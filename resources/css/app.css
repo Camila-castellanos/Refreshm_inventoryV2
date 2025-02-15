@@ -1,6 +1,13 @@
+@import 'primeicons/primeicons.css';
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+:root {
+    --primary-color: #90ee90;
+    --primary-color-text: #ffffff;
+    --surface-border: #dddddd;
+    --text-color: #333333;
+  }
 
 [x-cloak] {
     display: none;

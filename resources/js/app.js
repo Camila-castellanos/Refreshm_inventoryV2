@@ -8,11 +8,26 @@ import { ZiggyVue } from '../../vendor/tightenco/ziggy';
 import PrimeVue from 'primevue/config';
 import Aura from '@primevue/themes/aura';
 import Button from "primevue/button"
+import AppLayout from './Layouts/AppLayout.vue';
 const appName = import.meta.env.VITE_APP_NAME || 'QuoteRefreshm';
 
 createInertiaApp({
     title: (title) => `${title} - ${appName}`,
-    resolve: (name) => resolvePageComponent(`./Pages/${name}.vue`, import.meta.glob('./Pages/**/*.vue')),
+    resolve: (name) => {
+        return resolvePageComponent(`./Pages/${name}.vue`, import.meta.glob('./Pages/**/*.vue'))
+            .then((page) => {
+                // Validar la estructura de la página resuelta
+                const resolvedPage = page.default || page;
+    
+                // Aplicar el layout automáticamente para rutas bajo `/inventory`
+                if (name.startsWith('Inventory/')) {
+                    resolvedPage.layout = resolvedPage.layout || AppLayout;
+                }
+    
+                return resolvedPage;
+            });
+    },
+    
     setup({ el, App, props, plugin }) {
         // Crear la instancia de la aplicación
         const app = createApp({
@@ -34,7 +49,10 @@ createInertiaApp({
         // Registrar plugins y montar la aplicación
         app.use(plugin).use(ZiggyVue).use(PrimeVue, {
             theme: {
-                preset: Aura
+                preset: Aura,
+                options: {
+                    darkModeSelector: '.my-app-dark',
+                }
             }
         }).mount(el);
 

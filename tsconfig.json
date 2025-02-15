@@ -1,0 +1,19 @@
+{
+    "compilerOptions": {
+      "target": "es2022",
+      "module": "es2022",
+      "moduleResolution": "node",
+      "strict": true,
+      "jsx": "preserve",
+      "esModuleInterop": true,
+      "skipLibCheck": true,
+      "forceConsistentCasingInFileNames": true,
+      "baseUrl": ".",
+      "paths": {
+        "@/*": ["resources/js/*"]
+      }
+    },
+    "include": ["resources/js/**/*", "resources/js/**/*.d.ts"],
+    "exclude": ["node_modules"]
+  }
+  
