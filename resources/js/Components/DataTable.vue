@@ -9,7 +9,7 @@
             <Button label="Delete" icon="pi pi-refresh"  raised />
             <Button label="Place on Hold" icon="pi pi-refresh"  raised /> -->
             <div class="flex gap-2">
-                <Button label="Assign Location" icon="pi pi-plus-circle"  raised />
+                <!-- <Button label="Assign Location" icon="pi pi-plus-circle"  raised />
                 <Button label="Create Devices" icon="pi pi-plus"  raised />
                 <Button icon="pi pi-external-link" label="Export" @click="exportCSV($event)" />
                 <IconField>
@@ -17,7 +17,7 @@
                             <i class="pi pi-search" />
                         </InputIcon>
                         <InputText v-model="filters['global'].value" placeholder="Keyword Search" />
-                </IconField>
+                </IconField> -->
             </div>
     
 
@@ -31,7 +31,7 @@
     </template>
 
    
-    <template #footer> In total there are {{ items ? items.length : 0 }} products. </template>
+    <template #footer> In total there are {{ items ? items.length : 0 }} items. </template>
 </DataTable>
 
 </template>

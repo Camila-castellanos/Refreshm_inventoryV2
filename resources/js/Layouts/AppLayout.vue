@@ -32,9 +32,9 @@
         <!-- </header> -->
 
         <Drawer v-model:visible="drawerVisible">
-                <li v-for="item in navItems">
+                <button v-for="item in navItems" @click="router.visit(`${item.url}`)">
                     {{ item.label }}
-                </li>
+                </button>
         </Drawer>
 
         <main>
@@ -50,6 +50,7 @@ import Button from 'primevue/button';
 import Drawer from 'primevue/drawer'; 
 import { Menubar } from 'primevue';
 import Avatar from 'primevue/avatar';
+import { router } from '@inertiajs/vue3';
 
 function toggleDarkMode() {
     document.documentElement.classList.toggle('my-app-dark');
@@ -77,7 +78,7 @@ url: '/inventory/items'
 },
 {
 label: 'Vendors',
-url: '/inventory/items'
+url: '/inventory/vendors'
 },
 {
 label: 'Reports',

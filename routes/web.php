@@ -19,13 +19,15 @@ Route::get('/', function () {
 
 Route::prefix('inventory')->group(function () {
     Route::get('/items', function () {
-    
         return Inertia::render('Inventory/Index', [
             'layout' => 'AppLayout', 
         ]);
 
     });
-});
+
+    Route::get('/vendors', function () { 
+        return Inertia::render('Vendors/Vendors', ['layout' => 'AppLayout']); 
+    });});
 
 Route::middleware([
     'auth:sanctum',
