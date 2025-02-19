@@ -46,7 +46,9 @@
         </Drawer>
 
         <main>
-            <slot /> <!-- Renderiza el contenido de la página -->
+            <Transition name="fade">
+                <slot /> 
+            </Transition>
         </main>
     </div>
 </template>
@@ -97,10 +99,10 @@ const navItems = ref([
         }
     },
     {
-        label: 'Accounting',
-        icon: 'pi pi-wallet',
+        label: 'Dashboard',
+        icon: 'pi pi-chart-bar',
         command: () => {
-            router.visit('/accounting');
+            router.visit('/dashboard');
         }
     },
     {
@@ -150,5 +152,13 @@ onMounted(() => {
 header {
 
     padding: 1rem;
+}
+
+.fade-enter-active, .fade-leave-active {
+    transition: opacity 0.4s ease-in-out, transform 0.3s ease-in-out;
+}
+.fade-enter-from, .fade-leave-to {
+    opacity: 0;
+    transform: translateY(10px);
 }
 </style>

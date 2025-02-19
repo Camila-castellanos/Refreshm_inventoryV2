@@ -40,7 +40,8 @@ const Noir = definePreset(Aura, {
                     focusBackground: '{zinc.700}',
                     color: '#ffffff',
                     focusColor: '#ffffff'
-                }
+                },
+             
             },
             dark: {
                 primary: {
