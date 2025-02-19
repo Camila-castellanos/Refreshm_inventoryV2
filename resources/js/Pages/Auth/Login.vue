@@ -9,22 +9,29 @@
             <div class="text-surface-900 dark:text-surface-0 text-3xl font-medium mb-4">Welcome Back</div>
           </div>
   
-          <div>
-            <label for="email1" class="text-surface-900 dark:text-surface-0 font-medium mb-2 block">Email</label>
-            <InputText id="email1" type="text" placeholder="Email address" class="w-full mb-4" />
+          <form @submit.prevent="submitLogin">
+            <label for="email" class="text-surface-900 dark:text-surface-0 font-medium mb-2 block">Email</label>
+            <InputText id="email" type="text" v-model="form.email" placeholder="Email address" class="w-full mb-4" />
   
-            <label for="password1" class="text-surface-900 dark:text-surface-0 font-medium mb-2 block">Password</label>
-            <InputText id="password1" type="password" placeholder="Password" class="w-full mb-4" />
-  
-            <Button label="Sign In" icon="pi pi-user" class="w-full" />
+
+          <div v-if="errors.email" class="text-red-500 text-sm">
+            {{ errors.email }}
           </div>
+
+            <label for="password" class="text-surface-900 dark:text-surface-0 font-medium mb-2 block">Password</label>
+            <InputText id="password" type="password" v-model="form.password" placeholder="Password" class="w-full mb-4" />
+  
+            <Button label="Sign In" type="submit" icon="pi pi-user" class="w-full" />
+          </form>
+
         </div>
       </Transition>
     </div>
   </template>
   
   <script setup>
-  import { ref, onMounted } from 'vue';
+  import { ref, onMounted, computed } from 'vue';
+  import { router, useForm, usePage } from '@inertiajs/vue3';
   import Button from 'primevue/button';
   import InputText from 'primevue/inputtext';
   
@@ -33,7 +40,23 @@
   onMounted(() => {
     loaded.value = true;
   });
+
+  const form = useForm({
+    email: '',
+    password: ''
+});
+
+const errors = computed(() => usePage().props.errors || {});
+
+const submitLogin = () => {
+    router.post('/login', form, {
+        onFinish: () => form.reset('password')
+    });
+};
+
   </script>
+  
+
   
   <style scoped>
   .fade-enter-from, .fade-leave-to {

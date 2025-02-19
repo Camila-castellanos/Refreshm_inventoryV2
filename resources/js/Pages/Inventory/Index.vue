@@ -6,7 +6,7 @@
 
         <section class="w-[90%] mx-auto mt-4">
     
-            <DataTable :items="data" :headers="headers" ></DataTable>
+            <DataTable title="Active Inventory" class="mt-8" :items="data" :headers="headers" ></DataTable>
 
         </section>
     
