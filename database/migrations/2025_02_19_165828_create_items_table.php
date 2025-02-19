@@ -23,17 +23,17 @@ class CreateItemsTable extends Migration
             $table->string("battery")->nullable();
             $table->string("grade")->nullable();
             $table->string("issues")->nullable();
-            $table->unsignedFloat("cost")->nullable();
+            $table->float("cost")->unsigned()->nullable();
             $table->string("imei")->nullable();
             $table->float("selling_price")->nullable();
             $table->dateTime("sold")->nullable();
             $table->timestamp("hold")->nullable();
             $table->foreignId("sale_id")->nullable()->constrained();
             $table->string("customer")->nullable();
-            $table->unsignedFloat("discount")->nullable();
-            $table->unsignedFloat("tax")->nullable();
-            $table->unsignedFloat("subtotal")->nullable();
-            $table->unsignedFloat("profit")->nullable();
+            $table->float("discount")->unsigned()->nullable();
+            $table->float("tax")->unsigned()->nullable();
+            $table->float("subtotal")->unsigned()->nullable();
+            $table->float("profit")->unsigned()->nullable();
             $table->timestamps();
         });
     }
