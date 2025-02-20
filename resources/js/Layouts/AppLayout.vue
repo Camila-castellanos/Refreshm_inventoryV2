@@ -46,9 +46,9 @@
         </Drawer>
 
         <main>
-            <Transition name="fade">
+  
                 <slot /> 
-            </Transition>
+       
         </main>
     </div>
 </template>
@@ -96,6 +96,13 @@ const navItems = ref([
         icon: 'pi pi-box',
         command: () => {
             router.visit('/inventory/items');
+        }
+    },
+    {
+        label: 'Storages',
+        icon: 'pi pi-box',
+        command: () => {
+            router.visit('/inventory/storages/index');
         }
     },
     {

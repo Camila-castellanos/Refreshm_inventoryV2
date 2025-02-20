@@ -8,8 +8,10 @@ import { ZiggyVue } from '../../vendor/tightenco/ziggy';
 import PrimeVue from 'primevue/config';
 import ToastService from 'primevue/toastservice';
 import Toast from 'primevue/toast';
+import ConfirmationService from 'primevue/confirmationservice';
 import Aura from '@primevue/themes/aura';
 import { definePreset } from '@primevue/themes';
+import axios from 'axios';
 
 
 const Noir = definePreset(Aura, {
@@ -89,6 +91,7 @@ createInertiaApp({
             render: () => h(App, props),
         });
 
+
         // Registrar el mixin para manejar layouts dinámicos
         app.mixin({
             methods: {
@@ -101,6 +104,9 @@ createInertiaApp({
             },
         });
 
+        app.config.globalProperties.$axios = axios;
+
+
         // Registrar plugins y montar la aplicación
         app.use(plugin).use(ZiggyVue).use(PrimeVue, {
             theme: {
@@ -111,6 +117,7 @@ createInertiaApp({
             }
         })
         .use(ToastService)
+        .use(ConfirmationService)
         .component('Button', Button)
         .component('Toast', Toast)
         .mount(el);

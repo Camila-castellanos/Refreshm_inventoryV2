@@ -3,6 +3,7 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\VendorController;
+use App\Http\Controllers\StorageController;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -27,6 +28,12 @@ Route::get('/', function () {
 });
 
 
+
+Route::resource('storages', StorageController::class);
+Route::post('/storages/destroy', [StorageController::class, 'destroy']);
+
+
+
 Route::middleware([
     'auth:sanctum',
     config('jetstream.auth_session'),
@@ -48,6 +55,8 @@ Route::middleware([
         Route::get('/items/create', function () {
             return Inertia::render('Inventory/BulkCreate/InventoryItemsBulkCreate', ['layout' => 'AppLayout']);
         });
+
+        Route::get('/storages/index', function () { return Inertia::render('Storages/StoragesIndex', ['layout' => 'AppLayout']);});
 
     Route::get('/vendors', function () { 
         return Inertia::render('Vendors/Vendors', ['layout' => 'AppLayout']); 

@@ -12,7 +12,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('items', function (Blueprint $table) {
-            $table->foreignId('storage_id')->constrained('storages')->nullOnDelete();
+            $table->foreignIdFor(\App\Models\Storage::class)
+            ->nullable()
+            ->constrained()
+            ->nullOnDelete();
             $table->unsignedInteger('position')->nullOnDelete();
             $table->unique(['storage_id', 'position'], 'items_storage_position_unique');
             $table->unsignedBigInteger('sold_position')->nullable();
@@ -27,7 +30,9 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('items', function (Blueprint $table) {
-            $table->dropColumn(['sold_position', 'sold_storage_id', 'sold_storage_name']);
+            $table->dropForeign(['storage_id']);
+            $table->dropUnique('items_storage_position_unique');
+            $table->dropColumn(['storage_id', 'position', 'sold_position', 'sold_storage_id', 'sold_storage_name']);
         });
     }
 };

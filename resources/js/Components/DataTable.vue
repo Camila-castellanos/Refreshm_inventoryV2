@@ -10,6 +10,7 @@
 
                 <div class="flex gap-8">
                     <Button v-for="action in computedActions" :key="action.label"
+                        :severity="action.severity ? action.severity : 'primary'"
                         :class="[action.extraClasses, 'px-4 py-2 rounded-md'].join(' ')"
                         :icon="action.icon ? action.icon : ''" :label="action?.label" @click="action.action" :disabled="action.disable"  />
                 </div>
@@ -57,6 +58,7 @@ export interface ITableActions {
     extraClasses?: string,
     icon?: string,
     label: string;
+    severity?: string;
     action: () => void;
     disable?: (selectedItems: any[]) => boolean; 
 }
