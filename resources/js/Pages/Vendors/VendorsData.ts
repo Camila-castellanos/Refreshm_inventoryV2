@@ -1,3 +1,5 @@
+
+import axios from "axios";
 export const VendorHeaders = [
     {
         "label": "Vendor",
@@ -50,3 +52,7 @@ export const VendorHeaders = [
         "type": "string"
     }
 ];
+
+export default function fetchVendors() {
+    return axios.get('/vendor/list')
+}
