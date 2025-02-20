@@ -42,10 +42,11 @@ Route::middleware([
 
     Route::prefix('inventory')->group(function () {
         Route::get('/items', function () {
-            return Inertia::render('Inventory/Index', [
-                'layout' => 'AppLayout', 
-            ]);
+            return Inertia::render('Inventory/Index', ['layout' => 'AppLayout']);
+        });
 
+        Route::get('/items/create', function () {
+            return Inertia::render('Inventory/BulkCreate/InventoryItemsBulkCreate', ['layout' => 'AppLayout']);
         });
 
     Route::get('/vendors', function () { 
