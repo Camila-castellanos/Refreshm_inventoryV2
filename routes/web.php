@@ -4,6 +4,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\VendorController;
 use App\Http\Controllers\StorageController;
+use App\Http\Controllers\ItemController;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -52,12 +53,15 @@ Route::middleware([
             return Inertia::render('Inventory/Index', ['layout' => 'AppLayout']);
         });
 
-        Route::get('/items/create', function () {
+        Route::get('/items/bulk', function () {
             return Inertia::render('Inventory/BulkCreate/InventoryItemsBulkCreate', ['layout' => 'AppLayout']);
         });
 
-        Route::get('/storages/index', function () { return Inertia::render('Storages/StoragesIndex', ['layout' => 'AppLayout']);});
+        Route::resource("items", ItemController::class)
+        ->except(["show", "update", "edit"]);
 
+        Route::get('/storages/index', function () { return Inertia::render('Storages/StoragesIndex', ['layout' => 'AppLayout']);});
+        
     Route::get('/vendors', function () { 
         return Inertia::render('Vendors/Vendors', ['layout' => 'AppLayout']); 
     });});

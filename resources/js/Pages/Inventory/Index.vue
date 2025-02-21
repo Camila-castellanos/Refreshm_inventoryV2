@@ -26,7 +26,7 @@ const tableActions = [
         label: 'Create Items',
         icon: 'pi pi-plus',
         action: () => { 
-            router.visit('/inventory/items/create')
+            router.visit('/inventory/items/bulk')
         },
    
     },
