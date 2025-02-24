@@ -1,5 +1,6 @@
 <template>
-
+<ConfirmDialog></ConfirmDialog>
+<Toast></Toast>
 <section class="flex flex-col mt-[200px]">
   <section>
     <Button @click="createDevices">Create new devices</Button>
@@ -21,17 +22,19 @@ import fetchVendors from "@/Pages/Vendors/VendorsData";
 import { fetchStorages } from "@/Pages/Storages/StoragesIndexData";
 import "jsuites/dist/jsuites.css";
 import "jspreadsheet-ce/dist/jspreadsheet.css";
+import { useConfirm } from "primevue/useconfirm";
+import ConfirmDialog from 'primevue/confirmdialog';
+import { useToast } from "primevue";
 
-
+const confirm = useConfirm();
+const toast = useToast();
 const spreadsheet = ref(null);
 let instance = null;
 const storagesList = ref([]);
 const vendorsList = ref([]);
 
-// Datos iniciales como objetos
 const tableData = ref([]);
 
-// Columnas configuradas con claves de los objetos
 const columns = ref([
   { type: "calendar", title: "Date", data: "date", width: 120, options: { format: "YYYY-MM-DD" } },
   { type: "dropdown", title: "Vendor", data: "vendor", width: 150, source: ["Vendor A", "Vendor B"] },
@@ -94,7 +97,7 @@ onMounted(() => {
       onselection: (instance, cell, x, y, newValue) => {
       },
       oneditionstart: (instance, cell, x, y) => {
-        if (y === 9) { // 🔒 Bloquear edición en la columna 9 (Location)
+        if (y === 9) { 
           return false;
         }
       },
@@ -127,8 +130,6 @@ const getData = () => {
 
 function mapSpreadsheetData(spreadsheetData) {
 
-  // Agregar validacion
-
   return spreadsheetData.map(row => {
     let mappedRow = {};
     Object.keys(row).forEach(index => {
@@ -153,7 +154,32 @@ function mapSpreadsheetData(spreadsheetData) {
 
 
 function createDevices() {
-  submitSpreadsheet(mapSpreadsheetData(instance.getJson()))
+  confirm.require({
+        message: `Are you sure you want to create ${instance.getData().length} devices?`,
+        header: 'Confirmation',
+        icon: 'pi pi-exclamation-triangle',
+        rejectProps: {
+            label: 'Cancel',
+            severity: 'secondary',
+            outlined: true
+        },
+        acceptProps: {
+            label: 'Save'
+        },
+        accept: () => {
+          submitSpreadsheet(mapSpreadsheetData(instance.getJson())).then((res => {
+            toast.add({ severity: 'success', summary: 'Success', detail: 'Devices created successfully', life: 3000 });
+          })).catch(err => {
+            console.error(err)
+            toast.add({ severity: 'error', summary: 'Error', detail: 'Something went wrong! Please try again', life: 3000 });
+
+          })
+        },
+        reject: () => {
+              
+        }
+    });
+
 }
 
 function getAvailableStorage(numOfRows) {
@@ -211,10 +237,7 @@ function renderPositions(numOfRows) {
 
 
 async function submitSpreadsheet(body) {
-      axios.post("/inventory/items", { items: body }, { responseType: "blob" }).then((response) => {
-      alert('exito')
-      console.log(response)
-      });
+     return axios.post("/inventory/items", { items: body }, { responseType: "blob" })
     }
 
 </script>

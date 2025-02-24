@@ -87,6 +87,10 @@ function toggleDrawer() {
 }
 
 const logout = () => {
+    isDarkMode.value = false;
+    localStorage.setItem(themeKey, 'light');
+    applyTheme();
+
     router.post('/logout')
 }
 

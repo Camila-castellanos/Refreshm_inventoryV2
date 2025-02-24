@@ -1,11 +1,12 @@
 <template>
-    <div class="bg-surface-50 dark:bg-surface-950 px-6 py-20 md:px-12 flex justify-center items-center w-[100vw] h-[100vh]">
+    <div class="bg-surface-0 bg-[white] dark:bg-surface-950 px-6 py-20 md:px-12 flex justify-center items-center lg:flex-row h-screen w-[100vw] h-[100vh]">
+      <div class="hidden lg:block lg:w-1/2  ">
+            <img src="/images/BiggerLogo.png" class="mx-auto" alt="">
+            <img src="/images/iphone12.png" class="" alt="">
+        </div>
       <Transition name="fade">
-        <div v-if="loaded" class="bg-surface-0 dark:bg-surface-900 p-6 shadow rounded-border w-full lg:w-1/3 mx-auto">
+        <div v-if="loaded" class="sm:w-full lg:w-1/2 bg-surface-50 dark:bg-surface-900 p-6 shadow rounded-border  mx-auto">
           <div class="text-center mb-8">
-            <svg class="mb-4 mx-auto fill-surface-600 dark:fill-surface-200 h-16" viewBox="0 0 30 32">
-              <path fill-rule="evenodd" clip-rule="evenodd" d="M20.7207 6.18211L14.9944 3.11148L3.46855 9.28678L0.579749 7.73444L14.9944 0L23.6242 4.62977L20.7207 6.18211ZM14.9996 12.3574L26.5182 6.1821L29.4216 7.73443L14.9996 15.4621L6.37724 10.8391L9.27337 9.28677L14.9996 12.3574Z" />
-            </svg>
             <div class="text-surface-900 dark:text-surface-0 text-3xl font-medium mb-4">Welcome Back</div>
           </div>
   

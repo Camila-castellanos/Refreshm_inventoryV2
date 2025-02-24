@@ -44,8 +44,8 @@ class ItemController extends Controller
     {
         $user = Auth::user();
 
-        $tabs = Tab::where('user_id', $user->id)->orderBy('order', 'asc')->get();
-        $customFields = CustomField::where('user_id', $user->id)->get();
+        // $tabs = Tab::where('user_id', $user->id)->orderBy('order', 'asc')->get();
+        // $customFields = CustomField::where('user_id', $user->id)->get();
 
         if (Auth::user()->role == ('ADMIN')) {
             $context = [
@@ -53,10 +53,10 @@ class ItemController extends Controller
                 ->with(['storage:id,name,limit', 'vendor:id,vendor'])
                 ->whereNull("sold")
                 ->whereNull("hold")
-                ->whereNotIn('id', TabItem::pluck('item_id'))
+                // ->whereNotIn('id', TabItem::pluck('item_id'))
                 ->get(),
-                'tabs' => $tabs,
-                'fields' => $customFields,
+                // 'tabs' => $tabs,
+                // 'fields' => $customFields,
             ];
         } else if (Auth::user()->role == ('USER')) {
             //$usersId = User::where('store_id', @$user->store_id)->pluck('id')->toarray();
@@ -65,10 +65,10 @@ class ItemController extends Controller
                 ->with(['storage:id,name,limit', 'vendor:id,vendor'])
                 ->whereNull("sold")
                 ->whereNull("hold")
-                ->whereNotIn('id', TabItem::pluck('item_id'))
+                // ->whereNotIn('id', TabItem::pluck('item_id'))
                 ->get(),
-                'tabs' => $tabs,
-                'fields' => $customFields,
+                // 'tabs' => $tabs,
+                // 'fields' => $customFields,
             ];
         } else {
             $context = [
@@ -77,13 +77,13 @@ class ItemController extends Controller
                 ->with(['storage:id,name,limit', 'vendor:id,vendor'])
                 ->whereNull("sold")
                 ->whereNull("hold")
-                ->whereNotIn('id', TabItem::pluck('item_id'))
+                // ->whereNotIn('id', TabItem::pluck('item_id'))
                 ->get(),
-                'tabs' => $tabs,
-                'fields' => $customFields,
+                // 'tabs' => $tabs,
+                // 'fields' => $customFields,
             ];
         }
-        return Inertia::render('Items/Index', $context);
+        return Inertia::render('Inventory/Index', $context);
     }
 
 
