@@ -5,12 +5,12 @@
             <img src="/images/iphone12.png" class="" alt="">
         </div>
       <Transition name="fade">
-        <div v-if="loaded" class="sm:w-full lg:w-1/2 bg-surface-50 dark:bg-surface-900 p-6 shadow rounded-border  mx-auto">
+        <div v-if="loaded" class="sm:w-full lg:w-1/3 bg-surface-50 dark:bg-surface-900 p-6 shadow rounded-border  mx-auto">
           <div class="text-center mb-8">
             <div class="text-surface-900 dark:text-surface-0 text-3xl font-medium mb-4">Welcome Back</div>
           </div>
   
-          <form @submit.prevent="submitLogin">
+          <form @submit.prevent="submitLogin" >
             <label for="email" class="text-surface-900 dark:text-surface-0 font-medium mb-2 block">Email</label>
             <InputText id="email" type="text" v-model="form.email" placeholder="Email address" class="w-full mb-4" />
   

@@ -1,7 +1,7 @@
 <template>
 
 <Toast />
-
+<ConfirmDialog></ConfirmDialog>
 
     <section class="w-[90%] mx-auto mt-24">
         <DataTable title="Active Vendors" :actions="tableActions" :items="vendorList" :headers="VendorHeaders" @update:selected="handleSelection"/>
@@ -111,7 +111,9 @@ import { InputText, Dialog, Textarea } from 'primevue';
 import { useToast } from 'primevue/usetoast';
 import Dropdown from 'primevue/dropdown';
 import axios from 'axios';
-
+import {ConfirmDialog, useConfirm} from 'primevue';
+import { deleteVendors } from './VendorsData';
+const confirm = useConfirm();
 
 defineOptions({ layout: AppLayout })
 
@@ -171,6 +173,37 @@ function submitForm() {
 
 }
 
+  function confirmDelete() {
+    confirm.require({
+        message: 'Are you sure you want to delete the selected items?',
+        header: 'Confirmation',
+        icon: 'pi pi-exclamation-triangle',
+        rejectProps: {
+            label: 'Cancel',
+            severity: 'secondary',
+            outlined: true
+        },
+        acceptProps: {
+            label: 'Save'
+        },  
+        accept: () => {
+            destroyVendors()
+        },
+        reject: () => {
+        }
+    });
+};
+
+async function destroyVendors() {
+    try {
+                const response = await deleteVendors(selectedVendors.value.map(item => item.id))
+                toast.add({ severity: 'success', summary: 'Items deleted', detail: 'Vendors deleted successfully', life: 1500 });
+
+            } catch(err) {
+                toast.add({ severity: 'error', summary: 'Canceled', detail: 'Storage Deletion Canceled', life: 1500 });
+
+            }
+}
 
 const selectedVendors = ref([]);
 
@@ -190,7 +223,8 @@ const tableActions: ITableActions[] = [
     {
         label: 'Delete Vendor',
         icon: 'pi pi-trash',
-        action: () => { },
+        severity: 'danger',
+        action: () => { confirmDelete()},
         disable: (selectedItems) => selectedItems.length == 0
         
     },

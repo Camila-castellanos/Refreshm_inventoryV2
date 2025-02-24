@@ -55,4 +55,8 @@ export const VendorHeaders = [
 
 export default function fetchVendors() {
     return axios.get('/vendor/list')
+};
+
+export function deleteVendors() {
+    return axios.delete('/vendor/destroy')
 }
