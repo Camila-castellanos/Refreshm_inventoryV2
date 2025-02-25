@@ -36,6 +36,8 @@
   import Button from 'primevue/button';
   import InputText from 'primevue/inputtext';
   
+  const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
   const loaded = ref(false);
   
   onMounted(() => {
@@ -51,6 +53,9 @@ const errors = computed(() => usePage().props.errors || {});
 
 const submitLogin = () => {
     router.post('/login', form, {
+      headers: {
+            'X-CSRF-TOKEN': csrfToken
+        },
         onFinish: () => form.reset('password')
     });
 };
