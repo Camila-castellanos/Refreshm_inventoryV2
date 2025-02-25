@@ -13,9 +13,7 @@
 </template>
 
 <script setup>
-import { useModalService } from '@/composables/useModalService';
 import Dialog from 'primevue/dialog';
 import Button from 'primevue/button';
 
-const { isOpen, modalComponent, modalProps, close } = useModalService();
 </script>
