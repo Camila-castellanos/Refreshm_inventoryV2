@@ -4,7 +4,7 @@
 <ConfirmDialog></ConfirmDialog>
 
     <section class="w-[90%] mx-auto mt-24">
-        <DataTable title="Active Vendors" :actions="tableActions" :items="vendorList" :headers="VendorHeaders" @update:selected="handleSelection"/>
+        <DataTable title="Vendors" :actions="tableActions" :items="vendorList" :headers="VendorHeaders" @update:selected="handleSelection"/>
     </section>
 
     <Dialog v-model:visible="showCreateModal" modal header="Vendor Creation Form">
@@ -58,19 +58,26 @@
             </div>
 
             <div class="col-span-2">
-                <label class="block font-medium">Company Address</label>
+                <label class="block font-medium">Street Address</label>
                 <Textarea v-model="form.address" class="w-full" placeholder="Address" rows="2" />
                 <small class="text-red-500" v-if="errors.address">{{ errors.address }}</small>
             </div>
 
+            <div class="col-span-2">
+                <label class="block font-medium">            Unit / Floor #              </label>
+                <InputText  class="w-full" />
+                <!-- <small class="text-red-500" v-if="errors.phone">{{ errors.phone }}</small> -->
+            </div>
+
+
             <div>
                 <label class="block font-medium">Country</label>
-                <Dropdown v-model="form.country" :options="countries" class="w-full" placeholder="Select Country" />
+                <Textarea v-model="form.country" class="w-full" placeholder="Country" rows="2" />
                 <small class="text-red-500" v-if="errors.country">{{ errors.country }}</small>
             </div>
 
             <div>
-                <label class="block font-medium">State</label>
+                <label class="block font-medium">State / Province</label>
                 <InputText v-model="form.state" class="w-full" placeholder="State" />
             </div>
 
@@ -80,7 +87,7 @@
             </div>
 
             <div>
-                <label class="block font-medium">Postal Code</label>
+                <label class="block font-medium">Zip / Postal Code</label>
                 <InputText v-model="form.postal_code" class="w-full" placeholder="Postal Code" />
             </div>
 
@@ -103,16 +110,16 @@
 
 import AppLayout from '@/Layouts/AppLayout.vue'
 import DataTable from '@/Components/DataTable.vue';
-import { VendorHeaders } from './VendorsData';
+import { VendorHeaders, deleteVendors } from './VendorsData';
 import {ITableActions} from '@/Components/DataTable.vue';
 import { onMounted, ref, Ref } from 'vue';
 import { useForm } from '@inertiajs/vue3';
-import { InputText, Dialog, Textarea } from 'primevue';
+import { InputText, Dialog, Textarea, AutoComplete } from 'primevue';
 import { useToast } from 'primevue/usetoast';
 import Dropdown from 'primevue/dropdown';
 import axios from 'axios';
 import {ConfirmDialog, useConfirm} from 'primevue';
-import { deleteVendors } from './VendorsData';
+import fetchVendors from './VendorsData';
 const confirm = useConfirm();
 
 defineOptions({ layout: AppLayout })
@@ -135,7 +142,7 @@ const showSuccess = () => {
 
 
 const currencies = ref(["USD", "CAD"]);
-const countries = ref(["USA", "Canada", "Mexico", "Germany"]);
+const countries = ref([]);
 let vendorList = ref()
 
 
@@ -240,5 +247,7 @@ const tableActions: ITableActions[] = [
 
 onMounted(() => {
     axios.get('/vendor/list').then(res => vendorList.value = res.data)
+
+  
 })
 </script>

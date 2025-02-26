@@ -54,7 +54,7 @@ onMounted(() => {
 
 const tableActions = [
     {
-        label: 'Create Items',
+        label: 'Add Items',
         icon: 'pi pi-plus',
         action: () => { 
             router.visit('/inventory/items/bulk')
@@ -82,6 +82,13 @@ const tableActions = [
     {
         label: 'Edit Items',
         icon: 'pi pi-pencil',
+        action: () => {console.log('hi')},
+        disable: (selectedItems) => selectedItems.length !== 1
+        
+    },
+    {
+        label: 'Export',
+        icon: 'pi pi-file-export',
         action: () => {console.log('hi')},
         disable: (selectedItems) => selectedItems.length !== 1
         

@@ -147,7 +147,7 @@ class VendorController extends Controller
             $query->where('vendor', 'LIKE', '%' . $vendor . '%');
             $query->orWhere('first_name', 'LIKE', '%' . $vendor . '%');
             $query->orWhere('last_name', 'LIKE', '%' . $vendor . '%');
-        })->select('id', 'vendor', 'first_name', 'last_name')->get();
+        })->get();
         foreach ($vendors as $vendor) {
             $vendor->vendor_name = $vendor->first_name . " " . $vendor->last_name;
         }

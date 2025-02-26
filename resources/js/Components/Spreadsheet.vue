@@ -3,7 +3,7 @@
 <Toast></Toast>
 <section class="flex flex-col mt-[200px]">
   <section>
-    <Button @click="createDevices">Create new devices</Button>
+    <Button @click="createDevices">Save devices</Button>
   </section>
 
   <div class="spreadsheet-wrapper mt-8">
@@ -25,6 +25,7 @@ import "jspreadsheet-ce/dist/jspreadsheet.css";
 import { useConfirm } from "primevue/useconfirm";
 import ConfirmDialog from 'primevue/confirmdialog';
 import { useToast } from "primevue";
+import { router } from "@inertiajs/vue3";
 
 const confirm = useConfirm();
 const toast = useToast();
@@ -155,7 +156,7 @@ function mapSpreadsheetData(spreadsheetData) {
 
 function createDevices() {
   confirm.require({
-        message: `Are you sure you want to create ${instance.getData().length} devices?`,
+        message: `Are you sure you want to add these devices?`,
         header: 'Confirmation',
         icon: 'pi pi-exclamation-triangle',
         rejectProps: {
@@ -169,6 +170,7 @@ function createDevices() {
         accept: () => {
           submitSpreadsheet(mapSpreadsheetData(instance.getJson())).then((res => {
             toast.add({ severity: 'success', summary: 'Success', detail: 'Devices created successfully', life: 3000 });
+            router.visit('/inventory/items')
           })).catch(err => {
             console.error(err)
             toast.add({ severity: 'error', summary: 'Error', detail: 'Something went wrong! Please try again', life: 3000 });
@@ -242,7 +244,7 @@ async function submitSpreadsheet(body) {
 
 </script>
 
-<style scope>
+<style>
 .spreadsheet-wrapper {
   width: 100%;
   height: 90vh;
@@ -261,5 +263,28 @@ async function submitSpreadsheet(body) {
   /* Activa el scroll vertical si el contenido excede el espacio */
   max-height: 90vh;
   /* Asegura que la tabla no sobrepase el contenedor */
+}
+
+.jexcel_contextmenu {
+
+}
+
+.jexcel_contextmenu div {
+    color: #fff; /* Color de texto */
+    padding: 8px 12px;
+    color: white !important; 
+    font-weight: bold;
+}
+
+.jcontextmenu div {
+    padding: 8px 12px;
+    font-weight: bold !important;
+    font-family:sans-serif;
+    font-size: 16px;
+}
+
+.jexcel_contextmenu div:hover {
+    color: white !important; 
+    font-weight: bold;
 }
 </style>

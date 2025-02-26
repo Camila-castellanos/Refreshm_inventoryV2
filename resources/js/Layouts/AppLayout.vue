@@ -95,6 +95,13 @@ const logout = () => {
 }
 
 const navItems = ref([
+{
+        label: 'Dashboard',
+        icon: 'pi pi-chart-bar',
+        command: () => {
+            router.visit('/dashboard');
+        }
+    },
     {
         label: 'Inventory',
         icon: 'pi pi-box',
@@ -103,17 +110,10 @@ const navItems = ref([
         }
     },
     {
-        label: 'Storages',
+        label: 'Accounting',
         icon: 'pi pi-box',
         command: () => {
-            router.visit('/inventory/storages/index');
-        }
-    },
-    {
-        label: 'Dashboard',
-        icon: 'pi pi-chart-bar',
-        command: () => {
-            router.visit('/dashboard');
+            router.visit('/inventory/items');
         }
     },
     {
@@ -130,27 +130,36 @@ const navItems = ref([
             router.visit('/inventory/vendors');
         }
     },
-    {
-        label: 'Reports',
-        icon: 'pi pi-chart-line',
-        command: () => {
-            router.visit('/reports');
-        }
-    },
-    {
-        label: 'Stores',
-        icon: 'pi pi-store',
-        command: () => {
-            router.visit('/stores');
-        }
-    },
-    {
-        label: 'Users',
-        icon: 'pi pi-user',
-        command: () => {
-            router.visit('/users');
-        }
-    }
+    // {
+    //     label: 'Storages',
+    //     icon: 'pi pi-box',
+    //     command: () => {
+    //         router.visit('/inventory/storages/index');
+    //     }
+    // },
+   
+   
+    // {
+    //     label: 'Reports',
+    //     icon: 'pi pi-chart-line',
+    //     command: () => {
+    //         router.visit('/reports');
+    //     }
+    // },
+    // {
+    //     label: 'Stores',
+    //     icon: 'pi pi-store',
+    //     command: () => {
+    //         router.visit('/stores');
+    //     }
+    // },
+    // {
+    //     label: 'Users',
+    //     icon: 'pi pi-user',
+    //     command: () => {
+    //         router.visit('/users');
+    //     }
+    // }
 ]);
 
 onMounted(() => {
