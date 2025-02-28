@@ -1,13 +1,13 @@
 <template>
-    <form @submit.prevent="submitForm" class="p-6 rounded-lg w-full">
-        <div class="grid grid-cols-2 gap-4 w-full">
+    <form @submit.prevent="submitForm" class="w-full p-6 rounded-lg">
+        <div class="grid w-full grid-cols-2 gap-4">
             <div class="col-span-1">
-                <label for="icondisplay" class="font-bold block mb-2"> Date </label>
+                <label for="icondisplay" class="block mb-2 font-bold"> Date </label>
                 <DatePicker v-model="form.date" showIcon fluid iconDisplay="input" inputId="icondisplay" />
             </div>
 
             <div class="col-span-1">
-                <label for="icondisplay" class="font-bold block mb-2"> Tax </label>
+                <label for="icondisplay" class="block mb-2 font-bold"> Tax </label>
                 <Select v-model="form.tax" :options="taxes" optionLabel="name" placeholder="Select"
                     class="w-full md:w-56">
                     <template #option="slotProps">
@@ -26,14 +26,14 @@
             </div>
 
             <div class="col-span-1">
-                <label for="icondisplay" class="font-bold block mb-2"> Payment Method </label>
+                <label for="icondisplay" class="block mb-2 font-bold"> Payment Method </label>
                 <Select v-model="form.payment_method" :options="payment_method" optionLabel="name" placeholder="Select"
                     class="w-full md:w-56">
                 </Select>
             </div>
 
             <div class="col-span-1">
-                <label for="icondisplay" class="font-bold block mb-2"> Payment Account </label>
+                <label for="icondisplay" class="block mb-2 font-bold"> Payment Account </label>
                 <Select v-model="form.payment_account" :options="payment_account" optionLabel="name"
                     placeholder="Select" class="w-full md:w-56">
                 </Select>
@@ -53,9 +53,9 @@
                 <Textarea v-model="form.memo_notes" class="w-full" placeholder="Insert" rows="2" />
             </div>
 
-            <div class="col-span-2 w-full flex gap-2">
+            <div class="flex w-full col-span-2 gap-2">
                 <Button label="Save" class="w-1/2"></Button>
-                <Button label="Confirm" class="w-1/2"></Button>
+                <Button type="submit" label="Confirm" class="w-1/2"></Button>
             </div>
         </div>
 
@@ -74,6 +74,7 @@ import { defineProps } from 'vue';
 import { useForm } from '@inertiajs/vue3';
 import { inject, onMounted } from "vue";    
 import { ref, computed, watch } from 'vue';
+import axios from 'axios';
 
 
 
@@ -139,7 +140,7 @@ const payment_account = [{
     id: 1
 }]
 
-function submitForm(isConfirmed: boolean) {
+async function submitForm(isConfirmed: boolean) {
     if (!params.value.items.length) {
         alert("No items selected for sale!");
         return;
@@ -169,6 +170,13 @@ function submitForm(isConfirmed: boolean) {
     };
 
     console.log("Submitting Sale:", salePayload);
+
+    try {
+        const { data } = axios.post(this.$route('sales.store'), salePayload);
+        console.log("Sale submitted successfully:", data);
+    } catch (error) {
+        console.error("Error submitting sale:", error);
+    }
 
 }
 

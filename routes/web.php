@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\VendorController;
 use App\Http\Controllers\StorageController;
 use App\Http\Controllers\ItemController;
+use App\Http\Controllers\SaleController;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -71,5 +72,9 @@ Route::middleware([
     Route::post("vendor/store", [VendorController::class, "store"])->name("vendor.store");
     Route::get("vendor/list", [VendorController::class, "vendorList"])->name("vendor.list");
     Route::post("vendor/datewise", [VendorController::class, "datewise"])->name("vendor.datewise");
+
+    Route::post("sales", [SaleController::class, "store"])->name("sales.store");
+        Route::get("sale/{sale}/receipt", [SaleController::class, "receipt"])->name("sales.receipt");
+        Route::get("sale/{sale}/items", [SaleController::class, "soldItems"])->name("sales.sold");
 
 });
