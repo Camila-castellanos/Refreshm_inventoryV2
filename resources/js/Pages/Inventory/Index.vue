@@ -1,10 +1,30 @@
 <template>
+
 <StoragesAssign :items="selectedItems" ref="assignStorageVisible"></StoragesAssign>
     <div>
 
         <section class="w-[90%] mx-auto mt-4">
     
-            <DataTable title="Active Inventory" class="mt-8" @update:selected="handleSelection" :actions="tableActions" :items="tableData" :headers="headers" ></DataTable>
+       
+<Tabs value="0">
+    <TabList>
+        <Tab value="0">Active Inventory</Tab>
+        <Tab value="1">On Hold</Tab>
+        <Tab value="2">Sold</Tab>
+    </TabList>
+    <TabPanels>
+        <TabPanel value="0">
+            <DataTable title="Active Inventory" @update:selected="handleSelection" :actions="tableActions" :items="tableData" :headers="headers" ></DataTable>
+        </TabPanel>
+        <TabPanel value="1">
+            <DataTable title="On Hold" @update:selected="handleSelection" :items="[]" :headers="[]" ></DataTable>
+        </TabPanel>
+        <TabPanel value="2">
+            <DataTable title="Sold" @update:selected="handleSelection" :items="[]" :headers="[]" ></DataTable>
+        </TabPanel>
+    </TabPanels>
+</Tabs>
+
 
         </section>
     
@@ -20,10 +40,24 @@ import { router } from '@inertiajs/vue3';
 import { defineProps } from 'vue';
 import StoragesAssign from '../Storages/StoragesAssign/StoragesAssign.vue';
 import { Dialog } from 'primevue';
+import Tabs from 'primevue/tabs';
+import TabList from 'primevue/tablist';
+import Tab from 'primevue/tab';
+import TabPanels from 'primevue/tabpanels';
+import TabPanel from 'primevue/tabpanel';
+import { useDialog } from 'primevue/usedialog';
+import ItemsSell from './ItemsSell/ItemsSell.vue';
 
+const dialog = useDialog();
 const props = defineProps({
     items: Array
 });
+
+const tabs = ref([
+    { title: 'Tab 1', content: 'Tab 1 Content', value: '0' },
+    { title: 'Tab 2', content: 'Tab 2 Content', value: '1' },
+    { title: 'Tab 3', content: 'Tab 3 Content', value: '2' }
+]);
 
 const assignStorageVisible = ref(null);
 
@@ -50,7 +84,22 @@ function parseItemsData() {
 }
 onMounted(() => {
     parseItemsData()
-}) 
+
+
+
+}
+) 
+
+function openSellItemsModal() {
+    dialog.open(ItemsSell, {
+        data: {
+                items: selectedItems
+            },
+        props: {
+            modal: true
+        }
+    });
+}
 
 const tableActions = [
     {
@@ -68,6 +117,16 @@ const tableActions = [
             toggleAssignStorageVisible()
         },
         disable: (selectedItems) => selectedItems.length == 1
+
+   
+    },
+    {
+        label: 'Sell',
+        icon: 'pi pi-dollar',
+        action: () => { 
+            openSellItemsModal()
+        },
+      
 
    
     },

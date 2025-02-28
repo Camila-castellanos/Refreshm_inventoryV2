@@ -12,7 +12,7 @@ import ConfirmationService from 'primevue/confirmationservice';
 import Aura from '@primevue/themes/aura';
 import { definePreset } from '@primevue/themes';
 import axios from 'axios';
-
+import DialogService from 'primevue/dialogservice';
 
 const Noir = definePreset(Aura, {
     semantic: {
@@ -116,6 +116,7 @@ createInertiaApp({
                 }
             }
         })
+        .use(DialogService)
         .use(ToastService)
         .use(ConfirmationService)
         .component('Button', Button)

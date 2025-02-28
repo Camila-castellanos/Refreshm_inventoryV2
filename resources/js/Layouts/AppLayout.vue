@@ -1,6 +1,6 @@
 <template>
     <div class="h-[100vh]">
-
+        <DynamicDialog />
 
         <Menubar :model="navItems">
             <template #start>
@@ -61,7 +61,7 @@ import Drawer from 'primevue/drawer';
 import { Menubar } from 'primevue';
 import Avatar from 'primevue/avatar';
 import { router } from '@inertiajs/vue3';
-
+import {DynamicDialog} from 'primevue';
 const themeKey = 'theme-mode';
 
 const isDarkMode = ref(localStorage.getItem(themeKey) === 'dark');

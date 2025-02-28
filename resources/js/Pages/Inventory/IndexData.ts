@@ -41,7 +41,7 @@ export const headers = [
     },
     {
         "label": "Serial",
-        "name": "serial",
+        "name": "imei   ",
         "type": "string"
     },
     {
