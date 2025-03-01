@@ -9,7 +9,7 @@ use App\Http\Controllers\SaleController;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
-Route::get('/login', function() {
+Route::get('/login', function () {
     return Inertia::render('Auth/Login');
 });
 
@@ -59,13 +59,16 @@ Route::middleware([
         });
 
         Route::resource("items", ItemController::class)
-        ->except(["show", "update", "edit"]);
+            ->except(["show", "update", "edit"]);
 
-        Route::get('/storages/index', function () { return Inertia::render('Storages/StoragesIndex', ['layout' => 'AppLayout']);});
-        
-    Route::get('/vendors', function () { 
-        return Inertia::render('Vendors/Vendors', ['layout' => 'AppLayout']); 
-    });});
+        Route::get('/storages/index', function () {
+            return Inertia::render('Storages/StoragesIndex', ['layout' => 'AppLayout']);
+        });
+
+        Route::get('/vendors', function () {
+            return Inertia::render('Vendors/Vendors', ['layout' => 'AppLayout']);
+        });
+    });
 
 
     Route::resource("vendor", VendorController::class)->except(["show", "store"]);
@@ -74,7 +77,6 @@ Route::middleware([
     Route::post("vendor/datewise", [VendorController::class, "datewise"])->name("vendor.datewise");
 
     Route::post("sales", [SaleController::class, "store"])->name("sales.store");
-        Route::get("sale/{sale}/receipt", [SaleController::class, "receipt"])->name("sales.receipt");
-        Route::get("sale/{sale}/items", [SaleController::class, "soldItems"])->name("sales.sold");
-
+    Route::get("sale/{sale}/receipt", [SaleController::class, "receipt"])->name("sales.receipt");
+    Route::get("sale/{sale}/items", [SaleController::class, "soldItems"])->name("sales.sold");
 });

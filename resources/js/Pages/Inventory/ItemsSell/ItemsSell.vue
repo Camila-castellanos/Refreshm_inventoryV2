@@ -151,7 +151,7 @@
 </template>
 
 <script setup lang="ts">
-import { useForm } from "@inertiajs/vue3";
+import { router, useForm } from "@inertiajs/vue3";
 import axios from "axios";
 import { DatePicker, Select, Textarea } from "primevue";
 import Column from "primevue/column";
@@ -291,7 +291,9 @@ async function submitForm(e: Event, isConfirmed: boolean) {
     };
 
     try {
-        const { data } = await axios.post(route("sales.store"), salePayload);
+        const { data } = await axios.post<string>(route("sales.store"), salePayload);
+        window.open(data, "_blank");
+        router.reload();
     } catch (error) {
         console.error("Error submitting sale:", error);
     }

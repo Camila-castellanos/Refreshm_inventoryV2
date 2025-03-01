@@ -51,7 +51,6 @@ class ItemController extends Controller
             $context = [
                 'items' => Item::where("user_id", $user->id)
                 ->with(['storage:id,name,limit', 'vendor:id,vendor'])
-                ->whereNull("sold")
                 ->whereNull("hold")
                 // ->whereNotIn('id', TabItem::pluck('item_id'))
                 ->get(),
@@ -63,7 +62,6 @@ class ItemController extends Controller
             $context = [
                 'items' => Item::where("user_id", $user->id)
                 ->with(['storage:id,name,limit', 'vendor:id,vendor'])
-                ->whereNull("sold")
                 ->whereNull("hold")
                 // ->whereNotIn('id', TabItem::pluck('item_id'))
                 ->get(),
@@ -75,7 +73,6 @@ class ItemController extends Controller
                 // 'items' => Item::whereNull("sold")->whereNull("hold")->get(),
                 'items' => Item::where("user_id", $user->id)
                 ->with(['storage:id,name,limit', 'vendor:id,vendor'])
-                ->whereNull("sold")
                 ->whereNull("hold")
                 // ->whereNotIn('id', TabItem::pluck('item_id'))
                 ->get(),

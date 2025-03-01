@@ -16,7 +16,7 @@ use App\Models\Sale;
 use App\Models\Storage;
 use App\Models\Store;
 use App\Models\User;
-use Barryvdh\DomPDF\Facade as PDF;
+use Barryvdh\DomPDF\Facade\PDF;
 use Carbon\Carbon;
 use DateTime;
 use Exception;
@@ -270,14 +270,12 @@ class SaleController extends Controller
             }
         }
 
-        return view("sale-receipt", compact("sale", "customer", "header", "footer", "logo"));
-
-        // $pdf = PDF::loadView("sale-receipt", compact("sale", "customer", "header", "footer", "logo"))
-        //     ->setOptions([
-        //         'defaultFont' => 'sans-serif',
-        //         'isRemoteEnabled' => 'true',
-        //     ]);
-        // return $pdf->download("receipt.pdf");
+        $pdf = PDF::loadView("sale-receipt", compact("sale", "customer", "header", "footer", "logo"))
+            ->setOptions([
+                'defaultFont' => 'sans-serif',
+                'isRemoteEnabled' => 'true',
+            ]);
+        return $pdf->download("receipt.pdf");
     }
 
     /**

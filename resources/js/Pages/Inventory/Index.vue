@@ -33,8 +33,8 @@
                         <DataTable
                             title="Sold"
                             @update:selected="handleSelection"
-                            :items="[]"
-                            :headers="[]"
+                            :items="getSoldItems()"
+                            :headers="headers"
                         ></DataTable>
                     </TabPanel>
                 </TabPanels>
@@ -86,12 +86,18 @@ const handleSelection = (selected) => {
 
 const tableData = ref([]);
 function parseItemsData() {
-    tableData.value = props.items.map((item) => {
-        const { name, limit } = item.storage;
-        const { position } = item;
+    tableData.value = props.items.filter((item) => item.sold === null).map((item) => {
+        if (item.storage) {
+            const { name, limit } = item.storage;
+            const { position } = item;
+            return {
+                ...item,
+                location: `${name} - ${position}/${limit}`,
+            };
+        }
         return {
             ...item,
-            location: `${name} - ${position}/${limit}`,
+            location: "No storage information",
         };
     });
 }
@@ -159,4 +165,9 @@ const tableActions = [
         disable: (selectedItems) => selectedItems.length !== 1,
     },
 ];
+
+function getSoldItems() {
+    console.log(props.items.filter((item) => item.sold !== null));
+    return props.items.filter((item) => item.sold !== null);
+}
 </script>
