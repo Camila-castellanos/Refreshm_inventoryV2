@@ -23,6 +23,7 @@ use Exception;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -40,18 +41,19 @@ class SaleController extends Controller
         $form["user_id"] = Auth::user()->id;
         $form["balance_remaining"] = $request->balance_remaining;
         $form["date"] = $request->payment_date;
-        
+
         $sale = Sale::create($form);
 
+        log::info($form);
+
         foreach ($form["items"] as $sale_item) {
-                $sale_item["sale_id"] = $sale->id;
-                $sale_item['sold_position'] = $sale_item['position'];
-                $sale_item['sold_storage_id'] = $sale_item['storage_id'];
-                $sale_item['sold_storage_name'] = Storage::find($sale_item['storage_id'])?->name;
-           
+            $sale_item["sale_id"] = $sale->id;
+            $sale_item['sold_position'] = $sale_item['position'];
+            $sale_item['sold_storage_id'] = $sale_item['storage_id'];
+            $sale_item['sold_storage_name'] = Storage::find($sale_item['storage_id'])?->name;
+
             unset($sale_item["selected"]);
             $item = Item::find($sale_item["id"]);
-
 
             if ($request->paid == 1) {
                 Payment::insert([
@@ -66,19 +68,14 @@ class SaleController extends Controller
                 ]);
             }
             $item->update($sale_item);
-            
+
             if ($item) {
-
-               
-
                 $item->update([
                     'position' => null,
                     'storage_id' => null,
-                 
+
                 ]);
             }
-            
-
 
             TabItem::where('item_id', $sale_item["id"])->delete();
         }
@@ -94,7 +91,6 @@ class SaleController extends Controller
 
         foreach ($request->newItems as $new_item) {
             $total = $new_item["selling_price"] + (($form["tax"] / 100) * $new_item["selling_price"]);
-
 
             $item = Item::create([
                 'date' => $request->payment_date,
@@ -274,7 +270,7 @@ class SaleController extends Controller
             }
         }
 
-        return view("sale-receipt", compact("sale", "customer","header", "footer", "logo"));
+        return view("sale-receipt", compact("sale", "customer", "header", "footer", "logo"));
 
         // $pdf = PDF::loadView("sale-receipt", compact("sale", "customer", "header", "footer", "logo"))
         //     ->setOptions([
