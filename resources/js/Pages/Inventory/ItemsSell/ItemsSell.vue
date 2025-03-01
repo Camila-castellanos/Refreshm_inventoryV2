@@ -1,15 +1,15 @@
 <template>
-    <form @submit.prevent="submitForm" class="w-full p-6 rounded-lg">
-        <div class="grid w-full grid-cols-2 gap-4">
-            <div class="col-span-1">
+    <form class="w-full p-6 rounded-lg" @submit.prevent="submitForm">
+        <div class="grid w-full grid-cols-6 gap-4">
+            <div class="col-span-2">
                 <label for="icondisplay" class="block mb-2 font-bold"> Date </label>
                 <DatePicker v-model="form.date" showIcon fluid iconDisplay="input" inputId="icondisplay" />
             </div>
 
-            <div class="col-span-1">
+            <div class="col-span-2">
                 <label for="icondisplay" class="block mb-2 font-bold"> Tax </label>
                 <Select v-model="form.tax" :options="taxes" optionLabel="name" placeholder="Select"
-                    class="w-full md:w-56">
+                    class="w-full">
                     <template #option="slotProps">
                         <div class="flex items-center">
                             <div>{{ `${slotProps.option.name} - ${slotProps.option.percentage}%` }}</div>
@@ -25,21 +25,40 @@
                 </Select>
             </div>
 
-            <div class="col-span-1">
+            <div class="col-span-2">
+                <label for="icondisplay" class="block mb-2 font-bold"> Customer </label>
+                <Select v-model="form.customer" :options="customers" optionLabel="name" placeholder="Select"
+                    class="w-full">
+                    <template #option="slotProps">
+                        <div class="flex items-center">
+                            <div>{{ `${slotProps.option.name} - ${slotProps.option.percentage}%` }}</div>
+                        </div>
+                    </template>
+
+                    <template #footer>
+                        <div class="p-3">
+                            <Button label="Add New Customer" fluid severity="secondary" text size="small"
+                                icon="pi pi-plus" />
+                        </div>
+                    </template>
+                </Select>
+            </div>
+
+            <div class="col-span-3">
                 <label for="icondisplay" class="block mb-2 font-bold"> Payment Method </label>
                 <Select v-model="form.payment_method" :options="payment_method" optionLabel="name" placeholder="Select"
-                    class="w-full md:w-56">
+                    class="w-full">
                 </Select>
             </div>
 
-            <div class="col-span-1">
+            <div class="col-span-3">
                 <label for="icondisplay" class="block mb-2 font-bold"> Payment Account </label>
                 <Select v-model="form.payment_account" :options="payment_account" optionLabel="name"
-                    placeholder="Select" class="w-full md:w-56">
+                    placeholder="Select" class="w-full">
                 </Select>
             </div>
 
-            <div class="col-span-2">
+            <div class="col-span-6">
                 <DataTable :value="params.items" tableStyle="min-width: 50rem">
                     <Column field="model" header="Device"></Column>
                     <Column field="issues" header="Issue"></Column>
@@ -48,14 +67,14 @@
                 </DataTable>
             </div>
 
-            <div class="col-span-2">
+            <div class="col-span-6">
                 <label class="block font-medium">Memo Notes</label>
                 <Textarea v-model="form.memo_notes" class="w-full" placeholder="Insert" rows="2" />
             </div>
 
-            <div class="flex w-full col-span-2 gap-2">
-                <Button label="Save" class="w-1/2"></Button>
-                <Button type="submit" label="Confirm" class="w-1/2"></Button>
+            <div class="flex w-full col-span-6 gap-2">
+                <Button type="submit" @click="(e) => submitForm(e,false)" label="Save" class="w-1/2"></Button>
+                <Button type="submit" @click="(e) => submitForm(e,true)" label="Confirm" class="w-1/2"></Button>
             </div>
         </div>
 
@@ -64,24 +83,24 @@
 </template>
 
 <script setup lang="ts">
-import { useDialog } from 'primevue/usedialog';
-import { InputText, Dialog, Textarea, AutoComplete, DatePicker } from 'primevue';
-import { Select } from 'primevue';
-import { ConfirmDialog, useConfirm } from 'primevue';
-import DataTable from 'primevue/datatable';
-import Column from 'primevue/column';
-import { defineProps } from 'vue';
 import { useForm } from '@inertiajs/vue3';
-import { inject, onMounted } from "vue";    
-import { ref, computed, watch } from 'vue';
 import axios from 'axios';
-
+import { DatePicker, Select, Textarea } from 'primevue';
+import Column from 'primevue/column';
+import DataTable from 'primevue/datatable';
+import { computed, inject, onMounted, ref, watch } from "vue";
 
 
 // Subtotal: Sum of all selling prices
 const subtotal = computed(() => {
-    return params.value.items.reduce((sum, item) => sum + (item.selling_price || 0), 0);
+    return params.value.items.reduce((sum: number, item: any) => sum + (item.selling_price || 0), 0);
 });
+
+const flatTax = computed(() => {
+    if (!form.tax || !form.tax.percentage) return 0;
+    return parseFloat((subtotal.value * (form.tax.percentage / 100)).toFixed(2));
+});
+
 
 // Tax: Calculate tax amount based on subtotal and selected tax percentage
 const taxAmount = computed(() => {
@@ -97,11 +116,23 @@ const total = computed(() => {
 const dialogRef = inject('dialogRef');
 
 let params = ref<any>([]);
+let customers = ref<any>([]);
 
 onMounted(() => {
     params.value = dialogRef.value.data;
-    console.log(params.value)
+    parseCustomersData();
+    console.log(params.value, "llegando data")
 })
+
+function parseCustomersData() {
+    if (!params.value.customers || params.value.customers.length == 0) return;
+    customers.value = params.value.customers.map((customer: any) => {
+        return {
+            ...customer,
+            name: `${customer.first_name} ${customer.last_name}`,
+        };
+    });
+}
 
 const form = useForm({
     date: new Date(),
@@ -140,7 +171,9 @@ const payment_account = [{
     id: 1
 }]
 
-async function submitForm(isConfirmed: boolean) {
+async function submitForm(e: Event, isConfirmed: boolean) {
+    e.preventDefault();
+    console.log("Submitting form:", form);
     if (!params.value.items.length) {
         alert("No items selected for sale!");
         return;
@@ -148,8 +181,10 @@ async function submitForm(isConfirmed: boolean) {
 
     const salePayload = {
         subtotal: subtotal.value,
-        tax: taxAmount.value,
+        tax: form?.tax?.percentage || 0,
         total: total.value,
+        discount: 0,
+        flatTax: flatTax.value,
         date: form.date,
         memo_notes: form.memo_notes,
         payment_method: form.payment_method?.name || '',
@@ -172,7 +207,7 @@ async function submitForm(isConfirmed: boolean) {
     console.log("Submitting Sale:", salePayload);
 
     try {
-        const { data } = axios.post(this.$route('sales.store'), salePayload);
+        const { data } = await axios.post(route('sales.store'), salePayload);
         console.log("Sale submitted successfully:", data);
     } catch (error) {
         console.error("Error submitting sale:", error);

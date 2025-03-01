@@ -83,6 +83,8 @@ class ItemController extends Controller
                 // 'fields' => $customFields,
             ];
         }
+
+        $context['customers'] = Customer::all();
         return Inertia::render('Inventory/Index', $context);
     }
 
