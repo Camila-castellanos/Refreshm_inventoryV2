@@ -15,7 +15,7 @@
                     <span>{{ item.label }}</span>
                     <Badge v-if="item.badge" :class="{ 'ml-auto': !root, 'ml-2': root }" :value="item.badge" />
                     <span v-if="item.shortcut"
-                        class="ml-auto border border-surface rounded bg-emphasis text-muted-color text-xs p-1">{{
+                        class="p-1 ml-auto text-xs border rounded border-surface bg-emphasis text-muted-color">{{
                         item.shortcut }}</span>
                     <i v-if="hasSubmenu"
                         :class="['pi pi-angle-down ml-auto', { 'pi-angle-down': root, 'pi-angle-right': !root }]"></i>
@@ -37,7 +37,7 @@
         <!-- </header> -->
 
         <Drawer v-model:visible="drawerVisible" class="" >
-            <div class="w-full h-full flex flex-col gap-8 justify-start items-center">
+            <div class="flex flex-col items-center justify-start w-full h-full gap-8">
                 <Button variant="outlined" class="w-full" severity="secondary" v-for="item in navItems" @click="router.visit(`${item.url}`)">
                         {{ item.label }}
                 </Button>
@@ -120,7 +120,7 @@ const navItems = ref([
         label: 'Contacts',
         icon: 'pi pi-users',
         command: () => {
-            router.visit('/');
+            router.visit('/customers');
         }
     },
     {

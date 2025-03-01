@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\CustomerController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\VendorController;
@@ -70,6 +71,17 @@ Route::middleware([
         });
     });
 
+    Route::prefix('customers')->group(function () {
+        Route::get('', function () {
+            return Inertia::render('Customers/Index', ['layout' => 'AppLayout']);
+        });
+        Route::resource("/", CustomerController::class)->except(["show", "store"]);
+        Route::post("/datewise", [CustomerController::class, "datewise"])->name("customer.datewise");
+        Route::get("/list", [CustomerController::class, "customersList"])->name("customer.list");
+        Route::get("/email", [CustomerController::class, "marketingEmail"])->name("marketing.email");
+        Route::post("/email/send", [CustomerController::class, "sendMarketingEmail"])->name("send.marketing.email");
+    });
+
 
     Route::resource("vendor", VendorController::class)->except(["show", "store"]);
     Route::post("vendor/store", [VendorController::class, "store"])->name("vendor.store");
@@ -79,4 +91,5 @@ Route::middleware([
     Route::post("sales", [SaleController::class, "store"])->name("sales.store");
     Route::get("sale/{sale}/receipt", [SaleController::class, "receipt"])->name("sales.receipt");
     Route::get("sale/{sale}/items", [SaleController::class, "soldItems"])->name("sales.sold");
+
 });
