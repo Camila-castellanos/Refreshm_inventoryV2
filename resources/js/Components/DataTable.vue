@@ -18,13 +18,16 @@
             </div>
         </template>
         <template v-for="header in headers">
-            <Column :field="header.name" sortable :header="header.label">
-
+            <Column :field="header.name" sortable :header="header.label" v-if="header.name !== 'actions'">
             </Column>
 
         </template>
-
-
+        <Column header="Actions" name="actions" v-if="headers.filter(header => header.name === 'actions').length > 0">
+            <template #body="slotProps">
+                <Button icon="pi pi-pencil" rounded variant="outlined" aria-label="Edit" @click="onEditItem(slotProps.data)" class="mr-2"/>
+                <Button icon="pi pi-times" severity="danger" rounded variant="outlined" aria-label="Cancel" @click="onDeleteItem(slotProps.data)" />
+            </template>
+        </Column>
         <template #footer> In total there are {{ items ? items.length : 0 }} items. </template>
     </DataTable>
 
@@ -33,8 +36,8 @@
 <script setup lang="ts">
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
+import Button from 'primevue/button';
 import { ref, watch, computed } from 'vue';
-import ColumnGroup from 'primevue/columngroup';   // optional
 import Row from 'primevue/row';
 import { FilterMatchMode } from '@primevue/core/api';
 import { InputText, IconField, InputIcon } from 'primevue';
@@ -78,11 +81,19 @@ const exportCSV = () => {
     dt.value.exportCSV();
 };
 
-const emit = defineEmits(['update:selected']);
+const emit = defineEmits(['update:selected', 'edit', 'delete']);
 
 watch(selectedItems, (newSelection) => {
     emit('update:selected', newSelection);
 });
+
+function onEditItem(row: any) {
+    emit('edit', row);
+}
+
+function onDeleteItem(row: any) {
+    emit('delete', row);
+}
 
 
 const computedActions = computed(() => {

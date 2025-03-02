@@ -131,6 +131,28 @@
                     rows="2"
                 />
             </div>
+            <div class="col-span-6">
+                <div class="flex flex-col items-end justify-between">
+                    <div class="flex justify-end w-full gap-2 py-2">
+                        <label class="block font-medium">Subtotal</label>
+                        <div class="text-lg font-bold">
+                            {{ subtotal }}$
+                        </div>
+                    </div>
+                    <div class="flex justify-end w-full gap-2 py-2">
+                        <label class="block font-medium">Tax</label>
+                        <div class="text-lg font-bold">
+                            {{ taxAmount }}$
+                        </div>
+                    </div>
+                    <div class="flex justify-end w-full gap-2 py-2">
+                        <label class="block font-medium">Total</label>
+                        <div class="text-lg font-bold">
+                            {{ total }}$
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             <div class="flex w-full col-span-6 gap-2">
                 <Button
@@ -160,6 +182,7 @@ import { computed, inject, onMounted, ref, watch } from "vue";
 
 // Subtotal: Sum of all selling prices
 const subtotal = computed(() => {
+    if (!params.value?.items) return 0;
     return params.value.items.reduce(
         (sum: number, item: any) => sum + (item.selling_price || 0),
         0

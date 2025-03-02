@@ -242,7 +242,7 @@ class CustomerController extends Controller
     public function destroy(Customer $customer)
     {
         if ($customer->delete()) {
-            Contact::deleteCustomerById($customer->id);
+            Contact::deleteContactsByCustomer($customer->id);
             return response()->json('OK', 200);
         } else {
             return response()->json('', 500);

@@ -21,6 +21,8 @@
                                 :actions="tableActions"
                                 :items="tableData"
                                 :headers="headers"
+                                @edit="editCustomer"
+                                @delete="deleteCustomer"
                             ></DataTable>
                         </TabPanel>
                         <TabPanel value="1">
@@ -54,7 +56,7 @@
     </AppLayout>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import DataTable from "@/Components/DataTable.vue";
 import { router } from "@inertiajs/vue3";
 import Tab from "primevue/tab";
@@ -130,6 +132,16 @@ function parseItemsData() {
         };
     });
 }
+
+const editCustomer = (customer: any) => {
+    router.visit(route("customers.edit", { customer }));
+};
+
+const deleteCustomer = (customer: any) => {
+    axios.delete(route("customers.destroy", { customer })).then(() => {
+        router.reload();
+    });
+};
 onMounted(() => {
     parseItemsData();
 });

@@ -10,9 +10,10 @@ use App\Http\Controllers\SaleController;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
+
 Route::get('/login', function () {
     return Inertia::render('Auth/Login');
-});
+})->name('login');
 
 Route::post('/logout', function (Request $request) {
     Auth::guard('web')->logout();
