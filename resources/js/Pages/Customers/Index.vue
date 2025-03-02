@@ -1,55 +1,57 @@
 <template>
-    <StoragesAssign
-        :items="selectedItems"
-        ref="assignStorageVisible"
-    ></StoragesAssign>
-    <div>
-        <section class="w-[90%] mx-auto mt-4">
-            <Tabs value="0">
-                <TabList>
-                    <Tab value="0">Customers</Tab>
-                    <Tab value="1">Prospects</Tab>
-                    <Tab value="2">Mailing list</Tab>
-                    <Tab value="3">Email editor</Tab>
-                </TabList>
-                <TabPanels>
-                    <TabPanel value="0">
-                        <DataTable
-                            title="Customers"
-                            @update:selected="handleSelection"
-                            :actions="tableActions"
-                            :items="tableData"
-                            :headers="headers"
-                        ></DataTable>
-                    </TabPanel>
-                    <TabPanel value="1">
-                        <DataTable
-                            title="Prospects"
-                            @update:selected="handleSelection"
-                            :items="[]"
-                            :headers="[]"
-                        ></DataTable>
-                    </TabPanel>
-                    <TabPanel value="2">
-                        <DataTable
-                            title="Mailing List"
-                            @update:selected="handleSelection"
-                            :items="[]"
-                            :headers="[]"
-                        ></DataTable>
-                    </TabPanel>
-                    <TabPanel value="3">
-                        <DataTable
-                            title="Email editor"
-                            @update:selected="handleSelection"
-                            :items="[]"
-                            :headers="[]"
-                        ></DataTable>
-                    </TabPanel>
-                </TabPanels>
-            </Tabs>
-        </section>
-    </div>
+    <AppLayout>
+        <StoragesAssign
+            :items="selectedItems"
+            ref="assignStorageVisible"
+        ></StoragesAssign>
+        <div>
+            <section class="w-[90%] mx-auto mt-4">
+                <Tabs value="0">
+                    <TabList>
+                        <Tab value="0">Customers</Tab>
+                        <Tab value="1">Prospects</Tab>
+                        <Tab value="2">Mailing list</Tab>
+                        <Tab value="3">Email editor</Tab>
+                    </TabList>
+                    <TabPanels>
+                        <TabPanel value="0">
+                            <DataTable
+                                title="Customers"
+                                @update:selected="handleSelection"
+                                :actions="tableActions"
+                                :items="tableData"
+                                :headers="headers"
+                            ></DataTable>
+                        </TabPanel>
+                        <TabPanel value="1">
+                            <DataTable
+                                title="Prospects"
+                                @update:selected="handleSelection"
+                                :items="[]"
+                                :headers="[]"
+                            ></DataTable>
+                        </TabPanel>
+                        <TabPanel value="2">
+                            <DataTable
+                                title="Mailing List"
+                                @update:selected="handleSelection"
+                                :items="[]"
+                                :headers="[]"
+                            ></DataTable>
+                        </TabPanel>
+                        <TabPanel value="3">
+                            <DataTable
+                                title="Email editor"
+                                @update:selected="handleSelection"
+                                :items="[]"
+                                :headers="[]"
+                            ></DataTable>
+                        </TabPanel>
+                    </TabPanels>
+                </Tabs>
+            </section>
+        </div>
+    </AppLayout>
 </template>
 
 <script setup>
@@ -63,6 +65,7 @@ import Tabs from "primevue/tabs";
 import { defineProps, onMounted, ref } from "vue";
 import StoragesAssign from "../Storages/StoragesAssign/StoragesAssign.vue";
 import { headers } from "./IndexData";
+import AppLayout from "@/Layouts/AppLayout.vue";
 
 const props = defineProps({
     customers: Array,
@@ -73,7 +76,7 @@ const tableActions = [
         label: "Add customer",
         icon: "pi pi-plus",
         action: () => {
-            router.visit("/customers/create");
+            router.visit("/contacts/customers/create");
         },
     },
     {
@@ -115,7 +118,7 @@ const handleSelection = (selected) => {
 
 const tableData = ref([]);
 function parseItemsData() {
-  console.log(props);
+    console.log(props);
     if (!props.customers) {
         return;
     }

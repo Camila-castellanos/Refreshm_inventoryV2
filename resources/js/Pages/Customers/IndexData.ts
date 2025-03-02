@@ -5,11 +5,6 @@ export const headers = [
         "type": "string"
     },
     {
-        "label": "Contact",
-        "name": "contact",
-        "type": "string"
-    },
-    {
         "label": "Email",
         "name": "email",
         "type": "string"

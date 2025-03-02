@@ -71,11 +71,11 @@ Route::middleware([
         });
     });
 
-    Route::prefix('customers')->group(function () {
-        Route::get('', function () {
+    Route::prefix('contacts')->group(function () {
+        Route::get('/customers', function () {
             return Inertia::render('Customers/Index', ['layout' => 'AppLayout']);
         });
-        Route::resource("/", CustomerController::class)->except(["show", "store"]);
+        Route::resource("customers", CustomerController::class)->except(["show"]);
         Route::post("/datewise", [CustomerController::class, "datewise"])->name("customer.datewise");
         Route::get("/list", [CustomerController::class, "customersList"])->name("customer.list");
         Route::get("/email", [CustomerController::class, "marketingEmail"])->name("marketing.email");
