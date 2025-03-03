@@ -139,7 +139,7 @@ const editCustomer = (customer: any) => {
 
 const deleteCustomer = (customer: any) => {
     axios.delete(route("customers.destroy", { customer })).then(() => {
-        router.reload();
+        parseItemsData()
     });
 };
 onMounted(() => {

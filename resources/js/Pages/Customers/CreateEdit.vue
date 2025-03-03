@@ -115,23 +115,23 @@ personal_phone, p_index
                             <div class="col-span-2 px-6 py-3">
                                 <InputLabel for="accnumber" value="Account number" />
                                 <InputText type="number" class="w-full col-span-2 bg-transparent" name="accnumber"
-                                    placeholder="123456789" v-model="accnumber"></InputText>
+                                    placeholder="Insert" v-model="accnumber"></InputText>
                             </div>
                             <div class="col-span-2 px-6 py-3">
                                 <InputLabel for="website" value="Website" />
-                                <InputText class="w-full col-span-2" name="website" placeholder="https://johndoe.com"
+                                <InputText class="w-full col-span-2" name="website" placeholder="Insert"
                                     v-model="website" type="url"></InputText>
                             </div>
                             <div class="col-span-2 px-6 py-3">
                                 <InputLabel for="credit" value="Credit ($)" />
-                                <InputText class="w-full col-span-2" name="credit" placeholder="2348" v-model="credit"
+                                <InputText class="w-full col-span-2" name="credit" placeholder="Insert" v-model="credit"
                                     type="number"></InputText>
                             </div>
                             <div class="col-span-6 px-6 py-3">
                                 <InputLabel for="note" value="Note" />
                                 <Textarea
                                     class="w-full col-span-2 rounded-md shadow-sm focus:ring focus:ring-indigo-200 focus:ring-opacity-50 filter--value"
-                                    rows="3" name="note" placeholder="Note" v-model="note"></Textarea>
+                                    rows="3" name="note" placeholder="Insert"    v-model="note"></Textarea>
                             </div>
                         </div>
 
