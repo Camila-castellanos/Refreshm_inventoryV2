@@ -35,7 +35,7 @@
                         </div>
                     </template>
 
-                    <template #footer>
+                    <!-- <template #footer>
                         <div class="p-3">
                             <Button
                                 label="Add New Tax"
@@ -46,7 +46,7 @@
                                 icon="pi pi-plus"
                             />
                         </div>
-                    </template>
+                    </template> -->
                 </Select>
             </div>
 

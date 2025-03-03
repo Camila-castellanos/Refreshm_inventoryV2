@@ -64,29 +64,6 @@ const tableActions = [
       router.visit("/contacts/customers/create");
     },
   },
-  {
-    label: "Delete customer",
-    icon: "pi pi-trash",
-    severity: "danger",
-    action: () => {},
-    disable: (selectedItems) => selectedItems.length == 0,
-  },
-  {
-    label: "Edit customers",
-    icon: "pi pi-pencil",
-    action: () => {
-      console.log("hi");
-    },
-    disable: (selectedItems) => selectedItems.length !== 1,
-  },
-  {
-    label: "Export",
-    icon: "pi pi-file-export",
-    action: () => {
-      console.log("hi");
-    },
-    disable: (selectedItems) => selectedItems.length !== 1,
-  },
 ];
 
 const assignStorageVisible = ref(null);

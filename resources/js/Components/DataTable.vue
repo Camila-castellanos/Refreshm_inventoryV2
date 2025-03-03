@@ -18,6 +18,9 @@
                         :severity="action.severity ? action.severity : 'primary'"
                         :class="[action.extraClasses, 'px-4 py-2 rounded-md'].join(' ')"
                         :icon="action.icon ? action.icon : ''" :label="action?.label" @click="action.action" :disabled="action.disable"  />
+
+                        <Button icon="pi pi-file-export" label="Export CSV" severity="primary" @click="exportCSV" />
+
                 </div>
 
             </div>
