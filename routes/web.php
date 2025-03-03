@@ -70,6 +70,14 @@ Route::middleware([
         Route::get('/vendors', function () {
             return Inertia::render('Vendors/Vendors', ['layout' => 'AppLayout']);
         });
+
+        Route::get("items/tab/{id}", [ItemController::class, "tabItems"])->name("items.tab");
+        Route::post("items/tab/store", [ItemController::class, "tabStore"])->name("tab.store");
+        Route::post("items/tabmove", [ItemController::class, "tabMove"])->name("tab.move");
+        Route::post("items/tabmoveall", [ItemController::class, "tabMoveAll"])->name("tab.move.all");
+        Route::post("items/tabreturnmove", [ItemController::class, "tabreturnmove"])->name("tab.returnmove");
+        Route::post("items/tabreorder", [ItemController::class, "tabReorder"])->name("tab.reorder");
+        Route::post("items/tabremove", [ItemController::class, "tabRemove"])->name("tab.remove");
     });
 
     Route::prefix('contacts')->group(function () {
