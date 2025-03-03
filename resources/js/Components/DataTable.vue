@@ -1,18 +1,18 @@
 <template>
 
 
-    <DataTable v-model:filters="filters" :value="items" v-model:selection="selectedItems" selectionMode="multiple"
+    <DataTable v-model:filters="filters" :value="items" v-model:selection="selectedItems"
         dataKey="id" stripedRows ref="dt" paginator :rows="20" :rowsPerPageOptions="[5, 10, 20, 50]"
         tableStyle="min-width: 50rem" filterDisplay="row" :globalFilterFields="headers.filter(header => header.name !== 'actions').map(header => header.name)">
         <template #header>
             <div class="flex flex-wrap items-center justify-between gap-2">
-                <span class="text-xl font-bold">{{ title }}</span>
-                <div class="flex justify-end">
+                <div class="flex justify-between gap-12">
+                    <span class="text-xl font-bold">{{ title }}</span>
                     <IconField>
                         <InputIcon>
                             <i class="pi pi-search" />
                         </InputIcon>
-                        <InputText v-model="filters['global'].value" placeholder="Keyword Search" />
+                        <InputText v-model="filters['global'].value" placeholder="Search" />
                     </IconField>
                 </div>
                 <div class="flex gap-8">
@@ -24,11 +24,15 @@
 
             </div>
         </template>
+
+
+
+        <Column selectionMode="multiple" headerStyle="width: 3rem"></Column>
         <template v-for="header in headers">
             <Column :field="header.name" sortable :header="header.label" v-if="header.name !== 'actions'">
             </Column>
-
         </template>
+
         <Column header="Actions" name="actions" v-if="headers.filter(header => header.name === 'actions').length > 0">
             <template #body="slotProps">
                 <Button icon="pi pi-pencil" rounded variant="outlined" aria-label="Edit" @click="onEditItem(slotProps.data)" class="mr-2"/>
