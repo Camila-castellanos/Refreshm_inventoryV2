@@ -82,6 +82,7 @@ class ItemController extends Controller
         }
 
         $context['customers'] = Customer::all();
+        $context['tabs'] = Tab::where('user_id', $user->id)->orderBy('order', 'asc')->get();
         return Inertia::render('Inventory/Index', $context);
     }
 

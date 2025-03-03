@@ -3,11 +3,18 @@
 
     <DataTable v-model:filters="filters" :value="items" v-model:selection="selectedItems" selectionMode="multiple"
         dataKey="id" stripedRows ref="dt" paginator :rows="20" :rowsPerPageOptions="[5, 10, 20, 50]"
-        tableStyle="min-width: 50rem">
+        tableStyle="min-width: 50rem" filterDisplay="row" :globalFilterFields="headers.filter(header => header.name !== 'actions').map(header => header.name)">
         <template #header>
             <div class="flex flex-wrap items-center justify-between gap-2">
                 <span class="text-xl font-bold">{{ title }}</span>
-
+                <div class="flex justify-end">
+                    <IconField>
+                        <InputIcon>
+                            <i class="pi pi-search" />
+                        </InputIcon>
+                        <InputText v-model="filters['global'].value" placeholder="Keyword Search" />
+                    </IconField>
+                </div>
                 <div class="flex gap-8">
                     <Button v-for="action in computedActions" :key="action.label"
                         :severity="action.severity ? action.severity : 'primary'"

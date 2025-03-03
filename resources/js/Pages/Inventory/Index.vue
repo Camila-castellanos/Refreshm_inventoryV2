@@ -1,50 +1,54 @@
 <template>
-    <StoragesAssign
-        :items="selectedItems"
-        ref="assignStorageVisible"
-    ></StoragesAssign>
-    <div>
-        <section class="w-[90%] mx-auto mt-4">
-            <Tabs value="0">
-                <TabList>
-                    <Tab value="0">Active Inventory</Tab>
-                    <Tab value="1">On Hold</Tab>
-                    <Tab value="2">Sold</Tab>
-                </TabList>
-                <TabPanels>
-                    <TabPanel value="0">
-                        <DataTable
-                            title="Active Inventory"
-                            @update:selected="handleSelection"
-                            :actions="tableActions"
-                            :items="tableData"
-                            :headers="headers"
-                        ></DataTable>
-                    </TabPanel>
-                    <TabPanel value="1">
-                        <DataTable
-                            title="On Hold"
-                            @update:selected="handleSelection"
-                            :items="[]"
-                            :headers="[]"
-                        ></DataTable>
-                    </TabPanel>
-                    <TabPanel value="2">
-                        <DataTable
-                            title="Sold"
-                            @update:selected="handleSelection"
-                            :items="getSoldItems()"
-                            :headers="headers"
-                        ></DataTable>
-                    </TabPanel>
-                </TabPanels>
-            </Tabs>
-        </section>
+  <StoragesAssign :items="selectedItems" ref="assignStorageVisible"></StoragesAssign>
+  <div>
+    <section class="w-[90%] mx-auto mt-4">
+      <Tabs v-model:value="currentTab">
+        <TabList>
+          <Tab v-for="tab in tabs" :key="tab.value" :value="tab.value">
+            {{ tab.title }}
+          </Tab>
+          <Tab :value="tabs.length + 1" @click="openAddTabModal">
+            <i class="pi pi-plus"></i>
+          </Tab>
+        </TabList>
+        <TabPanels>
+          <TabPanel v-for="tab in tabs" :key="tab.value" :value="tab.value">
+            <DataTable
+              v-if="tab.value == 0"
+              title="Active Inventory"
+              @update:selected="handleSelection"
+              :actions="tableActions"
+              :items="tableData"
+              :headers="headers"></DataTable>
+            <DataTable v-else-if="tab.value == 1" title="On Hold" @update:selected="handleSelection" :items="[]" :headers="[]" :actions="tableActions"></DataTable>
+            <DataTable
+              v-else-if="tab.value == 2"
+              title="Sold"
+              @update:selected="handleSelection"
+              :actions="tableActions"
+              :items="getSoldItems()"
+              :headers="headers"></DataTable>
+            <DataTable v-else :title="tab.title" @update:selected="handleSelection" :items="tableData" :headers="headers" :actions="tableActions"></DataTable>
+          </TabPanel>
+        </TabPanels>
+      </Tabs>
+    </section>
+  </div>
+  <Dialog v-model:visible="addTabDialog" header="Add New Tab" modal @show="currentTab = lastTab">
+    <div class="p-fluid">
+      <div class="flex flex-col py-3">
+        <label for="tabTitle">Tab Title</label>
+        <InputText id="tabTitle" v-model="newTab.title" />
+      </div>
+      <div class="w-full mt-5">
+        <Button label="Add" @click="addNewTab" class="w-full" />
+      </div>
     </div>
+  </Dialog>
 </template>
 
 <script setup>
-import { onMounted, ref } from "vue";
+import { onMounted, ref, reactive,watch } from "vue";
 import DataTable from "@/Components/DataTable.vue";
 import { headers } from "./IndexData";
 import { data } from "./IndexData";
@@ -59,115 +63,148 @@ import TabPanels from "primevue/tabpanels";
 import TabPanel from "primevue/tabpanel";
 import { useDialog } from "primevue/usedialog";
 import ItemsSell from "./ItemsSell/ItemsSell.vue";
+import InputText from "primevue/inputtext";
 
 const dialog = useDialog();
 const props = defineProps({
-    items: Array,
-    customers: Array,
+  items: Array,
+  customers: Array,
+  tabs: Array,
 });
 
 const tabs = ref([
-    { title: "Tab 1", content: "Tab 1 Content", value: "0" },
-    { title: "Tab 2", content: "Tab 2 Content", value: "1" },
-    { title: "Tab 3", content: "Tab 3 Content", value: "2" },
+  { title: "Active Directory", value: "0" },
+  { title: "On hold", value: "1" },
+  { title: "Sold", value: "2" },
 ]);
 
 const assignStorageVisible = ref(null);
 
 const toggleAssignStorageVisible = () => {
-    assignStorageVisible.value.openDialog();
+  assignStorageVisible.value.openDialog();
 };
 
 let selectedItems = ref([]);
+const currentTab = ref("0");
+const lastTab = ref("0");
 
 const handleSelection = (selected) => {
-    selectedItems.value = selected;
+  selectedItems.value = selected;
 };
 
 const tableData = ref([]);
 function parseItemsData() {
-    tableData.value = props.items.filter((item) => item.sold === null).map((item) => {
-        if (item.storage) {
-            const { name, limit } = item.storage;
-            const { position } = item;
-            return {
-                ...item,
-                location: `${name} - ${position}/${limit}`,
-            };
-        }
+  props.tabs.forEach((tab, i) => {
+    console.log(tab);
+    tabs.value.push({ title: tab.name, value: (tabs.value.length + i).toString() });
+  });
+  tableData.value = props.items
+    .filter((item) => item.sold === null)
+    .map((item) => {
+      if (item.storage) {
+        const { name, limit } = item.storage;
+        const { position } = item;
         return {
-            ...item,
-            location: "No storage information",
+          ...item,
+          location: `${name} - ${position}/${limit}`,
         };
+      }
+      return {
+        ...item,
+        location: "No storage information",
+      };
     });
 }
 onMounted(() => {
-    parseItemsData();
+  parseItemsData();
 });
 
 function openSellItemsModal() {
-    console.log(props.customers);
-    dialog.open(ItemsSell, {
-        data: {
-            items: selectedItems,
-            customers: props.customers,
-        },
-        props: {
-            modal: true,
-        },
-    });
+  console.log(props.customers);
+  dialog.open(ItemsSell, {
+    data: {
+      items: selectedItems,
+      customers: props.customers,
+    },
+    props: {
+      modal: true,
+    },
+  });
 }
 
 const tableActions = [
-    {
-        label: "Add Items",
-        icon: "pi pi-plus",
-        action: () => {
-            router.visit("/inventory/items/bulk");
-        },
+  {
+    label: "Add Items",
+    icon: "pi pi-plus",
+    action: () => {
+      router.visit("/inventory/items/bulk");
     },
-    {
-        label: "Reassign location",
-        icon: "pi pi-arrow-up",
-        action: () => {
-            toggleAssignStorageVisible();
-        },
-        disable: (selectedItems) => selectedItems.length == 1,
+  },
+  {
+    label: "Reassign location",
+    icon: "pi pi-arrow-up",
+    action: () => {
+      toggleAssignStorageVisible();
     },
-    {
-        label: "Sell",
-        icon: "pi pi-dollar",
-        action: () => {
-            openSellItemsModal();
-        },
+    disable: (selectedItems) => selectedItems.length == 1,
+  },
+  {
+    label: "Sell",
+    icon: "pi pi-dollar",
+    action: () => {
+      openSellItemsModal();
     },
-    {
-        label: "Delete Items",
-        icon: "pi pi-trash",
-        severity: "danger",
-        action: () => {},
-        disable: (selectedItems) => selectedItems.length == 0,
+  },
+  {
+    label: "Delete Items",
+    icon: "pi pi-trash",
+    severity: "danger",
+    action: () => {},
+    disable: (selectedItems) => selectedItems.length == 0,
+  },
+  {
+    label: "Edit Items",
+    icon: "pi pi-pencil",
+    action: () => {
+      console.log("hi");
     },
-    {
-        label: "Edit Items",
-        icon: "pi pi-pencil",
-        action: () => {
-            console.log("hi");
-        },
-        disable: (selectedItems) => selectedItems.length !== 1,
+    disable: (selectedItems) => selectedItems.length !== 1,
+  },
+  {
+    label: "Export",
+    icon: "pi pi-file-export",
+    action: () => {
+      console.log("hi");
     },
-    {
-        label: "Export",
-        icon: "pi pi-file-export",
-        action: () => {
-            console.log("hi");
-        },
-        disable: (selectedItems) => selectedItems.length !== 1,
-    },
+    disable: (selectedItems) => selectedItems.length !== 1,
+  },
 ];
 
 function getSoldItems() {
-    console.log(props.items.filter((item) => item.sold !== null));
-    return props.items.filter((item) => item.sold !== null);
+  console.log(props.items.filter((item) => item.sold !== null));
+  return props.items.filter((item) => item.sold !== null);
 }
+
+const addTabDialog = ref(false);
+const newTab = reactive({ title: "", value: tabs.value.length.toString() });
+
+function openAddTabModal() {
+  addTabDialog.value = true;
+}
+
+function addNewTab() {
+  if (newTab.title.trim() !== "") {
+    axios.post(route("tab.store"), { tab: newTab.title }).then((response) => {
+      tabs.value.push(response.data);
+      addTabDialog.value = false;
+      window.location.reload();
+    });
+  }
+}
+
+watch(currentTab, (value) => {
+    if (value !== tabs.value.length + 1) {
+        lastTab.value = value;
+    }
+});
 </script>
