@@ -76,6 +76,7 @@
                                 text
                                 size="small"
                                 icon="pi pi-plus"
+                                @click="router.visit(route('customers.create'))" 
                             />
                         </div>
                     </template>

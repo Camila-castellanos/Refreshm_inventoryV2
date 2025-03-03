@@ -20,12 +20,11 @@
               :actions="tableActions"
               :items="tableData"
               :headers="headers"></DataTable>
-            <DataTable v-else-if="tab.value == 1" title="On Hold" @update:selected="handleSelection" :items="[]" :headers="[]" :actions="tableActions"></DataTable>
+            <DataTable v-else-if="tab.value == 1" title="On Hold" @update:selected="handleSelection" :items="[]" :headers="[]"></DataTable>
             <DataTable
               v-else-if="tab.value == 2"
               title="Sold"
               @update:selected="handleSelection"
-              :actions="tableActions"
               :items="getSoldItems()"
               :headers="headers"></DataTable>
             <DataTable v-else :title="tab.title" @update:selected="handleSelection" :items="tableData" :headers="headers" :actions="tableActions"></DataTable>
@@ -74,7 +73,7 @@ const props = defineProps({
 
 const tabs = ref([
   { title: "Active Directory", value: "0" },
-  { title: "On hold", value: "1" },
+  { title: "On Hold", value: "1" },
   { title: "Sold", value: "2" },
 ]);
 
