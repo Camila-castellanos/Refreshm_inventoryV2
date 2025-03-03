@@ -1,9 +1,7 @@
 <template>
-
-
     <DataTable v-model:filters="filters" :value="items" v-model:selection="selectedItems"
         dataKey="id" stripedRows ref="dt" paginator :rows="20" :rowsPerPageOptions="[5, 10, 20, 50]"
-        tableStyle="min-width: 50rem" filterDisplay="row" :globalFilterFields="headers.filter(header => header.name !== 'actions').map(header => header.name)">
+        tableStyle="min-width: 50rem" filterDisplay="row" :globalFilterFields="headers.filter(header => header.name !== 'actions').map(header => header.name)" :selection-mode="selectionMode">
         <template #header>
             <div class="flex flex-wrap items-center justify-between gap-2">
                 <div class="flex justify-between gap-12">
@@ -25,9 +23,6 @@
             </div>
         </template>
 
-
-
-        <Column selectionMode="multiple" headerStyle="width: 3rem"></Column>
         <template v-for="header in headers">
             <Column :field="header.name" sortable :header="header.label" v-if="header.name !== 'actions'">
             </Column>
@@ -51,7 +46,7 @@ import Button from 'primevue/button';
 import { ref, watch, computed } from 'vue';
 import Row from 'primevue/row';
 import { FilterMatchMode } from '@primevue/core/api';
-import { InputText, IconField, InputIcon } from 'primevue';
+import { InputText, IconField, InputIcon, OrganizationChartStyle } from 'primevue';
 
 const filters = ref({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
@@ -82,8 +77,10 @@ const props = defineProps<{
     headers: ITableHeaders[],
     items: any[],
     actions?: ITableActions[],
-    
+    selectionMode?: 'single' | 'multiple'
 }>();
+
+const selectionMode = ref(props.selectionMode ? props.selectionMode : 'multiple');
 
 const dt = ref();
 const selectedItems = ref<any[]>([]); 
