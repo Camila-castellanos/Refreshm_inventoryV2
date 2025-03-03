@@ -13,6 +13,7 @@ use App\Models\MailList;
 use App\Models\Sale;
 use App\Models\Contact;
 use App\Models\EmailTemplate;
+use App\Models\Prospect;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -71,7 +72,9 @@ class CustomerController extends Controller
             $customer->email = implode(", ", $customer->email);
             $customer->phone = implode(", ", $customer->phone);
         }
-        return Inertia::render('Customers/Index', compact("customers"));
+        
+        $prospects = Prospect::all()->toArray();
+        return Inertia::render('Customers/Index', compact("customers", "prospects"));
     }
 
     public function mailingList()
@@ -137,6 +140,7 @@ class CustomerController extends Controller
         $customer->shipping_address_postal = $request->shipping_postal_code;
         $customer->shipping_phone = $request->shipping_phone;
         $customer->delivery_instructions = $request->shipping_delivery_instructions;
+        $customer->credit = $request->credit;
         $customer->save();
 
         if ($customer->email[0]) {

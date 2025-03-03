@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\VendorController;
 use App\Http\Controllers\StorageController;
 use App\Http\Controllers\ItemController;
+use App\Http\Controllers\ProspectController;
 use App\Http\Controllers\SaleController;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -91,6 +92,7 @@ Route::middleware([
         Route::post("/email/send", [CustomerController::class, "sendMarketingEmail"])->name("send.marketing.email");
     });
 
+    Route::resource('prospects', ProspectController::class);
 
     Route::resource("vendor", VendorController::class)->except(["show", "store"]);
     Route::post("vendor/store", [VendorController::class, "store"])->name("vendor.store");

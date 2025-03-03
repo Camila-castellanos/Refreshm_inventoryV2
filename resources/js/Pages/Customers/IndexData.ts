@@ -45,3 +45,47 @@ export const headers = [
         "type": "string"
     },
 ]
+
+
+export const prospectHeaders = [
+    {
+        label: "Name",
+        name: "name",
+        type: "string",
+    },
+    {
+        label: "Email",
+        name: "email",
+        type: "string",
+    },
+    {
+        label: "Company",
+        name: "company_name",
+        type: "string",
+    },
+    {
+        label: "Phone",
+        name: "phone_number",
+        type: "string",
+    },
+    {
+        label: "Province/State",
+        name: "state",
+        type: "string",
+    },
+    {
+        label: "Country",
+        name: "country",
+        type: "string",
+    },
+    {
+        label: "Contact",
+        name: "contact_type",
+        type: "string",
+    },
+    {
+        label: "Actions",
+        name: "actions",
+        type: "string",
+    }
+]
