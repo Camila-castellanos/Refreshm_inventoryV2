@@ -316,8 +316,15 @@ async function submitForm(e: Event, isConfirmed: boolean) {
 
     try {
         const { data } = await axios.post<string>(route("sales.store"), salePayload);
-        window.open(data, "_blank");
-        router.reload();
+        const link = document.createElement("a");
+        link.href = data
+        link.target = "_blank"
+        link.rel = "noopener noreferrer"
+        document.body.appendChild(link);
+        link.download = "receipt.pdf"
+        link.click();
+        document.body.removeChild(link);
+        window.location.reload();
     } catch (error) {
         console.error("Error submitting sale:", error);
     }
