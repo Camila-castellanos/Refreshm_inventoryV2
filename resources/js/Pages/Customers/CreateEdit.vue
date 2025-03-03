@@ -2,495 +2,275 @@
     <AppLayout>
         <div class="py-12">
             <div class="mx-auto max-w-7xl sm:px-6 lg:px-8">
-                <div class="overflow-hidden shadow-xl sm:rounded-lg">
-                    <form
-                        method="post"
-                        ref="customerForm"
-                        @submit.prevent="onFormSubmit"
-                    >
-                        <a
-                            class="flex items-center justify-start mt-1 mb-3 ml-2 font-light gap-x-2"
-                            :href="route('customers.index')"
-                        >
-                            <i class="w-4 h-4 pi pi-chevron-left"></i>
-                            Back to index
-                        </a>
-                        <h1 class="mb-4 text-4xl font-bold">
+                <div class="overflow-hidden  sm:rounded-lg">
+
+                    <Button class="mb-12 ml-12" label="Back to Index" @click="router.visit(route('customers.index'))" icon="pi pi-chevron-left"></Button>
+
+
+                    <form method="post" ref="customerForm" @submit.prevent="onFormSubmit" class="flex flex-col gap-4">
+
+
+
+                        <h2 class="mb-4 text-4xl ml-12 font-bold">
                             {{ formType }} Customer
-                        </h1>
-                        <h2 class="text-2xl font-semibold">
-                            Basic Information
                         </h2>
-                        <div class="px-6 py-3">
+                        <Card class="card">
+                            <template #title>
+                            Basic Information
+                        </template>
+                        <template #content class="px-6 py-3">
                             <InputLabel for="customer" value="Customer name" />
-                            <InputText
-                                type="text"
-                                class="w-full"
-                                id="customer"
-                                name="customer_name"
-                                v-model="customer_name"
-                                placeholder="John Doe"
-                            ></InputText>
+                            <InputText type="text" class="w-full" id="customer" name="customer_name"
+                                v-model="customer_name" placeholder="Insert"></InputText>
                             <p class="block my-2 text-sm font-normal">
                                 Name of a business or person.
                             </p>
-                        </div>
-                        <h3 class="text-xl font-medium">Primary Contact</h3>
-                        <div class="w-full">
-                            <div
-                                class="grid grid-cols-6 gap-4 px-6 pt-6 pb-8 mb-4 rounded shadow-md"
-                                v-for="(
-                                    personal_info, index
-                                ) in personal_info_content"
-                                :key="index"
-                            >
-                                <div
-                                    class="col-span-6 text-right"
-                                    v-if="index != 0"
-                                >
-                                    <a
-                                        href="javascript:;"
-                                        class="text-red-500 removecontact"
-                                        @click="removeContact(index)"
-                                    >
+                        </template>
+                        </Card>
+                     
+
+                        <Card class="card">  
+                            <template #title>Primary Contact</template>
+                        <template #content  class="w-full">
+                            <div class="grid grid-cols-6 gap-4 px-6 pt-6 pb-8 mb-4 rounded" v-for="(
+personal_info, index
+        ) in personal_info_content" :key="index">
+                                <div class="col-span-6 text-right" v-if="index != 0">
+                                    <a href="javascript:;" class="text-red-500 removecontact"
+                                        @click="removeContact(index)">
                                         <i class="mr-1 pi pi-trash"></i>
                                         Remove
                                     </a>
                                 </div>
                                 <div class="col-span-3">
-                                    <InputLabel
-                                        for="first_name"
-                                        value="First name"
-                                    />
-                                    <InputText
-                                        type="text"
-                                        class="w-full"
-                                        id="first_name"
-                                        name="first_name[]"
-                                        v-model="first_name[index]"
-                                        placeholder="John"
-                                    ></InputText>
+                                    <InputLabel for="first_name" value="First name" />
+                                    <InputText type="text" class="w-full" id="first_name" name="first_name[]"
+                                        v-model="first_name[index]" placeholder="Insert"></InputText>
                                 </div>
                                 <div class="col-span-3">
-                                    <InputLabel
-                                        for="last_name"
-                                        value="Last name"
-                                    />
-                                    <InputText
-                                        type="text"
-                                        class="w-full col-span-2"
-                                        name="last_name[]"
-                                        id="last_name"
-                                        placeholder="Doe"
-                                        v-model="last_name[index]"
-                                    ></InputText>
+                                    <InputLabel for="last_name" value="Last name" />
+                                    <InputText type="text" class="w-full col-span-2" name="last_name[]" id="last_name"
+                                        placeholder="Insert" v-model="last_name[index]"></InputText>
                                 </div>
                                 <div class="col-span-3">
                                     <InputLabel for="email" value="Email" />
-                                    <InputText
-                                        type="email"
-                                        class="w-full col-span-2"
-                                        name="email[]"
-                                        id="email"
-                                        placeholder="johndoe@example.com"
-                                        v-model="email[index]"
-                                    ></InputText>
+                                    <InputText type="email" class="w-full col-span-2" name="email[]" id="email"
+                                        placeholder="Insert" v-model="email[index]"></InputText>
                                 </div>
                                 <div class="col-span-3">
-                                    <InputLabel
-                                        for="personal_phone"
-                                        value="Phone"
-                                    />
-                                    <InputText
-                                        type="tel"
-                                        class="w-full col-span-2"
-                                        id="personal_phone"
-                                        placeholder="Phone 8431234567"
-                                        name="personal_phone[]"
-                                        v-model="personal_phone[index]"
-                                    ></InputText>
+                                    <InputLabel for="personal_phone" value="Phone" />
+                                    <InputText type="tel" class="w-full col-span-2" id="personal_phone"
+                                        placeholder="Insert" name="personal_phone[]" v-model="personal_phone[index]">
+                                    </InputText>
                                 </div>
-                                <div
-                                    v-if="phone_optional[index].length != 0"
-                                    class="grid grid-cols-6 col-span-6 gap-4 px-6 py-3"
-                                >
-                                    <div
-                                        class="col-span-2 mb-6"
-                                        id="phone_optional"
-                                        v-for="(
-                                            personal_phone, p_index
-                                        ) in phone_optional[index]"
-                                        :key="p_index"
-                                    >
-                                        <div
-                                            class="flex justify-between col-span-2"
-                                        >
-                                            <label
-                                                class="mb-2 text-sm font-bold text-gray-700"
-                                                for="personal_phone_optional"
-                                            >
-                                                Phone (Optional)</label
-                                            >
-                                            <a
-                                                href="javascript:;"
-                                                class="text-red-500"
-                                                @click="
-                                                    removePhoneField(
-                                                        index,
-                                                        p_index
-                                                    )
-                                                "
-                                            >
+                                <div v-if="phone_optional[index].length != 0"
+                                    class="grid grid-cols-6 col-span-6 gap-4 px-6 py-3">
+                                    <div class="col-span-2 mb-6" id="phone_optional" v-for="(
+personal_phone, p_index
+                ) in phone_optional[index]" :key="p_index">
+                                        <div class="flex justify-between col-span-2">
+                                            <label class="mb-2 text-sm font-bold text-gray-700"
+                                                for="personal_phone_optional">
+                                                Phone (Optional)</label>
+                                            <a href="javascript:;" class="text-red-500" @click="
+                                                removePhoneField(
+                                                    index,
+                                                    p_index
+                                                )
+                                                ">
                                                 <i class="pi pi-times"></i>
                                             </a>
                                         </div>
-                                        <InputText
-                                            type="tel"
-                                            class="w-full col-span-2"
-                                            :name="
-                                                'personal_phone_optional[' +
-                                                index +
-                                                '][' +
-                                                p_index +
-                                                ']'
-                                            "
-                                            id="personal_phone_optional"
-                                            placeholder="Phone Number (Optional)"
-                                            v-model="
-                                                optional_number[index][p_index]
-                                            "
-                                        ></InputText>
+                                        <InputText type="tel" class="w-full col-span-2" :name="'personal_phone_optional[' +
+                                            index +
+                                            '][' +
+                                            p_index +
+                                            ']'
+                                            " id="personal_phone_optional" placeholder="Phone Number (Optional)" v-model="optional_number[index][p_index]
+                        "></InputText>
                                     </div>
                                 </div>
                                 <div v-else>
-                                    <InputText
-                                        type="hidden"
-                                        :name="
-                                            'personal_phone_optional[' +
-                                            index +
-                                            ']'
-                                        "
-                                        :value="[]"
-                                    ></InputText>
+                                    <InputText type="hidden" :name="'personal_phone_optional[' +
+                                        index +
+                                        ']'
+                                        " :value="[]"></InputText>
                                 </div>
                                 <div class="col-span-6 text-center">
-                                    <a
-                                        href="javascript:;"
-                                        class="text-blue-500"
-                                        @click="addPhoneField(index)"
-                                    >
+                                    <Button href="javascript:;" class="text-blue-500 w-full"
+                                        @click="addPhoneField(index)">
                                         <i class="pi pi-plus-circle"></i>
                                         Add Phone
-                                    </a>
+                                    </Button>
                                 </div>
                             </div>
                             <div class="col-span-6 text-center">
-                                <a
-                                    href="javascript:;"
-                                    class="text-blue-500"
-                                    @click="addContactDetails"
-                                    ><i class="pi pi-plus-circle"></i>
+                                <Button href="javascript:;" class="text-blue-500 w-full" @click="addContactDetails"><i
+                                        class="pi pi-plus-circle"></i>
                                     Add Contact
-                                </a>
+                                </Button>
                             </div>
-                        </div>
-                        <div class="grid w-full grid-cols-6 py-5">
+
+                            <div class="grid w-full grid-cols-6 py-5">
                             <div class="col-span-2 px-6 py-3">
-                                <InputLabel
-                                    for="accnumber"
-                                    value="Account number"
-                                />
-                                <InputText
-                                    type="number"
-                                    class="w-full col-span-2 bg-transparent"
-                                    name="accnumber"
-                                    placeholder="123456789"
-                                    v-model="accnumber"
-                                ></InputText>
+                                <InputLabel for="accnumber" value="Account number" />
+                                <InputText type="number" class="w-full col-span-2 bg-transparent" name="accnumber"
+                                    placeholder="123456789" v-model="accnumber"></InputText>
                             </div>
                             <div class="col-span-2 px-6 py-3">
                                 <InputLabel for="website" value="Website" />
-                                <InputText
-                                    class="w-full col-span-2"
-                                    name="website"
-                                    placeholder="https://johndoe.com"
-                                    v-model="website"
-                                    type="url"
-                                ></InputText>
+                                <InputText class="w-full col-span-2" name="website" placeholder="https://johndoe.com"
+                                    v-model="website" type="url"></InputText>
                             </div>
                             <div class="col-span-2 px-6 py-3">
                                 <InputLabel for="credit" value="Credit ($)" />
-                                <InputText
-                                    class="w-full col-span-2"
-                                    name="credit"
-                                    placeholder="2348"
-                                    v-model="credit"
-                                    type="number"
-                                ></InputText>
+                                <InputText class="w-full col-span-2" name="credit" placeholder="2348" v-model="credit"
+                                    type="number"></InputText>
                             </div>
                             <div class="col-span-6 px-6 py-3">
                                 <InputLabel for="note" value="Note" />
                                 <Textarea
                                     class="w-full col-span-2 rounded-md shadow-sm focus:ring focus:ring-indigo-200 focus:ring-opacity-50 filter--value"
-                                    rows="3"
-                                    name="note"
-                                    placeholder="Note"
-                                    v-model="note"
-                                ></Textarea>
+                                    rows="3" name="note" placeholder="Note" v-model="note"></Textarea>
                             </div>
                         </div>
-                        <div class="col-span-6 border-b border-gray-400"></div>
-                        <h2 class="pt-4 text-2xl font-bold">Billing</h2>
-                        <div class="col-span-3 px-6 py-3">
-                            <InputLabel
-                                for="billing_currency"
-                                value="Currency"
-                            />
-                            <InputText
-                                type="text"
-                                class="w-full"
-                                v-model="billing_currency"
-                                name="billing_currency"
-                                placeholder="Currency"
-                            ></InputText>
-                        </div>
-                        <h3 class="my-2 text-xl font-medium">
+
+                        </template>
+                        </Card>
+                     
+                        <Card class="card">
+                            <template #title>Billing</template>
+                        <template #content class="col-span-3 px-6 py-3">
+                            <InputLabel for="billing_currency" value="Currency" />
+                            <InputText type="text" class="w-full" v-model="billing_currency" name="billing_currency"
+                                placeholder="Currency"></InputText>
+                        </template>
+                        </Card>
+                        
+                        <Card class="card">
+                            <template #title class="my-2 text-xl font-medium">
                             Billing Address
-                        </h3>
-                        <div class="grid w-full grid-cols-8 gap-4 px-6 py-3">
-                            <div class="col-span-4">
-                                <InputLabel
-                                    for="billing_address"
-                                    value="Address"
-                                />
-                                <InputText
-                                    type="text"
-                                    class="w-full"
-                                    v-model="billing_address"
-                                    name="billing_address"
-                                    id="billing_address"
-                                    placeholder="65 Barclay Plaza"
-                                ></InputText>
+                        </template>
+                        <template #content >
+                            <div class="grid w-full grid-cols-8 gap-4 px-6 py-3">
+                                <div class="col-span-4">
+                                <InputLabel for="billing_address" value="Address" />
+                                <InputText type="text" class="w-full" v-model="billing_address" name="billing_address"
+                                    id="billing_address" placeholder="Insert"></InputText>
                             </div>
                             <div class="col-span-4">
-                                <InputLabel
-                                    for="billing_address_optional"
-                                    value="Address 2 (optional)"
-                                />
-                                <InputText
-                                    type="text"
-                                    class="w-full"
-                                    v-model="billing_address_optional"
-                                    name="billing_address_optional"
-                                    id="billing_address_optional"
-                                    placeholder="Apt 3"
-                                ></InputText>
+                                <InputLabel for="billing_address_optional" value="Address 2 (optional)" />
+                                <InputText type="text" class="w-full" v-model="billing_address_optional"
+                                    name="billing_address_optional" id="billing_address_optional" placeholder="Insert">
+                                </InputText>
                             </div>
                             <div class="col-span-2">
-                                <InputLabel
-                                    for="billing_country"
-                                    value="Country"
-                                />
-                                <InputText
-                                    type="text"
-                                    class="w-full"
-                                    v-model="billing_country"
-                                    name="billing_country"
-                                    id="billing_country"
-                                    placeholder="United States of America"
-                                ></InputText>
+                                <InputLabel for="billing_country" value="Country" />
+                                <InputText type="text" class="w-full" v-model="billing_country" name="billing_country"
+                                    id="billing_country" placeholder="Insert"></InputText>
                             </div>
                             <div class="col-span-2">
                                 <InputLabel for="billing_state" value="State" />
-                                <InputText
-                                    type="text"
-                                    class="w-full"
-                                    v-model="billing_state"
-                                    name="billing_state"
-                                    placeholder="New York"
-                                ></InputText>
+                                <InputText type="text" class="w-full" v-model="billing_state" name="billing_state"
+                                    placeholder="Insert"></InputText>
                             </div>
                             <div class="col-span-2">
                                 <InputLabel for="billing_city" value="City" />
-                                <InputText
-                                    type="text"
-                                    class="w-full"
-                                    v-model="billing_city"
-                                    name="billing_city"
-                                    placeholder="New York"
-                                ></InputText>
+                                <InputText type="text" class="w-full" v-model="billing_city" name="billing_city"
+                                    placeholder="Insert"></InputText>
                             </div>
                             <div class="col-span-2">
-                                <InputLabel
-                                    for="billing_postal_code"
-                                    value="Postal Code"
-                                />
-                                <InputText
-                                    type="text"
-                                    class="w-full"
-                                    v-model="billing_postal_code"
-                                    name="billing_postal_code"
-                                    placeholder="10007"
-                                ></InputText>
+                                <InputLabel for="billing_postal_code" value="Postal Code" />
+                                <InputText type="text" class="w-full" v-model="billing_postal_code"
+                                    name="billing_postal_code" placeholder="Insert"></InputText>
                             </div>
                             <div class="col-span-6">
-                                <a
-                                    href="javascript:;"
-                                    class="text-blue-500"
-                                    @click="cleanBillingForm"
-                                >
+                                <a href="javascript:;" class="text-blue-500" @click="cleanBillingForm">
                                     Clear Address
                                 </a>
                             </div>
-                        </div>
-                        <div class="col-span-6 border-b border-gray-400"></div>
-                        <h3 class="pt-4 text-xl font-bold">Shipping</h3>
-                        <div class="w-full px-6 py-3">
-                            <InputLabel for="shipto" value="Ship to" />
-                            <InputText
-                                type="text"
-                                class="w-full col-span-2"
-                                name="shipto"
-                                v-model="shipto"
-                            ></InputText>
-                        </div>
-                        <h3 class="my-2 text-xl font-medium">
+                            </div>
+                        </template>
+                        </Card>
+                    
+                        <Card class="card">
+                            <template #title class="pt-4 text-xl font-bold">Shipping</template>
+                            <template #content >
+                              <div class="w-full px-6 py-3">
+                                <InputLabel for="shipto" value="Ship to" />
+                                <InputText type="text" class="w-full col-span-2" name="shipto" placeholder="Insert"
+                                    v-model="shipto"></InputText>
+                              </div>
+
+                              <h3 class="my-2 text-xl font-medium">
                             Shipping Address
                         </h3>
                         <div class="w-full col-span-4">
                             <div class="rounded-md">
-                                <div
-                                    class="grid w-full grid-cols-8 gap-4 px-6 py-3"
-                                >
+                                <div class="grid w-full grid-cols-8 gap-4 px-6 py-3">
                                     <div class="col-span-4">
-                                        <InputLabel
-                                            for="shipping_address"
-                                            value="Address"
-                                        />
-                                        <InputText
-                                            type="text"
-                                            class="w-full"
-                                            v-model="shipping_address"
-                                            name="shipping_address"
-                                            id="shipping_address"
-                                            placeholder="65 Barclay Plaza"
-                                        ></InputText>
+                                        <InputLabel for="shipping_address" value="Address" />
+                                        <InputText type="text" class="w-full" v-model="shipping_address"
+                                            name="shipping_address" id="shipping_address" placeholder="Insert">
+                                        </InputText>
                                     </div>
                                     <div class="col-span-4">
-                                        <InputLabel
-                                            for="shipping_address_optional"
-                                            value="Address 2 (optional)"
-                                        />
-                                        <InputText
-                                            type="text"
-                                            class="w-full"
-                                            v-model="shipping_address_optional"
-                                            name="shipping_address_optional"
-                                            id="shipping_address_optional"
-                                            placeholder="Apt 3"
-                                        ></InputText>
+                                        <InputLabel for="shipping_address_optional" value="Address 2 (optional)" />
+                                        <InputText type="text" class="w-full" v-model="shipping_address_optional"
+                                            name="shipping_address_optional" id="shipping_address_optional"
+                                            placeholder="Insert"></InputText>
                                     </div>
                                     <div class="col-span-2">
-                                        <InputLabel
-                                            for="shipping_country"
-                                            value="Country"
-                                        />
-                                        <InputText
-                                            type="text"
-                                            class="w-full"
-                                            v-model="shipping_country"
-                                            name="shipping_country"
-                                            id="shipping_country"
-                                            placeholder="United States of America"
-                                        ></InputText>
+                                        <InputLabel for="shipping_country" value="Country" />
+                                        <InputText type="text" class="w-full" v-model="shipping_country"
+                                            name="shipping_country" id="shipping_country" placeholder="Insert">
+                                        </InputText>
                                     </div>
                                     <div class="col-span-2">
-                                        <InputLabel
-                                            for="shipping_state"
-                                            value="State"
-                                        />
-                                        <InputText
-                                            type="text"
-                                            class="w-full"
-                                            v-model="shipping_state"
-                                            name="shipping_state"
-                                            placeholder="New York"
-                                        ></InputText>
+                                        <InputLabel for="shipping_state" value="State" />
+                                        <InputText type="text" class="w-full" v-model="shipping_state"
+                                            name="shipping_state" placeholder="Insert"></InputText>
                                     </div>
                                     <div class="col-span-2">
-                                        <InputLabel
-                                            for="shipping_city"
-                                            value="City"
-                                        />
-                                        <InputText
-                                            type="text"
-                                            class="w-full"
-                                            v-model="shipping_city"
-                                            name="shipping_city"
-                                            placeholder="New York"
-                                        ></InputText>
+                                        <InputLabel for="shipping_city" value="City" />
+                                        <InputText type="text" class="w-full" v-model="shipping_city"
+                                            name="shipping_city" placeholder="Insert"></InputText>
                                     </div>
                                     <div class="col-span-2">
-                                        <InputLabel
-                                            for="shipping_postal_code"
-                                            value="Postal Code"
-                                        />
-                                        <InputText
-                                            type="text"
-                                            class="w-full"
-                                            v-model="shipping_postal_code"
-                                            name="shipping_postal_code"
-                                            placeholder="10007"
-                                        ></InputText>
+                                        <InputLabel for="shipping_postal_code" value="Postal Code" />
+                                        <InputText type="text" class="w-full" v-model="shipping_postal_code"
+                                            name="shipping_postal_code" placeholder="Insert"></InputText>
                                     </div>
                                     <div class="col-span-6">
-                                        <a
-                                            href="javascript:;"
-                                            class="text-blue-500"
-                                            @click="cleanShippingForm"
-                                        >
+                                        <a href="javascript:;" class="text-blue-500" @click="cleanShippingForm">
                                             Clear Address
                                         </a>
                                     </div>
                                 </div>
                                 <div class="w-full px-6 py-3">
-                                    <InputLabel
-                                        for="shipping_phone"
-                                        value="Phone"
-                                    />
-                                    <InputText
-                                        type="tel"
-                                        class="w-full col-span-2"
-                                        name="shipping_phone"
-                                        placeholder="Phone"
-                                        v-model="shipping_phone"
-                                    ></InputText>
+                                    <InputLabel for="shipping_phone" value="Phone" />
+                                    <InputText type="tel" class="w-full col-span-2" name="shipping_phone"
+                                        placeholder="Phone" v-model="shipping_phone"></InputText>
                                 </div>
                                 <div class="w-full px-6 py-3">
-                                    <InputLabel
-                                        for="shipping_delivery_instructions"
-                                        value="Delivery Instructions"
-                                    />
+                                    <InputLabel for="shipping_delivery_instructions" value="Delivery Instructions" />
                                     <Textarea
                                         class="w-full col-span-2 rounded-md shadow-sm focus:ring focus:ring-indigo-200 focus:ring-opacity-50 filter--value"
-                                        rows="4"
-                                        name="shipping_delivery_instructions"
-                                        v-model="shipping_delivery_instructions"
-                                        placeholder="Delivery Instructions"
-                                    ></Textarea>
+                                        rows="4" name="shipping_delivery_instructions"
+                                        v-model="shipping_delivery_instructions" placeholder="Insert"></Textarea>
                                 </div>
                             </div>
-                        </div>
+                        </div>  
+                            </template>
+                        </Card>
+                   
+                    
                         <section class="flex flex-row justify-around p-3">
-                            <Button
-                                class="w-full mx-2"
-                                type="reset"
-                                @click="cleanForm"
-                                >Reset</Button
-                            >
+                            <Button class="w-full mx-2" type="reset" @click="cleanForm">Reset</Button>
                             <Button class="w-full mx-2" @click="onFormSubmit">Save</Button>
                         </section>
                     </form>
+
                 </div>
             </div>
         </div>
@@ -504,6 +284,9 @@ import { Form } from "@primevue/forms";
 import axios from "axios";
 import { Button, Textarea, InputText } from "primevue";
 import { computed, onMounted, ref } from "vue";
+import { router } from "@inertiajs/vue3";
+import Card from 'primevue/card';
+
 
 // Props
 const props = defineProps({
@@ -682,7 +465,7 @@ async function onFormSubmit(event) {
         shipping_postal_code: shipping_postal_code.value,
         shipping_phone: shipping_phone.value,
         shipping_delivery_instructions: shipping_delivery_instructions.value,
-      credit: credit.value,
+        credit: credit.value,
         personal_phone_optional: [],
     };
 
@@ -747,3 +530,10 @@ function removeContact(index) {
     personal_info_content.value.splice(index, 1);
 }
 </script>
+
+<style scoped>
+.card {
+    width: 90%;
+    margin: 0 auto;
+}
+</style>
