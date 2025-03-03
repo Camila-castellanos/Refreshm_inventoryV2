@@ -3,26 +3,26 @@
     <div class="grid w-full grid-cols-6 gap-4">
       <div class="col-span-3">
         <label for="first_name" class="block mb-2 font-bold"> First name </label>
-        <InputText v-model="form.first_name" type="text" inputId="first_name" class="w-full" />
+        <InputText v-model="form.first_name" type="text" placeholder="Insert" inputId="first_name" class="w-full" />
       </div>
 
       <div class="col-span-3">
         <label for="last_name" class="block mb-2 font-bold"> Last name </label>
-        <InputText v-model="form.last_name" type="text" inputId="last_name" class="w-full" />
+        <InputText v-model="form.last_name" type="text" placeholder="Insert" inputId="last_name" class="w-full" />
       </div>
 
       <div class="col-span-3">
         <label for="email" class="block mb-2 font-bold"> Email </label>
-        <InputText v-model="form.email" type="email" inputId="email" class="w-full" />
+        <InputText v-model="form.email" type="email" placeholder="Insert" inputId="email" class="w-full" />
       </div>
       <div class="col-span-3">
         <label for="phone" class="block mb-2 font-bold"> Phone </label>
-        <InputText v-model="form.phone" type="tel" inputId="email" class="w-full" />
+        <InputText v-model="form.phone" type="tel" placeholder="Insert" inputId="email" class="w-full" />
       </div>
 
       <div class="col-span-3">
         <label for="company" class="block mb-2 font-bold"> Company name </label>
-        <InputText v-model="form.company" type="text" inputId="company" class="w-full" />
+        <InputText v-model="form.company" type="text" placeholder="Insert" inputId="company" class="w-full" />
       </div>
       <div class="col-span-3">
         <label for="contact_type" class="block mb-2 font-bold"> Contact type </label>
@@ -37,19 +37,19 @@
       </div>
       <div class="col-span-2">
         <label for="country" class="block mb-2 font-bold"> Country </label>
-        <InputText v-model="form.country" type="text" inputId="country" class="w-full" />
+        <InputText v-model="form.country" type="text" placeholder="Insert" inputId="country" class="w-full" />
       </div>
       <div class="col-span-2">
         <label for="state" class="block mb-2 font-bold"> Province/State </label>
-        <InputText v-model="form.state" type="text" inputId="state" class="w-full" />
+        <InputText v-model="form.state" type="text" placeholder="Insert" inputId="state" class="w-full" />
       </div>
       <div class="col-span-2">
         <label for="city" class="block mb-2 font-bold"> City </label>
-        <InputText v-model="form.city" type="text" inputId="city" class="w-full" />
+        <InputText v-model="form.city" type="text" placeholder="Insert" inputId="city" class="w-full" />
       </div>
       <div class="col-span-6">
         <label class="block font-medium">Address</label>
-        <Textarea v-model="form.address" class="w-full" placeholder="Insert" rows="2" />
+        <Textarea v-model="form.address"  class="w-full" placeholder="Insert" rows="2" />
       </div>
 
       <div class="flex w-full justify-center col-span-6 gap-2">
