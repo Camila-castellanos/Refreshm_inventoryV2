@@ -95,7 +95,6 @@ const handleSelection = (selected) => {
 const tableData = ref([]);
 function parseItemsData() {
   props.tabs.forEach((tab, i) => {
-    console.log(tab);
     tabs.value.push({ title: tab.name, value: (tabs.value.length + i).toString() });
   });
   tableData.value = props.items
@@ -120,7 +119,6 @@ onMounted(() => {
 });
 
 function openSellItemsModal() {
-  console.log(props.customers);
   dialog.open(ItemsSell, {
     data: {
       items: selectedItems,
@@ -181,8 +179,12 @@ const tableActions = [
 ];
 
 function getSoldItems() {
-  console.log(props.items.filter((item) => item.sold !== null));
-  return props.items.filter((item) => item.sold !== null);
+  return props.items.filter((item) => item.sold !== null).map((item) => {
+    return {
+      ...item,
+      location: `${item.sold_storage_name} - (${item.sold_position})`,
+    };
+    });
 }
 
 const addTabDialog = ref(false);
