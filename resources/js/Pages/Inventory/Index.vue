@@ -4,44 +4,44 @@
     <section class="w-[90%] mx-auto mt-4">
       <Tabs v-model:value="currentTab">
         <TabList>
-          <Tab v-for="tab in tabs" :key="tab.value" :value="tab.value">
-            {{ tab.title }}
+          <Tab v-for="tab in tabs" :key="tab.order" :value="tab.order">
+            {{ tab.name }}
           </Tab>
           <Tab :value="tabs.length + 1" @click="openAddTabModal">
             <i class="pi pi-plus"></i>
           </Tab>
         </TabList>
         <TabPanels>
-          <TabPanel v-for="tab in tabs" :key="tab.value" :value="tab.value">
+          <TabPanel v-for="tab in tabs" :key="tab.order" :value="tab.order">
             <DataTable
-              v-if="tab.value === '0'"
+              v-if="tab.order === 0"
               title="Active Inventory"
               @update:selected="handleSelection"
               :actions="tableActions"
               :items="tableData"
               :headers="headers"></DataTable>
             <DataTable
-              v-else-if="tab.value === '1'"
+              v-else-if="tab.order === 1"
               title="On Hold"
               @update:selected="handleSelection"
               :items="[]"
               :headers="[]"></DataTable>
             <DataTable
-              v-else-if="tab.value === '2'"
+              v-else-if="tab.order === 2"
               title="Sold"
               @update:selected="handleSelection"
               :items="getSoldItems()"
-              :headers="headers"></DataTable>
+              :headers="soldHeaders"></DataTable>
             <DataTable
               v-else
-              :title="tab.title"
+              :title="tab.name"
               @update:selected="handleSelection"
-              :items="tableData"
+              :items="[]"
               :headers="headers"
               :actions="tableActions"></DataTable>
           </TabPanel>
         </TabPanels>
-      </Tabs>
+      </Tabs>  
     </section>
   </div>
   <Dialog v-model:visible="addTabDialog" header="Add New Tab" modal @show="currentTab = lastTab">
@@ -60,8 +60,7 @@
 <script setup lang="ts">
 import { onMounted, ref, reactive, watch, Ref } from "vue";
 import DataTable from "@/Components/DataTable.vue";
-import { headers } from "./IndexData";
-import { data } from "./IndexData";
+import { headers, soldHeaders } from "./IndexData";
 import { router } from "@inertiajs/vue3";
 import { defineProps } from "vue";
 import StoragesAssign from "../Storages/StoragesAssign/StoragesAssign.vue";
@@ -76,6 +75,7 @@ import ItemsSell from "./ItemsSell/ItemsSell.vue";
 import InputText from "primevue/inputtext";
 import { Item, Tab as ITab } from "@/Lib/types";
 import axios from "axios";
+import MoveItem from "./MoveItem.vue";
 
 const dialog = useDialog();
 const props = defineProps({
@@ -84,10 +84,10 @@ const props = defineProps({
   tabs: Array<ITab>,
 });
 
-const tabs = ref([
-  { title: "Active Directory", value: "0" },
-  { title: "On Hold", value: "1" },
-  { title: "Sold", value: "2" },
+const tabs: Ref<ITab[]> = ref([
+  { name: "Active Directory", order: 0 },
+  { name: "On Hold", order: 1 },
+  { name: "Sold", order: 2 },
 ]);
 
 const assignStorageVisible: Ref<any> = ref(null);
@@ -97,22 +97,26 @@ const toggleAssignStorageVisible = () => {
 };
 
 let selectedItems: Ref<Item[]> = ref([]);
-const currentTab = ref("0");
-const lastTab = ref("0");
+const currentTab = ref(0);
+const lastTab = ref(0);
 
 const handleSelection = (selected: Item[]) => {
   selectedItems.value = selected;
 };
 
-const tableData: Ref<Item[]> = ref([]);
+const tableData: Ref<any[]> = ref([]);
 function parseItemsData() {
   console.log(props.items);
   props.tabs?.forEach((tab, i) => {
-    tabs.value.push({ title: tab.name, value: (tabs.value.length + i).toString() });
+    tabs.value.push({ name: tab.name, order: tabs.value.length + i, id: tab.id });
   });
   tableData.value = props
     .items!.filter((item) => item.sold === null)
-    .map((item) => {
+    .map((item: any) => {
+      if (item.id == 105) {
+      console.log(item)
+        
+      }
       if (item.storage) {
         const { name, limit } = item.storage;
         const { position } = item;
@@ -120,6 +124,19 @@ function parseItemsData() {
           ...item,
           location: `${name} - ${position}/${limit}`,
           vendor: item.vendor.vendor,
+          actions: [
+            {
+              label: "Move Tab",
+              icon: "",
+              outlined: true,
+              severity: "info",
+              extraClasses: "!font-black",
+              action: (item: Item) => {
+                console.log(item);
+                openMoveItemsModal(item);
+              },
+            }
+          ]
         };
       }
       return {
@@ -137,6 +154,18 @@ function openSellItemsModal() {
     data: {
       items: selectedItems,
       customers: props.customers,
+    },
+    props: {
+      modal: true,
+    },
+  });
+}
+
+function openMoveItemsModal(item: Item) {
+  dialog.open(MoveItem, {
+    data: {
+      tabs: tabs.value.filter((tab) => ![0, 1, 2].includes(tab.order)),
+      item: item,
     },
     props: {
       modal: true,

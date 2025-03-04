@@ -64,6 +64,7 @@ export interface Item {
 }
 
 export interface Tab {
+  id?: number;
   name: string;
   order: number;
 }
