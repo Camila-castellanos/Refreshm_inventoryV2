@@ -5,8 +5,8 @@ export const headers = [
         "type": "string"
     },
     {
-        "label": "Supplier",
-        "name": "supplier",
+        "label": "Vendor",
+        "name": "vendor",
         "type": "string"
     },
     {
@@ -35,13 +35,13 @@ export const headers = [
         "type": "string"
     },
     {
-        "label": "Notes",
-        "name": "notes",
+        "label": "Issues",
+        "name": "issues",
         "type": "string"
     },
     {
         "label": "Serial",
-        "name": "imei   ",
+        "name": "imei",
         "type": "string"
     },
     {
@@ -50,13 +50,18 @@ export const headers = [
         "type": "number"
     },
     {
-        "label": "Est. Sale",
-        "name": "est_sale",
+        "label": "Selling Price",
+        "name": "selling_price",
         "type": "number"
     },
     {
         "label": "Location",
         "name": "location",
+        "type": "string"
+    },
+    {
+        "label": "Actions",
+        "name": "actions",
         "type": "string"
     }
 ]

@@ -4,8 +4,8 @@
         tableStyle="min-width: 50rem" filterDisplay="row" :globalFilterFields="headers.filter(header => header.name !== 'actions').map(header => header.name)" :selection-mode="selectionMode">
         <template #header>
             <div class="flex flex-wrap items-center justify-between gap-2">
-                <div class="flex justify-between gap-12">
-                    <span class="text-xl font-bold">{{ title }}</span>
+                <div :class="title !== '' ? 'flex justify-between gap-12' : 'flex justify-start'">
+                    <span class="text-xl font-bold" v-show="title !== ''">{{ title }}</span>
                     <IconField>
                         <InputIcon>
                             <i class="pi pi-search" />
@@ -83,7 +83,7 @@ const props = defineProps<{
     selectionMode?: 'single' | 'multiple'
 }>();
 
-const selectionMode = ref(props.selectionMode ? props.selectionMode : 'multiple');
+const selectionMode = ref(props.items?.length === 0 ? undefined : (props.selectionMode ? props.selectionMode : 'multiple'));
 
 const dt = ref();
 const selectedItems = ref<any[]>([]); 

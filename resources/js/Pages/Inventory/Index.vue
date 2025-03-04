@@ -14,20 +14,31 @@
         <TabPanels>
           <TabPanel v-for="tab in tabs" :key="tab.value" :value="tab.value">
             <DataTable
-              v-if="tab.value == 0"
+              v-if="tab.value === '0'"
               title="Active Inventory"
               @update:selected="handleSelection"
               :actions="tableActions"
               :items="tableData"
               :headers="headers"></DataTable>
-            <DataTable v-else-if="tab.value == 1" title="On Hold" @update:selected="handleSelection" :items="[]" :headers="[]"></DataTable>
             <DataTable
-              v-else-if="tab.value == 2"
+              v-else-if="tab.value === '1'"
+              title="On Hold"
+              @update:selected="handleSelection"
+              :items="[]"
+              :headers="[]"></DataTable>
+            <DataTable
+              v-else-if="tab.value === '2'"
               title="Sold"
               @update:selected="handleSelection"
               :items="getSoldItems()"
               :headers="headers"></DataTable>
-            <DataTable v-else :title="tab.title" @update:selected="handleSelection" :items="tableData" :headers="headers" :actions="tableActions"></DataTable>
+            <DataTable
+              v-else
+              :title="tab.title"
+              @update:selected="handleSelection"
+              :items="tableData"
+              :headers="headers"
+              :actions="tableActions"></DataTable>
           </TabPanel>
         </TabPanels>
       </Tabs>
@@ -46,8 +57,8 @@
   </Dialog>
 </template>
 
-<script setup>
-import { onMounted, ref, reactive,watch } from "vue";
+<script setup lang="ts">
+import { onMounted, ref, reactive, watch, Ref } from "vue";
 import DataTable from "@/Components/DataTable.vue";
 import { headers } from "./IndexData";
 import { data } from "./IndexData";
@@ -63,12 +74,14 @@ import TabPanel from "primevue/tabpanel";
 import { useDialog } from "primevue/usedialog";
 import ItemsSell from "./ItemsSell/ItemsSell.vue";
 import InputText from "primevue/inputtext";
+import { Item, Tab as ITab } from "@/Lib/types";
+import axios from "axios";
 
 const dialog = useDialog();
 const props = defineProps({
-  items: Array,
+  items: Array<Item>,
   customers: Array,
-  tabs: Array,
+  tabs: Array<ITab>,
 });
 
 const tabs = ref([
@@ -77,27 +90,28 @@ const tabs = ref([
   { title: "Sold", value: "2" },
 ]);
 
-const assignStorageVisible = ref(null);
+const assignStorageVisible: Ref<any> = ref(null);
 
 const toggleAssignStorageVisible = () => {
   assignStorageVisible.value.openDialog();
 };
 
-let selectedItems = ref([]);
+let selectedItems: Ref<Item[]> = ref([]);
 const currentTab = ref("0");
 const lastTab = ref("0");
 
-const handleSelection = (selected) => {
+const handleSelection = (selected: Item[]) => {
   selectedItems.value = selected;
 };
 
-const tableData = ref([]);
+const tableData: Ref<Item[]> = ref([]);
 function parseItemsData() {
-  props.tabs.forEach((tab, i) => {
+  console.log(props.items);
+  props.tabs?.forEach((tab, i) => {
     tabs.value.push({ title: tab.name, value: (tabs.value.length + i).toString() });
   });
-  tableData.value = props.items
-    .filter((item) => item.sold === null)
+  tableData.value = props
+    .items!.filter((item) => item.sold === null)
     .map((item) => {
       if (item.storage) {
         const { name, limit } = item.storage;
@@ -105,6 +119,7 @@ function parseItemsData() {
         return {
           ...item,
           location: `${name} - ${position}/${limit}`,
+          vendor: item.vendor.vendor,
         };
       }
       return {
@@ -151,14 +166,14 @@ const tableActions = [
     action: () => {
       openSellItemsModal();
     },
-    disable: (selectedItems) => selectedItems.length == 0,
+    disable: (selectedItems: Item[]) => selectedItems.length == 0,
   },
   {
     label: "Delete Items",
     icon: "pi pi-trash",
     severity: "danger",
     action: () => {},
-    disable: (selectedItems) => selectedItems.length == 0,
+    disable: (selectedItems: Item[]) => selectedItems.length == 0,
   },
   {
     label: "Edit Items",
@@ -166,17 +181,19 @@ const tableActions = [
     action: () => {
       console.log("hi");
     },
-    disable: (selectedItems) => selectedItems.length !== 1,
+    disable: (selectedItems: Item[]) => selectedItems.length !== 1,
   },
-
 ];
 
 function getSoldItems() {
-  return props.items.filter((item) => item.sold !== null).map((item) => {
-    return {
-      ...item,
-      location: `${item.sold_storage_name} - (${item.sold_position})`,
-    };
+  return props
+    .items!.filter((item) => item.sold !== null)
+    .map((item) => {
+      return {
+        ...item,
+        location: `${item.sold_storage_name} - (${item.sold_position})`,
+        vendor: item.vendor.vendor,
+      };
     });
 }
 
@@ -198,8 +215,8 @@ function addNewTab() {
 }
 
 watch(currentTab, (value) => {
-    if (value !== tabs.value.length + 1) {
-        lastTab.value = value;
-    }
+  if (value != String(tabs.value.length + 1)) {
+    lastTab.value = value;
+  }
 });
 </script>
