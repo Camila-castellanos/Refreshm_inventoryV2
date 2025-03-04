@@ -58,6 +58,7 @@ import AppLayout from "@/Layouts/AppLayout.vue";
 import { ConfirmDialog, useConfirm, useDialog } from "primevue";
 import axios from "axios";
 import CreateEditModal from "./Prospects/CreateEditModal.vue";
+import MailList from "./MailList/MailList.vue";
 
 const props = defineProps({
   customers: Array,
@@ -95,7 +96,7 @@ const mailingListActions = [
   {
     label: "Create new list",
     icon: "pi pi-plus",
-    action: () => openAddProspect(),
+    action: () => openAddMailList(),
   },
   {
     label: "Delete lists",
@@ -204,6 +205,12 @@ function openAddProspect() {
   dialog.open(CreateEditModal, {
     props: { modal: true },
   });
+}
+
+function openAddMailList() {
+  dialog.open(MailList, {
+    props: { modal: true },
+  })
 }
 
 function editProspect(prospect) {
