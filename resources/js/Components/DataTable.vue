@@ -37,6 +37,7 @@
                 <Button icon="pi pi-times" severity="danger" rounded variant="outlined" aria-label="Cancel" @click="onDeleteItem(slotProps.data)" />
             </template>
         </Column>
+        <template #empty> No items found. </template>
         <template #footer> In total there are {{ items ? items.length : 0 }} items. </template>
     </DataTable>
 
@@ -83,7 +84,7 @@ const props = defineProps<{
     selectionMode?: 'single' | 'multiple'
 }>();
 
-const selectionMode = ref(props.selectionMode ? props.selectionMode : 'multiple');
+const selectionMode = ref(props.items.length > 0 ? (props.selectionMode ? props.selectionMode : 'multiple') : undefined);
 
 const dt = ref();
 const selectedItems = ref<any[]>([]); 

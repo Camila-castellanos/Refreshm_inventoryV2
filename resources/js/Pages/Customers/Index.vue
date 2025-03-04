@@ -32,7 +32,7 @@
               @delete="confirmDeleteProspect"></DataTable>
           </TabPanel>
           <TabPanel value="2">
-            <DataTable title="Mailing List" @update:selected="handleSelection" :items="[]" :headers="[]"></DataTable>
+            <DataTable title="Mailing List" @update:selected="handleSelection" :items="[]" :headers="mailingListHeaders" :actions="mailingListActions"></DataTable>
           </TabPanel>
           <TabPanel value="3">
             <DataTable title="Email editor" @update:selected="handleSelection" :items="[]" :headers="[]"></DataTable>
@@ -53,7 +53,7 @@ import TabPanels from "primevue/tabpanels";
 import Tabs from "primevue/tabs";
 import { defineProps, onMounted, ref } from "vue";
 import StoragesAssign from "../Storages/StoragesAssign/StoragesAssign.vue";
-import { headers, prospectHeaders } from "./IndexData";
+import { headers, mailingListHeaders, prospectHeaders } from "./IndexData";
 import AppLayout from "@/Layouts/AppLayout.vue";
 import { ConfirmDialog, useConfirm, useDialog } from "primevue";
 import axios from "axios";
@@ -91,6 +91,21 @@ const prospectTableActions = [
   },
 ];
 
+const mailingListActions = [
+  {
+    label: "Create new list",
+    icon: "pi pi-plus",
+    action: () => openAddProspect(),
+  },
+  {
+    label: "Delete lists",
+    icon: "pi pi-trash",
+    severity: "danger",
+    action: () => {},
+    disable: (selectedItems) => selectedItems.length == 0,
+  },
+];
+
 const assignStorageVisible = ref(null);
 
 let selectedItems = ref([]);
@@ -110,7 +125,7 @@ function parseItemsData() {
   tableData.value = props.customers.map((customer) => {
     return {
       ...customer,
-      name: `${customer.first_name} ${customer.last_name}`,
+      name: customer.name.slice(0, -2),
     };
   });
 
@@ -120,7 +135,6 @@ function parseItemsData() {
   prospectTableData.value = props.prospects.map((prospect) => {
     return {
       ...prospect,
-      name: `${prospect.first_name} ${prospect.last_name}`,
       contact_type: prospect.contact_type[0].toUpperCase() + prospect.contact_type.slice(1),
     };
   });

@@ -5,6 +5,11 @@ export const headers = [
         "type": "string"
     },
     {
+        "label": "Contact",
+        "name": "name",
+        "type": "string"
+    },
+    {
         "label": "Email",
         "name": "email",
         "type": "string"
@@ -87,5 +92,28 @@ export const prospectHeaders = [
         label: "Actions",
         name: "actions",
         type: "string",
+    }
+]
+
+export const mailingListHeaders = [
+    {
+        label: "Title",
+        name: "title",
+        type: "string",
+    },
+    {
+        label: "Names",
+        name: "names",
+        type: "string"
+    },
+    {
+        label: "Emails",
+        name: "emails",
+        type: "string"
+    },
+    {
+        label: "Actions",
+        name: "actions",
+        type: "string"
     }
 ]
