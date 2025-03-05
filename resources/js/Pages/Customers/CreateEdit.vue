@@ -3,14 +3,8 @@
         <div class="py-12">
             <div class="mx-auto max-w-7xl sm:px-6 lg:px-8">
                 <div class="overflow-hidden  sm:rounded-lg">
-
                     <Button class="mb-12 ml-12" label="Back to Index" @click="router.visit(route('customers.index'))" icon="pi pi-chevron-left"></Button>
-
-
                     <form method="post" ref="customerForm" @submit.prevent="onFormSubmit" class="flex flex-col gap-4">
-
-
-
                         <h2 class="mb-4 text-4xl ml-12 font-bold">
                             {{ formType }} Customer
                         </h2>
@@ -25,16 +19,16 @@
                             <p class="block my-2 text-sm font-normal">
                                 Name of a business or person.
                             </p>
+                            <Message v-if="nameInvalid" severity="error" size="small" variant="simple">
+                                Name is required</Message>
                         </template>
                         </Card>
-                     
-
                         <Card class="card">  
                             <template #title>Primary Contact</template>
                         <template #content  class="w-full">
                             <div class="grid grid-cols-6 gap-4 px-6 pt-6 pb-8 mb-4 rounded" v-for="(
-personal_info, index
-        ) in personal_info_content" :key="index">
+                                    personal_info, index
+                                ) in personal_info_content" :key="index">
                                 <div class="col-span-6 text-right" v-if="index != 0">
                                     <a href="javascript:;" class="text-red-500 removecontact"
                                         @click="removeContact(index)">
@@ -170,7 +164,7 @@ personal_phone, p_index
                                     id="billing_country" placeholder="Insert"></InputText>
                             </div>
                             <div class="col-span-2">
-                                <InputLabel for="billing_state" value="State" />
+                                <InputLabel for="billing_state" value="Province / State" />
                                 <InputText type="text" class="w-full" v-model="billing_state" name="billing_state"
                                     placeholder="Insert"></InputText>
                             </div>
@@ -180,7 +174,7 @@ personal_phone, p_index
                                     placeholder="Insert"></InputText>
                             </div>
                             <div class="col-span-2">
-                                <InputLabel for="billing_postal_code" value="Postal Code" />
+                                <InputLabel for="billing_postal_code" value="Postal/Zip Code" />
                                 <InputText type="text" class="w-full" v-model="billing_postal_code"
                                     name="billing_postal_code" placeholder="Insert"></InputText>
                             </div>
@@ -227,7 +221,7 @@ personal_phone, p_index
                                         </InputText>
                                     </div>
                                     <div class="col-span-2">
-                                        <InputLabel for="shipping_state" value="State" />
+                                        <InputLabel for="shipping_state" value="Province / State" />
                                         <InputText type="text" class="w-full" v-model="shipping_state"
                                             name="shipping_state" placeholder="Insert"></InputText>
                                     </div>
@@ -237,7 +231,7 @@ personal_phone, p_index
                                             name="shipping_city" placeholder="Insert"></InputText>
                                     </div>
                                     <div class="col-span-2">
-                                        <InputLabel for="shipping_postal_code" value="Postal Code" />
+                                        <InputLabel for="shipping_postal_code" value="Postal/Zip Code" />
                                         <InputText type="text" class="w-full" v-model="shipping_postal_code"
                                             name="shipping_postal_code" placeholder="Insert"></InputText>
                                     </div>
@@ -280,9 +274,8 @@ personal_phone, p_index
 <script setup>
 import InputLabel from "@/Components/InputLabel.vue";
 import AppLayout from "@/Layouts/AppLayout.vue";
-import { Form } from "@primevue/forms";
 import axios from "axios";
-import { Button, Textarea, InputText } from "primevue";
+import { Button, Textarea, InputText, Message } from "primevue";
 import { computed, onMounted, ref } from "vue";
 import { router } from "@inertiajs/vue3";
 import Card from 'primevue/card';
@@ -331,6 +324,7 @@ const customerForm = ref(null);
 // Arrays to control contacts and extra phones
 const personal_info_content = ref([]);
 const phone_optional = ref([]);
+const nameInvalid = ref(false);
 
 // Computed properties
 const formType = computed(() => (props.customerEdit ? "Edit" : "Create"));
@@ -438,6 +432,11 @@ function cleanShippingForm() {
 
 async function onFormSubmit(event) {
     event.preventDefault();
+    if (customer_name.value.trim() == "") {
+        nameInvalid.value = true;
+        window.scrollTo(0, 0);
+        return;
+    }
 
     const payload = {
         customer_name: customer_name.value,

@@ -44,7 +44,7 @@ class ItemController extends Controller
     {
         $user = Auth::user();
 
-        // $tabs = Tab::where('user_id', $user->id)->orderBy('order', 'asc')->get();
+        $tabs = Tab::where('user_id', $user->id)->orderBy('order', 'asc')->get();
         // $customFields = CustomField::where('user_id', $user->id)->get();
         // testing
         if (Auth::user()->role == ('ADMIN')) {
@@ -54,7 +54,7 @@ class ItemController extends Controller
                 ->whereNull("hold")
                 // ->whereNotIn('id', TabItem::pluck('item_id'))
                 ->get(),
-                // 'tabs' => $tabs,
+                'tabs' => $tabs,
                 // 'fields' => $customFields,
             ];
         } else if (Auth::user()->role == ('USER')) {
@@ -65,7 +65,7 @@ class ItemController extends Controller
                 ->whereNull("hold")
                 // ->whereNotIn('id', TabItem::pluck('item_id'))
                 ->get(),
-                // 'tabs' => $tabs,
+                'tabs' => $tabs,
                 // 'fields' => $customFields,
             ];
         } else {
@@ -76,13 +76,12 @@ class ItemController extends Controller
                 ->whereNull("hold")
                 // ->whereNotIn('id', TabItem::pluck('item_id'))
                 ->get(),
-                // 'tabs' => $tabs,
+                'tabs' => $tabs,
                 // 'fields' => $customFields,
             ];
         }
 
         $context['customers'] = Customer::all();
-        $context['tabs'] = Tab::where('user_id', $user->id)->orderBy('order', 'asc')->get();
         return Inertia::render('Inventory/Index', $context);
     }
 

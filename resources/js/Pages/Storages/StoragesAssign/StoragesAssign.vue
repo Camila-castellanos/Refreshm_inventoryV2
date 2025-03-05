@@ -42,7 +42,7 @@
   const visible = ref(false);
   
   const props = defineProps<{
-    items: number[]; // Assuming items are an array of item IDs
+    items: any[]; // Assuming items are an array of item IDs
   }>();
   
   type Storage = {
