@@ -82,18 +82,13 @@ Route::middleware([
         Route::post("report", [SaleController::class, "generateReport"])->name("sales.generate_report");
     });
 
-    Route::prefix('contacts')->group(function () {
-        Route::get('/customers', function () {
-            return Inertia::render('Customers/Index', ['layout' => 'AppLayout']);
-        });
-        Route::resource("customers", CustomerController::class)->except(["show"]);
-        Route::post("/datewise", [CustomerController::class, "datewise"])->name("customer.datewise");
-        Route::get("/list", [CustomerController::class, "customersList"])->name("customer.list");
-        Route::get("/email", [CustomerController::class, "marketingEmail"])->name("marketing.email");
-        Route::post("/email/send", [CustomerController::class, "sendMarketingEmail"])->name("send.marketing.email");
-    });
-
     Route::resource('prospects', ProspectController::class);
+
+    Route::resource("customer", CustomerController::class)->except(["show"]);
+    Route::post("customer/datewise", [CustomerController::class, "datewise"])->name("customer.datewise");
+    Route::get("customer/list", [CustomerController::class, "customersList"])->name("customer.list");
+    Route::get("customer/email", [CustomerController::class, "marketingEmail"])->name("marketing.email");
+    Route::post("customer/email/send", [CustomerController::class, "sendMarketingEmail"])->name("send.marketing.email");
 
     Route::resource("vendor", VendorController::class)->except(["show", "store"]);
     Route::post("vendor/store", [VendorController::class, "store"])->name("vendor.store");
