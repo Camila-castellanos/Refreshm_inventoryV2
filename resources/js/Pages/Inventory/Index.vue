@@ -106,17 +106,12 @@ const handleSelection = (selected: Item[]) => {
 
 const tableData: Ref<any[]> = ref([]);
 function parseItemsData() {
-  console.log(props.items);
   props.tabs?.forEach((tab, i) => {
     tabs.value.push({ name: tab.name, order: tabs.value.length + i, id: tab.id });
   });
   tableData.value = props
     .items!.filter((item) => item.sold === null)
     .map((item: any) => {
-      if (item.id == 105) {
-      console.log(item)
-        
-      }
       if (item.storage) {
         const { name, limit } = item.storage;
         const { position } = item;
@@ -132,7 +127,6 @@ function parseItemsData() {
               severity: "info",
               extraClasses: "!font-black",
               action: (item: Item) => {
-                console.log(item);
                 openMoveItemsModal(item);
               },
             }
