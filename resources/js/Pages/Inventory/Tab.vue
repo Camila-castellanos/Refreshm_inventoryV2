@@ -3,27 +3,29 @@
   <div>
     <section class="w-[90%] mx-auto mt-4">
       <ItemsTabs :custom-tabs="tabs">
-        <DataTable
-          title="Active Inventory"
-          @update:selected="handleSelection"
-          :actions="tableActions"
-          :items="tableData"
-          :headers="headers"></DataTable>
+            <DataTable
+              :title="tab?.name ?? 'No tab'"
+              @update:selected="handleSelection"
+              :items="tableData"
+              :headers="headers"
+              :actions="tableActions"></DataTable>
       </ItemsTabs>
     </section>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, Ref } from "vue";
+import { onMounted, ref, reactive, watch, Ref } from "vue";
 import DataTable from "@/Components/DataTable.vue";
-import { headers } from "./IndexData";
+import { headers, soldHeaders } from "./IndexData";
 import { router } from "@inertiajs/vue3";
 import { defineProps } from "vue";
 import StoragesAssign from "../Storages/StoragesAssign/StoragesAssign.vue";
+import { Dialog } from "primevue";
 import { useDialog } from "primevue/usedialog";
 import ItemsSell from "./Modals/ItemsSell.vue";
-import { Item, Tab as ITab } from "@/Lib/types";
+import InputText from "primevue/inputtext";
+import { Item, Tab as ITab, Tab } from "@/Lib/types";
 import axios from "axios";
 import MoveItem from "./Modals/MoveItem.vue";
 import ItemsTabs from "@/Components/ItemsTabs.vue";
@@ -32,9 +34,12 @@ const dialog = useDialog();
 const props = defineProps({
   items: Array<Item>,
   customers: Array,
-  tabs: {type:Array<ITab>, required: true},
+  tabs: {
+    type: Array<ITab>,
+    required: true
+  },
+  current_tab: Number
 });
-
 const assignStorageVisible: Ref<any> = ref(null);
 
 const toggleAssignStorageVisible = () => {
@@ -47,8 +52,14 @@ const handleSelection = (selected: Item[]) => {
   selectedItems.value = selected;
 };
 
+const tab: Ref<Tab | null> = ref(null);
+  const customTabs: Ref<Tab[]> = ref([]);
+
 const tableData: Ref<any[]> = ref([]);
 function parseItemsData() {
+  console.log(props);
+  const tabId = props.current_tab;
+  tab.value = props.tabs?.find((tab) => tab.id == Number(tabId)) ?? null;
   tableData.value = props
     .items!.filter((item) => item.sold === null)
     .map((item: any) => {
@@ -67,6 +78,7 @@ function parseItemsData() {
               severity: "info",
               extraClasses: "!font-black",
               action: (item: Item) => {
+                console.log(item);
                 openMoveItemsModal(item);
               },
             }
@@ -79,8 +91,6 @@ function parseItemsData() {
       };
     });
 }
-
-
 onMounted(() => {
   parseItemsData();
 });
@@ -100,7 +110,7 @@ function openSellItemsModal() {
 function openMoveItemsModal(item: Item) {
   dialog.open(MoveItem, {
     data: {
-      tabs: props.tabs,
+      tabs: props.tabs.filter((customTab) => customTab.id !== tab.value!.id),
       item: item,
     },
     props: {
@@ -114,7 +124,7 @@ const tableActions = [
     label: "Add Items",
     icon: "pi pi-plus",
     action: () => {
-      router.visit("/inventory/items/bulk");
+      router.visit(route("items.excel.create"));
     },
   },
   // {
@@ -149,4 +159,6 @@ const tableActions = [
     disable: (selectedItems: Item[]) => selectedItems.length !== 1,
   },
 ];
+
+
 </script>
