@@ -50,7 +50,7 @@ class ItemController extends Controller
         if (Auth::user()->role == ('ADMIN')) {
             $context = [
                 'items' => Item::where("user_id", $user->id)
-                ->with(['storage:id,name,limit', 'vendor:id,vendor', 'tabItems:id,tab_id'])
+                ->with(['storage:id,name,limit', 'vendor:id,vendor'])
                 ->whereNull("hold")
                 // ->whereNotIn('id', TabItem::pluck('item_id'))
                 ->get(),
