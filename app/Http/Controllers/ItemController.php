@@ -50,10 +50,11 @@ class ItemController extends Controller
         if (Auth::user()->role == ('ADMIN')) {
             $context = [
                 'items' => Item::where("user_id", $user->id)
-                ->with(['storage:id,name,limit', 'vendor:id,vendor'])
-                ->whereNull("hold")
-                // ->whereNotIn('id', TabItem::pluck('item_id'))
-                ->get(),
+                    ->with(['storage:id,name,limit', 'vendor:id,vendor'])
+                    ->whereNull("sold")
+                    ->whereNull("hold")
+                    // ->whereNotIn('id', TabItem::pluck('item_id'))
+                    ->get(),
                 'tabs' => $tabs,
                 // 'fields' => $customFields,
             ];
@@ -61,10 +62,11 @@ class ItemController extends Controller
             //$usersId = User::where('store_id', @$user->store_id)->pluck('id')->toarray();
             $context = [
                 'items' => Item::where("user_id", $user->id)
-                ->with(['storage:id,name,limit', 'vendor:id,vendor'])
-                ->whereNull("hold")
-                // ->whereNotIn('id', TabItem::pluck('item_id'))
-                ->get(),
+                    ->with(['storage:id,name,limit', 'vendor:id,vendor'])
+                    ->whereNull("sold")
+                    ->whereNull("hold")
+                    // ->whereNotIn('id', TabItem::pluck('item_id'))
+                    ->get(),
                 'tabs' => $tabs,
                 // 'fields' => $customFields,
             ];
@@ -72,10 +74,10 @@ class ItemController extends Controller
             $context = [
                 // 'items' => Item::whereNull("sold")->whereNull("hold")->get(),
                 'items' => Item::where("user_id", $user->id)
-                ->with(['storage:id,name,limit', 'vendor:id,vendor'])
-                ->whereNull("hold")
-                // ->whereNotIn('id', TabItem::pluck('item_id'))
-                ->get(),
+                    ->with(['storage:id,name,limit', 'vendor:id,vendor'])
+                    ->whereNull("hold")
+                    // ->whereNotIn('id', TabItem::pluck('item_id'))
+                    ->get(),
                 'tabs' => $tabs,
                 // 'fields' => $customFields,
             ];
@@ -93,71 +95,70 @@ class ItemController extends Controller
             'items' => 'required|array',
             'items.*' => 'exists:items,id',
         ]);
-    
+
         $storageId = $request->storage_id;
         $items = $request->items;
-    
+
         $storage = Storage::findOrFail($storageId);
-    
+
         $currentItemCount = Item::where('storage_id', $storageId)->count();
-    
+
         if ($currentItemCount + count($items) > $storage->limit) {
             return response()->json([
                 'message' => 'Not enough space in the selected storage.'
             ], 400);
         }
-    
+
         try {
-            DB::beginTransaction(); 
-            
+            DB::beginTransaction();
+
             $itemsToUpdate = Item::whereIn('id', $items)
                 ->where(function ($query) use ($storageId) {
                     $query->whereNull('storage_id')
-                          ->orWhere('storage_id', '!=', $storageId);
+                        ->orWhere('storage_id', '!=', $storageId);
                 })
                 ->get();
-    
+
             if ($itemsToUpdate->isEmpty()) {
                 return response()->json([
                     'message' => 'All selected items are already assigned to this storage.'
                 ], 400);
             }
-    
-           
+
+
             $updatedItems = [];
             foreach ($itemsToUpdate as $item) {
-                
+
                 $item->update([
                     'position' => null,
                     'storage_id' => null,
                 ]);
 
-                $newPosition = Item::getNextAvailablePosition($storageId); 
+                $newPosition = Item::getNextAvailablePosition($storageId);
                 $item->update([
                     'storage_id' => $storageId,
                     'position' => $newPosition
                 ]);
-    
+
                 $updatedItems[] = $item->id;
             }
-    
-            DB::commit(); 
-    
+
+            DB::commit();
+
             return response()->json([
                 'message' => 'Items assigned successfully!',
                 'storage' => $storage,
                 'updated_items' => $updatedItems,
             ]);
-    
         } catch (\Exception $e) {
-            DB::rollBack(); 
+            DB::rollBack();
             return response()->json([
                 'message' => 'Error while assigning items.',
                 'error' => $e->getMessage(),
             ], 500);
         }
     }
-    
+
 
     /**
      * Display a listing of the resource.
@@ -348,17 +349,17 @@ class ItemController extends Controller
     {
         $items = $request->input("items");
         $updated = [];
-    
+
         foreach ($items as $item) {
             $item['user_id'] = Auth::user()->id;
-    
+
             $object = Item::updateOrCreate(['id' => @$item["id"]], $item);
             $updated[] = $object;
         }
-    
+
         return response()->json($updated);
     }
-    
+
 
     /**
      * Deletes multiple resource.
@@ -423,8 +424,8 @@ class ItemController extends Controller
         }
         $removeTabItem = TabItem::whereIn('item_id', $ids)->delete();
         $items = Item::whereIn("id", $ids)
-        ->with(['storage:id,name,limit'])
-        ->update(["hold" => Carbon::now(), "customer" => $customer]);
+            ->with(['storage:id,name,limit'])
+            ->update(["hold" => Carbon::now(), "customer" => $customer]);
 
         return response()->json($items);
     }
@@ -664,7 +665,7 @@ class ItemController extends Controller
         // dd($id);
         $items = Item::whereHas('tabItems', function ($q) use ($id) {
             $q->where('tab_id', $id);
-        })->whereNull('sold');
+        })->with(['storage:id,name,limit', 'vendor:id,vendor'])->whereNull('sold')->whereNull('hold');
 
         $customFields = CustomField::where('user_id', $user->id)->get();
 
@@ -696,7 +697,7 @@ class ItemController extends Controller
         $checktab = Tab::where('id', $id)->first();
         // dd($context);
         if ($checktab->user_id == $user->id) {
-            return Inertia::render('Items/Tab', $context);
+            return Inertia::render('Inventory/Tab', $context);
         }
     }
 
@@ -823,7 +824,7 @@ class ItemController extends Controller
 
     public function excelCreate()
     {
-        return Inertia::render("Items/Excel");
+        return Inertia::render("Inventory/BulkCreate/ItemsBulkCreate");
     }
 
     public function excelStore(ItemExcelForm $request)
