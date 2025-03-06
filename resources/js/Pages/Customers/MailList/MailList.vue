@@ -5,25 +5,40 @@
         <InputLabel for="title" value="Title" class="text-xl mb-1" />
         <InputText v-model="form.title" type="text" placeholder="Insert" inputId="title" class="w-full" />
       </div>
-      <div class="flex w-full justify-center col-span-6 gap-2">
-        <Tabs value="0">
-          <TabList>
-            <Tab value="0">Customers</Tab>
-            <Tab value="1">Prospects</Tab>
-            <Tab value="2">Custom</Tab>
-          </TabList>
-          <TabPanels>
-            <TabPanel value="0">
-              <DataTable title="" :items="customerTableData" :headers="createMailListHeaders"></DataTable>
-            </TabPanel>
-            <TabPanel value="1">
-              <DataTable title="" :items="prospectTableData" :headers="createMailListHeaders"></DataTable>
-            </TabPanel>
-            <TabPanel value="2">
-              <DataTable title="" :items="customContactTableData" :headers="createMailListHeaders" :actions="customActions"></DataTable>
-            </TabPanel>
-          </TabPanels>
-        </Tabs>
+      <Tabs value="0" class="col-span-6">
+        <TabList>
+          <Tab value="0">Customers</Tab>
+          <Tab value="1">Prospects</Tab>
+          <Tab value="2">Custom</Tab>
+        </TabList>
+        <TabPanels>
+          <TabPanel value="0">
+            <DataTable
+              title=""
+              :items="customerTableData"
+              :headers="createMailListHeaders"
+              @update:selected="handleCustomerSelection"></DataTable>
+          </TabPanel>
+          <TabPanel value="1">
+            <DataTable
+              title=""
+              :items="prospectTableData"
+              :headers="createMailListHeaders"
+              @update:selected="handleProspectSelection"></DataTable>
+          </TabPanel>
+          <TabPanel value="2">
+            <DataTable
+              title=""
+              :items="customContactTableData"
+              :headers="createMailListHeaders"
+              :actions="customActions"
+              @update:selected="handleCustomSelection"></DataTable>
+          </TabPanel>
+        </TabPanels>
+      </Tabs>
+      <div class="col-span-6 grid grid-cols-2 w-full gap-x-4">
+        <Button type="button" label="Reset" icon="pi pi-times" variant="text" class="col-span-1" />
+        <Button type="submit" label="Submit" icon="pi pi-send" class="col-span-1" />
       </div>
     </div>
   </form>
@@ -32,7 +47,7 @@
       <div class="flex flex-col py-3">
         <InputLabel for="name">Name</InputLabel>
         <InputText id="name" v-model="customContact.name" />
-        <Message severity="error" text="" v-if="nameEmpty" >This is a required field</Message>
+        <Message severity="error" text="" v-if="nameEmpty">This is a required field</Message>
       </div>
       <div class="flex flex-col py-3">
         <InputLabel for="email">Name</InputLabel>
@@ -49,9 +64,10 @@
 import DataTable from "@/Components/DataTable.vue";
 import InputLabel from "@/Components/InputLabel.vue";
 import { Contact } from "@/Lib/types";
-import { Dialog, InputText, Message, Tab, TabList, TabPanel, TabPanels, Tabs } from "primevue";
+import { Button, Dialog, InputText, Message, Tab, TabList, TabPanel, TabPanels, Tabs } from "primevue";
 import { inject, onMounted, reactive, ref, Ref, watch } from "vue";
 import { createMailListHeaders } from "../IndexData";
+import axios from "axios";
 
 interface AllData {
   customers: Contact[];
@@ -68,14 +84,20 @@ const dialogRef: any = inject("dialogRef");
 const customerTableData: Ref<Contact[]> = ref([]);
 const prospectTableData: Ref<Contact[]> = ref([]);
 const customContactTableData: Ref<Contact[]> = ref([]);
-const allData: Ref<AllData> = ref({ customers: [], prospects: [], custom: [] });
-  const customContact = reactive({
-    name: "",
-    email: "",
-  });
+
+const selectedCustomers: Ref<Contact[]> = ref([]);
+const selectedProspects: Ref<Contact[]> = ref([]);
+const selectedCustomContacts: Ref<Contact[]> = ref([]);
+
 const addContact = ref(false);
 const nameEmpty = ref(false);
 const emailEmpty = ref(false);
+
+const customContact = reactive({
+  email: "",
+  name: "",
+});
+
 onMounted(() => {
   console.log(dialogRef.value.data);
   dialogRef.value.data.contacts.forEach((customer: Contact) => {
@@ -86,40 +108,59 @@ onMounted(() => {
     } else {
       customContactTableData.value.push(customer);
     }
-    
-  })
-  allData.value = {
-    customers: customerTableData.value,
-    prospects: prospectTableData.value,
-    custom: customContactTableData.value
-  }
-})
+  });
+});
 
 const customActions = [
   {
     label: "",
     icon: "pi pi-plus",
-    action: () => {addContact.value = true;},
-  }
-]
+    action: () => {
+      addContact.value = true;
+    },
+  },
+];
 
-const submitForm = () => {
+const submitForm = async () => {
   console.log(form);
+  const selected = [...selectedCustomContacts.value, ...selectedCustomers.value, ...selectedProspects.value];
+  const payload = {
+    emails: JSON.stringify(selected.map((contact) => contact.email)),
+    names: JSON.stringify(selected.map((contact) => contact.name)),
+    title: form.title,
+  };
+
+  try {
+    await axios.post(route("mailing_list.store"), payload);
+  } catch (e) {
+    console.log(e);
+  }
 };
 
-const addCustomContact = () => {
+const addCustomContact = async () => {
   if (customContact.name == "") {
     nameEmpty.value = true;
   }
   if (customContact.email == "") {
     emailEmpty.value = true;
   }
-  if( nameEmpty.value || emailEmpty.value ){
-    return
+  if (nameEmpty.value || emailEmpty.value) {
+    return;
   }
   addContact.value = false;
-  customContactTableData.value.push({name: customContact.name, email: customContact.email});
-}
+};
+
+const handleCustomerSelection = (selected: any[]) => {
+  selectedCustomers.value = selected;
+};
+
+const handleProspectSelection = (selected: any[]) => {
+  selectedProspects.value = selected;
+};
+
+const handleCustomSelection = (selected: any[]) => {
+  selectedCustomContacts.value = selected;
+};
 
 watch(customContact, (value) => {
   if (value.name != "" && nameEmpty.value) {
@@ -128,5 +169,5 @@ watch(customContact, (value) => {
   if (value.email != "" && emailEmpty.value) {
     emailEmpty.value = false;
   }
-})
+});
 </script>
