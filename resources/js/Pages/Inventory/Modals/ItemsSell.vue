@@ -324,7 +324,7 @@ async function submitForm(e: Event, isConfirmed: boolean) {
         link.download = "receipt.pdf"
         link.click();
         document.body.removeChild(link);
-        window.location.reload();
+        router.reload({ only: ['items'] });
     } catch (error) {
         console.error("Error submitting sale:", error);
     }
