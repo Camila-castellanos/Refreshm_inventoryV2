@@ -73,8 +73,7 @@ class CustomerController extends Controller
             $customer->phone = implode(", ", $customer->phone);
         }
         
-        $prospects = Prospect::all()->toArray();
-        return Inertia::render('Customers/Index', compact("customers", "prospects"));
+        return Inertia::render('Customers/Index', compact('customers'));
     }
 
     public function mailingList()
