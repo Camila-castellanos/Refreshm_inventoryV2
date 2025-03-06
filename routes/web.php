@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\VendorController;
 use App\Http\Controllers\StorageController;
 use App\Http\Controllers\ItemController;
+use App\Http\Controllers\MailListController;
 use App\Http\Controllers\ProspectController;
 use App\Http\Controllers\SaleController;
 use Illuminate\Http\Request;
@@ -94,4 +95,7 @@ Route::middleware([
     Route::post("vendor/store", [VendorController::class, "store"])->name("vendor.store");
     Route::get("vendor/list", [VendorController::class, "vendorList"])->name("vendor.list");
     Route::post("vendor/datewise", [VendorController::class, "datewise"])->name("vendor.datewise");
+
+    Route::resource("mailing_list", MailListController::class);
+    Route::post("mailing_list/send", [MailListController::class, 'send'])->name("send.mailing.list");
 });
