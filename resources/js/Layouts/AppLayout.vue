@@ -120,7 +120,7 @@ const navItems = ref([
         label: 'Contacts',
         icon: 'pi pi-users',
         command: () => {
-            router.visit('/contacts/customers');
+            router.visit('/customer');
         }
     },
     {
