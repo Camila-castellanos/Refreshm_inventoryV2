@@ -68,3 +68,15 @@ export interface Tab {
   name: string;
   order: number;
 }
+
+export interface Contact {
+  id: number;
+  name: string;
+  email: string;
+  user_id: number;
+  type: "customer" | "prospect";
+  prospect_id: number | null;
+  customer_id: number | null;
+  created_at: string;
+  updated_at: string;
+}

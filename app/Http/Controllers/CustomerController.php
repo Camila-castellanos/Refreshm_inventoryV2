@@ -79,7 +79,7 @@ class CustomerController extends Controller
 
     public function mailingList()
     {
-        return Inertia::render('Customers/MailingList');
+        return Inertia::render('Customers/MailList/Index');
     }
 
     public function emailEditor()

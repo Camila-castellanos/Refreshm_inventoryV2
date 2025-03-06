@@ -43,9 +43,6 @@
       <Column :field="header.name" sortable :header="header.label" v-if="header.name !== 'actions'"> </Column>
     </template>
     <template #empty> No items found. </template>
-    <template v-for="header in headers">
-      <Column :field="header.name" sortable :header="header.label" v-if="header.name !== 'actions'"> </Column>
-    </template>
 
     <Column header="Actions" name="actions" v-if="headers.filter((header) => header.name === 'actions').length > 0">
       <template #body="slotProps">

@@ -13,7 +13,7 @@ use App\Http\Requests\EmailForm;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\MarketingEmail;
 
-class MailListContoller extends Controller
+class MailListController extends Controller
 {
   /**
    * Display a listing of the resource.
@@ -27,7 +27,7 @@ class MailListContoller extends Controller
     $email_templates = EmailTemplate::where('user_id', Auth::id())->get()->toArray();
     $mailing_lists = MailList::where("user_id", $user_id)->get()->toArray();
 
-    return Inertia::render("Customers/MailingList", [
+    return Inertia::render("Customers/MailList/Index", [
       "contacts" => $contacts,
       "email_templates" => $email_templates,
       "mailing_lists" => $mailing_lists,

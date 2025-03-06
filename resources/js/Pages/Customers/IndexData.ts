@@ -117,3 +117,16 @@ export const mailingListHeaders = [
         type: "string"
     }
 ]
+
+export const createMailListHeaders = [
+    {
+        label: "Name",
+        name: "name",
+        type: "string",
+    },
+    {
+        label: "Email",
+        name: "email",
+        type: "string",
+    },
+]
