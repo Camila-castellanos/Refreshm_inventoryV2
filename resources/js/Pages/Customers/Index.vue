@@ -26,7 +26,6 @@ import { headers } from "./IndexData";
 
 const props = defineProps({
   customers: Array,
-  prospects: Array,
 });
 const confirm = useConfirm();
 
@@ -80,7 +79,7 @@ const editCustomer = (customer) => {
 
 const deleteCustomer = (customer) => {
   axios.delete(route("customers.destroy", { customer })).then(() => {
-    window.location.reload();
+    router.reload();
   });
 };
 

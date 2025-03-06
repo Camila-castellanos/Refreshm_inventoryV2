@@ -48,6 +48,8 @@ Route::middleware([
         return Inertia::render('Dashboard');
     })->name('dashboard');
 
+    Route::post('/items/assign-storage', [ItemController::class, 'assignStorage'])->name('items.assign');
+
     Route::group(["prefix" => "inventory", "name" => "inventory."], function () {
         Route::delete("items/obliterate", [ItemController::class, "obliterate"])->name("items.obliterate");
         Route::put("items/hold", [ItemController::class, "hold"])->name("items.hold");
