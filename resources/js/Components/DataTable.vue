@@ -9,20 +9,20 @@
     paginator
     :rows="20"
     :rowsPerPageOptions="[5, 10, 20, 50]"
-    tableStyle="min-width: 50rem"
-    filterDisplay="row"
+    filterDisplay="menu"
     :globalFilterFields="headers.filter((header) => header.name !== 'actions').map((header) => header.name)"
     :selection-mode="selectionMode">
     <template #header>
       <div class="flex flex-wrap items-center justify-between gap-2">
-        <div :class="title !== '' ? 'flex justify-between gap-12' : 'flex justify-start'">
+        <div :class="title !== '' ? 'flex justify-between items-center gap-12' : 'flex justify-start items-center'">
           <span class="text-xl font-bold" v-show="title !== ''">{{ title }}</span>
           <IconField>
             <InputIcon>
               <i class="pi pi-search" />
             </InputIcon>
-            <InputText v-model="filters['global'].value" placeholder="Search" />
+            <InputText v-model="filters['global'].value" placeholder="Search in all fields" />
           </IconField>
+          <slot />
         </div>
         <div class="flex gap-8">
           <Button
@@ -39,9 +39,15 @@
         </div>
       </div>
     </template>
-
-    <template v-for="header in headers">
-      <Column :field="header.name" sortable :header="header.label" v-if="header.name !== 'actions'"> </Column>
+    <template v-for="(header, index) in headers" :key="header.name">
+      <Column
+        v-if="index === 0"
+        selectionMode="multiple"
+        field="select"
+        headerStyle="width: 3rem; text-align: center;"
+        bodyStyle="width: 3rem; text-align: center;">
+      </Column>
+      <Column :field="header.name" sortable :header="header.label" v-if="header.name !== 'actions'"></Column>
     </template>
 
     <Column header="Actions" name="actions" v-if="headers.filter((header) => header.name === 'actions').length > 0">
@@ -59,6 +65,7 @@
       </template>
     </Column>
     <template #footer> In total there are {{ items ? items.length : 0 }} items. </template>
+    <template #empty> No data found </template>
   </DataTable>
 </template>
 
@@ -89,7 +96,7 @@ export interface ITableActions {
   extraClasses?: string;
   icon?: string;
   label: string;
-    severity?: string;
+  severity?: string;
   outlined?: boolean;
   action: () => void;
   disable?: (selectedItems: any[]) => boolean;

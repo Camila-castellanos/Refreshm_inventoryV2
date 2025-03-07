@@ -113,7 +113,7 @@ const navItems = ref([
         label: 'Accounting',
         icon: 'pi pi-box',
         command: () => {
-            router.visit('/inventory/items');
+            router.visit('/accounting/payments');
         }
     },
     {
