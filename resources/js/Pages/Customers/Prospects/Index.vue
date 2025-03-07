@@ -25,6 +25,7 @@ import { prospectHeaders } from "../IndexData";
 import CreateEditModal from "./CreateEditModal.vue";
 import ContactTabs from "@/Components/ContactTabs.vue";
 import AppLayout from "@/Layouts/AppLayout.vue";
+import {router} from "@inertiajs/vue3"
 
 const props = defineProps({
   prospects: Array,
@@ -85,7 +86,7 @@ function parseItemsData() {
 
 const deleteProspect = (prospect: any) => {
   axios.delete(route("prospects.destroy", { prospect })).then(() => {
-    window.location.reload();
+    router.reload();
   });
 };
 

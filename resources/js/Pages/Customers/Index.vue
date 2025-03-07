@@ -4,11 +4,11 @@
     <section class="w-[90%] mx-auto mt-4">
       <ContactTabs>
         <DataTable
-        title="Customers"
-        @update:selected="handleSelection"
-        :actions="tableActions"
-        :items="tableData"
-        :headers="headers"></DataTable>
+          title="Customers"
+          @update:selected="handleSelection"
+          :actions="tableActions"
+          :items="tableData"
+          :headers="headers"></DataTable>
       </ContactTabs>
     </section>
   </div>
@@ -20,22 +20,28 @@ import DataTable from "@/Components/DataTable.vue";
 import AppLayout from "@/Layouts/AppLayout.vue";
 import { router } from "@inertiajs/vue3";
 import axios from "axios";
-import { ConfirmDialog, useConfirm } from "primevue";
+import { ConfirmDialog, useConfirm, useDialog } from "primevue";
 import { defineProps, onMounted, ref } from "vue";
 import { headers } from "./IndexData";
+import CreateEdit from "./CreateEdit.vue";
 
 const props = defineProps({
   customers: Array,
-  prospects: Array,
 });
 const confirm = useConfirm();
+const dialog = useDialog();
 
 const tableActions = [
   {
     label: "Add customer",
     icon: "pi pi-plus",
     action: () => {
-      router.visit("/contacts/customers/create");
+      dialog.open(CreateEdit, {
+        props: {
+          modal: true,
+          header: "Create customer",
+        },
+      });
     },
   },
 ];
@@ -75,12 +81,20 @@ function parseItemsData() {
 }
 
 const editCustomer = (customer) => {
-  router.visit(route("customer.edit", { customer }));
+  dialog.open(CreateEdit, {
+    data: {
+      customer: customer,
+    },
+    props: {
+      modal: true,
+      header: "Edit customer",
+    },
+  });
 };
 
 const deleteCustomer = (customer) => {
   axios.delete(route("customers.destroy", { customer })).then(() => {
-    window.location.reload();
+    router.reload();
   });
 };
 
@@ -104,11 +118,9 @@ function confirmDelete(customer) {
   });
 }
 
-
 onMounted(() => {
   parseItemsData();
 });
 
 defineOptions({ layout: AppLayout });
-
 </script>

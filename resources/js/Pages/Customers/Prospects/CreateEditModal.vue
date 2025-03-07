@@ -60,7 +60,7 @@
 </template>
 
 <script setup lang="ts">
-import { useForm } from "@inertiajs/vue3";
+import { router, useForm } from "@inertiajs/vue3";
 import axios from "axios";
 import { InputText, Select, Textarea } from "primevue";
 import { inject, onMounted, Ref, ref } from "vue";
@@ -124,7 +124,7 @@ async function submitForm() {
     } else {
       await axios.post(route("prospects.store"), payload);
     }
-    window.location.reload();
+    router.reload();
   } catch (error) {
     console.error("Error fetching storages:", error);
   }
