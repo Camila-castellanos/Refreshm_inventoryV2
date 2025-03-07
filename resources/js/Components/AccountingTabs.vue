@@ -28,7 +28,7 @@ const redirectToTab = (tab: string) => {
 };
 
 const getCurrentTab = () => {
-   currentTab.value = window.location.pathname.split("/")[2];
+   currentTab.value = "/" + window.location.pathname.split("/")[2];
   console.log(currentTab.value);
 };
 

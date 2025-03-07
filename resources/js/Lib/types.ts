@@ -68,3 +68,49 @@ export interface Tab {
   name: string;
   order: number;
 }
+
+export interface Payment {
+  id: number;
+  sale_id: number;
+  amount_paid: string;
+  balance_remaining: string;
+  payment_method: string;
+  payment_account: string;
+  payment_date: string;
+  created_at: string;
+  updated_at: string;
+  date: string;
+  paid: string;
+}
+
+export interface EmailTemplate {
+  id: number;
+  name: string;
+  subject: string;
+  body: string;
+}
+
+export interface PaymentResponse {
+  id: number;
+  date: string;
+  customer: string;
+  returned_items: any[];
+  credited_items: any[];
+  customer_id: string;
+  customer_credit: number;
+  customer_email: any;
+  credit: any;
+  total: string;
+  amount_paid: string;
+  balance_remaining: string;
+  status: string;
+  payments: Payment[];
+  sale_id: number;
+  payment_method: string;
+  payment_account: string;
+  tax: string;
+  tax_id: number;
+  discount: string;
+  notes: any;
+  sale_date: string;
+}

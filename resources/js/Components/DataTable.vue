@@ -52,6 +52,7 @@
 
     <Column header="Actions" name="actions" v-if="headers.filter((header) => header.name === 'actions').length > 0">
       <template #body="slotProps">
+        <div class="flex gap-2">
         <Button
           v-for="action in slotProps.data.actions"
           :key="action.label"
@@ -60,8 +61,10 @@
           :icon="action.icon ? action.icon : ''"
           :label="action?.label"
           :outlined="action?.outlined ?? false"
+          :raised="action?.outlined ?? false"
           @click="() => action.action(slotProps.data)"
           :disabled="action.disable" />
+          </div>
       </template>
     </Column>
     <template #footer> In total there are {{ items ? items.length : 0 }} items. </template>
