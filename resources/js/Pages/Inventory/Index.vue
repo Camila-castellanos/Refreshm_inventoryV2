@@ -117,14 +117,14 @@ const tableActions = [
       router.visit("/inventory/items/bulk");
     },
   },
-  // {
-  //   label: "Reassign location",
-  //   icon: "pi pi-arrow-up",
-  //   action: () => {
-  //     toggleAssignStorageVisible();
-  //   },
-  //   disable: (selectedItems) => selectedItems.length == 1,
-  // },
+  {
+    label: "Reassign location",
+    icon: "pi pi-arrow-up",
+    action: () => {
+      toggleAssignStorageVisible();
+    },
+    disable: (selectedItems: Item[]) => selectedItems.length == 1,
+  },
   {
     label: "Sell",
     icon: "pi pi-dollar",

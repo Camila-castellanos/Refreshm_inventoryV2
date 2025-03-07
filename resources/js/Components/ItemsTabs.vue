@@ -93,7 +93,7 @@ function addNewTab() {
     axios.post(route("tab.store"), { tab: newTab.title }).then((response) => {
       tabs.value.push(response.data);
       addTabDialog.value = false;
-      window.location.reload();
+      router.reload({ only: ['tabs'] });
     });
   }
 }
