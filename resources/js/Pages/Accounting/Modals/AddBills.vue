@@ -83,6 +83,7 @@ onMounted(async () => {
       bills.value = dialogRef.value.data.bills.map((bill: any) => ({
         ...bill,
         vendor: vendorOptions.value.find((vendor: any) => vendor.id == bill.vendor_id),
+        subtotal: Number(bill.subtotal),
         tax: taxOptions.value.find((tax: any) => tax.id == bill.tax_id),
       }));
       isEditing.value = true;

@@ -41,13 +41,22 @@
       <Button type="submit" label="Confirm" :loading="loading" />
     </div>
 
-    <Divider align="center">OR</Divider>
+    <Divider align="center" v-if="!isEditing">OR</Divider>
 
-    <div class="flex flex-col items-center mt-4">
+    <div class="flex flex-col items-center mt-4" v-if="!isEditing">
       <label class="block text-sm font-medium mb-2">Upload Expenses via Excel/CSV:</label>
-      <FileUpload mode="basic" name="file" accept=".csv,.xls,.xlsx" :customUpload="true" @select="handleFileUpload" />
-      <Button label="UPLOAD FILE" class="p-button-primary mt-2" @click="uploadFile" :loading="loadingUpload" />
-      <Button label="Download Excel Demo" class="p-button-secondary mt-2" @click="downloadDemo" :loading="loadingUpload" />
+      <div class="flex justify-center gap-3 items-center">
+        <FileUpload
+          mode="basic"
+          choose-label="Choose and upload"
+          auto
+          name="file"
+          accept=".csv,.xls,.xlsx"
+          class="!col-span-2"
+          customUpload
+          @select="handleFileUpload" />
+        <Button label="Download Excel Demo" class="p-button-secondary col-span-1" @click="downloadDemo" :loading="loadingUpload" />
+      </div>
     </div>
   </form>
 </template>
@@ -56,7 +65,7 @@
 import { Expense, Tax } from "@/Lib/types";
 import axios from "axios";
 import { format } from "date-fns";
-import { FileUploadSelectEvent } from "primevue";
+import { FileUpload, FileUploadSelectEvent, FileUploadUploadEvent } from "primevue";
 import Button from "primevue/button";
 import DatePicker from "primevue/datepicker";
 import Divider from "primevue/divider";
@@ -100,6 +109,7 @@ const resetForm = () => {
 
 const handleFileUpload = (event: FileUploadSelectEvent) => {
   selectedFile.value = event.files[0];
+  uploadFile();
 };
 
 const deleteExpense = (index: number) => {
