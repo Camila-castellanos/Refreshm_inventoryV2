@@ -1,14 +1,19 @@
 <?php
 
+use App\Http\Controllers\BillController;
 use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\ExpensesController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\VendorController;
 use App\Http\Controllers\StorageController;
 use App\Http\Controllers\ItemController;
+use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProspectController;
 use App\Http\Controllers\SaleController;
+use App\Http\Controllers\TaxController;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 
@@ -96,4 +101,46 @@ Route::middleware([
     Route::post("vendor/store", [VendorController::class, "store"])->name("vendor.store");
     Route::get("vendor/list", [VendorController::class, "vendorList"])->name("vendor.list");
     Route::post("vendor/datewise", [VendorController::class, "datewise"])->name("vendor.datewise");
+
+    Route::get("accounting/expenses", [ExpensesController::class, "show"])->name("reports.expenses.show");
+    Route::delete("expenses/obliterate", [ExpensesController::class, "obliterate"])->name("expenses.obliterate");
+    Route::resource("expenses", ExpensesController::class)
+        ->except(["show", "update"]);
+    Route::post("expenses/update", [ExpensesController::class, "update"])->name("expenses.update");
+    Route::get("expenses/excel/create", [ExpensesController::class, "excelCreate"])->name("expenses.excel.create");
+    Route::post("expenses/excel/store", [ExpensesController::class, "excelStore"])->name("expenses.excel.store");
+    Route::get("expenses/excelDemo/download", [ExpensesController::class, "excelDemoDownload"])->name("expenses.excel.demo.download");
+
+    Route::get("accounting/bills", [BillController::class, "show"])->name("reports.bills.show");
+    Route::delete("bills/obliterate", [BillController::class, "obliterate"])->name("bills.obliterate");
+    Route::resource("bills", BillController::class)
+        ->except(["show", "update"]);
+    Route::post("bills/update", [BillController::class, "update"])->name("bills.update");
+    Route::post("bills/recordPayment", [BillController::class, "recordPayment"])->name("bills.record.payment");
+    Route::post("bills/removePayment", [BillController::class, "removePayment"])->name("bills.remove.payment");
+    Route::post("bills/editPayment", [BillController::class, "editPayment"])->name("bills.edit.payment");
+    Route::get("bills/excel/create", [BillController::class, "excelCreate"])->name("bills.excel.create");
+    Route::post("bills/excel/store", [BillController::class, "excelStore"])->name("bills.excel.store");
+    Route::get("bills/excelDemo/download", [BillController::class, "excelDemoDownload"])->name("bills.excel.demo.download");
+
+    Route::get("accounting/payments", [PaymentController::class, "show"])->name("reports.payments.show");
+    Route::resource("payments", PaymentController::class)->except(["show", "update"]);
+    Route::post("payments/update", [PaymentController::class, "update"])->name("payments.update");
+    Route::post("payments/remove", [PaymentController::class, "removePayment"])->name("remove.payment");
+    Route::post("payments/delete", [PaymentController::class, "delete"])->name("payments.delete");
+    Route::post("payments/edit", [PaymentController::class, "editPayment"])->name("edit.payment");
+    Route::get("accounting/payments/{id}/invoice", [PaymentController::class, "invoice"])->name("reports.payments.invoice");
+    Route::post("accounting/payments/{id}/sendInvoice", [PaymentController::class, "sendInvoice"])->name("payments.send.invoice");
+    Route::get("accounting/payments/{id}/view", [PaymentController::class, "view"])->name("payments.view");
+    Route::post("accounting/payments/{id}/invoice/paid", [PaymentController::class, "paid"])->name("reports.payments.invoice.paid");
+    Route::post("payments/addNewItems", [PaymentController::class, "addNewItems"])->name("payments.addNewItems");
+    Route::get("accounting/amount-paid-balancing-set", [PaymentController::class, "amountPaidBalancingSet"])->name("reports.amount.paid.balancing.set");
+
+    Route::get("accounting/taxes", [TaxController::class, "show"])->name("reports.taxes.show");
+    Route::get("accounting/taxes/list", [TaxController::class, "list"])->name("tax.list");
+    Route::post("accounting/taxes/store", [TaxController::class, "store"])->name("tax.store");
+    Route::post("accounting/taxes/update", [TaxController::class, "update"])->name("taxes.update");
+    Route::post("accounting/taxes/remove", [TaxController::class, "remove"])->name("taxes.remove");
+    Route::post("accounting/taxes/datewise", [TaxController::class, "datewise"])->name("taxes.datewise");
+    Route::resource("taxes", TaxController::class)->except(['update']);
 });

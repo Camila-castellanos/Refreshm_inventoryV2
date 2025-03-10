@@ -293,7 +293,7 @@ class SaleController extends Controller
             'fields' => $fields,
         ];
 
-        return Inertia::render("Items/Report", $context);
+        return Inertia::render("Inventory/Sold", $context);
     }
 
     /**
