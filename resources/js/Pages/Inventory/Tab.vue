@@ -3,12 +3,12 @@
   <div>
     <section class="w-[90%] mx-auto mt-4">
       <ItemsTabs :custom-tabs="tabs">
-            <DataTable
-              :title="tab?.name ?? 'No tab'"
-              @update:selected="handleSelection"
-              :items="tableData"
-              :headers="headers"
-              :actions="tableActions"></DataTable>
+        <DataTable
+          :title="tab?.name ?? 'No tab'"
+          @update:selected="handleSelection"
+          :items="tableData"
+          :headers="headers"
+          :actions="tableActions"></DataTable>
       </ItemsTabs>
     </section>
   </div>
@@ -36,9 +36,9 @@ const props = defineProps({
   customers: Array,
   tabs: {
     type: Array<ITab>,
-    required: true
+    required: true,
   },
-  current_tab: Number
+  current_tab: Number,
 });
 const assignStorageVisible: Ref<any> = ref(null);
 
@@ -53,7 +53,7 @@ const handleSelection = (selected: Item[]) => {
 };
 
 const tab: Ref<Tab | null> = ref(null);
-  const customTabs: Ref<Tab[]> = ref([]);
+const customTabs: Ref<Tab[]> = ref([]);
 
 const tableData: Ref<any[]> = ref([]);
 function parseItemsData() {
@@ -81,8 +81,8 @@ function parseItemsData() {
                 console.log(item);
                 openMoveItemsModal(item);
               },
-            }
-          ]
+            },
+          ],
         };
       }
       return {
@@ -104,6 +104,9 @@ function openSellItemsModal() {
     props: {
       modal: true,
     },
+    onClose: () => {
+      router.reload({ only: ["items"] });
+    },
   });
 }
 
@@ -115,6 +118,9 @@ function openMoveItemsModal(item: Item) {
     },
     props: {
       modal: true,
+    },
+    onClose: () => {
+      router.reload({ only: ["items"] });
     },
   });
 }
@@ -159,6 +165,4 @@ const tableActions = [
     disable: (selectedItems: Item[]) => selectedItems.length !== 1,
   },
 ];
-
-
 </script>

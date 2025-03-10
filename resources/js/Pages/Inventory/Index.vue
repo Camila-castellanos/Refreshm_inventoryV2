@@ -32,7 +32,7 @@ const dialog = useDialog();
 const props = defineProps({
   items: Array<Item>,
   customers: Array,
-  tabs: {type:Array<ITab>, required: true},
+  tabs: { type: Array<ITab>, required: true },
 });
 
 const assignStorageVisible: Ref<any> = ref(null);
@@ -69,8 +69,8 @@ function parseItemsData() {
               action: (item: Item) => {
                 openMoveItemsModal(item);
               },
-            }
-          ]
+            },
+          ],
         };
       }
       return {
@@ -79,7 +79,6 @@ function parseItemsData() {
       };
     });
 }
-
 
 onMounted(() => {
   parseItemsData();
@@ -105,6 +104,9 @@ function openMoveItemsModal(item: Item) {
     },
     props: {
       modal: true,
+    },
+    onClose: () => {
+      router.reload({ only: ["items"] });
     },
   });
 }

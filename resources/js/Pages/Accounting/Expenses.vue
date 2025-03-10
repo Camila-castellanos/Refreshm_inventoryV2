@@ -49,7 +49,12 @@ const actions: ITableActions[] = [
     label: "Add expenses",
     icon: "pi pi-plus",
     action: () => {
-      dialog.open(AddExpenses, { props: { modal: true, header: "Add new expense" } });
+      dialog.open(AddExpenses, {
+        props: { modal: true, header: "Add new expense" },
+        onClose: () => {
+          router.reload({ only: ["items"] });
+        },
+      });
     },
   },
   {
@@ -57,7 +62,13 @@ const actions: ITableActions[] = [
     icon: "pi pi-pencil",
     disable: (selectedItems) => selectedItems.length === 0,
     action: () => {
-      dialog.open(AddExpenses, { data: { expenses: selectedItems.value }, props: { modal: true, header: "Edit expenses" } });
+      dialog.open(AddExpenses, {
+        data: { expenses: selectedItems.value },
+        props: { modal: true, header: "Edit expenses" },
+        onClose: () => {
+          router.reload({ only: ["items"] });
+        },
+      });
     },
   },
   {
@@ -71,11 +82,13 @@ const actions: ITableActions[] = [
         header: "Delete expenses",
         icon: "pi pi-info-circle",
         accept: () => {
-          axios.delete(route("expenses.obliterate"), {
-            data: selectedItems.value,
-          }).then(() => {
-            router.reload({ only: ["items"] });
-          })
+          axios
+            .delete(route("expenses.obliterate"), {
+              data: selectedItems.value,
+            })
+            .then(() => {
+              router.reload();
+            });
         },
         reject: () => {
           console.log("Reject");

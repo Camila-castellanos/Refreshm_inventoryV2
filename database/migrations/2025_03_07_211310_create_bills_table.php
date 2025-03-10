@@ -22,7 +22,6 @@ return new class extends Migration
             $table->string("amount_paid")->nullable();
             $table->string("balance_remaining")->nullable();
             $table->foreignId("user_id")->nullable()->constrained();
-            $table->foreignId("bill_id")->constrained();
             $table->string("vendor_id")->nullable();
             $table->string("subtotal")->nullable();
             $table->string("tax")->nullable();
