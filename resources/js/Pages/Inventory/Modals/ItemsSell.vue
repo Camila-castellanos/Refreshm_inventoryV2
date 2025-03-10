@@ -7,7 +7,7 @@
       </div>
 
       <div class="col-span-2">
-        <label for="icondisplay" class="block mb-2 font-bold"> Tax </label>
+        <label for="icondisplay" class="block mb-2 font-bold"> Tax % </label>
         <Select v-model="form.tax" :options="taxes" optionLabel="name" placeholder="Select" class="w-full">
           <template #option="slotProps">
             <div class="flex items-center">
@@ -19,7 +19,7 @@
 
           <template #footer>
             <div class="p-3">
-              <Button label="Add New Tax" fluid severity="secondary" text size="small" icon="pi pi-plus" />
+              <Button label="Add New Tax" fluid severity="secondary" text size="small" icon="pi pi-plus" @click="addTax" />
             </div>
           </template>
         </Select>
@@ -91,13 +91,15 @@
 </template>
 
 <script setup lang="ts">
+import { Tab } from "@/Lib/types";
+import AddTaxes from "@/Pages/Accounting/Modals/AddTaxes.vue";
 import CreateEdit from "@/Pages/Customers/CreateEdit.vue";
 import { router, useForm } from "@inertiajs/vue3";
 import axios from "axios";
 import { DatePicker, Select, Textarea, useDialog } from "primevue";
 import Column from "primevue/column";
 import DataTable from "primevue/datatable";
-import { computed, inject, onMounted, ref, watch } from "vue";
+import { computed, inject, onMounted, Ref, ref, watch } from "vue";
 
 const dialog = useDialog();
 // Subtotal: Sum of all selling prices
@@ -129,8 +131,14 @@ let customers = ref<any>([]);
 
 onMounted(() => {
   params.value = dialogRef.value.data;
+  getTaxes();
   parseCustomersData();
 });
+
+async function getTaxes() {
+  const response = await axios.get(route("tax.list"));
+  taxes.value = response.data;
+}
 
 function parseCustomersData() {
   if (!params.value.customers || params.value.customers.length == 0) return;
@@ -151,16 +159,7 @@ const form = useForm({
   memo_notes: "",
 });
 
-const taxes = [
-  { id: 3, name: "HST", percentage: 13.0, user_id: 1 },
-  { id: 4, name: "GST", percentage: 5.0, user_id: 1 },
-  { id: 5, name: "No Tax", percentage: 0.0, user_id: 1 },
-  { id: 9, name: "Tax#206", percentage: 5.0, user_id: 22 },
-  { id: 10, name: "Tax#343", percentage: 0.0, user_id: 24 },
-  { id: 11, name: "Tax#359", percentage: 0.0, user_id: 23 },
-  { id: 12, name: "Tax#488", percentage: 5.0, user_id: 25 },
-  { id: 14, name: "USA", percentage: 0.0, user_id: 1 },
-];
+const taxes: Ref<Tab[]> = ref([]);
 
 const payment_method = [
   {
@@ -203,6 +202,19 @@ function addCustomer() {
           ...newCustomer.data,
           name: newCustomer.data.customer,
         });
+      }
+    },
+  });
+}
+
+function addTax() {
+  dialog.open(AddTaxes, {
+    data: {shouldReturnData: true},
+    props: { modal: true, header: "Add new tax" },
+    onClose: (data) => {
+      console.log(data);
+      if (data?.data) {
+         taxes.value.push(...data.data); 
       }
     },
   });

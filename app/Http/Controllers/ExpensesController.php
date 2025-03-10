@@ -26,7 +26,7 @@ class ExpensesController extends Controller
       'items' => Expense::where("user_id", $user->id)->orderBy('id', 'desc')->get(),
     ];
 
-    return Inertia::render("Accounting/ExpensesShow", $context);
+    return Inertia::render("Accounting/Expenses", $context);
   }
 
 

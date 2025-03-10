@@ -24,18 +24,18 @@
           </IconField>
           <slot />
         </div>
-        <div class="flex gap-8">
+        <div class="flex flex-no-wrap overflow-x-auto w-auto gap-8 whitespace-nowrap">
           <Button
             v-for="action in computedActions"
             :key="action.label"
             :severity="action.severity ? action.severity : 'primary'"
-            :class="[action.extraClasses, 'px-4 py-2 rounded-md'].join(' ')"
+            :class="[action.extraClasses, `px-4 py-2 rounded-md ${action.label.length > 0 ? 'min-w-[150px]' : 'min-w-[40px]'}`].join(' ')"
             :icon="action.icon ? action.icon : ''"
             :label="action?.label"
             @click="action.action"
             :disabled="action.disable" />
 
-          <Button icon="pi pi-file-export" label="Export CSV" severity="primary" @click="exportCSV" />
+          <Button icon="pi pi-file-export" label="Export CSV" severity="primary" @click="exportCSV" class="min-w-[150px]"/>
         </div>
       </div>
     </template>

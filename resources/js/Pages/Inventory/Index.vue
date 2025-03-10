@@ -123,7 +123,7 @@ const tableActions = [
     action: () => {
       toggleAssignStorageVisible();
     },
-    disable: (selectedItems: Item[]) => selectedItems.length == 1,
+    disable: (selectedItems: Item[]) => selectedItems.length == 0,
   },
   {
     label: "Sell",

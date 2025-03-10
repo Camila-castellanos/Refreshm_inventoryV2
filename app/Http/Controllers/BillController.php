@@ -50,10 +50,10 @@ class BillController extends Controller
 
     $context = [
       'items' => $bills,
-      'dataStatus' => $dataStatus
+      'data_status' => $dataStatus
     ];
 
-    return Inertia::render("Accounting/BillsShow", $context);
+    return Inertia::render("Accounting/Bills", $context);
   }
 
 

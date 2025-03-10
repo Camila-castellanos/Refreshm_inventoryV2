@@ -180,7 +180,7 @@ class PaymentController extends Controller
       if ($store) {
         $header = $store->header;
         $footer = $store->footer;
-        if (!is_null($store->logo)) {
+        if (!is_null($store->logo) && $store->logo != "") {
           $logo = base64_encode(file_get_contents(storage_path() . "/app/" . $store->logo));
         } else {
           $logo = base64_encode(file_get_contents(public_path() . "/img/_REFRESHMOBILE.png"));
@@ -199,7 +199,7 @@ class PaymentController extends Controller
 
 
 
-      $filename = $customer->customer . " Invoice " . $sales[0]->id . ".pdf";
+      $filename = $customer . " Invoice " . $sales[0]->id . ".pdf";
 
       return $pdf->stream($filename);
     }
