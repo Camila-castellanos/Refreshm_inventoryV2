@@ -44,9 +44,9 @@ onMounted(() => {
   tableData.value = props.items!.map((item) => {
     return {
       ...item,
-      amount: "$ " + item.amount_paid,
+      amount_paid: "$ " + item.amount_paid,
       total: "$ " + item.total,
-      balance_remaining: "$" + item.balance_remaining,
+      balance_remaining: "$ " + item.balance_remaining,
       /* 
        * Actions
        * if item is paid, show: invoice, view payments, edit and send
@@ -77,7 +77,8 @@ const getItemActions = (item: IPaymentResponse) => {
           dialog.open(ShowPayments, {
             data: {
               paidPayments: item.payments,
-              view: "view"
+              view: "view",
+              saleId: item.sale_id
             },
             props: {
               modal: true
@@ -115,7 +116,7 @@ const getItemActions = (item: IPaymentResponse) => {
             modal: true
           },
           onClose: () => {
-            router.reload({ only: ["items"] });
+            router.reload();
           }
         })
       }

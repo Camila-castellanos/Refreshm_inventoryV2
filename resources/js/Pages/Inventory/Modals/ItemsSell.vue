@@ -96,6 +96,7 @@ import AddTaxes from "@/Pages/Accounting/Modals/AddTaxes.vue";
 import CreateEdit from "@/Pages/Customers/CreateEdit.vue";
 import { router, useForm } from "@inertiajs/vue3";
 import axios from "axios";
+import { format } from "date-fns";
 import { DatePicker, Select, Textarea, useDialog } from "primevue";
 import Column from "primevue/column";
 import DataTable from "primevue/datatable";
@@ -179,16 +180,6 @@ const payment_account = [
   },
 ];
 
-const formatDate = (date: Date) => {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  const hours = String(date.getHours()).padStart(2, "0");
-  const minutes = String(date.getMinutes()).padStart(2, "0");
-  const seconds = String(date.getSeconds()).padStart(2, "0");
-  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-};
-
 function addCustomer() {
   dialog.open(CreateEdit, {
     props: {
@@ -233,7 +224,7 @@ async function submitForm(e: Event, isConfirmed: boolean) {
     total: total.value,
     discount: 0,
     flatTax: flatTax.value,
-    payment_date: formatDate(form.date),
+    payment_date: format(form.date, "yyyy-MM-dd"),
     memo_notes: form.memo_notes,
     payment_method: form.payment_method?.name || "",
     payment_account: form.payment_account?.name || "",
@@ -247,7 +238,7 @@ async function submitForm(e: Event, isConfirmed: boolean) {
       imei: item.imei,
       selling_price: item.selling_price,
       issues: item.issues,
-      sold: formatDate(form.date),
+      sold: format(form.date, "yyyy-MM-dd"),
       customer: form.customer.name,
       position: item.position,
       storage_id: item.storage_id,

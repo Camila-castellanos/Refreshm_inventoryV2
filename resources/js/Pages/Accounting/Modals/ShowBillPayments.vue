@@ -79,7 +79,7 @@ import TabView from "primevue/tabview";
 import Textarea from "primevue/textarea";
 import { useToast } from "primevue/usetoast";
 import { inject, onMounted, Ref, ref } from "vue";
-import ShowPayments from "./ShowPayments.vue";
+import ShowBillPayments from "./ShowBillPayments.vue";
 
 const toast = useToast();
 const dialog = useDialog();
@@ -88,7 +88,6 @@ const confirm = useConfirm();
 const dialogRef: any = inject("dialogRef");
 const view = ref("all");
 const paidId: Ref<any> = ref(null);
-const saleId: Ref<any> = ref(null);
 const paidDate: Ref<Date | null> = ref(null);
 const paidAmount: Ref<number | null> = ref(null);
 const paidPaymentMethod: Ref<string | null> = ref(null);
@@ -103,7 +102,6 @@ onMounted(() => {
   if (dialogRef.value?.data) {
     view.value = dialogRef.value.data.view || "all";
     paidId.value = dialogRef.value.data.paidId || null;
-    saleId.value = dialogRef.value.data.saleId || null;
     if (view.value !== "record") {
       tableData.value = dialogRef.value.data.paidPayments.map((payment: PaymentResponse) => ({
         ...payment,
@@ -113,11 +111,10 @@ onMounted(() => {
             label: "",
             icon: "pi pi-pencil",
             action: () => {
-              dialog.open(ShowPayments, {
+              dialog.open(ShowBillPayments, {
                 data: {
                   payment: payment,
                   view: "record",
-                  saleId: saleId.value,
                 },
                 props: {
                   modal: true,
@@ -133,8 +130,7 @@ onMounted(() => {
             icon: "pi pi-trash",
             severity: "danger",
             action: () => {
-              console.log(payment);
-              removePayment(payment.id);
+              removePayment(payment.id, Number(payment.amount_paid));
             },
           },
         ],
@@ -171,14 +167,13 @@ const invoicePaid = async () => {
     life: 3000,
   });
   try {
-    await axios.post(route("reports.payments.invoice.paid", { id: paidId.value }), {
+    await axios.post(route("bills.record.payment", { id: paidId.value }), {
       id: paidId.value,
-      sale_id: saleId.value,
       amount: String(paidAmount.value),
-      paidDate: format(paidDate.value as Date, "yyyy-MM-dd"),
-      paidPaymentMethod: paidPaymentMethod.value,
-      paidPaymentAccount: paidPaymentAccount.value,
-      paidNotes: paidNotes.value,
+      payment_date: format(paidDate.value as Date, "yyyy-MM-dd"),
+      payment_method: paidPaymentMethod.value,
+      payment_account: paidPaymentAccount.value,
+      payment_notes: paidNotes.value,
     });
     toast.add({ severity: "success", summary: "Success", detail: "Paid Successful!", life: 3000 });
     dialogRef.value.close();
@@ -197,13 +192,12 @@ const submitPaymentEdit = async () => {
       life: 3000,
     });
 
-    const response = await axios.post(route("edit.payment"), {
+    const response = await axios.post(route("bills.edit.payment"), {
       id: paymentId.value,
-      paymentAmount: paidAmount.value,
-      paymentMethod: paidPaymentMethod.value,
-      paymentAccount: paidPaymentAccount.value,
-      paymentDate: format(paidDate.value as Date, "yyyy-MM-dd"),
-      sale_id: saleId.value,
+      payment_amount: paidAmount.value,
+      payment_method: paidPaymentMethod.value,
+      payment_account: paidPaymentAccount.value,
+      payment_date: format(paidDate.value as Date, "yyyy-MM-dd"),
     });
 
     if (response.status >= 200 && response.status < 400) {
@@ -239,7 +233,7 @@ const submitPaymentEdit = async () => {
   }
 };
 
-const removePayment = async (paymentId: number) => {
+const removePayment = async (paymentId: number, paymentAmount: number) => {
   confirm.require({
     message: "Are you sure you want to remove this payment?",
     header: "Confirm Removal",
@@ -255,9 +249,9 @@ const removePayment = async (paymentId: number) => {
           life: 3000,
         });
 
-        const response = await axios.post(route("remove.payment"), {
+        const response = await axios.post(route("bills.remove.payment"), {
           id: paymentId,
-          sale_id: saleId.value,
+          payment_amount: paymentAmount,
         });
 
         if (response.status >= 200 && response.status < 400) {
