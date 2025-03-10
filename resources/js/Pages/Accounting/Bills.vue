@@ -27,6 +27,7 @@ import { onMounted, ref, Ref } from "vue";
 import { billHeaders } from "./data";
 import AddBills from "./Modals/AddBills.vue";
 import ShowPayments from "./Modals/ShowPayments.vue";
+import { router } from "@inertiajs/vue3";
 
 const dialog = useDialog();
 const props = defineProps({
@@ -85,7 +86,7 @@ const handleSelection = (items: Bill[]) => {
 };
 
 const getItemActions = (item: Bill) => {
-  if (item.status === "Paid") {
+  if (String(item.status) === "Paid") {
     return [
       {
         outlined: true, label: "View Payments", icon: "", action: () => {
@@ -97,6 +98,9 @@ const getItemActions = (item: Bill) => {
             props: {
               modal: true
             },
+            onClose: () => {
+              router.reload({ only: ["items"] });
+            }
           })
         }
       },
