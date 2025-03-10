@@ -28,6 +28,7 @@ import { billHeaders } from "./data";
 import AddBills from "./Modals/AddBills.vue";
 import ShowPayments from "./Modals/ShowPayments.vue";
 import { router } from "@inertiajs/vue3";
+import ShowBillPayments from "./Modals/ShowBillPayments.vue";
 
 const dialog = useDialog();
 const props = defineProps({
@@ -86,11 +87,12 @@ const handleSelection = (items: Bill[]) => {
 };
 
 const getItemActions = (item: Bill) => {
-  if (String(item.status) === "Paid") {
+  console.log(item.status);
+  if (item.status === 1) {
     return [
       {
         outlined: true, label: "View Payments", icon: "", action: () => {
-          dialog.open(ShowPayments, {
+          dialog.open(ShowBillPayments, {
             data: {
               paidPayments: item.payments,
               view: "view"
@@ -113,7 +115,7 @@ const getItemActions = (item: Bill) => {
       label: "Record / View Payments",
       icon: "",
       action: () => {
-        dialog.open(ShowPayments, {
+        dialog.open(ShowBillPayments, {
           data: {
             paidPayments: item.payments,
             paidId: item.id,
