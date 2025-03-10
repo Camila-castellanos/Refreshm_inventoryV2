@@ -29,6 +29,9 @@ class ExpenseForm extends FormRequest
       "items.*.name" => "sometimes",
       "items.*.category" => "sometimes",
       "items.*.amount" => "sometimes",
+      "items.*.total" => "sometimes",
+      "items.*.tax" => "sometimes",
+      "items.*.tax_id" => "sometimes",
     ];
   }
 }

@@ -42,7 +42,7 @@ class TaxController extends Controller
         'items' => $response,
       ];
 
-      return Inertia::render("Accounting/TaxesShow", $context);
+      return Inertia::render("Accounting/Taxes", $context);
     } catch (Exception $e) {
       return response()->json($e->getMessage(), 400);
     }
@@ -68,15 +68,15 @@ class TaxController extends Controller
   {
     try {
       $user = Auth::user();
-      if ($request->newTaxes) {
-        foreach ($request->newTaxes as $newTax) {
+      if ($request->taxes) {
+        foreach ($request->taxes as $newTax) {
           $newTax = Tax::create([
             'name' => $newTax["name"],
             'percentage' => $newTax["percentage"],
             'user_id' => $user->id,
           ]);
         }
-        return response()->json($request->newTaxes, 200);
+        return response()->json($request->taxes, 200);
       } else {
         $newTax = Tax::create([
           'name' => $request->name,

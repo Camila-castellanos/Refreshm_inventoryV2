@@ -4,10 +4,10 @@
       <ItemsTabs :custom-tabs="tabs">
         <DataTable title="Sold" @update:selected="handleSelection" :items="tableData" :headers="soldHeaders">
           <div class="max-w-[400px] w-full">
-            <div class="flex flex-row justify-around">
+            <form class="flex flex-row justify-around" @submit.prevent="onDateRangeSubmit">
               <DatePicker v-model="dates" :max-date="new Date()" selectionMode="range" dateFormat="dd/mm/yy" class="w-full" id="date" placeholder="Date range for report"></DatePicker>
               <Button label="Generate" class="mx-2" type="submit" />
-            </div>
+            </form>
           </div>
         </DataTable>
       </ItemsTabs>

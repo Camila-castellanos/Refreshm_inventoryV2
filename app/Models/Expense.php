@@ -12,7 +12,7 @@ class Expense extends Model
     "date",
     "name",
     "category",
-    "subtotal",
+    "amount",
     "tax",
     "tax_id",
     "total",

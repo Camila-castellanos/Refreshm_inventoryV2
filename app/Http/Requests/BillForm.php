@@ -32,6 +32,7 @@ class BillForm extends FormRequest
       "items.*.subtotal" => "sometimes",
       "items.*.tax" => "sometimes",
       "items.*.total" => "sometimes",
+      "items.*.invoice" => "sometimes",
     ];
   }
 }
