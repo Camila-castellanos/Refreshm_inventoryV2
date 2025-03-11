@@ -10,7 +10,7 @@
           id="customer"
           name="customer_name"
           v-model="form.customer_name"
-          placeholder="Insert"></InputText>
+          placeholder=""></InputText>
         <p class="block my-2 text-sm font-normal">Name of a business or person.</p>
         <Message v-if="nameInvalid" severity="error" size="small" variant="simple"> Name is required</Message>
       </template>
@@ -36,7 +36,7 @@
               id="first_name"
               name="first_name[]"
               v-model="form.first_name[index]"
-              placeholder="Insert"></InputText>
+              placeholder=""></InputText>
           </div>
           <div class="col-span-3">
             <InputLabel for="last_name" value="Last name" />
@@ -45,7 +45,7 @@
               class="w-full col-span-2"
               name="last_name[]"
               id="last_name"
-              placeholder="Insert"
+              placeholder=""
               v-model="form.last_name[index]"></InputText>
           </div>
           <div class="col-span-3">
@@ -55,7 +55,7 @@
               class="w-full col-span-2"
               name="email[]"
               id="email"
-              placeholder="Insert"
+              placeholder=""
               v-model="form.email[index]"></InputText>
           </div>
           <div class="col-span-3">
@@ -64,7 +64,7 @@
               type="tel"
               class="w-full col-span-2"
               id="personal_phone"
-              placeholder="Insert"
+              placeholder=""
               name="personal_phone[]"
               v-model="form.personal_phone[index]">
             </InputText>
@@ -110,16 +110,16 @@
               type="number"
               class="w-full col-span-2 bg-transparent"
               name="accnumber"
-              placeholder="Insert"
+              placeholder=""
               v-model="form.accnumber"></InputText>
           </div>
           <div class="col-span-2 px-6 py-3">
             <InputLabel for="website" value="Website" />
-            <InputText class="w-full col-span-2" name="website" placeholder="Insert" v-model="form.website" type="url"></InputText>
+            <InputText class="w-full col-span-2" name="website" placeholder="" v-model="form.website" type="url"></InputText>
           </div>
           <div class="col-span-2 px-6 py-3">
             <InputLabel for="credit" value="Credit ($)" />
-            <InputText class="w-full col-span-2" name="credit" placeholder="Insert" v-model="form.credit" type="number"></InputText>
+            <InputText class="w-full col-span-2" name="credit" placeholder="" v-model="form.credit" type="number"></InputText>
           </div>
           <div class="col-span-6 px-6 py-3">
             <InputLabel for="note" value="Note" />
@@ -127,7 +127,7 @@
               class="w-full col-span-2 rounded-md shadow-sm focus:ring focus:ring-indigo-200 focus:ring-opacity-50 filter--value"
               rows="3"
               name="note"
-              placeholder="Insert"
+              placeholder=""
               v-model="form.note"></Textarea>
           </div>
         </div>
@@ -154,7 +154,7 @@
               v-model="form.billing_address"
               name="billing_address"
               id="billing_address"
-              placeholder="Insert"></InputText>
+              placeholder=""></InputText>
           </div>
           <div class="col-span-4">
             <InputLabel for="billing_address_optional" value="Address 2 (optional)" />
@@ -164,7 +164,7 @@
               v-model="form.billing_address_optional"
               name="billing_address_optional"
               id="billing_address_optional"
-              placeholder="Insert">
+              placeholder="">
             </InputText>
           </div>
           <div class="col-span-2">
@@ -175,15 +175,15 @@
               v-model="form.billing_country"
               name="billing_country"
               id="billing_country"
-              placeholder="Insert"></InputText>
+              placeholder=""></InputText>
           </div>
           <div class="col-span-2">
             <InputLabel for="billing_state" value="Province / State" />
-            <InputText type="text" class="w-full" v-model="form.billing_state" name="billing_state" placeholder="Insert"></InputText>
+            <InputText type="text" class="w-full" v-model="form.billing_state" name="billing_state" placeholder=""></InputText>
           </div>
           <div class="col-span-2">
             <InputLabel for="billing_city" value="City" />
-            <InputText type="text" class="w-full" v-model="form.billing_city" name="billing_city" placeholder="Insert"></InputText>
+            <InputText type="text" class="w-full" v-model="form.billing_city" name="billing_city" placeholder=""></InputText>
           </div>
           <div class="col-span-2">
             <InputLabel for="billing_postal_code" value="Postal/Zip Code" />
@@ -192,7 +192,7 @@
               class="w-full"
               v-model="form.billing_postal_code"
               name="billing_postal_code"
-              placeholder="Insert"></InputText>
+              placeholder=""></InputText>
           </div>
           <div class="col-span-6">
             <a href="javascript:;" class="text-blue-500" @click="cleanBillingForm"> Clear Address </a>
@@ -206,7 +206,7 @@
       <template #content>
         <div class="w-full px-6 py-3">
           <InputLabel for="shipto" value="Ship to" />
-          <InputText type="text" class="w-full col-span-2" name="shipto" placeholder="Insert" v-model="form.shipto"></InputText>
+          <InputText type="text" class="w-full col-span-2" name="shipto" placeholder="" v-model="form.shipto"></InputText>
         </div>
 
         <h3 class="my-2 text-xl font-medium">Shipping Address</h3>
@@ -221,7 +221,7 @@
                   v-model="form.shipping_address"
                   name="shipping_address"
                   id="shipping_address"
-                  placeholder="Insert">
+                  placeholder="">
                 </InputText>
               </div>
               <div class="col-span-4">
@@ -232,7 +232,7 @@
                   v-model="form.shipping_address_optional"
                   name="shipping_address_optional"
                   id="shipping_address_optional"
-                  placeholder="Insert"></InputText>
+                  placeholder=""></InputText>
               </div>
               <div class="col-span-2">
                 <InputLabel for="shipping_country" value="Country" />
@@ -242,16 +242,16 @@
                   v-model="form.shipping_country"
                   name="shipping_country"
                   id="shipping_country"
-                  placeholder="Insert">
+                  placeholder="">
                 </InputText>
               </div>
               <div class="col-span-2">
                 <InputLabel for="shipping_state" value="Province / State" />
-                <InputText type="text" class="w-full" v-model="form.shipping_state" name="shipping_state" placeholder="Insert"></InputText>
+                <InputText type="text" class="w-full" v-model="form.shipping_state" name="shipping_state" placeholder=""></InputText>
               </div>
               <div class="col-span-2">
                 <InputLabel for="shipping_city" value="City" />
-                <InputText type="text" class="w-full" v-model="form.shipping_city" name="shipping_city" placeholder="Insert"></InputText>
+                <InputText type="text" class="w-full" v-model="form.shipping_city" name="shipping_city" placeholder=""></InputText>
               </div>
               <div class="col-span-2">
                 <InputLabel for="shipping_postal_code" value="Postal/Zip Code" />
@@ -260,7 +260,7 @@
                   class="w-full"
                   v-model="form.shipping_postal_code"
                   name="shipping_postal_code"
-                  placeholder="Insert"></InputText>
+                  placeholder=""></InputText>
               </div>
               <div class="col-span-6">
                 <a href="javascript:;" class="text-blue-500" @click="cleanShippingForm"> Clear Address </a>
@@ -282,7 +282,7 @@
                 rows="4"
                 name="shipping_delivery_instructions"
                 v-model="form.shipping_delivery_instructions"
-                placeholder="Insert"></Textarea>
+                placeholder=""></Textarea>
             </div>
           </div>
         </div>
