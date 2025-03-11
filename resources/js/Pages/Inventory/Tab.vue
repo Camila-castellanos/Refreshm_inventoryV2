@@ -73,12 +73,9 @@ function parseItemsData() {
           actions: [
             {
               label: "Move Tab",
-              icon: "",
-              outlined: true,
-              severity: "info",
+              icon: "pi pi-arrow-right-arrow-left",
               extraClasses: "!font-black",
               action: (item: Item) => {
-                console.log(item);
                 openMoveItemsModal(item);
               },
             },
@@ -88,6 +85,17 @@ function parseItemsData() {
       return {
         ...item,
         location: "No storage information",
+        vendor: item.vendor.vendor,
+        actions: [
+          {
+            label: "Move Tab",
+            icon: "pi pi-arrow-right-arrow-left",
+            extraClasses: "!font-black",
+            action: (item: Item) => {
+              openMoveItemsModal(item);
+            },
+          },
+        ],
       };
     });
 }
@@ -133,14 +141,14 @@ const tableActions = [
       router.visit(route("items.excel.create"));
     },
   },
-  // {
-  //   label: "Reassign location",
-  //   icon: "pi pi-arrow-up",
-  //   action: () => {
-  //     toggleAssignStorageVisible();
-  //   },
-  //   disable: (selectedItems) => selectedItems.length == 1,
-  // },
+  {
+    label: "Reassign location",
+    icon: "pi pi-arrow-up",
+    action: () => {
+      toggleAssignStorageVisible();
+    },
+    disable: (selectedItems: Item[]) => selectedItems.length == 1,
+  },
   {
     label: "Sell",
     icon: "pi pi-dollar",

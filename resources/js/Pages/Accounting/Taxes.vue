@@ -45,7 +45,6 @@ onMounted(() => {
     return {
       ...item,
       percentage: item.percentage + " %",
-      collected: "$ " + item.collected,
     };
   });
 });

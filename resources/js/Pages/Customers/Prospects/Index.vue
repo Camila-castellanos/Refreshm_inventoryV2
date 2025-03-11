@@ -68,13 +68,12 @@ function parseItemsData() {
       contact_type: prospect.contact_type[0].toUpperCase() + prospect.contact_type.slice(1),
       actions: [
         {
-          label: "",
+          label: "Edit",
           icon: "pi pi-pencil",
-          outlined: true,
           action: () => editProspect(prospect),
         },
         {
-          label: "",
+          label: "Delete",
           icon: "pi pi-trash",
           severity: "danger",
           action: () => confirmDeleteProspect(prospect),
