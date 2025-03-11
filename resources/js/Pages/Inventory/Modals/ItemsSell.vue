@@ -27,13 +27,7 @@
 
       <div class="col-span-2">
         <label for="icondisplay" class="block mb-2 font-bold"> Customer </label>
-        <Select v-model="form.customer" :options="customers" optionLabel="name" placeholder="Select" class="w-full">
-          <template #option="slotProps">
-            <div class="flex items-center">
-              <div>{{ `${slotProps.option.name}` }}</div>
-            </div>
-          </template>
-
+        <Select v-model="form.customer" :options="customers" optionLabel="customer" placeholder="Select" class="w-full">
           <template #footer>
             <div class="p-3">
               <Button label="Add New Customer" fluid severity="secondary" text size="small" icon="pi pi-plus" @click="addCustomer" />
@@ -146,7 +140,6 @@ function parseCustomersData() {
   customers.value = params.value.customers.map((customer: any) => {
     return {
       ...customer,
-      name: `${customer.first_name} ${customer.last_name}`,
     };
   });
 }
@@ -191,7 +184,6 @@ function addCustomer() {
       if (newCustomer?.data) {
         customers.value.push({
           ...newCustomer.data,
-          name: newCustomer.data.customer,
         });
       }
     },
@@ -218,17 +210,18 @@ async function submitForm(e: Event, isConfirmed: boolean) {
     return;
   }
 
+  console.log(form)
   const salePayload = {
     subtotal: subtotal.value,
-    tax: form?.tax?.percentage || 0,
+    tax: form?.tax?.percentage ?? 0,
     total: total.value,
     discount: 0,
     flatTax: flatTax.value,
     payment_date: format(form.date, "yyyy-MM-dd"),
-    memo_notes: form.memo_notes,
+    notes: form.memo_notes,
     payment_method: form.payment_method?.name || "",
     payment_account: form.payment_account?.name || "",
-    tax_id: form.tax?.id || null,
+    tax_id: form.tax?.id ?? null,
     paid: isConfirmed ? 1 : 0, // 1 = Fully Paid, 0 = Unpaid
     balance_remaining: isConfirmed ? 0 : total.value,
     amount_paid: isConfirmed ? total.value : 0,
@@ -239,7 +232,7 @@ async function submitForm(e: Event, isConfirmed: boolean) {
       selling_price: item.selling_price,
       issues: item.issues,
       sold: format(form.date, "yyyy-MM-dd"),
-      customer: form.customer.name,
+      customer: form.customer.customer,
       position: item.position,
       storage_id: item.storage_id,
       profit: item.selling_price - (item.cost || 0), // Ensure cost exists

@@ -706,7 +706,7 @@ class ItemController extends Controller
         try {
             $itemArray = $request->input("item");
             $item = Item::find($itemArray["id"]);
-            $customer = Customer::where('id', $item->customer)->first();
+            $customer = Customer::where('customer', $item->customer)->first();
             $sale = Sale::find($item->sale_id);
             $value = $item->selling_price - $sale->discount;
             //Subtotal Calculation
