@@ -395,7 +395,7 @@ class PaymentController extends Controller
       $context = [
         'saleId' => $id,
         'saleDate' => Item::where("sale_id", $id)->pluck('sold')->first(),
-        'customer' => Item::where("sale_id", $id)->pluck('sold')->first(),
+        'customer' => Item::where("sale_id", $id)->pluck('customer')->first(),
         'items' => Item::where("user_id", $user->id)->with(['storage:id,name,limit', 'vendor:id,vendor'])->whereNull("sold")->whereNull("hold")->get(),
       ];
     } else {
@@ -407,7 +407,7 @@ class PaymentController extends Controller
       ];
     }
 
-    return Inertia::render('Accounting/PaymentEdit', $context);
+    return Inertia::render('Accounting/AddItems', $context);
   }
 
   /**
