@@ -498,7 +498,7 @@ class ItemController extends Controller
 
 
 
-        return Inertia::render('Items/Hold', $context);
+        return Inertia::render('Inventory/Hold', $context);
     }
 
     public function tabStore(Request $request)

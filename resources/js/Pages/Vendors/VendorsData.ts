@@ -42,3 +42,7 @@ export const VendorHeaders = [
         "type": "number"
     },
 ];
+
+export default function fetchVendors() {
+    return axios.get('/vendor/list')
+};
