@@ -154,13 +154,13 @@ const navItems = ref([
     //         router.visit('/stores');
     //     }
     // },
-    // {
-    //     label: 'Users',
-    //     icon: 'pi pi-user',
-    //     command: () => {
-    //         router.visit('/users');
-    //     }
-    // }
+    {
+        label: 'Users',
+        icon: 'pi pi-user',
+        command: () => {
+            router.visit('/users');
+        }
+    }
 ]);
 
 onMounted(() => {
