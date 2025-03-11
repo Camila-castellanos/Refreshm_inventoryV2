@@ -77,18 +77,18 @@ function parseItemsData() {
         ...item,
         location: "No storage information",
         vendor: item.vendor.vendor,
-          actions: [
-            {
-              label: "Move Tab",
-              icon: "",
-              outlined: true,
-              severity: "info",
-              extraClasses: "!font-black",
-              action: (item: Item) => {
-                openMoveItemsModal(item);
-              },
+        actions: [
+          {
+            label: "Move Tab",
+            icon: "",
+            outlined: true,
+            severity: "info",
+            extraClasses: "!font-black",
+            action: (item: Item) => {
+              openMoveItemsModal(item);
             },
-          ],
+          },
+        ],
       };
     });
 }
