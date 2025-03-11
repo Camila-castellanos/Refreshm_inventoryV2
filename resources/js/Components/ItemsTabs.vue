@@ -46,7 +46,7 @@ const props = defineProps({
 });
 
 const tabs: Ref<ITab[]> = ref([
-  { name: "Active Directory", order: 0 },
+  { name: "Active Inventory", order: 0 },
   { name: "On Hold", order: 1 },
   { name: "Sold", order: 2 },
 ]);
@@ -73,9 +73,7 @@ onMounted(() => {
       currentTab.value = 2;
       break;
     default:
-      console.log(endpoint);
       let tabId = endpoint.split("/tab/")[1];
-      console.log(tabId);
       currentTab.value = tabs.value.find((tab) => tab.id == Number(tabId))?.order ?? 0;
       break;
   }

@@ -78,7 +78,7 @@ class VendorController extends Controller
             $vendor->balance = $balance < 0 ? 0 : $balance;
             $vendor->total_spend = $total_spend < 0 ? 0 : $total_spend;
         }
-        return Inertia::render('Vendors/Index', compact("vendors"));
+        return Inertia::render('Vendors/Vendors', compact("vendors"));
     }
 
     /**
