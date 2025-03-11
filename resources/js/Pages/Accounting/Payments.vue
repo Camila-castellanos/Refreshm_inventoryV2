@@ -66,17 +66,15 @@ const getItemActions = (item: IPaymentResponse) => {
   if (item.status === "Paid") {
     return [
       {
-        outlined: true,
         label: "Invoice",
-        icon: "",
+        icon: "pi pi-receipt",
         action: () => {
           window.location.assign(route("reports.payments.invoice", item.id));
         },
       },
       {
-        outlined: true,
         label: "View Payments",
-        icon: "",
+        icon: "pi pi-list",
         action: () => {
           dialog.open(ShowPayments, {
             data: {
@@ -91,9 +89,8 @@ const getItemActions = (item: IPaymentResponse) => {
         },
       },
       {
-        outlined: true,
         label: "Edit",
-        icon: "",
+        icon: "pi pi-pencil",
         severity: "info",
         action: () => {
           console.log(item);
@@ -104,23 +101,21 @@ const getItemActions = (item: IPaymentResponse) => {
           });
         },
       },
-      { outlined: true, label: "Send", icon: "", severity: "info", action: () => {} },
+      { label: "Send", icon: "pi pi-envelope", severity: "info", action: () => {} },
     ];
   }
 
   return [
     {
-      outlined: true,
       label: "Invoice",
-      icon: "",
+      icon: "pi pi-receipt",
       action: () => {
         window.location.assign(route("reports.payments.invoice", item.id));
       },
     },
     {
-      outlined: true,
       label: "Record / View Payments",
-      icon: "",
+      icon: "pi pi-save",
       action: () => {
         dialog.open(ShowPayments, {
           data: {
@@ -139,9 +134,8 @@ const getItemActions = (item: IPaymentResponse) => {
       },
     },
     {
-      outlined: true,
       label: "Edit",
-      icon: "",
+      icon: "pi pi-pencil",
       severity: "info",
       action: () => {
         dialog.open(SaleEdit, {
@@ -151,7 +145,7 @@ const getItemActions = (item: IPaymentResponse) => {
         });
       },
     },
-    { outlined: true, label: "Send", icon: "", severity: "info", action: () => {} },
+    { label: "Send", icon: "pi pi-envelope", severity: "info", action: () => {} },
   ];
 };
 

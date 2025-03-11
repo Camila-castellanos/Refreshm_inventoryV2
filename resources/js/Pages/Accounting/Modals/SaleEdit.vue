@@ -104,7 +104,7 @@
 
       <div class="col-span-6">
         <label class="block font-medium">Memo Notes</label>
-        <Textarea v-model="form.memo_notes" class="w-full" placeholder="Insert" rows="2" />
+        <Textarea v-model="form.memo_notes" class="w-full" placeholder="" rows="2" />
       </div>
       <div class="col-span-6">
         <div class="flex flex-col items-end justify-between">

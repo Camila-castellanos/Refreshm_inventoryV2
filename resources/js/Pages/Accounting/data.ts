@@ -78,17 +78,17 @@ export const billHeaders = [
   {
     label: "Total",
     name: "total",
-    type: "string",
+    type: "number",
   },
   {
     label: "Amount Paid",
     name: "amount_paid",
-    type: "string",
+    type: "number",
   },
   {
     label: "Balance Remaining",
     name: "balance_remaining",
-    type: "string",
+    type: "number",
   },
   {
     label: "Invoice",
@@ -116,7 +116,7 @@ export const taxHeaders = [
   {
     label: "Collected",
     name: "collected",
-    type: "string",
+    type: "number",
   },
   {
     label: "Paid",

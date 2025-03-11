@@ -62,9 +62,7 @@ function parseItemsData() {
           actions: [
             {
               label: "Move Tab",
-              icon: "",
-              outlined: true,
-              severity: "info",
+              icon: "pi pi-arrow-right-arrow-left",
               extraClasses: "!font-black",
               action: (item: Item) => {
                 openMoveItemsModal(item);
@@ -80,9 +78,7 @@ function parseItemsData() {
         actions: [
           {
             label: "Move Tab",
-            icon: "",
-            outlined: true,
-            severity: "info",
+            icon: "pi pi-arrow-right-arrow-left",
             extraClasses: "!font-black",
             action: (item: Item) => {
               openMoveItemsModal(item);
@@ -129,7 +125,7 @@ const tableActions = [
     label: "Add Items",
     icon: "pi pi-plus",
     action: () => {
-      router.visit("/inventory/items/bulk");
+      router.visit("/inventory/items/excel/create");
     },
   },
   {
@@ -163,5 +159,11 @@ const tableActions = [
     },
     disable: (selectedItems: Item[]) => selectedItems.length !== 1,
   },
+  {
+    label: "Place on hold",
+    icon: "pi pi-lock",
+    action: () => console.log("hi"),
+    disable: (selectedItems: Item[]) => selectedItems.length == 0,
+  }
 ];
 </script>
