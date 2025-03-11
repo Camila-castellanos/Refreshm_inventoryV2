@@ -62,9 +62,7 @@ function parseItemsData() {
           actions: [
             {
               label: "Move Tab",
-              icon: "",
-              outlined: true,
-              severity: "info",
+              icon: "pi pi-arrow-right-arrow-left",
               extraClasses: "!font-black",
               action: (item: Item) => {
                 openMoveItemsModal(item);
@@ -80,9 +78,7 @@ function parseItemsData() {
         actions: [
           {
             label: "Move Tab",
-            icon: "",
-            outlined: true,
-            severity: "info",
+            icon: "pi pi-arrow-right-arrow-left",
             extraClasses: "!font-black",
             action: (item: Item) => {
               openMoveItemsModal(item);

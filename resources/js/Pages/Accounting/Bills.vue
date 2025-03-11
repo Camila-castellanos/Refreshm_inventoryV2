@@ -88,7 +88,7 @@ const getItemActions = (item: Bill) => {
   if (item.status === 1) {
     return [
       {
-        outlined: true, label: "View Payments", icon: "", action: () => {
+        label: "View Payments", icon: "pi pi-list", action: () => {
           dialog.open(ShowBillPayments, {
             data: {
               paidPayments: item.payments,
@@ -108,9 +108,8 @@ const getItemActions = (item: Bill) => {
 
   return [
     {
-      outlined: true,
       label: "Record / View Payments",
-      icon: "",
+      icon: "pi pi-save",
       action: () => {
         dialog.open(ShowBillPayments, {
           data: {

@@ -300,11 +300,12 @@
 import InputLabel from "@/Components/InputLabel.vue";
 import { router, useForm } from "@inertiajs/vue3";
 import axios from "axios";
-import { Button, InputText, Message, Textarea } from "primevue";
+import { Button, InputText, Message, Textarea, useToast } from "primevue";
 import Card from "primevue/card";
 import { computed, inject, onMounted, ref } from "vue";
 
 const dialogRef = inject("dialogRef");
+const toast = useToast();
 
 // Refs for form
 const customerForm = ref(null);
@@ -438,7 +439,7 @@ const form = useForm({
   shipping_postal_code: "",
   shipping_phone: "",
   shipping_delivery_instructions: "",
-  credit: null,
+  credit: 0,
   personal_phone_optional: [],
 });
 
@@ -467,10 +468,12 @@ async function onFormSubmit(event) {
     if (response.status >= 200 && response.status < 400) {
       const newCustomer = response.data;
       cleanForm();
+      toast.add({ severity: "success", summary: "Success", detail: "Customer created succesfully!", life: 3000 });
       dialogRef.value.close(newCustomer);
     }
   } catch (error) {
     console.error(error);
+    toast.add({ severity: "error", summary: "Error", detail: error.response?.data || error.message, life: 4000 });
   }
 }
 
