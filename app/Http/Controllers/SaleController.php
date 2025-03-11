@@ -62,6 +62,7 @@ class SaleController extends Controller
                     'balance_remaining' => $form["balance_remaining"],
                     'payment_method' => $form["payment_method"],
                     'payment_account' => $form["payment_account"],
+                    'payment_notes' => $form["notes"],
                     'payment_date' => $request->payment_date,
                     'created_at' => now(),
                     'updated_at' => now(),
@@ -182,7 +183,7 @@ class SaleController extends Controller
             $finalCredit = $request->credit + $sale->credit;
             $customerAdded = $request->credit - $sale->credit;
             if ($request->credit != null || $request->credit > 0) {
-                $customer = Customer::where('id', $request->customer)->first();
+                $customer = Customer::where('customer', $request->customer)->first();
                 $credit = $customer->credit - $customerAdded;
                 Customer::where('id', $request->customer)->update([
                     'credit' => $credit + $request->removed_credit,
@@ -220,6 +221,7 @@ class SaleController extends Controller
 
             return response()->json($request, 201);
         } catch (Exception $e) {
+            dd($e);
             return response()->json($e->getMessage(), 500);
         }
     }
