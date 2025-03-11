@@ -45,17 +45,16 @@
       <Column
         v-if="index === 0"
         selectionMode="multiple"
-        frozen
         field="select"
         headerStyle="width: 3rem; text-align: center;"
         bodyStyle="width: 3rem; text-align: center;">
       </Column>
-      <Column :field="header.name" sortable frozen :header="header.label" v-if="header.name !== 'actions'">
-        <template #body="slotProps" v-if="header.type === 'number'"> $ {{ slotProps.data[header.name] }} </template>
+      <Column :field="header.name" sortable :header="header.label" v-if="header.name !== 'actions'">
+        <template #body="slotProps" v-if="header.type === 'number'"> $ {{ slotProps.data[header.name] ? slotProps.data[header.name].toFixed(2) : 0 }} </template>
       </Column>
     </template>
 
-    <Column header="Actions" name="actions" frozen v-if="headers.filter((header) => header.name === 'actions').length > 0">
+    <Column header="Actions" name="actions" v-if="headers.filter((header) => header.name === 'actions').length > 0">
       <template #body="slotProps">
         <div class="flex gap-2">
           <Button
@@ -64,7 +63,7 @@
             :severity="action.severity ? action.severity : 'primary'"
             :class="[action.extraClasses, 'px-4 py-2 rounded-md'].join(' ')"
             :icon="action.icon ? action.icon : ''"
-            :label="action?.label"
+            v-tooltip.bottom="action.label + ' '"
             :outlined="action?.outlined ?? false"
             :raised="action?.outlined ?? false"
             @click="() => action.action(slotProps.data)"

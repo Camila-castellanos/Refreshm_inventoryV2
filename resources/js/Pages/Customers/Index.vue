@@ -41,6 +41,9 @@ const tableActions = [
           modal: true,
           header: "Create customer",
         },
+        onClose: () => {
+      router.reload();
+        }
       });
     },
   },
@@ -64,13 +67,12 @@ function parseItemsData() {
       name: `${customer.first_name} ${customer.last_name}`,
       actions: [
         {
-          label: "",
+          label: "Edit",
           icon: "pi pi-pencil",
-          outlined: true,
           action: () => editCustomer(customer),
         },
         {
-          label: "",
+          label: "Delete",
           icon: "pi pi-trash",
           severity: "danger",
           action: () => confirmDelete(customer),
@@ -89,6 +91,9 @@ const editCustomer = (customer) => {
       modal: true,
       header: "Edit customer",
     },
+    onClose: () => {
+      router.reload();
+    }
   });
 };
 

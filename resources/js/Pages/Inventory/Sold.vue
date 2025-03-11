@@ -28,11 +28,9 @@ import { format} from "date-fns";
 import axios from "axios";
 
 const props = defineProps({
-  items: Array<Item>,
-  tabs: Array<ITab>,
+  tabs: { type: Array<ITab>, required: true },
 });
 
-const tabs: Ref<ITab[]> = ref([]);
 const dates: Ref<Date | Date[] | (Date | null)[] | null | undefined> = ref([]);
 
 let selectedItems: Ref<Item[]> = ref([]);
@@ -42,39 +40,8 @@ const handleSelection = (selected: Item[]) => {
 };
 
 const tableData: Ref<any[]> = ref([]);
-function parseItemsData() {
-  console.log(props.items);
-  props.tabs?.forEach((tab, i) => {
-    tabs.value.push({ name: tab.name, order: tabs.value.length + i, id: tab.id });
-  });
-  tableData.value =
-    props.items
-      ?.filter((item) => item.sold === null)
-      .map((item: any) => {
-        if (item.id == 105) {
-          console.log(item);
-        }
-        if (item.storage) {
-          const { name, limit } = item.storage;
-          const { position } = item;
-          return {
-            ...item,
-            location: `${name} - ${position}/${limit}`,
-            vendor: item.vendor.vendor,
-          };
-        }
-        return {
-          ...item,
-          location: "No storage information",
-        };
-      }) ?? [];
-}
-onMounted(() => {
-  parseItemsData();
-});
 
 async function onDateRangeSubmit() {
-  // Se asume que dates.value es un array con dos fechas
   const start = format((dates.value as Date[])[0], "yyyy-MM-dd");
   const end = format((dates.value as Date[])[1], "yyyy-MM-dd");
 
@@ -98,7 +65,6 @@ async function onDateRangeSubmit() {
         selected: false,
         vendor: item.vendor.vendor,
       };
-      console.log(mergedItem)
       delete mergedItem.custom_values;
       return mergedItem;
     });
