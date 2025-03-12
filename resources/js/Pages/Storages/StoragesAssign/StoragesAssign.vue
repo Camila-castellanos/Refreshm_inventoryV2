@@ -40,6 +40,7 @@ import Dialog from "primevue/dialog";
 import { fetchStorages } from "../StoragesIndexData";
 import axios from "axios";
 import {router} from "@inertiajs/vue3"
+import { Item } from "@/Lib/types";
 
 const visible = ref(false);
 
@@ -50,7 +51,7 @@ const props = defineProps<{
 type Storage = {
   id: number;
   name: string;
-  items: number[];
+  items: Item[];
   limit: number;
 };
 
@@ -67,6 +68,7 @@ function openDialog() {
 function closeDialog() {
   visible.value = false;
   selectedStorage.value = null; // Reset selection when closing
+  window.location.reload();
 }
 
 // Fetch storages from the API
@@ -107,7 +109,7 @@ function assignLocation() {
 
   const selected = storages.value.find((s) => s.id === selectedStorage.value);
   if (selected) {
-    selected.items = [...selected.items, ...props.items.map(item => item.id)]; // Simulate adding items
+    selected.items = [...selected.items.map(item => item.id), ...props.items.map(item => item.id)]; // Simulate adding items
   }
 
   const payload = {
@@ -115,7 +117,7 @@ function assignLocation() {
     items: selected?.items,
   };
 
-  axios.post(route("items.assign", payload)).then((res) => router.reload());
+  axios.post(route("items.assign"), payload).then((res) => router.reload());
 
   closeDialog(); // Close dialog after assignment
 }

@@ -39,6 +39,7 @@ const assignStorageVisible: Ref<any> = ref(null);
 
 const toggleAssignStorageVisible = () => {
   assignStorageVisible.value.openDialog();
+  
 };
 
 let selectedItems: Ref<Item[]> = ref([]);
