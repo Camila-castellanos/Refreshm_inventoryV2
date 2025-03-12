@@ -15,7 +15,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, Ref } from "vue";
+import { onMounted, ref, Ref, watchEffect } from "vue";
 import DataTable from "@/Components/DataTable.vue";
 import { headers } from "./IndexData";
 import { router } from "@inertiajs/vue3";
@@ -93,6 +93,12 @@ onMounted(() => {
   parseItemsData();
 });
 
+watchEffect(() => {
+  if (tableData.value) {
+    parseItemsData();
+  }
+});
+
 function openSellItemsModal() {
   dialog.open(ItemsSell, {
     data: {
@@ -101,6 +107,9 @@ function openSellItemsModal() {
     },
     props: {
       modal: true,
+    },
+    onClose: () => {
+      router.reload()
     },
   });
 }
@@ -164,6 +173,6 @@ const tableActions = [
     icon: "pi pi-lock",
     action: () => console.log("hi"),
     disable: (selectedItems: Item[]) => selectedItems.length == 0,
-  }
+  },
 ];
 </script>

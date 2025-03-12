@@ -8,10 +8,13 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\VendorController;
 use App\Http\Controllers\StorageController;
 use App\Http\Controllers\ItemController;
+use App\Http\Controllers\LocationController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProspectController;
 use App\Http\Controllers\SaleController;
+use App\Http\Controllers\StoreController;
 use App\Http\Controllers\TaxController;
+use App\Http\Controllers\UserController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -145,4 +148,34 @@ Route::middleware([
     Route::post("accounting/taxes/remove", [TaxController::class, "remove"])->name("taxes.remove");
     Route::post("accounting/taxes/datewise", [TaxController::class, "datewise"])->name("taxes.datewise");
     Route::resource("taxes", TaxController::class)->except(['update']);
+
+    Route::resource("stores", StoreController::class)->except(["show"]);
+    Route::get('receipt/detail/{id}', [StoreController::class, 'receiptDetail'])->name("receipt.detail");
+
+    Route::get("stores/{store}/users", [StoreController::class, "listUsers"])->name("stores.usersList");
+    Route::post("stores/{store}/users", [StoreController::class, "users"])->name("stores.users");
+    Route::put("stores/{store}/receipt", [StoreController::class, "storeReceiptSettings"])->name("stores.storeReceiptSettings");
+    Route::put("stores/{store}/cut", [StoreController::class, "updateStorePercent"])->name("stores.updateStorePercent");
+
+    Route::get("user/locations", [LocationController::class, "userLocations"])->name("locations.list");
+    Route::resource("stores.locations", LocationController::class)->shallow();
+    Route::get("locations/{location}/users", [LocationController::class, "listUsers"])->name("locations.usersList");
+    Route::post("locations/{location}/users", [LocationController::class, "users"])->name("locations.users");
+
+    Route::resource("users", UserController::class)->except(["show"]);
+
+    Route::get(
+        "users/{user}/role",
+        [UserController::class, "changeRole"]
+    )->name('users.changeRole');
+
+    Route::post(
+        "users/{user}/role",
+        [UserController::class, "updateRole"]
+    )->name('users.updateRole');
+
+    Route::post(
+        "users/{user}/headers",
+        [UserController::class, "updateHeaders"]
+    )->name('users.updateHeaders');
 });

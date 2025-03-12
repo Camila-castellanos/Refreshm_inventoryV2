@@ -15,7 +15,7 @@
     :globalFilterFields="headers.filter((header) => header.name !== 'actions').map((header) => header.name)"
     :selection-mode="selectionMode">
     <template #header>
-      <div class="flex flex-wrap items-center justify-between gap-2">
+      <div class="flex flex-no-wrap items-center justify-between gap-2">
         <div :class="title !== '' ? 'flex justify-between items-center gap-12' : 'flex justify-start items-center'">
           <span class="text-xl font-bold" v-show="title !== ''">{{ title }}</span>
           <IconField>
@@ -26,7 +26,7 @@
           </IconField>
           <slot />
         </div>
-        <div class="flex flex-no-wrap overflow-x-auto w-auto gap-8 whitespace-nowrap">
+        <div class="flex flex-no-wrap overflow-x-auto w-auto max-w-[900px] gap-8 whitespace-nowrap">
           <Button
             v-for="action in computedActions"
             :key="action.label"
@@ -50,7 +50,7 @@
         bodyStyle="width: 3rem; text-align: center;">
       </Column>
       <Column :field="header.name" sortable :header="header.label" v-if="header.name !== 'actions'">
-        <template #body="slotProps" v-if="header.type === 'number'"> $ {{ slotProps.data[header.name] ? slotProps.data[header.name].toFixed(2) : 0 }} </template>
+        <template #body="slotProps" v-if="header.type === 'number'"> $ {{ slotProps.data[header.name] && slotProps.data[header.name] > 0 ? Number(slotProps.data[header.name]).toFixed(2) : 0 }} </template>
       </Column>
     </template>
 
