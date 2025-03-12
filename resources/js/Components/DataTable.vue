@@ -50,7 +50,7 @@
         bodyStyle="width: 3rem; text-align: center;">
       </Column>
       <Column :field="header.name" sortable :header="header.label" v-if="header.name !== 'actions'">
-        <template #body="slotProps" v-if="header.type === 'number'"> $ {{ slotProps.data[header.name] ? slotProps.data[header.name].toFixed(2) : 0 }} </template>
+        <template #body="slotProps" v-if="header.type === 'number'"> $ {{ slotProps.data[header.name] && slotProps.data[header.name] > 0 ? Number(slotProps.data[header.name]).toFixed(2) : 0 }} </template>
       </Column>
     </template>
 

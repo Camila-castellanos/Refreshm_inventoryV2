@@ -205,3 +205,24 @@ export interface Location {
   created_at: string
   updated_at: string
 }
+
+export interface User {
+  id: number;
+  name: string;
+  email: string;
+  email_verified_at: any;
+  current_team_id: any;
+  profile_photo_path: any;
+  role: string;
+  deleted_at: any;
+  created_at: string;
+  updated_at: string;
+  store_id: any;
+  location_id: any;
+  invoice_header: any;
+  invoice_footer: any;
+  invoice_logo: any;
+  headers: any;
+  sold_headers: any;
+  profile_photo_url: string;
+}
