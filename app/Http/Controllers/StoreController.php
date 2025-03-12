@@ -114,7 +114,7 @@ class StoreController extends Controller
    */
   public function edit(Store $store)
   {
-    return Inertia::render("Stores/Edit", [
+    return Inertia::render("Stores/CreateEdit", [
       "storeEdit" => $store
     ]);
   }
@@ -142,7 +142,6 @@ class StoreController extends Controller
     $data = [
       "name" => $request->name,
       "address" => $request->address,
-      "price_percent" => $request->price_percent,
       "header" => $request->header,
       "footer" => $request->footer,
       "logo" => $logo,
@@ -177,10 +176,13 @@ class StoreController extends Controller
   public function listUsers(Store $store)
   {
     $userList = User::all()->merge($store->users);
-    return Inertia::render("Stores/Users", [
+
+    $data = [
       "userList" => $userList,
       "store" => $store,
-    ]);
+    ];
+    
+    return response()->json($data);
   }
 
   /**

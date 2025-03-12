@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\VendorController;
 use App\Http\Controllers\StorageController;
 use App\Http\Controllers\ItemController;
+use App\Http\Controllers\LocationController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProspectController;
 use App\Http\Controllers\SaleController;
@@ -154,4 +155,9 @@ Route::middleware([
     Route::post("stores/{store}/users", [StoreController::class, "users"])->name("stores.users");
     Route::put("stores/{store}/receipt", [StoreController::class, "storeReceiptSettings"])->name("stores.storeReceiptSettings");
     Route::put("stores/{store}/cut", [StoreController::class, "updateStorePercent"])->name("stores.updateStorePercent");
+
+    Route::get("user/locations", [LocationController::class, "userLocations"])->name("locations.list");
+    Route::resource("stores.locations", LocationController::class)->shallow();
+    Route::get("locations/{location}/users", [LocationController::class, "listUsers"])->name("locations.usersList");
+    Route::post("locations/{location}/users", [LocationController::class, "users"])->name("locations.users");
 });
