@@ -27,6 +27,7 @@ import { onMounted, ref } from "vue";
 import { headers } from "./data";
 import ShowPayments from "./Modals/ShowPayments.vue";
 import { router } from "@inertiajs/vue3";
+import SaleEdit from "./Modals/SaleEdit.vue";
 
 const props = defineProps({
   items: Array<IPaymentResponse>,
@@ -47,7 +48,7 @@ onMounted(() => {
       amount_paid: "$ " + item.amount_paid,
       total: "$ " + item.total,
       balance_remaining: "$ " + item.balance_remaining,
-      /* 
+      /*
        * Actions
        * if item is paid, show: invoice, view payments, edit and send
        * if item is unpaid, show: invoice, record / view payments, edit, send
@@ -65,64 +66,86 @@ const getItemActions = (item: IPaymentResponse) => {
   if (item.status === "Paid") {
     return [
       {
-        outlined: true,
         label: "Invoice",
-        icon: "",
+        icon: "pi pi-receipt",
         action: () => {
           window.location.assign(route("reports.payments.invoice", item.id));
         },
       },
       {
-        outlined: true, label: "View Payments", icon: "", action: () => {
+        label: "View Payments",
+        icon: "pi pi-list",
+        action: () => {
           dialog.open(ShowPayments, {
             data: {
               paidPayments: item.payments,
               view: "view",
-              saleId: item.sale_id
+              saleId: item.sale_id,
             },
             props: {
-              modal: true
+              modal: true,
             },
-          })
-        }
+          });
+        },
       },
-      { outlined: true, label: "Edit", icon: "", severity: "info", action: () => { } },
-      { outlined: true, label: "Send", icon: "", severity: "info", action: () => { } },
+      {
+        label: "Edit",
+        icon: "pi pi-pencil",
+        severity: "info",
+        action: () => {
+          console.log(item);
+          dialog.open(SaleEdit, {
+            data: { saleId: item.sale_id, payment: item },
+            props: { modal: true, header: "Edit sale" },
+            onClose: () => router.reload(),
+          });
+        },
+      },
+      { label: "Send", icon: "pi pi-envelope", severity: "info", action: () => {} },
     ];
   }
 
   return [
     {
-      outlined: true,
       label: "Invoice",
-      icon: "",
+      icon: "pi pi-receipt",
       action: () => {
         window.location.assign(route("reports.payments.invoice", item.id));
       },
     },
     {
-      outlined: true,
       label: "Record / View Payments",
-      icon: "",
+      icon: "pi pi-save",
       action: () => {
         dialog.open(ShowPayments, {
           data: {
             paidPayments: item.payments,
             paidId: item.id,
             view: "all",
-            saleId: item.sale_id
+            saleId: item.sale_id,
           },
           props: {
-            modal: true
+            modal: true,
           },
           onClose: () => {
             router.reload();
-          }
-        })
-      }
+          },
+        });
+      },
     },
-    { outlined: true, label: "Edit", icon: "", severity: "info", action: () => { } },
-    { outlined: true, label: "Send", icon: "", severity: "info", action: () => { } },
+    {
+      label: "Edit",
+      icon: "pi pi-pencil",
+      severity: "info",
+      action: () => {
+        dialog.open(SaleEdit, {
+          data: { saleId: item.sale_id, payment: item },
+          props: { modal: true, header: "Edit sale" },
+          onClose: () => router.reload(),
+        });
+      },
+    },
+    { label: "Send", icon: "pi pi-envelope", severity: "info", action: () => {} },
   ];
 };
 

@@ -142,7 +142,7 @@ class CustomerController extends Controller
         $customer->credit = $request->credit;
         $customer->save();
 
-        if ($customer->email[0]) {
+        if (is_array($customer->email) && count($customer->email) > 0) {
             $contact = new Contact();
             $contact->name = $form["customer_name"];
             $contact->email = $customer->email[0];

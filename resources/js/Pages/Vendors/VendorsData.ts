@@ -7,11 +7,6 @@ export const VendorHeaders = [
         "type": "string"
     },
     {
-        "label": "Contact",
-        "name": "contact",
-        "type": "string"
-    },
-    {
         "label": "Email",
         "name": "email",
         "type": "string"
@@ -46,17 +41,8 @@ export const VendorHeaders = [
         "name": "total_spend",
         "type": "number"
     },
-    {
-        "label": "Actions",
-        "name": "actions",
-        "type": "string"
-    }
 ];
 
 export default function fetchVendors() {
     return axios.get('/vendor/list')
 };
-
-export function deleteVendors() {
-    return axios.delete('/vendor/destroy')
-}

@@ -128,7 +128,7 @@ const navItems = ref([
         label: 'Vendors',
         icon: 'pi pi-truck',
         command: () => {
-            router.visit('/inventory/vendors');
+            router.visit('/vendor');
         }
     },
     // {

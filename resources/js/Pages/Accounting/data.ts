@@ -78,17 +78,17 @@ export const billHeaders = [
   {
     label: "Total",
     name: "total",
-    type: "string",
+    type: "number",
   },
   {
     label: "Amount Paid",
     name: "amount_paid",
-    type: "string",
+    type: "number",
   },
   {
     label: "Balance Remaining",
     name: "balance_remaining",
-    type: "string",
+    type: "number",
   },
   {
     label: "Invoice",
@@ -116,7 +116,7 @@ export const taxHeaders = [
   {
     label: "Collected",
     name: "collected",
-    type: "string",
+    type: "number",
   },
   {
     label: "Paid",
@@ -131,6 +131,69 @@ export const taxHeaders = [
   {
     label: "Total purchases",
     name: "total_purchases",
+    type: "string",
+  },
+];
+
+export const itemHeaders = [
+  {
+    label: "Date",
+    name: "date",
+    type: "string",
+  },
+  {
+    label: "Vendor",
+    name: "vendor",
+    type: "string",
+  },
+  {
+    label: "Manufacturer",
+    name: "manufacturer",
+    type: "string",
+  },
+  {
+    label: "Model",
+    name: "model",
+    type: "string",
+  },
+  {
+    label: "Colour",
+    name: "colour",
+    type: "string",
+  },
+  {
+    label: "Battery",
+    name: "battery",
+    type: "string",
+  },
+  {
+    label: "Grade",
+    name: "grade",
+    type: "string",
+  },
+  {
+    label: "Issues",
+    name: "issues",
+    type: "string",
+  },
+  {
+    label: "IMEI/Serial",
+    name: "imei",
+    type: "string",
+  },
+  {
+    label: "Cost",
+    name: "cost",
+    type: "number",
+  },
+  {
+    label: "Selling Price",
+    name: "selling_price",
+    type: "number",
+  },
+  {
+    label: "Location",
+    name: "location",
     type: "string",
   },
 ];

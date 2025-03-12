@@ -123,11 +123,6 @@ export const soldHeaders = [
     type: "string",
   },
   {
-    label: "Selling Price",
-    name: "selling_price",
-    type: "number",
-  },
-  {
     label: "Location",
     name: "location",
     type: "string",
@@ -135,21 +130,21 @@ export const soldHeaders = [
   {
     label: "Cost",
     name: "cost",
-    type: "number",
+    type: "string",
   },
   {
     label: "Subtotal",
     name: "subtotal",
-    type: "number",
+    type: "string",
   },
   {
     label: "Total",
     name: "total",
-    type: "number",
+    type: "string",
   },
   {
     label: "Profit",
     name: "profit",
-    type: "number",
+    type: "string",
   },
 ];
