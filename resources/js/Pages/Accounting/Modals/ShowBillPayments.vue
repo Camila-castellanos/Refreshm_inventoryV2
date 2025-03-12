@@ -80,6 +80,7 @@ import Textarea from "primevue/textarea";
 import { useToast } from "primevue/usetoast";
 import { inject, onMounted, Ref, ref } from "vue";
 import ShowBillPayments from "./ShowBillPayments.vue";
+import {router} from "@inertiajs/vue3"
 
 const toast = useToast();
 const dialog = useDialog();
@@ -261,10 +262,8 @@ const removePayment = async (paymentId: number, paymentAmount: number) => {
             detail: "The invoice payment has been removed successfully.",
             life: 3000,
           });
-
-          setTimeout(() => {
-            location.reload();
-          }, 1500);
+          tableData.value = tableData.value.filter(value => value.id !== paymentId)
+          router.reload();
         }
       } catch (error: any) {
         let errorMessage = "An unexpected error occurred.";

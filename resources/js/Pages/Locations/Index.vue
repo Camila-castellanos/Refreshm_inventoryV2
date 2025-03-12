@@ -1,9 +1,9 @@
 <template>
-  <ConfirmDialog/>
+  <ConfirmDialog />
   <div>
     <section class="w-[90%] mx-auto mt-4">
       <DataTable
-        title="Stores"
+        title="Locations"
         @update:selected="handleSelection"
         :actions="tableActions"
         :items="tableData"
@@ -14,26 +14,40 @@
 <script lang="ts" setup>
 import DataTable from "@/Components/DataTable.vue";
 import AppLayout from "@/Layouts/AppLayout.vue";
-import { Store } from "@/Lib/types";
-import { onMounted, Ref, ref, watch, watchEffect } from "vue";
-import {router} from "@inertiajs/vue3"
+import { Location, Store } from "@/Lib/types";
+import { onMounted, Ref, ref, watchEffect } from "vue";
+import { router } from "@inertiajs/vue3";
 import { ConfirmDialog, useConfirm, useDialog, useToast } from "primevue";
 import axios from "axios";
-import SelectUsers from "../Locations/Modals/SelectUsers.vue";
+import CreateEdit from "./Modals/CreateEdit.vue";
+import SelectUsers from "./Modals/SelectUsers.vue";
 
 const toast = useToast();
 const confirm = useConfirm();
 const dialog = useDialog();
 
-const props = defineProps<{ stores: Store[] }>();
+const props = defineProps<{ store: Store; locations: Location[] }>();
 
-const tableData: Ref<Store[]> = ref([]);
-const selectedItems: Ref<Store[]> = ref([]);
+const tableData: Ref<Location[]> = ref([]);
+const selectedItems: Ref<Location[]> = ref([]);
 const tableActions = ref([
   {
-    label: "Create store",
+    label: "Create location",
     icon: "pi pi-plus",
-    action: () => {router.visit(route('stores.create'))},
+    action: () => {
+      dialog.open(CreateEdit, {
+        data: {
+          storeId: props.store.id,
+        },
+        props: {
+          modal: true,
+          header: "Add location",
+        },
+        onClose: () => {
+          router.reload();
+        },
+      });
+    },
   },
 ]);
 
@@ -44,8 +58,8 @@ const headers = [
     type: "string",
   },
   {
-    label: "Email",
-    name: "email",
+    label: "Address",
+    name: "address",
     type: "string",
   },
   {
@@ -55,23 +69,17 @@ const headers = [
   },
 ];
 
-const handleSelection = (items: any[]) => {
+const handleSelection = (items: Location[]) => {
   selectedItems.value = items;
 };
 
 onMounted(() => {
-  parseItems()
-});
-
-watchEffect(() => {
-  if (tableData.value) {
-    parseItems();
-  }
+  parseItems();
 });
 
 function parseItems() {
-  tableData.value = props.stores.map(store => ({
-    ...store,
+  tableData.value = props.locations.map((location) => ({
+    ...location,
     actions: [
       {
         label: "Users",
@@ -79,9 +87,9 @@ function parseItems() {
         action: () => {
           dialog.open(SelectUsers, {
             data: {
-              id: store.id,
-              getUsers: 'stores.usersList',
-              updateUsers: 'stores.users'
+              id: location.id,
+              getUsers: 'locations.usersList',
+              updateUsers: 'locations.users'
             },
             props: {
               modal: true,
@@ -91,27 +99,46 @@ function parseItems() {
               router.reload();
             },
           });
-        }
-      },
-      {
-        label: "Locations",
-        icon: "pi pi-map-marker",
-        action: () => { router.visit(route('stores.locations.index', store.id)) }
+        },
       },
       {
         label: "Edit",
         icon: "pi pi-pencil",
-        action: () => { router.visit(route('stores.edit', store.id)) }
+        action: () => {
+          dialog.open(CreateEdit, {
+            data: {
+              storeId: props.store.id,
+              id: location.id,
+              name: location.name,
+              address: location.address,
+            },
+            props: {
+              modal: true,
+              header: "Edit location",
+            },
+            onClose: () => {
+              router.reload();
+            },
+          });
+        },
       },
       {
         label: "Delete",
         icon: "pi pi-trash",
         severity: "danger",
-        action: () => { onDelete(route('stores.destroy', store.id)) }
-      }
-    ]
-  }))
+        action: () => {
+          onDelete(route("locations.destroy", location.id));
+        },
+      },
+    ],
+  }));
 }
+
+watchEffect(() => {
+  if (tableData.value) {
+    parseItems();
+  }
+});
 
 const onDelete = (url: string) => {
   confirm.require({
@@ -122,14 +149,14 @@ const onDelete = (url: string) => {
     accept: async () => {
       try {
         const response = await axios.delete(url);
-        
+
         if (response.status >= 200 && response.status < 400) {
           toast.add({ severity: "success", summary: "Deleted", detail: "The item has been deleted successfully.", life: 3000 });
           router.reload();
         }
       } catch (error: any) {
         let errorMessage = "An unknown error occurred.";
-        
+
         if (error.response) {
           errorMessage = error.response.data;
         } else if (error.request) {
@@ -137,16 +164,13 @@ const onDelete = (url: string) => {
         } else {
           errorMessage = error.message;
         }
-        
+
         toast.add({ severity: "error", summary: "Error", detail: errorMessage, life: 5000 });
       }
     },
-    reject: () => {
-      toast.add({ severity: "info", summary: "Cancelled", detail: "Deletion cancelled.", life: 3000 });
-    }
+    reject: () => {},
   });
 };
-
 
 defineOptions({ layout: AppLayout });
 </script>

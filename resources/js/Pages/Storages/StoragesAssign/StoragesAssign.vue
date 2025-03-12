@@ -68,7 +68,7 @@ function openDialog() {
 function closeDialog() {
   visible.value = false;
   selectedStorage.value = null; // Reset selection when closing
-  window.location.reload();
+  router.reload();
 }
 
 // Fetch storages from the API

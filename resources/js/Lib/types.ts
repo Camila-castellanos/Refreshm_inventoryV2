@@ -195,3 +195,13 @@ export interface Store {
   created_at: any;
   updated_at: any;
 }
+
+export interface Location {
+  id: number
+  name: string
+  address: string
+  store_id: number
+  deleted_at: any
+  created_at: string
+  updated_at: string
+}
