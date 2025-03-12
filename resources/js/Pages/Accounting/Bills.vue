@@ -45,9 +45,6 @@ onMounted(() => {
   currentTab.value = `/bills${props.data_status !== "all" ? `?status=${props.data_status}` : ""}`;
   tableData.value = props?.items?.map((item) => ({
     ...item,
-    total: "$ " + item.total,
-    amount_paid: "$ " + item.amount_paid,
-    balance_remaining: "$ " + item.balance_remaining,
     actions: getItemActions(item),
     status: item.status === 1 ? "Paid" : "Unpaid",
   })) ?? ([] as Bill[]);
@@ -91,7 +88,7 @@ const getItemActions = (item: Bill) => {
   if (item.status === 1) {
     return [
       {
-        outlined: true, label: "View Payments", icon: "", action: () => {
+        label: "View Payments", icon: "pi pi-list", action: () => {
           dialog.open(ShowBillPayments, {
             data: {
               paidPayments: item.payments,
@@ -111,9 +108,8 @@ const getItemActions = (item: Bill) => {
 
   return [
     {
-      outlined: true,
       label: "Record / View Payments",
-      icon: "",
+      icon: "pi pi-save",
       action: () => {
         dialog.open(ShowBillPayments, {
           data: {

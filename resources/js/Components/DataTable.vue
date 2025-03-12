@@ -7,6 +7,8 @@
     stripedRows
     ref="dt"
     paginator
+    scrollable
+    scrollHeight="900px"
     :rows="20"
     :rowsPerPageOptions="[5, 10, 20, 50]"
     filterDisplay="menu"
@@ -35,7 +37,7 @@
             @click="action.action"
             :disabled="action.disable" />
 
-          <Button icon="pi pi-file-export" label="Export CSV" severity="primary" @click="exportCSV" class="min-w-[150px]"/>
+          <Button icon="pi pi-file-export" label="Export CSV" severity="primary" @click="exportCSV" class="min-w-[150px]" />
         </div>
       </div>
     </template>
@@ -47,24 +49,26 @@
         headerStyle="width: 3rem; text-align: center;"
         bodyStyle="width: 3rem; text-align: center;">
       </Column>
-      <Column :field="header.name" sortable :header="header.label" v-if="header.name !== 'actions'"></Column>
+      <Column :field="header.name" sortable :header="header.label" v-if="header.name !== 'actions'">
+        <template #body="slotProps" v-if="header.type === 'number'"> $ {{ slotProps.data[header.name] ? slotProps.data[header.name].toFixed(2) : 0 }} </template>
+      </Column>
     </template>
 
     <Column header="Actions" name="actions" v-if="headers.filter((header) => header.name === 'actions').length > 0">
       <template #body="slotProps">
         <div class="flex gap-2">
-        <Button
-          v-for="action in slotProps.data.actions"
-          :key="action.label"
-          :severity="action.severity ? action.severity : 'primary'"
-          :class="[action.extraClasses, 'px-4 py-2 rounded-md'].join(' ')"
-          :icon="action.icon ? action.icon : ''"
-          :label="action?.label"
-          :outlined="action?.outlined ?? false"
-          :raised="action?.outlined ?? false"
-          @click="() => action.action(slotProps.data)"
-          :disabled="action.disable" />
-          </div>
+          <Button
+            v-for="action in slotProps.data.actions"
+            :key="action.label"
+            :severity="action.severity ? action.severity : 'primary'"
+            :class="[action.extraClasses, 'px-4 py-2 rounded-md'].join(' ')"
+            :icon="action.icon ? action.icon : ''"
+            v-tooltip.bottom="action.label + ' '"
+            :outlined="action?.outlined ?? false"
+            :raised="action?.outlined ?? false"
+            @click="() => action.action(slotProps.data)"
+            :disabled="action.disable" />
+        </div>
       </template>
     </Column>
     <template #footer> In total there are {{ items ? items.length : 0 }} items. </template>

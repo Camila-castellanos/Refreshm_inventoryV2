@@ -66,6 +66,7 @@ const Noir = definePreset(Aura, {
 
 import Button from "primevue/button"
 import AppLayout from './Layouts/AppLayout.vue';
+import { Tooltip } from 'primevue';
 const appName = import.meta.env.VITE_APP_NAME || 'QuoteRefreshm';
 
 createInertiaApp({
@@ -106,6 +107,7 @@ createInertiaApp({
 
         app.config.globalProperties.$axios = axios;
 
+        app.directive("tooltip", Tooltip);
 
         // Registrar plugins y montar la aplicación
         app.use(plugin).use(ZiggyVue).use(PrimeVue, {
