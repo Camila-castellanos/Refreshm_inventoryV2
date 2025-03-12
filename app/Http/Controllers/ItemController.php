@@ -21,9 +21,8 @@ use App\Mail\RequestItems;
 use Exception;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
-use Barryvdh\DomPDF\Facade as PDF;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
-use Excel;
 use App\Exports\ItemsExample;
 use Illuminate\Support\Facades\Auth;
 use App\Imports\ItemsImport;
@@ -31,6 +30,8 @@ use App\Exports\ItemDemoExport;
 use Illuminate\Support\Facades\Mail;
 use App\Models\Vendor;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Maatwebsite\Excel\Facades\Excel;
 use Response;
 
 class ItemController extends Controller
@@ -830,7 +831,7 @@ class ItemController extends Controller
     {
         try {
             $check = $request->validated();
-            \Log::info('Validated data:', $check);
+            Log::info('Validated data:', $check);
             $test = Excel::import(new ItemsImport, $check['file']);
             return response()->json($test, 201);
         } catch (Exception $e) {

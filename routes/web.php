@@ -11,6 +11,7 @@ use App\Http\Controllers\ItemController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProspectController;
 use App\Http\Controllers\SaleController;
+use App\Http\Controllers\StoreController;
 use App\Http\Controllers\TaxController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -145,4 +146,12 @@ Route::middleware([
     Route::post("accounting/taxes/remove", [TaxController::class, "remove"])->name("taxes.remove");
     Route::post("accounting/taxes/datewise", [TaxController::class, "datewise"])->name("taxes.datewise");
     Route::resource("taxes", TaxController::class)->except(['update']);
+
+    Route::resource("stores", StoreController::class)->except(["show"]);
+    Route::get('receipt/detail/{id}', [StoreController::class, 'receiptDetail'])->name("receipt.detail");
+
+    Route::get("stores/{store}/users", [StoreController::class, "listUsers"])->name("stores.usersList");
+    Route::post("stores/{store}/users", [StoreController::class, "users"])->name("stores.users");
+    Route::put("stores/{store}/receipt", [StoreController::class, "storeReceiptSettings"])->name("stores.storeReceiptSettings");
+    Route::put("stores/{store}/cut", [StoreController::class, "updateStorePercent"])->name("stores.updateStorePercent");
 });
