@@ -131,13 +131,13 @@ const navItems = ref([
             router.visit('/vendor');
         }
     },
-    // {
-    //     label: 'Storages',
-    //     icon: 'pi pi-box',
-    //     command: () => {
-    //         router.visit('/inventory/storages/index');
-    //     }
-    // },
+    {
+        label: 'Storages',
+        icon: 'pi pi-box',
+        command: () => {
+            router.visit('/inventory/storages/index');
+        }
+    },
    
    
     // {
@@ -147,20 +147,20 @@ const navItems = ref([
     //         router.visit('/reports');
     //     }
     // },
-    // {
-    //     label: 'Stores',
-    //     icon: 'pi pi-store',
-    //     command: () => {
-    //         router.visit('/stores');
-    //     }
-    // },
-    // {
-    //     label: 'Users',
-    //     icon: 'pi pi-user',
-    //     command: () => {
-    //         router.visit('/users');
-    //     }
-    // }
+    {
+        label: 'Stores',
+        icon: 'pi pi-store',
+        command: () => {
+            router.visit('/stores');
+        }
+    },
+    {
+        label: 'Users',
+        icon: 'pi pi-user',
+        command: () => {
+            router.visit('/users');
+        }
+    }
 ]);
 
 onMounted(() => {

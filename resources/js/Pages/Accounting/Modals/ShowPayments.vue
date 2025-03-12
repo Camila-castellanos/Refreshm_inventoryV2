@@ -267,10 +267,7 @@ const removePayment = async (paymentId: number) => {
             detail: "The invoice payment has been removed successfully.",
             life: 3000,
           });
-
-          setTimeout(() => {
-            location.reload();
-          }, 1500);
+          tableData.value = tableData.value.filter(value => value.id !== paymentId);
         }
       } catch (error: any) {
         let errorMessage = "An unexpected error occurred.";

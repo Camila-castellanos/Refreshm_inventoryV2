@@ -62,7 +62,6 @@ class SaleController extends Controller
                     'balance_remaining' => $form["balance_remaining"],
                     'payment_method' => $form["payment_method"],
                     'payment_account' => $form["payment_account"],
-                    'payment_notes' => $form["notes"],
                     'payment_date' => $request->payment_date,
                     'created_at' => now(),
                     'updated_at' => now(),

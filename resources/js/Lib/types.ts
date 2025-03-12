@@ -181,3 +181,48 @@ export interface Bill {
   updated_at: string;
   payments: any[];
 }
+
+export interface Store {
+  id: number;
+  name: string;
+  address: string;
+  email: string;
+  price_percent: number;
+  deleted_at: any;
+  header: string;
+  footer: string;
+  logo: string;
+  created_at: any;
+  updated_at: any;
+}
+
+export interface Location {
+  id: number
+  name: string
+  address: string
+  store_id: number
+  deleted_at: any
+  created_at: string
+  updated_at: string
+}
+
+export interface User {
+  id: number;
+  name: string;
+  email: string;
+  email_verified_at: any;
+  current_team_id: any;
+  profile_photo_path: any;
+  role: string;
+  deleted_at: any;
+  created_at: string;
+  updated_at: string;
+  store_id: any;
+  location_id: any;
+  invoice_header: any;
+  invoice_footer: any;
+  invoice_logo: any;
+  headers: any;
+  sold_headers: any;
+  profile_photo_url: string;
+}
