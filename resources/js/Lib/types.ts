@@ -181,3 +181,17 @@ export interface Bill {
   updated_at: string;
   payments: any[];
 }
+
+export interface Store {
+  id: number;
+  name: string;
+  address: string;
+  email: string;
+  price_percent: number;
+  deleted_at: any;
+  header: string;
+  footer: string;
+  logo: string;
+  created_at: any;
+  updated_at: any;
+}
