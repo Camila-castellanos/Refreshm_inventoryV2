@@ -131,13 +131,13 @@ const navItems = ref([
             router.visit('/vendor');
         }
     },
-    {
-        label: 'Storages',
-        icon: 'pi pi-box',
-        command: () => {
-            router.visit('/inventory/storages/index');
-        }
-    },
+    // {
+    //     label: 'Storages',
+    //     icon: 'pi pi-box',
+    //     command: () => {
+    //         router.visit('/inventory/storages/index');
+    //     }
+    // },
    
    
     // {
