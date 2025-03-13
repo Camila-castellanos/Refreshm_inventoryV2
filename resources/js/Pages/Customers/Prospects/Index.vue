@@ -25,6 +25,7 @@ import { prospectHeaders } from "../IndexData";
 import CreateEditModal from "./CreateEditModal.vue";
 import ContactTabs from "@/Components/ContactTabs.vue";
 import AppLayout from "@/Layouts/AppLayout.vue";
+import {router} from "@inertiajs/vue3"
 
 const props = defineProps({
   prospects: Array,
@@ -67,13 +68,12 @@ function parseItemsData() {
       contact_type: prospect.contact_type[0].toUpperCase() + prospect.contact_type.slice(1),
       actions: [
         {
-          label: "",
+          label: "Edit",
           icon: "pi pi-pencil",
-          outlined: true,
           action: () => editProspect(prospect),
         },
         {
-          label: "",
+          label: "Delete",
           icon: "pi pi-trash",
           severity: "danger",
           action: () => confirmDeleteProspect(prospect),
@@ -85,7 +85,7 @@ function parseItemsData() {
 
 const deleteProspect = (prospect: any) => {
   axios.delete(route("prospects.destroy", { prospect })).then(() => {
-    window.location.reload();
+    router.reload();
   });
 };
 

@@ -182,7 +182,7 @@ class SaleController extends Controller
             $finalCredit = $request->credit + $sale->credit;
             $customerAdded = $request->credit - $sale->credit;
             if ($request->credit != null || $request->credit > 0) {
-                $customer = Customer::where('id', $request->customer)->first();
+                $customer = Customer::where('customer', $request->customer)->first();
                 $credit = $customer->credit - $customerAdded;
                 Customer::where('id', $request->customer)->update([
                     'credit' => $credit + $request->removed_credit,
@@ -220,6 +220,7 @@ class SaleController extends Controller
 
             return response()->json($request, 201);
         } catch (Exception $e) {
+            dd($e);
             return response()->json($e->getMessage(), 500);
         }
     }
@@ -293,7 +294,7 @@ class SaleController extends Controller
             'fields' => $fields,
         ];
 
-        return Inertia::render("Items/Report", $context);
+        return Inertia::render("Inventory/Sold", $context);
     }
 
     /**

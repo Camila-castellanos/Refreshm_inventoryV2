@@ -66,10 +66,11 @@ class CustomerController extends Controller
             $customer->balance = $balance < 0 ? 0 : $balance;
             $customer->credit = (float) $customer->credit;
 
-            for ($i = 0; $i < count($customer->first_name); $i++) {
-                $customer->name .= ($customer->first_name[$i] ?? '') . " " . ($customer->last_name[$i] ?? '') . ", ";
+            foreach ($customer->first_name as $key => $fname) {
+                $customer->name .= $fname . " " . $customer->last_name[$key] . ", ";
             }
-            
+
+            $customer->name = rtrim($customer->name, ", ");
             $customer->email = implode(", ", $customer->email);
             $customer->phone = implode(", ", $customer->phone);
         }
@@ -143,7 +144,7 @@ class CustomerController extends Controller
         $customer->credit = $request->credit;
         $customer->save();
 
-        if ($customer->email[0]) {
+        if (is_array($customer->email) && count($customer->email) > 0) {
             $contact = new Contact();
             $contact->name = $form["customer_name"];
             $contact->email = $customer->email[0];

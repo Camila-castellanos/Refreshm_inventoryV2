@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::table('sales', function (Blueprint $table) {
             $table->foreignId('paid')->default(1);
             $table->foreignId('tax_id')->nullable();
+            $table->decimal('credit')->default(0);
             $table->string('amount_paid')->nullable();
             $table->string('balance_remaining')->nullable();
             $table->string('payment_method')->nullable();
