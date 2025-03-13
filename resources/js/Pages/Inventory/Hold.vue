@@ -15,18 +15,15 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, Ref } from "vue";
 import DataTable from "@/Components/DataTable.vue";
-import { headers } from "./IndexData";
-import { router } from "@inertiajs/vue3";
-import { defineProps } from "vue";
-import StoragesAssign from "../Storages/StoragesAssign/StoragesAssign.vue";
-import { useDialog } from "primevue/usedialog";
-import ItemsSell from "./Modals/ItemsSell.vue";
-import { Item, Tab as ITab } from "@/Lib/types";
-import axios from "axios";
-import MoveItem from "./Modals/MoveItem.vue";
 import ItemsTabs from "@/Components/ItemsTabs.vue";
+import { Tab as ITab, Item } from "@/Lib/types";
+import { router } from "@inertiajs/vue3";
+import { useDialog } from "primevue/usedialog";
+import { defineProps, onMounted, ref, Ref } from "vue";
+import StoragesAssign from "../Storages/StoragesAssign/StoragesAssign.vue";
+import { headers } from "./IndexData";
+import ItemsSell from "./Modals/ItemsSell.vue";
 
 const dialog = useDialog();
 const props = defineProps({
@@ -61,11 +58,11 @@ function parseItemsData() {
           vendor: item.vendor.vendor,
           actions: [
             {
-              label: "Move Tab",
-              icon: "pi pi-arrow-right-arrow-left",
+              label: "Label",
+              icon: "pi pi-file",
               extraClasses: "!font-black",
               action: (item: Item) => {
-                openMoveItemsModal(item);
+                window.location.assign(route('items.label', item.id));
               },
             },
           ],
@@ -77,13 +74,12 @@ function parseItemsData() {
         vendor: item.vendor.vendor,
         actions: [
           {
-            label: "Move Tab",
-            icon: "pi pi-arrow-right-arrow-left",
-            extraClasses: "!font-black",
+            label: "Label",
+            icon: "pi pi-file",
             action: (item: Item) => {
-              openMoveItemsModal(item);
+              window.location.assign(route('items.label', item.id));
             },
-          },
+          }
         ],
       };
     });
@@ -105,37 +101,7 @@ function openSellItemsModal() {
   });
 }
 
-function openMoveItemsModal(item: Item) {
-  dialog.open(MoveItem, {
-    data: {
-      tabs: props.tabs,
-      item: item,
-    },
-    props: {
-      modal: true,
-    },
-    onClose: () => {
-      router.reload({ only: ["items"] });
-    },
-  });
-}
-
 const tableActions = [
-  {
-    label: "Add Items",
-    icon: "pi pi-plus",
-    action: () => {
-      router.visit("/inventory/items/bulk");
-    },
-  },
-  {
-    label: "Reassign location",
-    icon: "pi pi-arrow-up",
-    action: () => {
-      toggleAssignStorageVisible();
-    },
-    disable: (selectedItems: Item[]) => selectedItems.length == 0,
-  },
   {
     label: "Sell",
     icon: "pi pi-dollar",
@@ -145,19 +111,11 @@ const tableActions = [
     disable: (selectedItems: Item[]) => selectedItems.length == 0,
   },
   {
-    label: "Delete Items",
+    label: "Return Items",
     icon: "pi pi-trash",
     severity: "danger",
     action: () => {},
     disable: (selectedItems: Item[]) => selectedItems.length == 0,
-  },
-  {
-    label: "Edit Items",
-    icon: "pi pi-pencil",
-    action: () => {
-      console.log("hi");
-    },
-    disable: (selectedItems: Item[]) => selectedItems.length !== 1,
   },
 ];
 </script>

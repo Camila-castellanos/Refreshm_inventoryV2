@@ -1,5 +1,6 @@
 <template>
   <StoragesAssign :items="selectedItems" ref="assignStorageVisible"></StoragesAssign>
+  <ConfirmDialog></ConfirmDialog>
   <div>
     <section class="w-[90%] mx-auto mt-4">
       <ItemsTabs :custom-tabs="tabs">
@@ -12,6 +13,16 @@
       </ItemsTabs>
     </section>
   </div>
+  <Dialog v-model:visible="showDialog" header="Assign Customer" :modal="true">
+    <div class="p-4">
+      <label for="customer-name" class="block text-sm font-medium">Customer Name:</label>
+      <InputText id="customer-name" v-model="customerName" class="w-full mt-2" />
+    </div>
+    <template #footer>
+      <Button label="Cancel" icon="pi pi-times" @click="showDialog = false" class="p-button-text" />
+      <Button label="Confirm" icon="pi pi-check" @click="confirmHold" class="p-button-primary" />
+    </template>
+  </Dialog>
 </template>
 
 <script setup lang="ts">
@@ -27,8 +38,13 @@ import { Item, Tab as ITab } from "@/Lib/types";
 import axios from "axios";
 import MoveItem from "./Modals/MoveItem.vue";
 import ItemsTabs from "@/Components/ItemsTabs.vue";
+import { Button, ConfirmDialog, Dialog, InputText, useConfirm, useToast } from "primevue";
 
+const confirm = useConfirm();
+const toast = useToast();
 const dialog = useDialog();
+const showDialog = ref(false);
+const customerName = ref("");
 const props = defineProps({
   items: Array<Item>,
   customers: Array,
@@ -84,6 +100,13 @@ function parseItemsData() {
               openMoveItemsModal(item);
             },
           },
+          {
+            label: "Label",
+            icon: "pi pi-file",
+            action: (item: Item) => {
+              window.location.assign(route('items.label', item.id));
+            },
+          }
         ],
       };
     });
@@ -171,8 +194,44 @@ const tableActions = [
   {
     label: "Place on hold",
     icon: "pi pi-lock",
-    action: () => console.log("hi"),
+    action: () => onClickHold(),
     disable: (selectedItems: Item[]) => selectedItems.length == 0,
   },
 ];
+
+const onClickHold = () => {
+  confirm.require({
+    message: "Are you sure you want to place these items on hold?", 
+    header: "Confirmation",
+    icon: "pi pi-exclamation-triangle",
+    accept: () => {
+      showDialog.value = true; // Show dialog for customer input
+      confirm.close();
+    },
+  });
+};
+
+const confirmHold = async () => {
+  if (!customerName.value) {
+    toast.add({ severity: "warn", summary: "Warning", detail: "Customer name is required", life: 3000 });
+    return;
+  }
+
+  try {
+    await axios.put(route("items.hold"), {
+      data: selectedItems.value,
+      customer: customerName.value,
+    });
+
+    toast.add({ severity: "success", summary: "Success", detail: "Items placed on hold!", life: 3000 });
+    showDialog.value = false;
+  } catch (error) {
+    toast.add({
+      severity: "error",
+      summary: "Error",
+      detail: error.response?.data || "An error occurred",
+      life: 5000,
+    });
+  }
+};
 </script>
