@@ -247,3 +247,33 @@ export interface User {
   sold_headers: any;
   profile_photo_url: string;
 }
+
+export interface EmailTemplate {
+  id: number;
+  subject: string;
+  content: string;
+  user_id: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface User {
+  id: number;
+  name: string;
+  email: string;
+  email_verified_at: any;
+  two_factor_confirmed_at: any;
+  current_team_id: any;
+  profile_photo_path: any;
+  created_at: string;
+  updated_at: string;
+  store_id: number;
+  location_id: any;
+  invoice: any;
+  column_headers: any;
+  sold_headers: any;
+  role: string;
+  deleted_at: any;
+  profile_photo_url: string;
+  two_factor_enabled: boolean;
+}

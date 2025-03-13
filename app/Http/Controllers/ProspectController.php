@@ -21,7 +21,7 @@ class ProspectController extends Controller
     $user_id = Auth::user()->id;
     $prospects = Prospect::where('user_id', $user_id)->get()->toArray();
 
-    return Inertia::render("Customers/Prospects/Index", compact('prospects'));
+    return Inertia::render("Customers/Prospects", compact('prospects'));
   }
 
   /**

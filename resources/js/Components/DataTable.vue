@@ -53,8 +53,6 @@
         <template #body="slotProps" v-if="header.type === 'number'"> $ {{ slotProps.data[header.name] && slotProps.data[header.name] > 0 ? Number(slotProps.data[header.name]).toFixed(2) : 0 }} </template>
       </Column>
     </template>
-    <template #empty> No items found. </template>
-
     <Column header="Actions" name="actions" v-if="headers.filter((header) => header.name === 'actions').length > 0">
       <template #body="slotProps">
         <div class="flex gap-2">
@@ -68,12 +66,12 @@
             :outlined="action?.outlined ?? false"
             :raised="action?.outlined ?? false"
             @click="() => action.action(slotProps.data)"
-            :disabled="action.disable" />
+            :disabled="typeof action.disable === 'function' ? action.disable() : false"/> 
         </div>
       </template>
     </Column>
     <template #footer> In total there are {{ items ? items.length : 0 }} items. </template>
-    <template #empty> No data found </template>
+    <template #empty> No data found. </template>
   </DataTable>
 </template>
 

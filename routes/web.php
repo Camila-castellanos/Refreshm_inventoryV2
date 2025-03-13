@@ -1,7 +1,9 @@
 <?php
 
 use App\Http\Controllers\BillController;
+use App\Http\Controllers\ContactController;
 use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\EmailsController;
 use App\Http\Controllers\ExpensesController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -182,4 +184,8 @@ Route::middleware([
         "users/{user}/headers",
         [UserController::class, "updateHeaders"]
     )->name('users.updateHeaders');
+
+    Route::resource("email_templates", EmailsController::class);
+
+    Route::post("store/contact", [ContactController::class, "store"])->name("contact.store");
 });
