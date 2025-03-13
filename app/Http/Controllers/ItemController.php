@@ -21,9 +21,8 @@ use App\Mail\RequestItems;
 use Exception;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
-use Barryvdh\DomPDF\Facade as PDF;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
-use Excel;
 use App\Exports\ItemsExample;
 use Illuminate\Support\Facades\Auth;
 use App\Imports\ItemsImport;
@@ -31,6 +30,8 @@ use App\Exports\ItemDemoExport;
 use Illuminate\Support\Facades\Mail;
 use App\Models\Vendor;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Maatwebsite\Excel\Facades\Excel;
 use Response;
 
 class ItemController extends Controller
@@ -45,41 +46,40 @@ class ItemController extends Controller
         $user = Auth::user();
 
         $tabs = Tab::where('user_id', $user->id)->orderBy('order', 'asc')->get();
-        // $customFields = CustomField::where('user_id', $user->id)->get();
-        // testing
+        $customFields = CustomField::where('user_id', $user->id)->get();
+
         if (Auth::user()->role == ('ADMIN')) {
             $context = [
                 'items' => Item::where("user_id", $user->id)
                     ->with(['storage:id,name,limit', 'vendor:id,vendor'])
                     ->whereNull("sold")
                     ->whereNull("hold")
-                    // ->whereNotIn('id', TabItem::pluck('item_id'))
+                    ->whereNotIn('id', TabItem::pluck('item_id'))
                     ->get(),
                 'tabs' => $tabs,
-                // 'fields' => $customFields,
+                'fields' => $customFields,
             ];
         } else if (Auth::user()->role == ('USER')) {
-            //$usersId = User::where('store_id', @$user->store_id)->pluck('id')->toarray();
             $context = [
                 'items' => Item::where("user_id", $user->id)
                     ->with(['storage:id,name,limit', 'vendor:id,vendor'])
                     ->whereNull("sold")
                     ->whereNull("hold")
-                    // ->whereNotIn('id', TabItem::pluck('item_id'))
+                    ->whereNotIn('id', TabItem::pluck('item_id'))
                     ->get(),
                 'tabs' => $tabs,
-                // 'fields' => $customFields,
+                'fields' => $customFields,
             ];
         } else {
             $context = [
-                // 'items' => Item::whereNull("sold")->whereNull("hold")->get(),
                 'items' => Item::where("user_id", $user->id)
                     ->with(['storage:id,name,limit', 'vendor:id,vendor'])
+                    ->whereNull("sold")
                     ->whereNull("hold")
-                    // ->whereNotIn('id', TabItem::pluck('item_id'))
+                    ->whereNotIn('id', TabItem::pluck('item_id'))
                     ->get(),
                 'tabs' => $tabs,
-                // 'fields' => $customFields,
+                'fields' => $customFields,
             ];
         }
 
@@ -499,7 +499,7 @@ class ItemController extends Controller
 
 
 
-        return Inertia::render('Items/Hold', $context);
+        return Inertia::render('Inventory/Hold', $context);
     }
 
     public function tabStore(Request $request)
@@ -706,7 +706,7 @@ class ItemController extends Controller
         try {
             $itemArray = $request->input("item");
             $item = Item::find($itemArray["id"]);
-            $customer = Customer::where('id', $item->customer)->first();
+            $customer = Customer::where('customer', $item->customer)->first();
             $sale = Sale::find($item->sale_id);
             $value = $item->selling_price - $sale->discount;
             //Subtotal Calculation
@@ -831,7 +831,7 @@ class ItemController extends Controller
     {
         try {
             $check = $request->validated();
-            \Log::info('Validated data:', $check);
+            Log::info('Validated data:', $check);
             $test = Excel::import(new ItemsImport, $check['file']);
             return response()->json($test, 201);
         } catch (Exception $e) {

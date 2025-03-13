@@ -1,6 +1,7 @@
 <template>
     <div class="h-[100vh]">
         <DynamicDialog />
+        <Toast />
 
         <Menubar :model="navItems">
             <template #start>
@@ -58,7 +59,7 @@
 import { ref, onMounted } from 'vue';
 import Button from 'primevue/button';
 import Drawer from 'primevue/drawer';
-import { Menubar } from 'primevue';
+import { Menubar, Toast } from 'primevue';
 import Avatar from 'primevue/avatar';
 import { router } from '@inertiajs/vue3';
 import {DynamicDialog} from 'primevue';
@@ -113,7 +114,7 @@ const navItems = ref([
         label: 'Accounting',
         icon: 'pi pi-box',
         command: () => {
-            router.visit('/inventory/items');
+            router.visit('/accounting/payments');
         }
     },
     {
@@ -127,7 +128,7 @@ const navItems = ref([
         label: 'Vendors',
         icon: 'pi pi-truck',
         command: () => {
-            router.visit('/inventory/vendors');
+            router.visit('/vendor');
         }
     },
     // {
@@ -146,20 +147,20 @@ const navItems = ref([
     //         router.visit('/reports');
     //     }
     // },
-    // {
-    //     label: 'Stores',
-    //     icon: 'pi pi-store',
-    //     command: () => {
-    //         router.visit('/stores');
-    //     }
-    // },
-    // {
-    //     label: 'Users',
-    //     icon: 'pi pi-user',
-    //     command: () => {
-    //         router.visit('/users');
-    //     }
-    // }
+    {
+        label: 'Stores',
+        icon: 'pi pi-store',
+        command: () => {
+            router.visit('/stores');
+        }
+    },
+    {
+        label: 'Users',
+        icon: 'pi pi-user',
+        command: () => {
+            router.visit('/users');
+        }
+    }
 ]);
 
 onMounted(() => {

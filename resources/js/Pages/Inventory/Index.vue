@@ -15,7 +15,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, Ref } from "vue";
+import { onMounted, ref, Ref, watchEffect } from "vue";
 import DataTable from "@/Components/DataTable.vue";
 import { headers } from "./IndexData";
 import { router } from "@inertiajs/vue3";
@@ -32,7 +32,7 @@ const dialog = useDialog();
 const props = defineProps({
   items: Array<Item>,
   customers: Array,
-  tabs: {type:Array<ITab>, required: true},
+  tabs: { type: Array<ITab>, required: true },
 });
 
 const assignStorageVisible: Ref<any> = ref(null);
@@ -62,27 +62,41 @@ function parseItemsData() {
           actions: [
             {
               label: "Move Tab",
-              icon: "",
-              outlined: true,
-              severity: "info",
+              icon: "pi pi-arrow-right-arrow-left",
               extraClasses: "!font-black",
               action: (item: Item) => {
                 openMoveItemsModal(item);
               },
-            }
-          ]
+            },
+          ],
         };
       }
       return {
         ...item,
         location: "No storage information",
+        vendor: item.vendor.vendor,
+        actions: [
+          {
+            label: "Move Tab",
+            icon: "pi pi-arrow-right-arrow-left",
+            extraClasses: "!font-black",
+            action: (item: Item) => {
+              openMoveItemsModal(item);
+            },
+          },
+        ],
       };
     });
 }
 
-
 onMounted(() => {
   parseItemsData();
+});
+
+watchEffect(() => {
+  if (tableData.value) {
+    parseItemsData();
+  }
 });
 
 function openSellItemsModal() {
@@ -93,6 +107,9 @@ function openSellItemsModal() {
     },
     props: {
       modal: true,
+    },
+    onClose: () => {
+      router.reload()
     },
   });
 }
@@ -106,6 +123,9 @@ function openMoveItemsModal(item: Item) {
     props: {
       modal: true,
     },
+    onClose: () => {
+      router.reload({ only: ["items"] });
+    },
   });
 }
 
@@ -114,17 +134,17 @@ const tableActions = [
     label: "Add Items",
     icon: "pi pi-plus",
     action: () => {
-      router.visit("/inventory/items/bulk");
+      router.visit("/inventory/items/excel/create");
     },
   },
-  // {
-  //   label: "Reassign location",
-  //   icon: "pi pi-arrow-up",
-  //   action: () => {
-  //     toggleAssignStorageVisible();
-  //   },
-  //   disable: (selectedItems) => selectedItems.length == 1,
-  // },
+  {
+    label: "Reassign location",
+    icon: "pi pi-arrow-up",
+    action: () => {
+      toggleAssignStorageVisible();
+    },
+    disable: (selectedItems: Item[]) => selectedItems.length == 0,
+  },
   {
     label: "Sell",
     icon: "pi pi-dollar",
@@ -147,6 +167,12 @@ const tableActions = [
       console.log("hi");
     },
     disable: (selectedItems: Item[]) => selectedItems.length !== 1,
+  },
+  {
+    label: "Place on hold",
+    icon: "pi pi-lock",
+    action: () => console.log("hi"),
+    disable: (selectedItems: Item[]) => selectedItems.length == 0,
   },
 ];
 </script>

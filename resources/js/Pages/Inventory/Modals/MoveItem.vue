@@ -8,9 +8,9 @@
 </template>
 
 <script setup>
-import { inject, onMounted, ref } from "vue";
 import axios from "axios";
 import { Button, Select } from "primevue";
+import { inject, onMounted, ref } from "vue";
 
 const dialogRef = inject("dialogRef");
 
@@ -32,7 +32,7 @@ const moveTab = async () => {
         tab: selectedTab.value,
         item: item.value.id,
       });
-      window.location.reload();
+      dialogRef.value.close();
     } catch (error) {
       console.error(error);
     }

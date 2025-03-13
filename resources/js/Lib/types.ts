@@ -90,3 +90,160 @@ export interface MailingList {
   created_at: string;
   updated_at: string;
 }
+export interface Payment {
+  id: number;
+  sale_id: number;
+  amount_paid: string;
+  balance_remaining: string;
+  payment_method: string;
+  payment_account: string;
+  payment_date: string;
+  created_at: string;
+  updated_at: string;
+  date: string;
+  paid: string;
+}
+
+export interface EmailTemplate {
+  id: number;
+  name: string;
+  subject: string;
+  body: string;
+}
+
+export interface PaymentResponse {
+  id: number;
+  date: string;
+  customer: string;
+  returned_items: any[];
+  credited_items: any[];
+  customer_id: string;
+  customer_credit: number;
+  customer_email: any;
+  credit: any;
+  total: string;
+  amount_paid: string;
+  balance_remaining: string;
+  status: string;
+  payments: Payment[];
+  sale_id: number;
+  payment_method: string;
+  payment_account: string;
+  tax: string;
+  tax_id: number;
+  discount: string;
+  notes: any;
+  sale_date: string;
+}
+
+export interface Expense {
+  id?: number;
+  date?: string | null | Date;
+  name?: string;
+  category?: string;
+  amount?: number;
+  user_id?: number;
+  created_at?: string;
+  updated_at?: string;
+  tax?: number | null;
+  total?: string | number;
+  tax_id?: number;
+}
+
+export interface Tax {
+  id: number;
+  name: string;
+  percentage: number;
+  collected: number;
+  paid: number;
+  total_sales: number;
+  total_purchases: number;
+}
+
+export interface Vendor {
+  id: number;
+  vendor: string;
+  user_id: number;
+  first_name: any;
+  last_name: any;
+  email: any;
+  phone: any;
+  phone_optional: any;
+  website: any;
+  notes: any;
+  currency: any;
+  address: any;
+  address_optional: any;
+  address_country: any;
+  address_state: any;
+  address_city: any;
+  address_postal: any;
+  created_at: string;
+  updated_at: string;
+  vendor_name: string;
+}
+
+export interface Bill {
+  id: number;
+  status: number;
+  date: string;
+  vendor: string;
+  total: string;
+  amount_paid: string;
+  balance_remaining: string;
+  user_id: number;
+  vendor_id: string;
+  subtotal: string;
+  tax: string;
+  flat_tax: string;
+  invoice: any;
+  tax_id: any;
+  created_at: string;
+  updated_at: string;
+  payments: any[];
+}
+
+export interface Store {
+  id: number;
+  name: string;
+  address: string;
+  email: string;
+  price_percent: number;
+  deleted_at: any;
+  header: string;
+  footer: string;
+  logo: string;
+  created_at: any;
+  updated_at: any;
+}
+
+export interface Location {
+  id: number
+  name: string
+  address: string
+  store_id: number
+  deleted_at: any
+  created_at: string
+  updated_at: string
+}
+
+export interface User {
+  id: number;
+  name: string;
+  email: string;
+  email_verified_at: any;
+  current_team_id: any;
+  profile_photo_path: any;
+  role: string;
+  deleted_at: any;
+  created_at: string;
+  updated_at: string;
+  store_id: any;
+  location_id: any;
+  invoice_header: any;
+  invoice_footer: any;
+  invoice_logo: any;
+  headers: any;
+  sold_headers: any;
+  profile_photo_url: string;
+}

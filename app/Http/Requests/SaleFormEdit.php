@@ -42,6 +42,7 @@ class SaleFormEdit extends FormRequest
             "items.*.customer" => "required",
             "credit" => "nullable|numeric",
             "tax_id" => "required",
+            "customer" => "required|string"
         ];
     }
 }
