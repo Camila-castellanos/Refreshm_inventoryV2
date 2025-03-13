@@ -67,22 +67,24 @@ class PaymentController extends Controller
           }
 
           $credit = 0;
+          $customer_id = null;
           $sold = new DateTime($item->sold);
           $customer = $item->customer;
           $customer_emails = null;
-          if (is_numeric($item->customer)) {
-            $customers = Customer::whereId($item->customer)->select('customer', 'billing_address', 'billing_address_country', 'billing_address_state', 'billing_address_city', 'billing_address_postal', 'email', 'phone', 'credit')->first();
-            if ($customers) {
-              $customer = $customers->customer;
-              $customer_emails = $customers->email;
-              $credit = $customers->credit;
-            } else {
-              $customer = $item->customer;
-              $credit = 0;
-            }
-          }
-          $customer_id = $item->customer;
 
+          $customers = Customer::where('customer', $item->customer)
+            ->select('customer', 'billing_address', 'billing_address_country', 'billing_address_state', 'billing_address_city', 'billing_address_postal', 'email', 'phone', 'credit', 'id')
+            ->first();
+
+          if ($customers) {
+            $customer = $customers->customer;
+            $customer_emails = $customers->email;
+            $credit = $customers->credit;
+            $customer_id = $customers->id;
+          } else {
+            $customer = $item->customer;
+            $credit = 0;
+          }
 
           $returned_items = [];
           $credited_items = [];
@@ -217,7 +219,7 @@ class PaymentController extends Controller
       $message = $request->message;
       $req = new Request;
       $req->merge(['id' => $request->id]);
-      $invoice = $this->invoice($req);
+      $invoice = $this->invoice($req)->getContent();
       $invoiceSent = new InvoiceSent($subject, $message);
       $invoiceSent->attachData($invoice, 'invoice.pdf', [
         'mime' => 'application/pdf',
