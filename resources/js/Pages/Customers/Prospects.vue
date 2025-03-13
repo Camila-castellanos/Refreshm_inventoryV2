@@ -20,9 +20,9 @@
 import DataTable from "@/Components/DataTable.vue";
 import axios from "axios";
 import { ConfirmDialog, useConfirm, useDialog } from "primevue";
-import { defineProps, onMounted, Ref, ref } from "vue";
-import { prospectHeaders } from "../IndexData";
-import CreateEditModal from "./CreateEditModal.vue";
+import { defineProps, onMounted, Ref, ref, watchEffect } from "vue";
+import { prospectHeaders } from "./IndexData";
+import CreateEditModal from "./Modals/CreateEditModal.vue";
 import ContactTabs from "@/Components/ContactTabs.vue";
 import AppLayout from "@/Layouts/AppLayout.vue";
 import {router} from "@inertiajs/vue3"
@@ -111,6 +111,12 @@ function confirmDeleteProspect(prospect: any) {
 
 onMounted(() => {
   parseItemsData();
+});
+
+watchEffect(() => {
+  if (prospectTableData.value) {
+    parseItemsData();
+  }
 });
 
 function openAddProspect() {

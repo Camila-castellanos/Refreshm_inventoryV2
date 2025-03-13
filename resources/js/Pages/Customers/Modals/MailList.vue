@@ -15,20 +15,25 @@
           <TabPanel value="0">
             <DataTable
               title=""
+              :key="customerTableData.length"
               :items="customerTableData"
               :headers="createMailListHeaders"
+              :selection="selectedCustomers"
               @update:selected="handleCustomerSelection"></DataTable>
           </TabPanel>
           <TabPanel value="1">
             <DataTable
               title=""
+              :key="prospectTableData.length"
               :items="prospectTableData"
               :headers="createMailListHeaders"
+              :selection="selectedProspects"
               @update:selected="handleProspectSelection"></DataTable>
           </TabPanel>
           <TabPanel value="2">
             <DataTable
               title=""
+              :key="customContactTableData.length"
               :items="customContactTableData"
               :headers="createMailListHeaders"
               :actions="customActions"
@@ -63,23 +68,17 @@
 <script setup lang="ts">
 import DataTable from "@/Components/DataTable.vue";
 import InputLabel from "@/Components/InputLabel.vue";
-import { Contact } from "@/Lib/types";
-import { Button, Dialog, InputText, Message, Tab, TabList, TabPanel, TabPanels, Tabs } from "primevue";
+import { Contact, MailingList } from "@/Lib/types";
+import { Button, Dialog, InputText, Message, Tab, TabList, TabPanel, TabPanels, Tabs, useToast } from "primevue";
 import { inject, onMounted, reactive, ref, Ref, watch } from "vue";
 import { createMailListHeaders } from "../IndexData";
 import axios from "axios";
+import { DynamicDialogInstance } from "primevue/dynamicdialogoptions";
 
-interface AllData {
-  customers: Contact[];
-  prospects: Contact[];
-  custom: Contact[];
-}
+const toast = useToast();
 
-const form = reactive({
-  title: "",
-});
 
-const dialogRef: any = inject("dialogRef");
+const dialogRef = inject("dialogRef") as Ref<DynamicDialogInstance>;
 
 const customerTableData: Ref<Contact[]> = ref([]);
 const prospectTableData: Ref<Contact[]> = ref([]);
@@ -98,8 +97,13 @@ const customContact = reactive({
   name: "",
 });
 
+const form = reactive({
+  title: "",
+  id: null as number | null, // Add this line to store list.id
+});
+
+// After the onMounted function declaration, add this code to parse selected contacts
 onMounted(() => {
-  console.log(dialogRef.value.data);
   dialogRef.value.data.contacts.forEach((customer: Contact) => {
     if (customer.type == "customer") {
       customerTableData.value.push(customer);
@@ -109,7 +113,66 @@ onMounted(() => {
       customContactTableData.value.push(customer);
     }
   });
+
+  // Parse selected contacts from the mailing list if it exists
+  if (dialogRef.value.data.selected) {
+    const list = dialogRef.value.data.selected as MailingList;
+    form.title = list.title;
+    form.id = list.id; // Store the list.id
+    
+    try {
+      const emails = JSON.parse(list.emails);
+      const names = JSON.parse(list.names);
+
+      emails.forEach((email: string) => {
+        const contact = dialogRef.value.data.contacts.find((c: Contact) => c.email === email);
+        if (contact) {
+          if (contact.type === "customer") {
+            selectedCustomers.value.push(contact);
+          } else if (contact.type === "prospect") {
+            selectedProspects.value.push(contact);
+          } else {
+            selectedCustomContacts.value.push(contact);
+          }
+        }
+      });
+    } catch (e) {
+      console.error("Error parsing mailing list data", e);
+      toast.add({ severity: "error", summary: "Error", detail: "Could not parse mailing list data", life: 3000 });
+    }
+  }
 });
+
+// Update the submitForm function to include the list.id for updates
+const submitForm = async () => {
+  const selected = [...selectedCustomContacts.value, ...selectedCustomers.value, ...selectedProspects.value];
+  const payload = {
+    emails: JSON.stringify(selected.map((contact) => contact.email)),
+    names: JSON.stringify(selected.map((contact) => contact.name)),
+    title: form.title,
+    id: form.id, // Include the id for updates
+  };
+
+  try {
+    // Use PUT for updates, POST for new lists
+    const endpoint = form.id 
+      ? route("mailing_list.update", { id: form.id }) 
+      : route("mailing_list.store");
+    const method = form.id ? "put" : "post";
+    
+    await axios[method](endpoint, payload);
+    toast.add({ 
+      severity: "success", 
+      summary: "Success", 
+      detail: form.id ? "Mailing list updated successfully" : "Mailing list created successfully", 
+      life: 3000 
+    });
+    dialogRef.value.close();
+  } catch (e) {
+    console.log(e);
+    toast.add({ severity: "error", summary: "Error", detail: "Something went wrong! Please try again", life: 3000 });
+  }
+};
 
 const customActions = [
   {
@@ -121,22 +184,6 @@ const customActions = [
   },
 ];
 
-const submitForm = async () => {
-  console.log(form);
-  const selected = [...selectedCustomContacts.value, ...selectedCustomers.value, ...selectedProspects.value];
-  const payload = {
-    emails: JSON.stringify(selected.map((contact) => contact.email)),
-    names: JSON.stringify(selected.map((contact) => contact.name)),
-    title: form.title,
-  };
-
-  try {
-    await axios.post(route("mailing_list.store"), payload);
-  } catch (e) {
-    console.log(e);
-  }
-};
-
 const addCustomContact = async () => {
   if (customContact.name == "") {
     nameEmpty.value = true;
@@ -147,7 +194,12 @@ const addCustomContact = async () => {
   if (nameEmpty.value || emailEmpty.value) {
     return;
   }
-  addContact.value = false;
+
+  axios.post(route("contact.store"), customContact).then((response) => {
+    toast.add({ severity: "success", summary: "Success", detail: "Contact added successfully", life: 3000 });
+    customContactTableData.value.push(response.data);
+    addContact.value = false;
+  })
 };
 
 const handleCustomerSelection = (selected: any[]) => {

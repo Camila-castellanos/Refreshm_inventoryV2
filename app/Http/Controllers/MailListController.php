@@ -27,7 +27,7 @@ class MailListController extends Controller
     $email_templates = EmailTemplate::where('user_id', Auth::id())->get()->toArray();
     $mailing_lists = MailList::where("user_id", $user_id)->get()->toArray();
 
-    return Inertia::render("Customers/MailList/Index", [
+    return Inertia::render("Customers/MailList", [
       "contacts" => $contacts,
       "email_templates" => $email_templates,
       "mailing_lists" => $mailing_lists,
@@ -141,37 +141,30 @@ class MailListController extends Controller
   public function send(EmailForm $request)
   {
     $validatedData = $request->validated();
-    $contacts = $validatedData['contacts'];
+    $contacts = $validatedData['contacts']; // Lista de emails
     $subject = $validatedData['subject'];
     $content = $validatedData['content'];
-
     $user = Auth::user();
 
     if (!$user) {
       return response()->json(['error' => 'User not authenticated'], 401);
     }
 
-    foreach ($contacts as $contact) {
-      $names = $contact['name'];
-      $emails = $contact['email'];
+    // Obtener los nombres y emails de la base de datos
+    $contactData = Contact::whereIn('email', $contacts)->get(['name', 'email']);
 
-      if (is_array($names)) {
-        foreach ($names as $key => $name) {
-          $email = $emails[$key];
-          try {
-            $mail = new MarketingEmail($subject, $content, $name, $user);
-            Mail::to($email)->send($mail);
-          } catch (\Exception $e) {
-            // Handle error, log, or continue to the next recipient
-          }
-        }
-      } else {
-        try {
-          $mail = new MarketingEmail($subject, $content, $names, $user);
-          Mail::to($emails)->send($mail);
-        } catch (\Exception $e) {
-          // Handle error, log, or continue to the next recipient
-        }
+    // Convertir a un array asociativo [email => name]
+    $contactsMap = $contactData->pluck('name', 'email')->toArray();
+
+    foreach ($contacts as $email) {
+      $name = $contactsMap[$email] ?? 'Valued Customer'; // Nombre por defecto si no se encuentra en la BD
+
+      try {
+        $mail = new MarketingEmail($subject, $content, $name, $user);
+        Mail::to($email)->send($mail);
+      } catch (\Exception $e) {
+        return response()->json(['error' => $e->getMessage()], 500);
+        continue;
       }
     }
 

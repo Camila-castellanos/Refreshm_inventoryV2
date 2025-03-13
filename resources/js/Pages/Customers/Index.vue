@@ -21,7 +21,7 @@ import AppLayout from "@/Layouts/AppLayout.vue";
 import { router } from "@inertiajs/vue3";
 import axios from "axios";
 import { ConfirmDialog, useConfirm, useDialog } from "primevue";
-import { defineProps, onMounted, ref } from "vue";
+import { defineProps, onMounted, ref, watchEffect } from "vue";
 import { headers } from "./IndexData";
 import CreateEdit from "./CreateEdit.vue";
 
@@ -125,6 +125,12 @@ function confirmDelete(customer) {
 
 onMounted(() => {
   parseItemsData();
+});
+
+watchEffect(() => {
+  if (props.customers) {
+    parseItemsData();
+  }
 });
 
 defineOptions({ layout: AppLayout });
