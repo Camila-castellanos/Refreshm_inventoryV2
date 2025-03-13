@@ -28,6 +28,7 @@ import { headers } from "./data";
 import ShowPayments from "./Modals/ShowPayments.vue";
 import { router } from "@inertiajs/vue3";
 import SaleEdit from "./Modals/SaleEdit.vue";
+import SendEmail from "./Modals/SendEmail.vue";
 
 const props = defineProps({
   items: Array<IPaymentResponse>,
@@ -101,7 +102,19 @@ const getItemActions = (item: IPaymentResponse) => {
           });
         },
       },
-      { label: "Send", icon: "pi pi-envelope", severity: "info", action: () => {} },
+      {
+        label: "Send",
+        icon: "pi pi-envelope",
+        severity: "info",
+        action: () => {
+          dialog.open(SendEmail, {
+            data: { customer_id: item.customer_id, invoice_id: item.id, templates: props.email_templates },
+            props: { modal: true },
+            onClose: () => router.reload(),
+          });
+        },
+        disable: () => !(Array.isArray(item.customer_email) && item.customer_email.length > 0),
+      },
     ];
   }
 
@@ -145,7 +158,19 @@ const getItemActions = (item: IPaymentResponse) => {
         });
       },
     },
-    { label: "Send", icon: "pi pi-envelope", severity: "info", action: () => {} },
+    {
+      label: "Send",
+      icon: "pi pi-envelope",
+      severity: "info",
+      action: () => {
+        dialog.open(SendEmail, {
+          data: { customer_id: item.customer_id, invoice_id: item.id, templates: props.email_templates },
+          props: { modal: true },
+          onClose: () => router.reload(),
+        });
+      },
+      disable: () => !(Array.isArray(item.customer_email) && item.customer_email.length > 0),
+    },
   ];
 };
 
