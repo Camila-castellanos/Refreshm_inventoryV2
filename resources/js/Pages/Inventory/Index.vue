@@ -1,8 +1,8 @@
 <template>
   <StoragesAssign :items="selectedItems" ref="assignStorageVisible"></StoragesAssign>
-  <ConfirmDialog></ConfirmDialog>
+
   <div>
-    <section class="w-[90%] mx-auto mt-4">
+    <section class="w-[95%] mx-auto mt-4">
       <ItemsTabs :custom-tabs="tabs">
         <DataTable
           title="Active Inventory"
@@ -77,6 +77,13 @@ function parseItemsData() {
           vendor: item.vendor.vendor,
           actions: [
             {
+              label: "Label",
+              icon: "pi pi-file",
+              action: (item: Item) => {
+                window.location.assign(route("items.label", item.id));
+              },
+            },
+            {
               label: "Move Tab",
               icon: "pi pi-arrow-right-arrow-left",
               extraClasses: "!font-black",
@@ -93,6 +100,13 @@ function parseItemsData() {
         vendor: item.vendor.vendor,
         actions: [
           {
+            label: "Label",
+            icon: "pi pi-file",
+            action: (item: Item) => {
+              window.location.assign(route("items.label", item.id));
+            },
+          },
+          {
             label: "Move Tab",
             icon: "pi pi-arrow-right-arrow-left",
             extraClasses: "!font-black",
@@ -100,13 +114,6 @@ function parseItemsData() {
               openMoveItemsModal(item);
             },
           },
-          {
-            label: "Label",
-            icon: "pi pi-file",
-            action: (item: Item) => {
-              window.location.assign(route('items.label', item.id));
-            },
-          }
         ],
       };
     });
@@ -132,7 +139,7 @@ function openSellItemsModal() {
       modal: true,
     },
     onClose: () => {
-      router.reload()
+      router.reload();
     },
   });
 }
@@ -180,16 +187,16 @@ const tableActions = [
     label: "Delete Items",
     icon: "pi pi-trash",
     severity: "danger",
-    action: () => {},
+    action: () => {onDeleteMultiple()},
     disable: (selectedItems: Item[]) => selectedItems.length == 0,
   },
   {
     label: "Edit Items",
     icon: "pi pi-pencil",
     action: () => {
-      console.log("hi");
+      onEdit();
     },
-    disable: (selectedItems: Item[]) => selectedItems.length !== 1,
+    disable: (selectedItems: Item[]) => selectedItems.length === 0,
   },
   {
     label: "Place on hold",
@@ -201,7 +208,7 @@ const tableActions = [
 
 const onClickHold = () => {
   confirm.require({
-    message: "Are you sure you want to place these items on hold?", 
+    message: "Are you sure you want to place these items on hold?",
     header: "Confirmation",
     icon: "pi pi-exclamation-triangle",
     accept: () => {
@@ -225,7 +232,7 @@ const confirmHold = async () => {
 
     toast.add({ severity: "success", summary: "Success", detail: "Items placed on hold!", life: 3000 });
     showDialog.value = false;
-  } catch (error) {
+  } catch (error: any) {
     toast.add({
       severity: "error",
       summary: "Error",
@@ -233,5 +240,41 @@ const confirmHold = async () => {
       life: 5000,
     });
   }
+};
+
+const onEdit = () => {
+  const currentPaginate = document.getElementById("currentPaginate")?.getAttribute("data-id") || "";
+  const filter = document.getElementsByClassName("filter--value")[0]?.value || "";
+
+  document.cookie = `paginate=${currentPaginate}`;
+  document.cookie = `pagefilter=${filter}`;
+
+  let items = selectedItems.value.map((item: any) => item.id).join(";");
+
+  router.get(route("items.edit", btoa(items)));
+};
+
+const onDeleteMultiple = () => {
+  confirm.require({
+    message: "Are you sure? You won't be able to revert this!",
+    header: "Delete Confirmation",
+    icon: "pi pi-exclamation-triangle",
+    accept: async () => {
+      try {
+        const response = await axios.delete(route("items.obliterate"), { data: selectedItems.value });
+        if (response.status >= 200 && response.status < 400) {
+          toast.add({ severity: "success", summary: "Deleted", detail: "Items deleted successfully", life: 3000 });
+          location.reload();
+        }
+      } catch (error: any) {
+        toast.add({
+          severity: "error",
+          summary: "Error",
+          detail: error.response?.data || error.message || "An error occurred",
+          life: 5000,
+        });
+      }
+    },
+  });
 };
 </script>

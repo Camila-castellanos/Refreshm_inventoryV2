@@ -1,10 +1,9 @@
 <template>
-  <StoragesAssign :items="selectedItems" ref="assignStorageVisible"></StoragesAssign>
   <div>
-    <section class="w-[90%] mx-auto mt-4">
+    <section class="w-[95%] mx-auto mt-4">
       <ItemsTabs :custom-tabs="tabs">
         <DataTable
-          title="Active Inventory"
+          title="On Hold"
           @update:selected="handleSelection"
           :actions="tableActions"
           :items="tableData"
@@ -18,25 +17,20 @@
 import DataTable from "@/Components/DataTable.vue";
 import ItemsTabs from "@/Components/ItemsTabs.vue";
 import { Tab as ITab, Item } from "@/Lib/types";
-import { router } from "@inertiajs/vue3";
-import { useDialog } from "primevue/usedialog";
+import axios from "axios";
+import { useConfirm, useDialog, useToast } from "primevue";
 import { defineProps, onMounted, ref, Ref } from "vue";
-import StoragesAssign from "../Storages/StoragesAssign/StoragesAssign.vue";
 import { headers } from "./IndexData";
 import ItemsSell from "./Modals/ItemsSell.vue";
 
 const dialog = useDialog();
+const confirm = useConfirm()
+const toast = useToast();
 const props = defineProps({
   items: Array<Item>,
   customers: Array,
   tabs: { type: Array<ITab>, required: true },
 });
-
-const assignStorageVisible: Ref<any> = ref(null);
-
-const toggleAssignStorageVisible = () => {
-  assignStorageVisible.value.openDialog();
-};
 
 let selectedItems: Ref<Item[]> = ref([]);
 
@@ -101,6 +95,28 @@ function openSellItemsModal() {
   });
 }
 
+const onClickReturn = () => {
+  confirm.require({
+    message: "Are you sure you want to return these items?", 
+    header: "Confirmation",
+    icon: "pi pi-exclamation-triangle",
+    accept: async () => {
+      try {
+        await axios.put(route("items.unhold"), { data: selectedItems.value });
+        toast.add({ severity: "success", summary: "Success", detail: "Items returned!", life: 3000 });
+        location.reload();
+      } catch (error: any) {
+        toast.add({
+          severity: "error",
+          summary: "Error",
+          detail: error.response?.data || "An error occurred",
+          life: 5000,
+        });
+      }
+    },
+  });
+};
+
 const tableActions = [
   {
     label: "Sell",
@@ -112,9 +128,9 @@ const tableActions = [
   },
   {
     label: "Return Items",
-    icon: "pi pi-trash",
+    icon: "pi pi-undo",
     severity: "danger",
-    action: () => {},
+    action: () => {onClickReturn();},
     disable: (selectedItems: Item[]) => selectedItems.length == 0,
   },
 ];

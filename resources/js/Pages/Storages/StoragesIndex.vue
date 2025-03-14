@@ -1,6 +1,6 @@
 <template>
       <Toast />
-      <ConfirmDialog></ConfirmDialog>
+      
                 <section class="w-[90%] mx-auto mt-4">    
                     <DataTable title="Active Storages Location" @update:selected="handleSelection" class="mt-8" :actions="tableActions" :items="data":headers="StoragesIndexHeaders" ></DataTable>
                 </section>

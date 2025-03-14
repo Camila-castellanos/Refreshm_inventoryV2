@@ -1,5 +1,5 @@
 <template>
-  <ConfirmDialog />
+  
   <div>
     <section class="w-[90%] mx-auto mt-4">
       <DataTable title="Users" @update:selected="handleSelection" :actions="tableActions" :items="tableData" :headers="headers"></DataTable>
