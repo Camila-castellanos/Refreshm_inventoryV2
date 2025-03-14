@@ -3,6 +3,7 @@
 use App\Http\Controllers\BillController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\CustomFieldsController;
 use App\Http\Controllers\EmailsController;
 use App\Http\Controllers\ExpensesController;
 use Illuminate\Foundation\Application;
@@ -188,4 +189,7 @@ Route::middleware([
     Route::resource("email_templates", EmailsController::class);
 
     Route::post("store/contact", [ContactController::class, "store"])->name("contact.store");
+
+    Route::resource("customfields", CustomFieldsController::class);
+    Route::post("customfields/{id}/active", [CustomFieldsController::class, "updateActive"])->name("customFields.updateActive");
 });

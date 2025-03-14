@@ -75,7 +75,7 @@ function parseItemsData() {
           label: "Delete",
           icon: "pi pi-trash",
           severity: "danger",
-          action: () => confirmDelete(customer),
+          action: () => confirmDelete(customer.id),
         },
       ],
     };
@@ -98,7 +98,7 @@ const editCustomer = (customer) => {
 };
 
 const deleteCustomer = (customer) => {
-  axios.delete(route("customers.destroy", { customer })).then(() => {
+  axios.delete(route("customer.destroy", { customer })).then(() => {
     router.reload();
   });
 };

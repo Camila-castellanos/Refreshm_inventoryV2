@@ -83,7 +83,7 @@ function parseItemsData() {
   });
 }
 
-const deleteProspect = (prospect: any) => {
+const deleteProspect = (prospect: Prosp) => {
   axios.delete(route("prospects.destroy", { prospect })).then(() => {
     router.reload();
   });

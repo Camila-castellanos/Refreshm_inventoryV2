@@ -4,7 +4,7 @@
       <template #title>
         <div class="flex items-center">
           <Button icon="pi pi-arrow-left" link class="mr-2" @click="router.visit(route('stores.index'))" />
-          <h2 class="text-xl font-semibold">{{storeEdit?.id ? 'Edit' : 'Create'}} Store</h2>
+          <h2 class="text-xl font-semibold">{{ storeEdit?.id ? "Edit" : "Create" }} Store</h2>
         </div>
       </template>
 
@@ -130,7 +130,17 @@ onMounted(() => {
   }
 });
 
-const form: {name: string, address: string, email: string, header: string, footer: string, adminname: string, password: string, confirmPassword: string, logo: string | null} = reactive({
+const form: {
+  name: string;
+  address: string;
+  email: string;
+  header: string;
+  footer: string;
+  adminname: string;
+  password: string;
+  confirmPassword: string;
+  logo: string | null;
+} = reactive({
   name: "",
   address: "",
   email: "",
@@ -147,8 +157,8 @@ const handleFileSelect = (event: any) => {
 };
 
 const imagePreview = computed(() => {
-  console.log(form.logo)
-  return form.logo ? URL.createObjectURL(form.logo) : "";
+  console.log(form.logo);
+  return form.logo && typeof form.logo === "object" ? URL.createObjectURL(form.logo) : "";
 });
 
 const onFormSubmit = () => {
@@ -160,27 +170,28 @@ const onFormSubmit = () => {
   formData.append("email", form.email);
 
   if (form.logo) formData.append("logo", form.logo);
-  
+
   if (!props?.storeEdit?.id) {
     formData.append("adminname", form.adminname);
     formData.append("password", form.password);
     formData.append("password_confirmation", form.confirmPassword);
 
     axios
-    .post(requestUrl.value, formData, { headers: { "Content-Type": "multipart/form-data" } })
-    .then((response) => {
-      toast.add({ severity: "success", summary: "Success", detail: `Store saved successfully: ${response.data.name}`, life: 3000 });
-      resetForm();
-    })
-    .catch((error) => {
-      let textMsg = error.response ? Object.values(error.response.data.errors).join("\n") : "An error occurred";
-      toast.add({ severity: "error", summary: "Error", detail: textMsg, life: 5000 });
-    });
+      .post(requestUrl.value, formData, { headers: { "Content-Type": "multipart/form-data", Accept: "application/json" } })
+      .then((response) => {
+        toast.add({ severity: "success", summary: "Success", detail: `Store saved successfully: ${response.data.name}`, life: 3000 });
+        resetForm();
+      })
+      .catch((error) => {
+        let textMsg = error.response ? Object.values(error.response.data.errors).join("\n") : "An error occurred";
+        toast.add({ severity: "error", summary: "Error", detail: textMsg, life: 5000 });
+      });
     return;
   }
+  formData.append("_method", "PUT");
 
   axios
-    .put(requestUrl.value, formData, { headers: { "Content-Type": "multipart/form-data" } })
+    .post(requestUrl.value, formData, { headers: { "Content-Type": "multipart/form-data", Accept: "application/json" } })
     .then((response) => {
       toast.add({ severity: "success", summary: "Success", detail: `Store saved successfully: ${response.data.name}`, life: 3000 });
       resetForm();

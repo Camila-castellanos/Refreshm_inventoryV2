@@ -277,3 +277,20 @@ export interface User {
   profile_photo_url: string;
   two_factor_enabled: boolean;
 }
+
+export interface CustomField {
+  label: string;
+  name: string;
+  type: string;
+}
+
+export interface Field {
+  id: number;
+  created_at: string;
+  updated_at: string;
+  text: string;
+  value: string;
+  type: string;
+  active: number;
+  user_id: number;
+}

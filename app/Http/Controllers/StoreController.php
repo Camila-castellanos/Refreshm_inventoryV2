@@ -135,9 +135,8 @@ class StoreController extends Controller
   public function update(StoreUpdateForm $request, Store $store)
   {
     $logo = $request->logo;
-    $storeValue = Store::where()->pluck('id',)->first();
 
-    $logo = $request["logo"]->store("logos");
+    $logo = $request->hasFile('logo') ? $request->file('logo')->store("logos") : $store->logo;
 
     $data = [
       "name" => $request->name,
