@@ -1,6 +1,8 @@
 <template>
   <StoragesAssign :items="selectedItems" ref="assignStorageVisible"></StoragesAssign>
-
+  <Dialog v-model:visible="showCustomFields" header="Edit fields" :modal="true">
+    <CustomFields :headers="headers" :custom-headers="fields ?? []" @update-headers="updateTableHeaders" />
+  </Dialog>
   <div>
     <section class="w-[95%] mx-auto mt-4">
       <ItemsTabs :custom-tabs="tabs">
@@ -9,20 +11,10 @@
           @update:selected="handleSelection"
           :actions="tableActions"
           :items="tableData"
-          :headers="headers"></DataTable>
+          :headers="allHeaders"></DataTable>
       </ItemsTabs>
     </section>
   </div>
-  <Dialog v-model:visible="showDialog" header="Assign Customer" :modal="true">
-    <div class="p-4">
-      <label for="customer-name" class="block text-sm font-medium">Customer Name:</label>
-      <InputText id="customer-name" v-model="customerName" class="w-full mt-2" />
-    </div>
-    <template #footer>
-      <Button label="Cancel" icon="pi pi-times" @click="showDialog = false" class="p-button-text" />
-      <Button label="Confirm" icon="pi pi-check" @click="confirmHold" class="p-button-primary" />
-    </template>
-  </Dialog>
 </template>
 
 <script setup lang="ts">
@@ -34,20 +26,23 @@ import { defineProps } from "vue";
 import StoragesAssign from "../Storages/StoragesAssign/StoragesAssign.vue";
 import { useDialog } from "primevue/usedialog";
 import ItemsSell from "./Modals/ItemsSell.vue";
-import { Item, Tab as ITab } from "@/Lib/types";
+import { Item, Tab as ITab, Field, CustomField } from "@/Lib/types";
 import axios from "axios";
 import MoveItem from "./Modals/MoveItem.vue";
 import ItemsTabs from "@/Components/ItemsTabs.vue";
 import { Button, ConfirmDialog, Dialog, InputText, useConfirm, useToast } from "primevue";
+import CustomFields from "./Modals/CustomFields.vue";
 
 const confirm = useConfirm();
 const toast = useToast();
 const dialog = useDialog();
 const showDialog = ref(false);
 const customerName = ref("");
+const showCustomFields = ref(false);
 const props = defineProps({
   items: Array<Item>,
   customers: Array,
+  fields: Array<Field>,
   tabs: { type: Array<ITab>, required: true },
 });
 
@@ -58,6 +53,7 @@ const toggleAssignStorageVisible = () => {
 };
 
 let selectedItems: Ref<Item[]> = ref([]);
+const allHeaders: Ref<CustomField[]> = ref([]);
 
 const handleSelection = (selected: Item[]) => {
   selectedItems.value = selected;
@@ -65,6 +61,10 @@ const handleSelection = (selected: Item[]) => {
 
 const tableData: Ref<any[]> = ref([]);
 function parseItemsData() {
+  allHeaders.value = [
+    ...headers.value,
+    ...(props.fields?.map((field) => ({ name: field.value, label: field.text, type: field.type })) ?? []),
+  ];
   tableData.value = props
     .items!.filter((item) => item.sold === null)
     .map((item: any) => {
@@ -75,46 +75,12 @@ function parseItemsData() {
           ...item,
           location: `${name} - ${position}/${limit}`,
           vendor: item.vendor.vendor,
-          actions: [
-            {
-              label: "Label",
-              icon: "pi pi-file",
-              action: (item: Item) => {
-                window.location.assign(route("items.label", item.id));
-              },
-            },
-            {
-              label: "Move Tab",
-              icon: "pi pi-arrow-right-arrow-left",
-              extraClasses: "!font-black",
-              action: (item: Item) => {
-                openMoveItemsModal(item);
-              },
-            },
-          ],
         };
       }
       return {
         ...item,
         location: "No storage information",
         vendor: item.vendor.vendor,
-        actions: [
-          {
-            label: "Label",
-            icon: "pi pi-file",
-            action: (item: Item) => {
-              window.location.assign(route("items.label", item.id));
-            },
-          },
-          {
-            label: "Move Tab",
-            icon: "pi pi-arrow-right-arrow-left",
-            extraClasses: "!font-black",
-            action: (item: Item) => {
-              openMoveItemsModal(item);
-            },
-          },
-        ],
       };
     });
 }
@@ -124,7 +90,7 @@ onMounted(() => {
 });
 
 watchEffect(() => {
-  if (tableData.value) {
+  if (tableData.value || props.fields) {
     parseItemsData();
   }
 });
@@ -144,14 +110,15 @@ function openSellItemsModal() {
   });
 }
 
-function openMoveItemsModal(item: Item) {
+function openMoveItemsModal() {
   dialog.open(MoveItem, {
     data: {
       tabs: props.tabs,
-      item: item,
+      items: selectedItems.value,
     },
     props: {
       modal: true,
+      header: "Move items",
     },
     onClose: () => {
       router.reload({ only: ["items"] });
@@ -160,6 +127,13 @@ function openMoveItemsModal(item: Item) {
 }
 
 const tableActions = [
+  {
+    label: "Edit fields",
+    icon: "pi pi-pen-to-square",
+    action: () => {
+      showCustomFields.value = true;
+    },
+  },
   {
     label: "Add Items",
     icon: "pi pi-plus",
@@ -184,14 +158,16 @@ const tableActions = [
     disable: (selectedItems: Item[]) => selectedItems.length == 0,
   },
   {
-    label: "Delete Items",
+    label: "Delete selected",
     icon: "pi pi-trash",
     severity: "danger",
-    action: () => {onDeleteMultiple()},
+    action: () => {
+      onDeleteMultiple();
+    },
     disable: (selectedItems: Item[]) => selectedItems.length == 0,
   },
   {
-    label: "Edit Items",
+    label: "Edit selected",
     icon: "pi pi-pencil",
     action: () => {
       onEdit();
@@ -199,48 +175,14 @@ const tableActions = [
     disable: (selectedItems: Item[]) => selectedItems.length === 0,
   },
   {
-    label: "Place on hold",
-    icon: "pi pi-lock",
-    action: () => onClickHold(),
-    disable: (selectedItems: Item[]) => selectedItems.length == 0,
+    label: "Move Tab",
+    icon: "pi pi-arrow-right-arrow-left",
+    extraClasses: "!font-black",
+    action: () => {
+      openMoveItemsModal();
+    },
   },
 ];
-
-const onClickHold = () => {
-  confirm.require({
-    message: "Are you sure you want to place these items on hold?",
-    header: "Confirmation",
-    icon: "pi pi-exclamation-triangle",
-    accept: () => {
-      showDialog.value = true; // Show dialog for customer input
-      confirm.close();
-    },
-  });
-};
-
-const confirmHold = async () => {
-  if (!customerName.value) {
-    toast.add({ severity: "warn", summary: "Warning", detail: "Customer name is required", life: 3000 });
-    return;
-  }
-
-  try {
-    await axios.put(route("items.hold"), {
-      data: selectedItems.value,
-      customer: customerName.value,
-    });
-
-    toast.add({ severity: "success", summary: "Success", detail: "Items placed on hold!", life: 3000 });
-    showDialog.value = false;
-  } catch (error: any) {
-    toast.add({
-      severity: "error",
-      summary: "Error",
-      detail: error.response?.data || "An error occurred",
-      life: 5000,
-    });
-  }
-};
 
 const onEdit = () => {
   const currentPaginate = document.getElementById("currentPaginate")?.getAttribute("data-id") || "";
@@ -276,5 +218,9 @@ const onDeleteMultiple = () => {
       }
     },
   });
+};
+
+const updateTableHeaders = (updatedHeaders: CustomField[]) => {
+  allHeaders.value = updatedHeaders;
 };
 </script>

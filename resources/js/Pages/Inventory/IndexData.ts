@@ -1,4 +1,7 @@
-export const headers = [
+import { CustomField } from "@/Lib/types";
+import { ref, Ref } from "vue";
+
+export const headers: Ref<CustomField[]> = ref([
   {
     label: "Date",
     name: "date",
@@ -59,14 +62,9 @@ export const headers = [
     name: "location",
     type: "string",
   },
-  {
-    label: "Actions",
-    name: "actions",
-    type: "string",
-  },
-];
+]);
 
-export const soldHeaders = [
+export const soldHeaders: Ref<CustomField[]> = ref([
   {
     label: "Sale Date",
     name: "date",
@@ -152,4 +150,4 @@ export const soldHeaders = [
     name: "actions",
     type: "string",
   },
-];
+]);

@@ -31,7 +31,7 @@ class   StoreUpdateForm extends FormRequest
       "address" => "required",
       "header" => "required",
       "footer" => "required",
-      "logo" => "required",
+      "logo" => "nullable|image",
     ];
   }
 }

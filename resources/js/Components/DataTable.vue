@@ -31,7 +31,7 @@
             v-for="action in computedActions"
             :key="action.label"
             :severity="action.severity ? action.severity : 'primary'"
-            :class="[action.extraClasses, `px-4 py-2 rounded-md ${action.label.length > 0 ? 'min-w-[150px]' : 'min-w-[40px]'}`].join(' ')"
+            :class="[action.extraClasses, `rounded-md ${action.label.length > 0 ? 'min-w-fit' : 'min-w-[40px]'}`].join(' ')"
             :icon="action.icon ? action.icon : ''"
             :label="action?.label"
             @click="action.action"
