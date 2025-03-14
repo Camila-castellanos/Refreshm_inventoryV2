@@ -1,6 +1,6 @@
 <template>
   <Toast />
-  <ConfirmDialog></ConfirmDialog>
+  
 
   <section class="w-[90%] mx-auto mt-24">
     <DataTable title="Vendors" :actions="tableActions" :items="vendorList" :headers="VendorHeaders" @update:selected="handleSelection" />

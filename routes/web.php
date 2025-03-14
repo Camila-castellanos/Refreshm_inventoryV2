@@ -1,13 +1,17 @@
 <?php
 
 use App\Http\Controllers\BillController;
+use App\Http\Controllers\ContactController;
 use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\CustomFieldsController;
+use App\Http\Controllers\EmailsController;
 use App\Http\Controllers\ExpensesController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\VendorController;
 use App\Http\Controllers\StorageController;
 use App\Http\Controllers\ItemController;
+use App\Http\Controllers\MailListController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProspectController;
@@ -107,7 +111,10 @@ Route::middleware([
     Route::get("vendor/list", [VendorController::class, "vendorList"])->name("vendor.list");
     Route::post("vendor/datewise", [VendorController::class, "datewise"])->name("vendor.datewise");
 
+    Route::resource("mailing_list", MailListController::class);
+    Route::post("mailing_list/send", [MailListController::class, 'send'])->name("send.mailing.list");
     Route::get("accounting/expenses", [ExpensesController::class, "show"])->name("reports.expenses.show");
+
     Route::delete("expenses/obliterate", [ExpensesController::class, "obliterate"])->name("expenses.obliterate");
     Route::resource("expenses", ExpensesController::class)
         ->except(["show", "update"]);
@@ -178,4 +185,11 @@ Route::middleware([
         "users/{user}/headers",
         [UserController::class, "updateHeaders"]
     )->name('users.updateHeaders');
+
+    Route::resource("email_templates", EmailsController::class);
+
+    Route::post("store/contact", [ContactController::class, "store"])->name("contact.store");
+
+    Route::resource("customfields", CustomFieldsController::class);
+    Route::post("customfields/{id}/active", [CustomFieldsController::class, "updateActive"])->name("customFields.updateActive");
 });

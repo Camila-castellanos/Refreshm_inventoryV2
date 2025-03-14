@@ -1,5 +1,5 @@
 <template>
-  <ConfirmDialog/>
+  
   <DataTable :value="items">
     <Column field="model" header="Device"></Column>
     <Column field="issues" header="Issue"></Column>

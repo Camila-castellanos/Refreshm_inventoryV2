@@ -1,5 +1,4 @@
 <template>
-  <ConfirmDialog />
   <div>
     <section class="w-full px-2 py-1 mx-auto mt-4">
       <Tabs v-model:value="currentTab">
@@ -42,7 +41,7 @@
 import { Tab as ITab } from "@/Lib/types";
 import { router } from "@inertiajs/vue3";
 import axios from "axios";
-import { Button, ConfirmDialog, Dialog, useConfirm } from "primevue";
+import { Button, Dialog, useConfirm } from "primevue";
 import InputText from "primevue/inputtext";
 import Tab from "primevue/tab";
 import TabList from "primevue/tablist";

@@ -1,8 +1,10 @@
 <script setup lang="ts">
+import { User } from "@/Lib/types";
+import { usePage } from "@inertiajs/vue3";
 import axios from "axios";
 import { Button, FloatLabel, Select, useToast } from "primevue";
 import { DynamicDialogInstance } from "primevue/dynamicdialogoptions";
-import { inject, Ref, ref } from "vue";
+import { inject, onMounted, Ref, ref } from "vue";
 
 const roles = ref([
   { name: "OWNER", value: "OWNER" },
@@ -10,9 +12,18 @@ const roles = ref([
   { name: "USER", value: "USER" },
 ]);
 
+const page = usePage();
+const user = (page.props.auth as any).user as User;
+
 const toast = useToast();
 const dialogRef = inject("dialogRef") as Ref<DynamicDialogInstance>;
 const selected: Ref<string> = ref("");
+
+onMounted(() => {
+    if (user.role === "ADMIN") {
+      roles.value = roles.value.filter((role) => role.value !== "OWNER");
+    }
+  })
 
 const formSubmit = async () => {
   try {

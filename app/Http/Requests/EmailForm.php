@@ -2,12 +2,10 @@
 
 namespace App\Http\Requests;
 
-use App\Actions\Fortify\PasswordValidationRules;
 use Illuminate\Foundation\Http\FormRequest;
 
-class   StoreUpdateForm extends FormRequest
+class EmailForm extends FormRequest
 {
-  use PasswordValidationRules;
   /**
    * Determine if the user is authorized to make this request.
    *
@@ -26,12 +24,9 @@ class   StoreUpdateForm extends FormRequest
   public function rules()
   {
     return [
-      "name" => "required",
-      "email" => "required",
-      "address" => "required",
-      "header" => "required",
-      "footer" => "required",
-      "logo" => "nullable|image",
+      "contacts" => "required|array",
+      "subject" => "required|string",
+      "content" => "required|string",
     ];
   }
 }

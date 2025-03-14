@@ -1,9 +1,10 @@
 <template>
-  <ConfirmDialog></ConfirmDialog>
+  
   <Toast></Toast>
   <section class="flex flex-col mt-[200px] w-full px-4">
     <section>
-      <Button @click="createDevices">Save devices</Button>
+       <Button v-if="!props.initialData.length" @click="createDevices">Save devices</Button>
+      <Button v-else @click="editDevices">Update devices</Button>
     </section>
 
     <div class="spreadsheet-wrapper mt-8">
@@ -13,16 +14,19 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
-import jspreadsheet from "jspreadsheet-ce";
-import fetchVendors from "@/Pages/Vendors/VendorsData";
 import { fetchStorages } from "@/Pages/Storages/StoragesIndexData";
-import "jsuites/dist/jsuites.css";
-import "jspreadsheet-ce/dist/jspreadsheet.css";
-import { useConfirm } from "primevue/useconfirm";
-import ConfirmDialog from "primevue/confirmdialog";
-import { useToast } from "primevue";
+import fetchVendors from "@/Pages/Vendors/VendorsData";
 import { router } from "@inertiajs/vue3";
+import jspreadsheet from "jspreadsheet-ce";
+import "jspreadsheet-ce/dist/jspreadsheet.css";
+import "jsuites/dist/jsuites.css";
+import { useToast } from "primevue";
+import { useConfirm } from "primevue/useconfirm";
+import { onMounted, ref } from "vue";
+
+const props = defineProps({
+  initialData: { type: Array, required: false },
+})
 
 const confirm = useConfirm();
 const toast = useToast();
@@ -31,9 +35,10 @@ let instance = null;
 const storagesList = ref([]);
 const vendorsList = ref([]);
 
-const tableData = ref([]);
+const tableData = ref(props.initialData || []);
 
 const columns = ref([
+  {type: "hidden", data: "id"},
   { type: "calendar", title: "Date", data: "date", width: 120, options: { format: "YYYY-MM-DD" } },
   { type: "dropdown", title: "Vendor", data: "vendor", width: 150, source: ["Vendor A", "Vendor B"] },
   { type: "text", title: "Manufacturer", data: "manufacturer", width: 150 },
@@ -62,15 +67,24 @@ onMounted(() => {
 
       columns.value = updatedColumns;
 
+      tableData.value = props.initialData.map(item => {
+        const storage = resStorages.data.find(s => s.id === item.storage_id);
+        return {
+          ...item,
+          location: `${storage?.name} - ${item.position}/${storage?.limit}`,
+          vendor: resVendors.data.find(v => v.id === item.vendor_id)?.vendor || "",
+        }
+      });
+
       instance = jspreadsheet(spreadsheet.value, {
         data: tableData.value.map((row) => columns.value.map((col) => row[col.data] || "")),
-        columns: columns.value.map((col) => ({ type: col.type, title: col.title, width: col.width, source: col.source || null })),
-        allowInsertRow: true,
+        columns: columns.value.map((col) => ({ type: col.type, title: col.title, width: col.width, source: col.source || null, readOnly: col.data == 'location' && props.initialData.length > 0 ? true : col.readOnly })),
+        allowInsertRow: props.initialData.length === 0,
         allowInsertColumn: false,
-        allowManualInsertRow: true,
+        allowManualInsertRow: props.initialData.length === 0,
         editable: true,
         contextMenu: (obj, x, y, e) => {
-          return [
+          return props.initialData.length === 0 ? [
             {
               title: "Insert Row Above",
               onclick: () => instance.insertRow(1, y),
@@ -84,39 +98,22 @@ onMounted(() => {
               onclick: () => instance.deleteRow(y),
             },
             {
-              title: "Insert 50 Rows Below", // 🚀 Nueva opción personalizada
+              title: "Insert 50 Rows Below",
               onclick: () => instance.insertRow(50, y + 1),
             },
-          ];
+          ] : [];
         },
-        onselection: (instance, cell, x, y, newValue) => {},
         oneditionstart: (instance, cell, x, y) => {
           if (y === 9) {
             return false;
           }
         },
-        oninsertrow: (ele, rowIndex, numOfRows) => renderPositions(numOfRows),
-        ondeleterow: (ele, rowIndex, numOfRows) => renderPositions(numOfRows),
       });
-
-      instance.setData([{}]);
-      renderPositions(1);
     })
     .catch((error) => {
       console.error("Error fetching data:", error);
     });
 });
-
-const getData = () => {
-  const rawData = instance.getData();
-  const objectData = rawData.map((row) => {
-    let obj = {};
-    columns.value.forEach((col, index) => {
-      obj[col.data] = row[index];
-    });
-    return obj;
-  });
-};
 
 function mapSpreadsheetData(spreadsheetData) {
   return spreadsheetData.map((row) => {
@@ -125,7 +122,6 @@ function mapSpreadsheetData(spreadsheetData) {
       const column = columns.value[index];
       if (column) {
         if (index == 9) {
-          console.log(index);
           mappedRow["storage_id"] = storagesList.value.find((item) => item.name == row[index].split("-")[0].trim()).id;
           return;
         }
@@ -224,6 +220,45 @@ function renderPositions(numOfRows) {
 async function submitSpreadsheet(body) {
   return axios.post("/inventory/items", { items: body }, { responseType: "blob" });
 }
+
+const editDevices = async () => {
+  if (!instance) return;
+
+  const tableData = instance.getData().map((row, index) => {
+    let obj = {};
+    columns.value.forEach((col, colIndex) => {
+      obj[col.data] = row[colIndex];
+    });
+    return obj;
+  });
+
+  const formattedData = tableData.map(row => {
+    return {
+      id: row.id,
+      manufacturer: row.manufacturer,
+      model: row.model,
+      colour: row.colour,
+      battery: row.battery,
+      grade: row.grade,
+      issues: row.issues,
+      imei: row.imei,
+      storage_id: storagesList.value.find(item => item.name === row.location.split('-')[0].trim())?.id,
+      cost: parseFloat(row.cost),
+      selling_price: row.selling_price,
+      date: row.date,
+      vendor_id: vendorsList.value.find(item => item.vendor === row.vendor)?.id,
+    };
+  });
+
+  try {
+    await axios.post(route("items.update"), { items: formattedData }, { responseType: "blob" });
+    toast.add({ severity: "success", summary: "Success", detail: "Devices updated successfully", life: 3000 });
+    history.back();
+  } catch (error) {
+    toast.add({ severity: "error", summary: "Error", detail: "Something went wrong!", life: 3000 });
+  }
+};
+
 </script>
 
 <style>

@@ -1,7 +1,11 @@
 <template>
   <div class="w-[300px]">
-    <form @submit.prevent="moveTab" method="post" class="w-full flex justify-center items-center flex-col">
-      <Select v-model="selectedTab" :options="tabs" optionLabel="name" placeholder="Select" option-value="id" class="w-full mb-5"> </Select>
+    <form @submit.prevent="moveItems" method="post" class="w-full flex justify-center items-center flex-col">
+      <Select v-model="selectedTab" :options="tabs" optionLabel="name" optionValue="id" class="w-full mb-5">
+      </Select>
+      
+      <input v-if="selectedTab === 'OnHold'" v-model="customerName" type="text" placeholder="Customer Name" class="w-full mb-5 p-2 border rounded" />
+      
       <Button type="submit" class="w-full">Move</Button>
     </form>
   </div>
@@ -9,33 +13,44 @@
 
 <script setup>
 import axios from "axios";
-import { Button, Select } from "primevue";
+import { Button, Select, useToast } from "primevue";
 import { inject, onMounted, ref } from "vue";
 
 const dialogRef = inject("dialogRef");
+const toast = useToast();
 
 const tabs = ref([]);
-const item = ref({});
+const items = ref([]);
+const customerName = ref("");
 
 onMounted(() => {
-  console.log(dialogRef.value);
-  item.value = dialogRef.value.data.item;
-  tabs.value = dialogRef.value.data.tabs;
+  items.value = dialogRef.value.data.items;
+  tabs.value = [{ name: "OnHold", id: "OnHold" }, ...dialogRef.value.data.tabs];
 });
 
 const selectedTab = ref(null);
 
-const moveTab = async () => {
-  if (selectedTab.value) {
-    try {
-      const response = await axios.post(route("tab.move"), {
-        tab: selectedTab.value,
-        item: item.value.id,
+const moveItems = async () => {
+  if (!selectedTab.value) return;
+  try {
+    if (selectedTab.value === "OnHold") {
+      await axios.put(route("items.hold"), {
+        data: items.value,
+        customer: customerName.value, 
       });
-      dialogRef.value.close();
-    } catch (error) {
-      console.error(error);
+      toast.add({ severity: "success", summary: "Success", detail: "Items placed on hold!", life: 3000 });
+    } else {
+      for (const item of items.value) {
+        await axios.post(route("tab.move"), {
+          tab: selectedTab.value,
+          item: item.id,
+        });
+      }
+      toast.add({ severity: "success", summary: "Success", detail: "Items moved successfully!", life: 3000 });
     }
+    dialogRef.value.close();
+  } catch (error) {
+    toast.add({ severity: "error", summary: "Error", detail: error.message, life: 3000 });
   }
 };
 </script>
