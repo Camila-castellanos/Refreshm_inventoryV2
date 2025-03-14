@@ -2,6 +2,7 @@
   <div class="h-[100vh]">
     <DynamicDialog />
     <Toast />
+    <ConfirmDialog/>
 
     <Menubar :model="navItems">
       <template #start>
@@ -14,7 +15,7 @@
         <Button icon="pi pi-bars" aria-label="Save" @click="toggleDrawer" class="hide-breakpoint" />
       </template>
       <template #item="{ item, props, hasSubmenu, root }">
-        <a v-ripple class="flex items-center" v-bind="props.action">
+        <a v-ripple class="flex items-center" v-bind="props.action" :href="item.url">
           <span>{{ item.label }}</span>
           <Badge v-if="item.badge" :class="{ 'ml-auto': !root, 'ml-2': root }" :value="item.badge" />
           <span v-if="item.shortcut" class="p-1 ml-auto text-xs border rounded border-surface bg-emphasis text-muted-color">{{
@@ -44,7 +45,7 @@
 
     <Drawer v-model:visible="drawerVisible" class="">
       <div class="flex flex-col items-center justify-start w-full h-full gap-8">
-        <Button variant="outlined" class="w-full" severity="secondary" v-for="item in navItems" @click="router.visit(`${item.url}`)">
+        <Button variant="outlined" class="w-full" severity="secondary" v-for="item in navItems" @click="router.visit(`${item.url}`); drawerVisible = false">
           {{ item.label }}
         </Button>
       </div>
@@ -60,7 +61,7 @@
 import { ref, onMounted, computed } from "vue";
 import Button from "primevue/button";
 import Drawer from "primevue/drawer";
-import { Menubar, Toast, Menu } from "primevue";
+import { Menubar, Toast, Menu, ConfirmDialog } from "primevue";
 import Avatar from "primevue/avatar";
 import { router } from "@inertiajs/vue3";
 import { DynamicDialog } from "primevue";

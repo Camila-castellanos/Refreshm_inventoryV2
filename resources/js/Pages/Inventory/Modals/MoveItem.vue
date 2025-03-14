@@ -9,10 +9,11 @@
 
 <script setup>
 import axios from "axios";
-import { Button, Select } from "primevue";
+import { Button, Select, useToast } from "primevue";
 import { inject, onMounted, ref } from "vue";
 
 const dialogRef = inject("dialogRef");
+const toast = useToast();
 
 const tabs = ref([]);
 const item = ref({});
@@ -32,9 +33,11 @@ const moveTab = async () => {
         tab: selectedTab.value,
         item: item.value.id,
       });
+      toast.add({ severity: "success", summary: "Success", detail: "Item moved successfully!", life: 3000 });
       dialogRef.value.close();
     } catch (error) {
       console.error(error);
+      toast.add({ severity: "error", summary: "Error", detail: error.message, life: 3000 });
     }
   }
 };

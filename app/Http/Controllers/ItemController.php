@@ -333,7 +333,7 @@ class ItemController extends Controller
         $ids = base64_decode(urldecode($item));
         $ids = explode(";", $ids);
         $items = Item::whereIn("id", $ids)->get();
-        return Inertia::render('Items/Edit', [
+        return Inertia::render('Inventory/Edit', [
             "editing" => $items,
             "fields" => $customFields,
         ]);

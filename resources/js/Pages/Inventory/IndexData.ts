@@ -147,4 +147,9 @@ export const soldHeaders = [
     name: "profit",
     type: "string",
   },
+  {
+    label: "Actions",
+    name: "actions",
+    type: "string",
+  },
 ];

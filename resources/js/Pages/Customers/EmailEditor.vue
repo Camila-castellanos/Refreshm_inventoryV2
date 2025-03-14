@@ -1,5 +1,5 @@
 <template>
-  <ConfirmDialog />
+  
   <div>
     <section class="w-full max-w-[90%] mx-auto mt-4 p-4 pt-0">
       <ContactTabs>

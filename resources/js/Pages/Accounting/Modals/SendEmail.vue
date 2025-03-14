@@ -45,7 +45,7 @@
     </div>
 
     <!-- PrimeVue Confirm Dialog -->
-    <ConfirmDialog></ConfirmDialog>
+    
   </div>
 </template>
 

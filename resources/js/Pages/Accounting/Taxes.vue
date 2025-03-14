@@ -1,5 +1,5 @@
 <template>
-  <ConfirmDialog></ConfirmDialog>
+  
   <div>
     <section class="w-[90%] mx-auto mt-4">
       <AccountingTabs>

@@ -1,5 +1,5 @@
 <template>
-  <ConfirmDialog></ConfirmDialog>
+  
   <form class="w-full p-6 rounded-lg" @submit.prevent="onEdit">
     <div class="grid w-full grid-cols-6 gap-4">
       <div class="col-span-2">
