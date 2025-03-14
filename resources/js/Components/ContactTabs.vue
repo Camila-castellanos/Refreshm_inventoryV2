@@ -5,8 +5,8 @@
         <TabList>
           <Tab value="/customer" @click="redirectToTab('/customer')">Customers</Tab>
           <Tab value="/prospects" @click="redirectToTab('/prospects')">Prospects</Tab>
-          <Tab value="/mailing_list" @click="redirectToTab('/mailing-list')">Mailing list</Tab>
-          <Tab value="/email_templates" @click="redirectToTab('/email-editor')">Email editor</Tab>
+          <Tab value="/mailing_list" @click="redirectToTab('/mailing_list')">Mailing list</Tab>
+          <Tab value="/email_templates" @click="redirectToTab('/email_templates')">Email editor</Tab>
         </TabList>
       </Tabs>
       <slot />

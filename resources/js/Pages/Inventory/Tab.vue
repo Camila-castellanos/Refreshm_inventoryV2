@@ -1,7 +1,6 @@
 <template>
-  <StoragesAssign :items="selectedItems" ref="assignStorageVisible"></StoragesAssign>
   <div>
-    <section class="w-[90%] mx-auto mt-4">
+    <section class="w-[95%] mx-auto mt-4">
       <ItemsTabs :custom-tabs="tabs">
         <DataTable
           :title="tab?.name ?? 'No tab'"
@@ -15,22 +14,20 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, reactive, watch, Ref } from "vue";
 import DataTable from "@/Components/DataTable.vue";
-import { headers, soldHeaders } from "./IndexData";
-import { router } from "@inertiajs/vue3";
-import { defineProps } from "vue";
-import StoragesAssign from "../Storages/StoragesAssign/StoragesAssign.vue";
-import { Dialog } from "primevue";
-import { useDialog } from "primevue/usedialog";
-import ItemsSell from "./Modals/ItemsSell.vue";
-import InputText from "primevue/inputtext";
-import { Item, Tab as ITab, Tab } from "@/Lib/types";
-import axios from "axios";
-import MoveItem from "./Modals/MoveItem.vue";
 import ItemsTabs from "@/Components/ItemsTabs.vue";
+import { Tab as ITab, Item, Tab } from "@/Lib/types";
+import { router } from "@inertiajs/vue3";
+import { defineProps, onMounted, ref, Ref, watchEffect } from "vue";
+import { headers } from "./IndexData";
+import ItemsSell from "./Modals/ItemsSell.vue";
+import MoveItem from "./Modals/MoveItem.vue";
+import { useConfirm, useDialog, useToast } from "primevue";
+import axios from "axios";
 
 const dialog = useDialog();
+const confirm = useConfirm();
+const toast = useToast();
 const props = defineProps({
   items: Array<Item>,
   customers: Array,
@@ -40,12 +37,6 @@ const props = defineProps({
   },
   current_tab: Number,
 });
-const assignStorageVisible: Ref<any> = ref(null);
-
-const toggleAssignStorageVisible = () => {
-  assignStorageVisible.value.openDialog();
-};
-
 let selectedItems: Ref<Item[]> = ref([]);
 
 const handleSelection = (selected: Item[]) => {
@@ -53,7 +44,6 @@ const handleSelection = (selected: Item[]) => {
 };
 
 const tab: Ref<Tab | null> = ref(null);
-const customTabs: Ref<Tab[]> = ref([]);
 
 const tableData: Ref<any[]> = ref([]);
 function parseItemsData() {
@@ -72,6 +62,13 @@ function parseItemsData() {
           vendor: item.vendor.vendor,
           actions: [
             {
+            label: "Label",
+            icon: "pi pi-file",
+            action: (item: Item) => {
+              window.location.assign(route('items.label', item.id));
+            },
+          },
+            {
               label: "Move Tab",
               icon: "pi pi-arrow-right-arrow-left",
               extraClasses: "!font-black",
@@ -88,6 +85,13 @@ function parseItemsData() {
         vendor: item.vendor.vendor,
         actions: [
           {
+            label: "Label",
+            icon: "pi pi-file",
+            action: (item: Item) => {
+              window.location.assign(route('items.label', item.id));
+            },
+          },
+          {
             label: "Move Tab",
             icon: "pi pi-arrow-right-arrow-left",
             extraClasses: "!font-black",
@@ -102,6 +106,12 @@ function parseItemsData() {
 onMounted(() => {
   parseItemsData();
 });
+
+watchEffect(() => {
+  if (props.items) {
+    parseItemsData();
+  }
+})
 
 function openSellItemsModal() {
   dialog.open(ItemsSell, {
@@ -133,21 +143,48 @@ function openMoveItemsModal(item: Item) {
   });
 }
 
+const onClickReturnMove = () => {
+  confirm.require({
+    message: "Are you sure you want to return these items to Active Inventory?", 
+    header: "Confirmation",
+    icon: "pi pi-exclamation-triangle",
+    accept: async () => {
+      try {
+        const itemsId = selectedItems.value.map(item => item.id);
+        await axios.post(route("tab.returnmove"), {
+          tab_id: tab.value?.id,
+          item_ids: itemsId,
+        });
+        toast.add({ severity: "success", summary: "Success", detail: "Items returned to Active Inventory!", life: 3000 });
+        router.reload()
+      } catch (error: any) {
+        console.log(error);
+        toast.add({
+          severity: "error",
+          summary: "Error",
+          detail: error.response?.data || "An error occurred",
+          life: 5000,
+        });
+      }
+    },
+  });
+};
+
 const tableActions = [
   {
-    label: "Add Items",
-    icon: "pi pi-plus",
+    label: "Edit Items",
+    icon: "pi pi-pencil",
     action: () => {
-      router.visit(route("items.excel.create"));
+      onEdit();
     },
+    disable: (selectedItems: Item[]) => selectedItems.length !== 1,
   },
   {
-    label: "Reassign location",
-    icon: "pi pi-arrow-up",
-    action: () => {
-      toggleAssignStorageVisible();
-    },
-    disable: (selectedItems: Item[]) => selectedItems.length == 1,
+    label: "Return move",
+    icon: "pi pi-undo",
+    severity: "danger",
+    action: () => {onClickReturnMove()},
+    disable: (selectedItems: Item[]) => selectedItems.length == 0,
   },
   {
     label: "Sell",
@@ -157,20 +194,19 @@ const tableActions = [
     },
     disable: (selectedItems: Item[]) => selectedItems.length == 0,
   },
-  {
-    label: "Delete Items",
-    icon: "pi pi-trash",
-    severity: "danger",
-    action: () => {},
-    disable: (selectedItems: Item[]) => selectedItems.length == 0,
-  },
-  {
-    label: "Edit Items",
-    icon: "pi pi-pencil",
-    action: () => {
-      console.log("hi");
-    },
-    disable: (selectedItems: Item[]) => selectedItems.length !== 1,
-  },
 ];
+
+const onEdit = () => {
+  const currentPaginate = document.getElementById("currentPaginate")?.getAttribute("data-id") || "";
+  const filter = document.getElementsByClassName("filter--value")[0]?.value || "";
+
+  document.cookie = `paginate=${currentPaginate}`;
+  document.cookie = `pagefilter=${filter}`;
+
+  let items = selectedItems.value
+    .map((item: any) => item.id)
+    .join(";");
+
+  router.get(route("items.edit", btoa(items)));
+};
 </script>

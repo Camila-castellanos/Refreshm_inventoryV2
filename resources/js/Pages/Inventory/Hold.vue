@@ -1,10 +1,9 @@
 <template>
-  <StoragesAssign :items="selectedItems" ref="assignStorageVisible"></StoragesAssign>
   <div>
-    <section class="w-[90%] mx-auto mt-4">
+    <section class="w-[95%] mx-auto mt-4">
       <ItemsTabs :custom-tabs="tabs">
         <DataTable
-          title="Active Inventory"
+          title="On Hold"
           @update:selected="handleSelection"
           :actions="tableActions"
           :items="tableData"
@@ -15,31 +14,23 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, Ref } from "vue";
 import DataTable from "@/Components/DataTable.vue";
-import { headers } from "./IndexData";
-import { router } from "@inertiajs/vue3";
-import { defineProps } from "vue";
-import StoragesAssign from "../Storages/StoragesAssign/StoragesAssign.vue";
-import { useDialog } from "primevue/usedialog";
-import ItemsSell from "./Modals/ItemsSell.vue";
-import { Item, Tab as ITab } from "@/Lib/types";
-import axios from "axios";
-import MoveItem from "./Modals/MoveItem.vue";
 import ItemsTabs from "@/Components/ItemsTabs.vue";
+import { Tab as ITab, Item } from "@/Lib/types";
+import axios from "axios";
+import { useConfirm, useDialog, useToast } from "primevue";
+import { defineProps, onMounted, ref, Ref } from "vue";
+import { headers } from "./IndexData";
+import ItemsSell from "./Modals/ItemsSell.vue";
 
 const dialog = useDialog();
+const confirm = useConfirm()
+const toast = useToast();
 const props = defineProps({
   items: Array<Item>,
   customers: Array,
   tabs: { type: Array<ITab>, required: true },
 });
-
-const assignStorageVisible: Ref<any> = ref(null);
-
-const toggleAssignStorageVisible = () => {
-  assignStorageVisible.value.openDialog();
-};
 
 let selectedItems: Ref<Item[]> = ref([]);
 
@@ -61,11 +52,11 @@ function parseItemsData() {
           vendor: item.vendor.vendor,
           actions: [
             {
-              label: "Move Tab",
-              icon: "pi pi-arrow-right-arrow-left",
+              label: "Label",
+              icon: "pi pi-file",
               extraClasses: "!font-black",
               action: (item: Item) => {
-                openMoveItemsModal(item);
+                window.location.assign(route('items.label', item.id));
               },
             },
           ],
@@ -77,13 +68,12 @@ function parseItemsData() {
         vendor: item.vendor.vendor,
         actions: [
           {
-            label: "Move Tab",
-            icon: "pi pi-arrow-right-arrow-left",
-            extraClasses: "!font-black",
+            label: "Label",
+            icon: "pi pi-file",
             action: (item: Item) => {
-              openMoveItemsModal(item);
+              window.location.assign(route('items.label', item.id));
             },
-          },
+          }
         ],
       };
     });
@@ -105,37 +95,29 @@ function openSellItemsModal() {
   });
 }
 
-function openMoveItemsModal(item: Item) {
-  dialog.open(MoveItem, {
-    data: {
-      tabs: props.tabs,
-      item: item,
-    },
-    props: {
-      modal: true,
-    },
-    onClose: () => {
-      router.reload({ only: ["items"] });
+const onClickReturn = () => {
+  confirm.require({
+    message: "Are you sure you want to return these items?", 
+    header: "Confirmation",
+    icon: "pi pi-exclamation-triangle",
+    accept: async () => {
+      try {
+        await axios.put(route("items.unhold"), { data: selectedItems.value });
+        toast.add({ severity: "success", summary: "Success", detail: "Items returned!", life: 3000 });
+        location.reload();
+      } catch (error: any) {
+        toast.add({
+          severity: "error",
+          summary: "Error",
+          detail: error.response?.data || "An error occurred",
+          life: 5000,
+        });
+      }
     },
   });
-}
+};
 
 const tableActions = [
-  {
-    label: "Add Items",
-    icon: "pi pi-plus",
-    action: () => {
-      router.visit("/inventory/items/bulk");
-    },
-  },
-  {
-    label: "Reassign location",
-    icon: "pi pi-arrow-up",
-    action: () => {
-      toggleAssignStorageVisible();
-    },
-    disable: (selectedItems: Item[]) => selectedItems.length == 0,
-  },
   {
     label: "Sell",
     icon: "pi pi-dollar",
@@ -145,19 +127,11 @@ const tableActions = [
     disable: (selectedItems: Item[]) => selectedItems.length == 0,
   },
   {
-    label: "Delete Items",
-    icon: "pi pi-trash",
+    label: "Return Items",
+    icon: "pi pi-undo",
     severity: "danger",
-    action: () => {},
+    action: () => {onClickReturn();},
     disable: (selectedItems: Item[]) => selectedItems.length == 0,
-  },
-  {
-    label: "Edit Items",
-    icon: "pi pi-pencil",
-    action: () => {
-      console.log("hi");
-    },
-    disable: (selectedItems: Item[]) => selectedItems.length !== 1,
   },
 ];
 </script>

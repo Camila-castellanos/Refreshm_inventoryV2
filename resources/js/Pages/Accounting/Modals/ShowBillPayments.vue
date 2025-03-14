@@ -1,5 +1,5 @@
 <template>
-  <ConfirmDialog></ConfirmDialog>
+  
   <TabView v-if="view === 'all'">
     <TabPanel header="Record Payment" :value="'record'">
       <form @submit.prevent="invoicePaid" class="flex flex-col gap-4 w-50">

@@ -80,7 +80,7 @@ class CustomerController extends Controller
 
     public function mailingList()
     {
-        return Inertia::render('Customers/MailingList');
+        return Inertia::render('Customers/MailList');
     }
 
     public function emailEditor()

@@ -333,7 +333,7 @@ class ItemController extends Controller
         $ids = base64_decode(urldecode($item));
         $ids = explode(";", $ids);
         $items = Item::whereIn("id", $ids)->get();
-        return Inertia::render('Items/Edit', [
+        return Inertia::render('Inventory/Edit', [
             "editing" => $items,
             "fields" => $customFields,
         ]);
@@ -477,7 +477,7 @@ class ItemController extends Controller
         if (Auth::user()->role == ('ADMIN')) {
             $context = [
                 // 'items' => $user->store ? Item::where("user_id", $user->id)->get() : '',
-                'items' => Item::where("user_id", $user->id)->whereNull("sold")->whereNotNull("hold")->get(),
+                'items' => Item::where("user_id", $user->id)->with(['storage:id,name,limit', 'vendor:id,vendor'])->whereNull("sold")->whereNotNull("hold")->get(),
                 'tabs' => $tabs,
                 'fields' => $customFields,
             ];
@@ -485,13 +485,13 @@ class ItemController extends Controller
             $usersId = User::where('store_id', @$user->store_id)->pluck('id')->toarray();
             $context = [
                 // 'items' => Item::whereIn("user_id", @$usersId)->whereNull("sold")->whereNotNull("hold")->get(),
-                'items' => Item::where("user_id", $user->id)->whereNull("sold")->whereNotNull("hold")->get(),
+                'items' => Item::where("user_id", $user->id)->with(['storage:id,name,limit', 'vendor:id,vendor'])->whereNull("sold")->whereNotNull("hold")->get(),
                 'tabs' => $tabs,
                 'fields' => $customFields,
             ];
         } else {
             $context = [
-                'items' => Item::whereNull("sold")->whereNotNull("hold")->get(),
+                'items' => Item::whereNull("sold")->with(['storage:id,name,limit', 'vendor:id,vendor'])->whereNotNull("hold")->get(),
                 'tabs' => $tabs,
                 'fields' => $customFields,
             ];

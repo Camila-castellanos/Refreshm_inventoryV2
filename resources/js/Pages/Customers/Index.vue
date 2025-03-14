@@ -1,5 +1,5 @@
 <template>
-  <ConfirmDialog></ConfirmDialog>
+  
   <div>
     <section class="w-[90%] mx-auto mt-4">
       <ContactTabs>
@@ -21,7 +21,7 @@ import AppLayout from "@/Layouts/AppLayout.vue";
 import { router } from "@inertiajs/vue3";
 import axios from "axios";
 import { ConfirmDialog, useConfirm, useDialog } from "primevue";
-import { defineProps, onMounted, ref } from "vue";
+import { defineProps, onMounted, ref, watchEffect } from "vue";
 import { headers } from "./IndexData";
 import CreateEdit from "./CreateEdit.vue";
 
@@ -75,7 +75,7 @@ function parseItemsData() {
           label: "Delete",
           icon: "pi pi-trash",
           severity: "danger",
-          action: () => confirmDelete(customer),
+          action: () => confirmDelete(customer.id),
         },
       ],
     };
@@ -98,7 +98,7 @@ const editCustomer = (customer) => {
 };
 
 const deleteCustomer = (customer) => {
-  axios.delete(route("customers.destroy", { customer })).then(() => {
+  axios.delete(route("customer.destroy", { customer })).then(() => {
     router.reload();
   });
 };
@@ -125,6 +125,12 @@ function confirmDelete(customer) {
 
 onMounted(() => {
   parseItemsData();
+});
+
+watchEffect(() => {
+  if (props.customers) {
+    parseItemsData();
+  }
 });
 
 defineOptions({ layout: AppLayout });
