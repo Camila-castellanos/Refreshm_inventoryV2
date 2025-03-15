@@ -14,7 +14,7 @@ use App\Models\Customer;
 use App\Models\Vendor;
 use App\Models\Sale;
 use App\Models\Bill;
-use Barryvdh\DomPDF\Facade as PDF;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Excel;
 use Illuminate\Support\Facades\Auth;

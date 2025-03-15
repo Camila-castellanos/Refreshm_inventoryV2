@@ -16,7 +16,7 @@ use App\Models\Sale;
 use App\Models\Storage;
 use App\Models\Store;
 use App\Models\User;
-use Barryvdh\DomPDF\Facade\PDF;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use DateTime;
 use Exception;
