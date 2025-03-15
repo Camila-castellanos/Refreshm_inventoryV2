@@ -271,7 +271,7 @@ class SaleController extends Controller
             }
         }
 
-        $pdf = PDF::loadView("sale-receipt", compact("sale", "customer", "header", "footer", "logo"))
+        $pdf = PdfloadView("sale-receipt", compact("sale", "customer", "header", "footer", "logo"))
             ->setOptions([
                 'defaultFont' => 'sans-serif',
                 'isRemoteEnabled' => 'true',
