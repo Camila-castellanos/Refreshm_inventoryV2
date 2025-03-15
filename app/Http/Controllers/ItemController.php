@@ -400,7 +400,7 @@ class ItemController extends Controller
      */
     public function label(Item $item): \Illuminate\Http\Response
     {
-        $pdf = PdfloadView("label", compact("item"))->setOptions(["defaultFont" => "sans-serif", "isRemoteEnabled" => "true"])->setPaper("a6", "landscape");
+        $pdf = Pdf::loadView("label", compact("item"))->setOptions(["defaultFont" => "sans-serif", "isRemoteEnabled" => "true"])->setPaper("a6", "landscape");
         return $pdf->stream();
     }
 
