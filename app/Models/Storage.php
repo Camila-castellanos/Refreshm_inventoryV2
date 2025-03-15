@@ -22,7 +22,6 @@ class Storage extends Model
             Item::where('storage_id', $storage->id)
                 ->update([
                     'position' => null,
-                    'absolute_position' => null
                 ]);
         });
     }

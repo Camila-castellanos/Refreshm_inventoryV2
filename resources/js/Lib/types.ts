@@ -294,3 +294,12 @@ export interface Field {
   active: number;
   user_id: number;
 }
+
+export interface Storage {
+  id: number;
+  name: string;
+  limit: number;
+  created_at: string;
+  updated_at: string;
+  items: Item[];
+}
