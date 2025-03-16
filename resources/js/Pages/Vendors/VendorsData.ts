@@ -41,6 +41,11 @@ export const VendorHeaders = [
         "name": "total_spend",
         "type": "number"
     },
+    {
+        label: "Actions",
+        name: "actions",
+        type: "string"
+    }
 ];
 
 export default function fetchVendors() {

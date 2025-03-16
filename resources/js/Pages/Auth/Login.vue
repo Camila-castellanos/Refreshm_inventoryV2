@@ -23,6 +23,7 @@
             <InputText id="password" type="password" v-model="form.password" placeholder="Password" class="w-full mb-4" />
   
             <Button label="Sign In" type="submit" icon="pi pi-user" class="w-full" />
+            <Button label="Sign Up" icon="pi pi-user-add" @click="router.visit('/register')" class="w-full mt-3" />
           </form>
 
         </div>

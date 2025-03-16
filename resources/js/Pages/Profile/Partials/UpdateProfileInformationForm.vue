@@ -8,10 +8,12 @@ import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
+import { useToast } from 'primevue';
 
 const props = defineProps({
     user: Object,
 });
+const toast = useToast();
 
 const form = useForm({
     _method: 'PUT',
@@ -32,7 +34,15 @@ const updateProfileInformation = () => {
     form.post(route('user-profile-information.update'), {
         errorBag: 'updateProfileInformation',
         preserveScroll: true,
-        onSuccess: () => clearPhotoFileInput(),
+        onSuccess: () => {
+            toast.add({
+                severity: 'success',
+                summary: 'Success',
+                detail: 'Profile updated successfully',
+                life: 3000
+            })
+            clearPhotoFileInput()
+        },
     });
 };
 
@@ -100,7 +110,7 @@ const clearPhotoFileInput = () => {
                 <InputLabel for="photo" value="Photo" />
 
                 <!-- Current Profile Photo -->
-                <div v-show="! photoPreview" class="mt-2">
+                <div v-show="!photoPreview" class="mt-2">
                     <img :src="user.profile_photo_url" :alt="user.name" class="rounded-full size-20 object-cover">
                 </div>
 
