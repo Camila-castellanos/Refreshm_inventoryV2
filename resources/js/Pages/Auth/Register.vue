@@ -1,112 +1,110 @@
+<template>
+  <div
+    class="bg-surface-0 bg-[white] dark:bg-surface-950 px-6 py-20 md:px-12 flex justify-center items-center lg:flex-row h-screen w-[100vw] h-[100vh]">
+    <!-- Sección Izquierda (Imagen) -->
+    <div class="hidden lg:block lg:w-1/2">
+      <img src="/images/BiggerLogo.png" class="mx-auto" alt="Logo" />
+      <img src="/images/iphone12.png" class="" alt="Preview" />
+    </div>
+
+    <!-- Sección Derecha (Formulario de Registro) -->
+    <Transition name="fade">
+      <div v-if="loaded" class="sm:w-full lg:w-1/3 bg-surface-50 dark:bg-surface-900 p-6 shadow rounded-border mx-auto">
+        <div class="text-center mb-8">
+          <div class="text-surface-900 dark:text-surface-0 text-3xl font-medium mb-4">Create an Account</div>
+        </div>
+
+        <form @submit.prevent="submit">
+          <!-- Nombre -->
+          <label for="name" class="text-surface-900 dark:text-surface-0 font-medium mb-2 block">Full Name</label>
+          <InputText id="name" type="text" v-model="form.name" placeholder="Enter your full name" class="w-full mb-4" />
+          <div v-if="form.errors.name" class="text-red-500 text-sm">{{ form.errors.name }}</div>
+
+          <!-- Email -->
+          <label for="email" class="text-surface-900 dark:text-surface-0 font-medium mb-2 block">Email</label>
+          <InputText id="email" type="email" v-model="form.email" placeholder="Enter your email" class="w-full mb-4" />
+          <div v-if="form.errors.email" class="text-red-500 text-sm">{{ form.errors.email }}</div>
+
+          <!-- Contraseña -->
+          <label for="password" class="text-surface-900 dark:text-surface-0 font-medium mb-2 block">Password</label>
+          <Password toggle-mask fluid id="password" v-model="form.password" class="w-full mb-4" />
+          <div v-if="form.errors.password" class="text-red-500 text-sm">{{ form.errors.password }}</div>
+
+          <!-- Confirmación de Contraseña -->
+          <label for="password_confirmation" class="text-surface-900 dark:text-surface-0 font-medium mb-2 block">Confirm Password</label>
+          <Password
+            toggle-mask
+            fluid
+            id="password_confirmation"
+            :feedback="false"
+            v-model="form.password_confirmation"
+            placeholder="Re-enter your password"
+            class="w-full mb-4" />
+          <div v-if="form.errors.password_confirmation" class="text-red-500 text-sm">{{ form.errors.password_confirmation }}</div>
+
+          <!-- Aceptación de términos -->
+          <div v-if="$page.props.jetstream.hasTermsAndPrivacyPolicyFeature" class="flex items-center mt-4">
+            <Checkbox id="terms" v-model:checked="form.terms" name="terms" required class="mr-2" />
+            <label for="terms" class="text-sm text-gray-600 dark:text-gray-400">
+              I agree to the
+              <a target="_blank" :href="route('terms.show')" class="underline text-indigo-600">Terms</a> and
+              <a target="_blank" :href="route('policy.show')" class="underline text-indigo-600">Privacy Policy</a>.
+            </label>
+          </div>
+          <div v-if="form.errors.terms" class="text-red-500 text-sm">{{ form.errors.terms }}</div>
+
+          <!-- Botón de registro -->
+          <Button label="Register" type="submit" icon="pi pi-user" class="w-full mt-4" :disabled="form.processing" />
+
+          <!-- Enlace a login -->
+          <div class="text-center mt-4">
+            <span class="text-gray-600 dark:text-gray-400">Already have an account?</span>
+            <a :href="route('login')" class="text-indigo-600 underline ml-1">Sign in</a>
+          </div>
+        </form>
+      </div>
+    </Transition>
+  </div>
+</template>
+
 <script setup>
-import { Head, Link, useForm } from '@inertiajs/vue3';
-import AuthenticationCard from '@/Components/AuthenticationCard.vue';
-import AuthenticationCardLogo from '@/Components/AuthenticationCardLogo.vue';
-import Checkbox from '@/Components/Checkbox.vue';
-import InputError from '@/Components/InputError.vue';
-import InputLabel from '@/Components/InputLabel.vue';
-import PrimaryButton from '@/Components/PrimaryButton.vue';
-import TextInput from '@/Components/TextInput.vue';
+import { ref, onMounted } from "vue";
+import { useForm, usePage } from "@inertiajs/vue3";
+import Button from "primevue/button";
+import InputText from "primevue/inputtext";
+import Checkbox from "@/Components/Checkbox.vue";
+import { Password } from "primevue";
+
+const loaded = ref(false);
+
+onMounted(() => {
+  loaded.value = true;
+});
 
 const form = useForm({
-    name: '',
-    email: '',
-    password: '',
-    password_confirmation: '',
-    terms: false,
+  name: "",
+  email: "",
+  password: "",
+  password_confirmation: "",
+  terms: false,
 });
 
 const submit = () => {
-    form.post(route('register'), {
-        onFinish: () => form.reset('password', 'password_confirmation'),
-    });
+  form.post(route("register"), {
+    onFinish: () => form.reset("password", "password_confirmation"),
+  });
 };
 </script>
 
-<template>
-    <Head title="Register" />
+<style scoped>
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
+}
 
-    <AuthenticationCard>
-        <template #logo>
-            <AuthenticationCardLogo />
-        </template>
-
-        <form @submit.prevent="submit">
-            <div>
-                <InputLabel for="name" value="Name" />
-                <TextInput
-                    id="name"
-                    v-model="form.name"
-                    type="text"
-                    class="mt-1 block w-full"
-                    required
-                    autofocus
-                    autocomplete="name"
-                />
-                <InputError class="mt-2" :message="form.errors.name" />
-            </div>
-
-            <div class="mt-4">
-                <InputLabel for="email" value="Email" />
-                <TextInput
-                    id="email"
-                    v-model="form.email"
-                    type="email"
-                    class="mt-1 block w-full"
-                    required
-                    autocomplete="username"
-                />
-                <InputError class="mt-2" :message="form.errors.email" />
-            </div>
-
-            <div class="mt-4">
-                <InputLabel for="password" value="Password" />
-                <TextInput
-                    id="password"
-                    v-model="form.password"
-                    type="password"
-                    class="mt-1 block w-full"
-                    required
-                    autocomplete="new-password"
-                />
-                <InputError class="mt-2" :message="form.errors.password" />
-            </div>
-
-            <div class="mt-4">
-                <InputLabel for="password_confirmation" value="Confirm Password" />
-                <TextInput
-                    id="password_confirmation"
-                    v-model="form.password_confirmation"
-                    type="password"
-                    class="mt-1 block w-full"
-                    required
-                    autocomplete="new-password"
-                />
-                <InputError class="mt-2" :message="form.errors.password_confirmation" />
-            </div>
-
-            <div v-if="$page.props.jetstream.hasTermsAndPrivacyPolicyFeature" class="mt-4">
-                <InputLabel for="terms">
-                    <div class="flex items-center">
-                        <Checkbox id="terms" v-model:checked="form.terms" name="terms" required />
-
-                        <div class="ms-2">
-                            I agree to the <a target="_blank" :href="route('terms.show')" class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">Terms of Service</a> and <a target="_blank" :href="route('policy.show')" class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">Privacy Policy</a>
-                        </div>
-                    </div>
-                    <InputError class="mt-2" :message="form.errors.terms" />
-                </InputLabel>
-            </div>
-
-            <div class="flex items-center justify-end mt-4">
-                <Link :href="route('login')" class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                    Already registered?
-                </Link>
-
-                <PrimaryButton class="ms-4" :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
-                    Register
-                </PrimaryButton>
-            </div>
-        </form>
-    </AuthenticationCard>
-</template>
+.fade-enter-active,
+.fade-leave-active {
+  transition: all 1.5s ease;
+}
+</style>

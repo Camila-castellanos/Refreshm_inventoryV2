@@ -1,14 +1,11 @@
 <template>
-  <Toast />
-  
-
   <section class="w-[90%] mx-auto mt-24">
     <DataTable title="Vendors" :actions="tableActions" :items="vendorList" :headers="VendorHeaders" @update:selected="handleSelection" />
   </section>
 
-  <Dialog v-model:visible="showCreateModal" modal header="Vendor Creation Form">
+  <Dialog v-model:visible="showCreateModal" modal :header="formType === 'Create' ? 'Vendor Creation Form' : 'Edit Vendor Form'">
     <form @submit.prevent="submitForm" class="p-6 rounded-lg w-full max-w-2xl">
-      <h2 class="text-xl font-semibold mb-4">Basic Information</h2>
+      <h2 class="text-xl font-semibold mb-4">{{ formType === "Create" ? "Basic Information" : "Edit Vendor Details" }}</h2>
 
       <div class="grid grid-cols-2 gap-4">
         <div class="col-span-2">
@@ -45,11 +42,7 @@
           <label class="block font-medium">Optional Phone</label>
           <InputText v-model="form.optional_phone" class="w-full" placeholder="Optional Phone" />
         </div>
-      </div>
 
-      <h2 class="text-xl font-semibold mt-6 mb-4">Company Information</h2>
-
-      <div class="grid grid-cols-2 gap-4">
         <div>
           <label class="block font-medium">Currency</label>
           <Dropdown v-model="form.currency" :options="currencies" class="w-full" placeholder="Select Currency" />
@@ -65,7 +58,6 @@
         <div class="col-span-2">
           <label class="block font-medium"> Unit / Floor # </label>
           <InputText class="w-full" />
-          <!-- <small class="text-red-500" v-if="errors.phone">{{ errors.phone }}</small> -->
         </div>
 
         <div>
@@ -97,12 +89,13 @@
       </div>
 
       <div class="flex justify-end mt-6 space-x-4">
-        <Button label="Reset" severity="secondary" @click="form.reset()" />
-        <Button label="Save" type="submit" severity="primary" :loading="form.processing" />
+        <Button label="Reset" severity="secondary" @click="formType === 'Edit' ? loadVendorData() : form.reset()" />
+        <Button :label="formType === 'Create' ? 'Save' : 'Update'" type="submit" severity="primary" :loading="form.processing" />
       </div>
     </form>
   </Dialog>
 </template>
+
 <script setup lang="ts">
 import DataTable, { ITableActions } from "@/Components/DataTable.vue";
 import AppLayout from "@/Layouts/AppLayout.vue";
@@ -112,35 +105,21 @@ import axios from "axios";
 import { ConfirmDialog, Dialog, InputText, Textarea, useConfirm } from "primevue";
 import Dropdown from "primevue/dropdown";
 import { useToast } from "primevue/usetoast";
-import { onMounted, ref, Ref } from "vue";
+import { onMounted, ref, Ref, watchEffect } from "vue";
 import { VendorHeaders } from "./VendorsData";
-
-defineOptions({ layout: AppLayout });
 
 const toast = useToast();
 const confirm = useConfirm();
 
-const props = defineProps({
-  vendors: Array<Vendor>,
-});
-
-const showSuccess = () => {
-  toast.add({
-    severity: "success",
-    summary: "Success",
-    detail: "Vendor created successfully!",
-    life: 3000,
-  });
-};
-
-const showError = () => {
-  toast.add({ severity: "error", summary: "Error", detail: "Please try again", life: 3000 });
-};
+const props = defineProps({ vendors: Array<Vendor> });
 
 const currencies = ref(["USD", "CAD"]);
-const countries = ref([]);
 const vendorList: Ref<Vendor[]> = ref([]);
 const selectedVendors: Ref<Vendor[]> = ref([]);
+
+const formType = ref<"Create" | "Edit">("Create");
+const editVendorId = ref<number | null>(null);
+const showCreateModal: Ref<boolean> = ref(false);
 
 const form = useForm({
   vendor: "",
@@ -160,23 +139,93 @@ const form = useForm({
 
 const errors: Ref<any> = ref({});
 
-const showCreateModal: Ref<boolean> = ref(false);
-
 function submitForm() {
-  axios
-    .post("/vendor/store", form)
-    .then((res) => {
-      console.log(res.data);
+  const url = formType.value === "Create" ? route("vendor.store") : route("vendor.update", editVendorId.value);
+
+  const method = formType.value === "Create" ? "post" : "put";
+
+  axios({ method, url, data: form })
+    .then(() => {
       showCreateModal.value = false;
       form.reset();
-      showSuccess();
+      toast.add({
+        severity: "success",
+        summary: "Success",
+        detail: `Vendor ${formType.value === "Create" ? "created" : "updated"} successfully!`,
+        life: 3000,
+      });
       router.reload({ only: ["vendors"] });
     })
     .catch((err) => {
-      console.error(err);
-      showError();
+      errors.value = err.response?.data?.errors || {};
+      toast.add({ severity: "error", summary: "Error", detail: "Please try again", life: 3000 });
     });
 }
+
+function loadVendorData() {
+  const vendor = selectedVendors.value[0];
+  if (vendor) {
+    form.defaults(vendor);
+    form.reset();
+  }
+}
+
+function editVendor(vendor: Vendor) {
+  formType.value = "Edit";
+  editVendorId.value = vendor.id;
+  form.defaults(vendor);
+  form.reset();
+  showCreateModal.value = true;
+}
+
+const handleSelection = (selected: Vendor[]) => {
+  selectedVendors.value = selected;
+};
+
+const parseItemsData = () => {
+  vendorList.value =
+    props.vendors?.map((vendor) => ({
+      ...vendor,
+      actions: [
+        {
+          label: "Edit",
+          icon: "pi pi-pencil",
+          action: () => editVendor(vendor),
+        },
+      ],
+    })) || [];
+}
+
+onMounted(() => {
+  parseItemsData();
+});
+
+watchEffect(() => {
+  if (props.vendors) {
+    parseItemsData();
+  }
+});
+
+const tableActions: ITableActions[] = [
+  {
+    label: "New Vendor",
+    icon: "pi pi-plus",
+    action: () => {
+      formType.value = "Create";
+      form.reset();
+      showCreateModal.value = true;
+    },
+  },
+  {
+    label: "Delete Vendor",
+    icon: "pi pi-trash",
+    severity: "danger",
+    action: () => {
+      confirmDelete();
+    },
+    disable: (selectedItems) => selectedItems.length == 0,
+  },
+];
 
 function confirmDelete() {
   confirm.require({
@@ -223,40 +272,5 @@ async function destroyVendors() {
   }
 }
 
-const handleSelection = (selected: Vendor[]) => {
-  selectedVendors.value = selected;
-  console.log("Selected Vendors:", selectedVendors.value);
-  console.log();
-};
-
-const tableActions: ITableActions[] = [
-  {
-    label: "New Vendor",
-    icon: "pi pi-plus",
-    action: () => {
-      showCreateModal.value = true;
-    },
-  },
-  {
-    label: "Delete Vendor",
-    icon: "pi pi-trash",
-    severity: "danger",
-    action: () => {
-      confirmDelete();
-    },
-    disable: (selectedItems) => selectedItems.length == 0,
-  },
-  {
-    label: "Edit Vendor",
-    icon: "pi pi-pencil",
-    action: () => {
-      console.log("hi");
-    },
-    disable: (selectedItems) => selectedItems.length !== 1,
-  },
-];
-
-onMounted(() => {
-  vendorList.value = props.vendors?.map((vendor) => vendor) as Vendor[];
-});
+defineOptions({ layout: AppLayout });
 </script>
