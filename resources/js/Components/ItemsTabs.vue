@@ -237,13 +237,26 @@ function onDragEnd() {
 
 // API reorder
 function reorderTabs() {
+  const offset = staticTabs.value.length;
+
+  // Revisamos si alguna tab cambió de posición real
+  const reordered = customTabsDraggable.value.some((tab, index) => {
+    return tab.order !== (offset + index);
+  });
+
+  if (!reordered) {
+    // No hacemos petición si no hay cambios reales
+    return;
+  }
+
   const reorderedTabs = customTabsDraggable.value.map((tab, index) => ({
     id: tab.id,
-    order: staticTabs.value.length + index,
+    order: offset + index,
   }));
 
   axios.post(route("tab.reorder"), { tab: reorderedTabs }).then(() => {
     toast.add({ severity: "success", summary: "Tabs Reordered", detail: "The tabs have been reordered.", life: 3000 });
+    location.reload();
   });
 }
 

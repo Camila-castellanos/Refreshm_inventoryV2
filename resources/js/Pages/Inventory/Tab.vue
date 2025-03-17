@@ -141,6 +141,13 @@ const onClickReturnMove = () => {
 
 const tableActions = [
   {
+    label: "Edit fields",
+    icon: "pi pi-pen-to-square",
+    action: () => {
+      showCustomFields.value = true;
+    },
+    },
+  {
     label: "Edit Items",
     icon: "pi pi-pencil",
     action: () => {
