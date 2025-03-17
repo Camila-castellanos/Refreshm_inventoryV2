@@ -7,13 +7,12 @@
     stripedRows
     ref="dt"
     paginator
-    scrollable
-    scrollHeight="900px"
+    resizableColumns
+    column-resize-mode="fit"
     :rows="20"
     :rowsPerPageOptions="[5, 10, 20, 50]"
-    filterDisplay="menu"
     :globalFilterFields="headers.filter((header) => header.name !== 'actions').map((header) => header.name)"
-    :class="inventory ? 'text-sm' : ''"
+    :class="inventory ? 'text-xs' : ''"
     :selection-mode="selectionMode">
     <template #header>
       <div class="flex flex-no-wrap items-center justify-between gap-2">
@@ -50,25 +49,23 @@
         headerStyle="width: 3rem; text-align: center;"
         bodyStyle="width: 3rem; text-align: center;">
       </Column>
-      <Column :field="header.name" sortable :header="header.label" v-if="header.name !== 'actions'">
-        <template #body="slotProps" v-if="header.type === 'number'"> $ {{ slotProps.data[header.name] && slotProps.data[header.name] > 0 ? Number(slotProps.data[header.name]).toFixed(2) : 0 }} </template>
+      <Column
+        :field="header.name"
+        sortable
+        :header="header.label"
+        v-if="header.name !== 'actions'"
+        header-style="width: fit !important">
+        <template #body="slotProps" v-if="header.type === 'number'">
+          $ {{ slotProps.data[header.name] && slotProps.data[header.name] > 0 ? Number(slotProps.data[header.name]).toFixed(2) : 0 }}
+        </template>
       </Column>
     </template>
     <Column header="Actions" name="actions" v-if="headers.filter((header) => header.name === 'actions').length > 0">
       <template #body="slotProps">
-        <div class="flex gap-2">
-          <Button
-            v-for="action in slotProps.data.actions"
-            :key="action.label"
-            :severity="action.severity ? action.severity : 'primary'"
-            :class="[action.extraClasses, 'px-4 py-2 rounded-md'].join(' ')"
-            :icon="action.icon ? action.icon : ''"
-            v-tooltip.bottom="action.label + ' '"
-            :outlined="action?.outlined ?? false"
-            :raised="action?.outlined ?? false"
-            @click="() => action.action(slotProps.data)"
-            :disabled="typeof action.disable === 'function' ? action.disable() : false"/> 
-        </div>
+        <Button icon="pi pi-ellipsis-v" class="p-button-text p-0 w-8 h-8" @click="toggleMenu($event, slotProps.index)" />
+
+        <!-- Menú contextual -->
+        <Menu :ref="(el) => (menuRefs[slotProps.index] = el)" :model="getMenuItems(slotProps.data)" popup />
       </template>
     </Column>
     <template #footer> In total there are {{ items ? items.length : 0 }} items. </template>
@@ -78,11 +75,11 @@
 
 <script setup lang="ts">
 import { FilterMatchMode } from "@primevue/core/api";
-import { IconField, InputIcon, InputText } from "primevue";
+import { IconField, InputIcon, InputText, Menu } from "primevue";
 import Button from "primevue/button";
 import Column from "primevue/column";
 import DataTable from "primevue/datatable";
-import { computed, ref, watch } from "vue";
+import { computed, Ref, ref, shallowRef, watch } from "vue";
 
 const filters = ref({
   global: { value: null, matchMode: FilterMatchMode.CONTAINS },
@@ -122,6 +119,7 @@ const selectionMode = ref(props?.selectionMode ?? "multiple");
 
 const dt = ref();
 const selectedItems = ref<any[]>([]);
+const menuRefs: Ref<any[]> = ref([]);
 
 const exportCSV = () => {
   dt.value.exportCSV();
@@ -139,4 +137,18 @@ const computedActions = computed(() => {
     disable: action.disable ? action.disable(selectedItems.value) : false,
   }));
 });
+
+function toggleMenu(event: Event, index: number) {
+  menuRefs.value[index]?.toggle(event);
+}
+
+function getMenuItems(data: any) {
+  return data.actions.map((action: ITableActions) => ({
+    label: action.label,
+    icon: action.icon,
+    disabled: typeof action.disable === "function" ? action.disable(selectedItems.value) : false,
+    command: () => action.action(),
+    class: action.extraClasses || "",
+  }));
+}
 </script>
