@@ -5,7 +5,13 @@
   <div>
     <section class="w-[95%] mx-auto mt-4">
       <ItemsTabs :custom-tabs="tabs">
-        <DataTable title="Sold" @update:selected="handleSelection" :items="tableData" inventory :headers="allHeaders">
+        <DataTable
+          title="Sold"
+          @update:selected="handleSelection"
+          :items="tableData"
+          inventory
+          :headers="allHeaders"
+          :actions="tableActions">
           <div class="max-w-[400px] w-full">
             <form class="flex flex-row justify-around" @submit.prevent="onDateRangeSubmit">
               <DatePicker
@@ -44,7 +50,7 @@ const toast = useToast();
 
 const props = defineProps({
   tabs: { type: Array<ITab>, required: true },
-    fields: Array<Field>,
+  fields: Array<Field>,
 });
 
 const dates: Ref<Date | Date[] | (Date | null)[] | null | undefined> = ref([]);
@@ -100,7 +106,7 @@ async function onDateRangeSubmit() {
               action: () => {
                 onReturn(item);
               },
-            }
+            },
           ],
         }));
     } catch (error) {
@@ -116,9 +122,7 @@ const onEdit = () => {
   document.cookie = `paginate=${currentPaginate}`;
   document.cookie = `pagefilter=${filter}`;
 
-  let items = selectedItems.value
-    .map((item: any) => item.id)
-    .join(";");
+  let items = selectedItems.value.map((item: any) => item.id).join(";");
 
   router.get(route("items.edit", btoa(items)));
 };
@@ -154,4 +158,13 @@ onMounted(() => {
   ];
 });
 
+const tableActions = [
+  {
+    label: "Edit fields",
+    icon: "pi pi-pen-to-square",
+    action: () => {
+      showCustomFields.value = true;
+    },
+  },
+];
 </script>
