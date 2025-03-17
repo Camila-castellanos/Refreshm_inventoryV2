@@ -5,41 +5,17 @@
       <Dropdown v-model="selectedTemplate" :options="templates" optionLabel="subject" placeholder="Select a template" class="w-[300px]" />
     </div>
 
-    <div class="bg-white rounded-lg shadow">
+    <div class="rounded-lg shadow">
       <div class="mb-4">
         <FloatLabel variant="in">
           <InputText v-model="subject" class="w-full" id="subject" />
           <label for="subject">Subject</label>
         </FloatLabel>
       </div>
-      <Editor v-model="content" editorStyle="height: 320px" :modules="editorModules">
-        <template #toolbar>
-          <span class="ql-formats">
-            <button class="ql-bold" aria-label="Bold"></button>
-            <button class="ql-italic" aria-label="Italic"></button>
-            <button class="ql-underline" aria-label="Underline"></button>
-          </span>
-          <span class="ql-formats">
-            <button class="ql-align" value="" aria-label="Align Left"></button>
-            <button class="ql-align" value="center" aria-label="Align Center"></button>
-            <button class="ql-align" value="right" aria-label="Align Right"></button>
-          </span>
-          <span class="ql-formats">
-            <button class="ql-header" value="1" aria-label="Heading 1"></button>
-            <button class="ql-link" aria-label="Insert Link"></button>
-            <button class="ql-code-block" aria-label="Insert Code"></button>
-          </span>
-          <span class="ql-formats">
-            <button class="ql-list" value="ordered" aria-label="Ordered List"></button>
-            <button class="ql-list" value="bullet" aria-label="Bullet List"></button>
-          </span>
-          <span class="ql-formats">
-            <button class="ql-clean" aria-label="Clear Formatting"></button>
-          </span>
-        </template>
+      <Editor v-model="content" editorStyle="height: 320px">
       </Editor>
 
-      <div class="flex justify-end gap-3 p-4 bg-gray-50 rounded-b-lg">
+      <div class="flex justify-end gap-3 p-4 rounded-b-lg">
         <Button label="Send" severity="primary" :loading="loading" @click="handleSend" />
       </div>
     </div>
@@ -69,19 +45,6 @@ const toast = useToast();
 const confirm = useConfirm();
 
 const dialogRef = inject("dialogRef") as Ref<DynamicDialogInstance>;
-
-const editorModules = {
-  toolbar: {
-    container: [
-      [{ header: 1 }, { header: 2 }],
-      ["bold", "italic", "underline"],
-      [{ list: "ordered" }, { list: "bullet" }],
-      [{ align: [] }],
-      ["link", "code-block"],
-      ["clean"],
-    ],
-  },
-};
 
 watchEffect(() => {
   if (dialogRef.value) {

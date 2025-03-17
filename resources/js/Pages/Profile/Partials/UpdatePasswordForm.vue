@@ -1,12 +1,81 @@
+<template>
+  <div class="flex justify-between">
+    <div class="flex items-start mb-2 w-1/3">
+      <div>
+        <h2 class="text-xl font-medium mb-1">Update Password</h2>
+        <p class="text-sm">Ensure your account is using a long, random password to stay secure.</p>
+      </div>
+    </div>
+
+    <Card class="shadow-none w-2/3">
+      <template #content>
+        <form @submit.prevent="updatePassword" class="space-y-6">
+          <!-- Current Password -->
+          <div class="field">
+            <label for="current_password" class="block text-sm font-medium mb-1">Current Password</label>
+            <Password
+              id="current_password"
+              ref="currentPasswordInput"
+              v-model="form.current_password"
+              toggleMask
+              :feedback="false"
+              class="w-full"
+              inputClass="w-full"
+              autocomplete="current-password"
+            />
+            <small v-if="form.errors.current_password" class="text-red-500">{{ form.errors.current_password }}</small>
+          </div>
+
+          <!-- New Password -->
+          <div class="field">
+            <label for="password" class="block text-sm font-medium mb-1">New Password</label>
+            <Password
+              id="password"
+              ref="passwordInput"
+              v-model="form.password"
+              toggleMask
+              class="w-full"
+              inputClass="w-full"
+              autocomplete="new-password"
+            />
+            <small v-if="form.errors.password" class="text-red-500">{{ form.errors.password }}</small>
+          </div>
+
+          <!-- Confirm Password -->
+          <div class="field">
+            <label for="password_confirmation" class="block text-sm font-medium mb-1">Confirm Password</label>
+            <Password
+              id="password_confirmation"
+              v-model="form.password_confirmation"
+              toggleMask
+              :feedback="false"
+              class="w-full"
+              inputClass="w-full"
+              autocomplete="new-password"
+            />
+            <small v-if="form.errors.password_confirmation" class="text-red-500">{{ form.errors.password_confirmation }}</small>
+          </div>
+
+          <div class="flex justify-end gap-2">
+            <span v-if="form.recentlySuccessful" class="text-green-500 self-center mr-2">Saved successfully</span>
+            <Button 
+              type="submit" 
+              :loading="form.processing" 
+              :disabled="form.processing"
+              label="Save"
+              icon="pi pi-save"
+            />
+          </div>
+        </form>
+      </template>
+    </Card>
+  </div>
+</template>
+
 <script setup>
-import ActionMessage from '@/Components/ActionMessage.vue';
-import FormSection from '@/Components/FormSection.vue';
-import InputError from '@/Components/InputError.vue';
-import InputLabel from '@/Components/InputLabel.vue';
-import PrimaryButton from '@/Components/PrimaryButton.vue';
-import { useForm } from '@inertiajs/vue3';
-import { Password, useToast } from 'primevue';
 import { ref } from 'vue';
+import { useForm } from '@inertiajs/vue3';
+import { Password, Button, Card, useToast } from 'primevue';
 
 const toast = useToast();
 const passwordInput = ref(null);
@@ -28,8 +97,8 @@ const updatePassword = () => {
                 summary: 'Success',
                 detail: 'Password updated successfully',
                 life: 3000
-            })
-            form.reset()
+            });
+            form.reset();
         },
         onError: () => {
             if (form.errors.password) {
@@ -46,69 +115,25 @@ const updatePassword = () => {
 };
 </script>
 
-<template>
-    <FormSection @submitted="updatePassword">
-        <template #title>
-            Update Password
-        </template>
+<style scoped>
+:deep(.p-card) {
+  box-shadow: none;
+  border: none;
+}
 
-        <template #description>
-            Ensure your account is using a long, random password to stay secure.
-        </template>
+:deep(.p-card-content) {
+  padding: 1.5rem;
+}
 
-        <template #form>
-            <div class="col-span-6 sm:col-span-4">
-                <InputLabel for="current_password" value="Current Password" />
-                <Password
-                    id="current_password"
-                    ref="currentPasswordInput"
-                    v-model="form.current_password"
-                    toggleMask
-                    fluid
-                    :feedback="false"
-                    class="mt-1 block w-full"
-                    autocomplete="current-password"
-                />
-                <InputError :message="form.errors.current_password" class="mt-2" />
-            </div>
+:deep(.p-card .p-card-body) {
+  padding: 0;
+}
 
-            <div class="col-span-6 sm:col-span-4">
-                <InputLabel for="password" value="New Password" />
-                <Password
-                    id="password"
-                    ref="passwordInput"
-                    v-model="form.password"
-                    toggleMask
-                    fluid
-                    class="mt-1 block w-full"
-                    autocomplete="new-password"
-                />
-                <InputError :message="form.errors.password" class="mt-2" />
-            </div>
+:deep(.p-password) {
+  width: 100%;
+}
 
-            <div class="col-span-6 sm:col-span-4">
-                <InputLabel for="password_confirmation" value="Confirm Password" />
-                <Password
-                    toggleMask
-                    fluid
-                    :feedback="false"
-                    id="password_confirmation"
-                    v-model="form.password_confirmation"
-                    class="mt-1 block w-full"
-                    autocomplete="new-password"
-                />
-                <InputError :message="form.errors.password_confirmation" class="mt-2" />
-            </div>
-        </template>
-
-        <template #actions>
-            <ActionMessage :on="form.recentlySuccessful" class="me-3">
-                Saved.
-            </ActionMessage>
-
-            <PrimaryButton :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
-                Save
-            </PrimaryButton>
-        </template>
-    </FormSection>
-</template>
+:deep(.p-password-input) {
+  width: 100%;
+}
+</style>

@@ -27,7 +27,7 @@
           </IconField>
           <slot />
         </div>
-        <div class="flex flex-no-wrap overflow-x-auto w-auto max-w-[900px] gap-8 whitespace-nowrap">
+        <div class="flex flex-no-wrap overflow-x-auto w-auto max-w-[900px] gap-8 whitespace-nowrap pb-2">
           <Button
             v-for="action in computedActions"
             :key="action.label"
