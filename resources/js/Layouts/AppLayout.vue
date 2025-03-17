@@ -122,12 +122,6 @@ const dropdownNavItems = ref([
   { label: "Store", icon: "pi pi-home", url: user?.store_id ? route("stores.edit", user.store_id) : "#", roles: ["ADMIN"] },
   { label: "Locations", icon: "pi pi-map", url: route("locations.list"), roles: ["ADMIN"] },
   { label: "Users", icon: "pi pi-users", url: route("users.index"), roles: ["ADMIN"] },
-  {
-    label: "API Tokens",
-    icon: "pi pi-key",
-    url: page.props.jetstream.hasApiFeatures ? route("api-tokens.index") : "#",
-    roles: ["OWNER", "USER", "ADMIN"],
-  },
 ]);
 
 onMounted(() => {

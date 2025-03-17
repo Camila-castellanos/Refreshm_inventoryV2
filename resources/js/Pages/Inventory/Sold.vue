@@ -1,8 +1,11 @@
 <template>
+  <Dialog v-model:visible="showCustomFields" header="Edit fields" :modal="true">
+    <CustomFields :headers="soldHeaders" :custom-headers="fields ?? []" @update-headers="updateTableHeaders" />
+  </Dialog>
   <div>
     <section class="w-[95%] mx-auto mt-4">
       <ItemsTabs :custom-tabs="tabs">
-        <DataTable title="Sold" @update:selected="handleSelection" :items="tableData" :headers="soldHeaders">
+        <DataTable title="Sold" @update:selected="handleSelection" :items="tableData" inventory :headers="allHeaders">
           <div class="max-w-[400px] w-full">
             <form class="flex flex-row justify-around" @submit.prevent="onDateRangeSubmit">
               <DatePicker
@@ -26,25 +29,33 @@
 import { ref, onMounted, Ref } from "vue";
 import DataTable from "@/Components/DataTable.vue";
 import ItemsTabs from "@/Components/ItemsTabs.vue";
-import { Tab as ITab, Item } from "@/Lib/types";
+import { CustomField, Field, Tab as ITab, Item } from "@/Lib/types";
 import { soldHeaders } from "./IndexData";
 import Card from "primevue/card";
 import Button from "primevue/button";
-import { DatePicker, useConfirm, useToast } from "primevue";
+import { DatePicker, Dialog, useConfirm, useToast } from "primevue";
 import { format } from "date-fns";
 import axios from "axios";
 import { router } from "@inertiajs/vue3";
+import CustomFields from "./Modals/CustomFields.vue";
 
 const confirm = useConfirm();
 const toast = useToast();
 
 const props = defineProps({
   tabs: { type: Array<ITab>, required: true },
+    fields: Array<Field>,
 });
 
 const dates: Ref<Date | Date[] | (Date | null)[] | null | undefined> = ref([]);
 
 let selectedItems: Ref<Item[]> = ref([]);
+const showCustomFields = ref(false);
+const allHeaders: Ref<CustomField[]> = ref([]);
+
+const updateTableHeaders = (updatedHeaders: CustomField[]) => {
+  allHeaders.value = updatedHeaders;
+};
 
 const handleSelection = (selected: Item[]) => {
   selectedItems.value = selected;
@@ -135,5 +146,12 @@ const onReturn = (item: Item) => {
     },
   });
 };
+
+onMounted(() => {
+  allHeaders.value = [
+    ...soldHeaders.value,
+    ...(props.fields?.filter((f) => f.active).map((field) => ({ name: field.value, label: field.text, type: field.type })) ?? []),
+  ];
+});
 
 </script>

@@ -29,9 +29,9 @@ class CustomerController extends Controller
      */
     public function index()
     {
-        $customers = Customer::whereUserId(Auth::id())->get();
+        $customers = Customer::whereUserId(Auth::user()->id)->get();
         foreach ($customers as $customer) {
-            $items = Item::whereCustomer($customer->id)->whereUserId(Auth::id())->get();
+            $items = Item::whereCustomer($customer->customer)->whereUserId(Auth::user()->id)->get();
             $sale_pks = $items->map(function ($item) {
                 return $item->sale_id;
             })->toArray();
@@ -39,7 +39,10 @@ class CustomerController extends Controller
             $total = [];
             $profit = [];
             $balance = [];
-            $sales = Sale::whereIn("id", $sale_pks)->whereYear('created_at', date('Y'))->get();
+            $sales = Sale::whereIn("id", $sale_pks)
+                ->whereYear('created_at', date('Y'))
+                ->with('items') 
+                ->get();
             foreach ($sales as $sale) {
                 $tax = intval($sale->tax) / 100;
                 $balance[] = $sale->balance_remaining;

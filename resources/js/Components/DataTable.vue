@@ -13,6 +13,7 @@
     :rowsPerPageOptions="[5, 10, 20, 50]"
     filterDisplay="menu"
     :globalFilterFields="headers.filter((header) => header.name !== 'actions').map((header) => header.name)"
+    :class="inventory ? 'text-sm' : ''"
     :selection-mode="selectionMode">
     <template #header>
       <div class="flex flex-no-wrap items-center justify-between gap-2">
@@ -114,6 +115,7 @@ const props = defineProps<{
   items: any[];
   actions?: ITableActions[];
   selectionMode?: "single" | "multiple";
+  inventory?: boolean;
 }>();
 
 const selectionMode = ref(props?.selectionMode ?? "multiple");
