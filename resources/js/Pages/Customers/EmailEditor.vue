@@ -57,30 +57,6 @@
                     editorStyle="height: 400px"
                     class="w-full"
                     :class="{ 'p-invalid': submitted && !messageContent }">
-                    <template #toolbar>
-                      <span class="ql-formats">
-                        <button class="ql-bold" aria-label="Bold"></button>
-                        <button class="ql-italic" aria-label="Italic"></button>
-                        <button class="ql-underline" aria-label="Underline"></button>
-                      </span>
-                      <span class="ql-formats">
-                        <button class="ql-align" value="" aria-label="Align Left"></button>
-                        <button class="ql-align" value="center" aria-label="Align Center"></button>
-                        <button class="ql-align" value="right" aria-label="Align Right"></button>
-                      </span>
-                      <span class="ql-formats">
-                        <button class="ql-header" value="1" aria-label="Heading 1"></button>
-                        <button class="ql-link" aria-label="Insert Link"></button>
-                        <button class="ql-code-block" aria-label="Insert Code"></button>
-                      </span>
-                      <span class="ql-formats">
-                        <button class="ql-list" value="ordered" aria-label="Ordered List"></button>
-                        <button class="ql-list" value="bullet" aria-label="Bullet List"></button>
-                      </span>
-                      <span class="ql-formats">
-                        <button class="ql-clean" aria-label="Clear Formatting"></button>
-                      </span>
-                    </template>
                   </Editor>
                   <small v-if="submitted && !messageContent" class="p-error">Content is required.</small>
                 </div>

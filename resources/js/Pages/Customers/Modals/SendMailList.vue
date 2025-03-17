@@ -5,41 +5,16 @@
       <Dropdown v-model="selectedTemplate" :options="templates" optionLabel="subject" placeholder="Select a template" class="w-[300px]" />
     </div>
 
-    <div class="bg-white rounded-lg shadow">
-      <Editor v-model="content" editorStyle="height: 320px" :modules="editorModules">
-        <template #toolbar>
-          <span class="ql-formats">
-            <button class="ql-bold" aria-label="Bold"></button>
-            <button class="ql-italic" aria-label="Italic"></button>
-            <button class="ql-underline" aria-label="Underline"></button>
-          </span>
-          <span class="ql-formats">
-            <button class="ql-align" value="" aria-label="Align Left"></button>
-            <button class="ql-align" value="center" aria-label="Align Center"></button>
-            <button class="ql-align" value="right" aria-label="Align Right"></button>
-          </span>
-          <span class="ql-formats">
-            <button class="ql-header" value="1" aria-label="Heading 1"></button>
-            <button class="ql-link" aria-label="Insert Link"></button>
-            <button class="ql-code-block" aria-label="Insert Code"></button>
-          </span>
-          <span class="ql-formats">
-            <button class="ql-list" value="ordered" aria-label="Ordered List"></button>
-            <button class="ql-list" value="bullet" aria-label="Bullet List"></button>
-          </span>
-          <span class="ql-formats">
-            <button class="ql-clean" aria-label="Clear Formatting"></button>
-          </span>
-        </template>
+    <div class="rounded-lg shadow">
+      <Editor v-model="content" editorStyle="height: 320px">
       </Editor>
 
-      <div class="flex justify-end gap-3 p-4 bg-gray-50 rounded-b-lg">
+      <div class="flex justify-end gap-3 p-4 rounded-b-lg">
         <Button label="Send" severity="primary" :loading="loading" @click="handleSendEmailToMailList" />
       </div>
     </div>
 
     <!-- PrimeVue Confirm Dialog -->
-    
   </div>
 </template>
 
@@ -71,20 +46,6 @@ watchEffect(() => {
     contacts.value = dialogRef.value.data.contacts || [];
   }
 });
-
-// Configuración de Quill Editor
-const editorModules = {
-  toolbar: {
-    container: [
-      [{ header: 1 }, { header: 2 }],
-      ["bold", "italic", "underline"],
-      [{ list: "ordered" }, { list: "bullet" }],
-      [{ align: [] }],
-      ["link", "code-block"],
-      ["clean"],
-    ],
-  },
-};
 
 // Actualizar el contenido cuando cambia la plantilla seleccionada
 watchEffect(() => {

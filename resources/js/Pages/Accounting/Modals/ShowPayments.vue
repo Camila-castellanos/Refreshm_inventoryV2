@@ -3,7 +3,7 @@
   <TabView v-if="view === 'all'">
     <TabPanel header="Record Payment" :value="'record'">
       <form @submit.prevent="invoicePaid" class="flex flex-col gap-4 w-50">
-        <div class="grid grid-cols-8 gap-4 bg-white p-3 rounded">
+        <div class="grid grid-cols-8 gap-4 bg-[var(--surface)] p-3 rounded">
           <div class="col-span-12 flex items-center gap-2">
             <label class="w-2/6 text-right">Payment Date:</label>
             <Calendar v-model="paidDate" class="w-4/6" showIcon dateFormat="yy-mm-dd" :max-date="new Date()" />
@@ -36,7 +36,7 @@
   </TabView>
   <DataTable v-if="view === 'view'" title="Payments recorded" :headers="headers" :items="tableData" />
   <form @submit.prevent="submitPaymentEdit" class="flex flex-col gap-4 w-50" v-if="view === 'record'">
-    <div class="grid grid-cols-8 gap-4 bg-white p-3 rounded">
+    <div class="grid grid-cols-8 gap-4 bg-[var(--surface)] p-3 rounded">
       <div class="col-span-12 flex items-center gap-2">
         <label class="w-2/6 text-right">Payment Date:</label>
         <Calendar v-model="paidDate" class="w-4/6" showIcon dateFormat="yy-mm-dd" :max-date="new Date()" />

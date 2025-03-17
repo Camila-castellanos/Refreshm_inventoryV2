@@ -9,6 +9,7 @@
   --text-color: #333333;
   --bg-item: #f3f4f6;
   --bg-card: #ffffff;
+  --surface: #ffffff;
 }
 
 html {
@@ -20,6 +21,7 @@ html {
   background-color: #121212; /* Un fondo oscuro para el dark mode */
   --bg-item: #1f2937;
   --bg-card: #1f2937;
+  --surface: #18181b;
 }
 
 [x-cloak] {

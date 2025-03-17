@@ -25,7 +25,7 @@ const customerName = ref("");
 
 onMounted(() => {
   items.value = dialogRef.value.data.items;
-  tabs.value = [{ name: "OnHold", id: "OnHold" }, ...dialogRef.value.data.tabs];
+  tabs.value = [{ name: "On Hold", id: "On Hold" }, ...dialogRef.value.data.tabs];
 });
 
 const selectedTab = ref(null);
@@ -33,7 +33,7 @@ const selectedTab = ref(null);
 const moveItems = async () => {
   if (!selectedTab.value) return;
   try {
-    if (selectedTab.value === "OnHold") {
+    if (selectedTab.value === "On Hold") {
       await axios.put(route("items.hold"), {
         data: items.value,
         customer: customerName.value, 

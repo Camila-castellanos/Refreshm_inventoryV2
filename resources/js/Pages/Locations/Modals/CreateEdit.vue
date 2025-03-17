@@ -2,7 +2,7 @@
   <form @submit.prevent="formSubmit" class="flex flex-col gap-4 w-50">
     <div class="flex justify-evenly gap-4 items-center">
       <InputText v-model="location.name" placeholder="Name" class="w-full" />
-      <InputText v-model="location.address" placeholder="Address" class="w-full" />>
+      <InputText v-model="location.address" placeholder="Address" class="w-full" />
     </div>
     <div class="flex justify-around mt-4">
       <Button type="submit" label="Confirm" class="p-button-primary" />

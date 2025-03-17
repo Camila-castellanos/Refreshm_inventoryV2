@@ -32,16 +32,17 @@ onMounted(async () => {
 
 <template>
   <form @submit.prevent="formSubmit" method="post">
-    <FloatLabel class="w-full my-2" variant="on">
+    <FloatLabel variant="in" class="w-full my-2 relative">
       <MultiSelect
         v-model="selectedUsers"
         display="chip"
         :options="users"
         optionLabel="email"
         filter
-        :maxSelectedLabels="3"
-        class="w-full md:w-80"
-        id="users" />
+        :maxSelectedLabels="1"
+        inputId="users"
+        class="w-full md:w-80 h-auto"
+      />
       <label for="users">Users</label>
     </FloatLabel>
     <Button type="submit" size="large" label="Confirm" class="!block ml-auto"/>
