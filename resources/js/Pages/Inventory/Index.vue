@@ -11,6 +11,7 @@
           @update:selected="handleSelection"
           :actions="tableActions"
           :items="tableData"
+          inventory
           :headers="allHeaders"></DataTable>
       </ItemsTabs>
     </section>
@@ -18,26 +19,23 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, Ref, watchEffect } from "vue";
 import DataTable from "@/Components/DataTable.vue";
-import { headers } from "./IndexData";
-import { router } from "@inertiajs/vue3";
-import { defineProps } from "vue";
-import StoragesAssign from "../Storages/StoragesAssign/StoragesAssign.vue";
-import { useDialog } from "primevue/usedialog";
-import ItemsSell from "./Modals/ItemsSell.vue";
-import { Item, Tab as ITab, Field, CustomField } from "@/Lib/types";
-import axios from "axios";
-import MoveItem from "./Modals/MoveItem.vue";
 import ItemsTabs from "@/Components/ItemsTabs.vue";
-import { Button, ConfirmDialog, Dialog, InputText, useConfirm, useToast } from "primevue";
+import { CustomField, Field, Tab as ITab, Item } from "@/Lib/types";
+import { router } from "@inertiajs/vue3";
+import axios from "axios";
+import { Dialog, useConfirm, useToast } from "primevue";
+import { useDialog } from "primevue/usedialog";
+import { defineProps, onMounted, ref, Ref, watchEffect } from "vue";
+import StoragesAssign from "../Storages/StoragesAssign/StoragesAssign.vue";
+import { headers } from "./IndexData";
 import CustomFields from "./Modals/CustomFields.vue";
+import ItemsSell from "./Modals/ItemsSell.vue";
+import MoveItem from "./Modals/MoveItem.vue";
 
 const confirm = useConfirm();
 const toast = useToast();
 const dialog = useDialog();
-const showDialog = ref(false);
-const customerName = ref("");
 const showCustomFields = ref(false);
 const props = defineProps({
   items: Array<Item>,
@@ -45,6 +43,8 @@ const props = defineProps({
   fields: Array<Field>,
   tabs: { type: Array<ITab>, required: true },
 });
+
+const tabs = ref(props.tabs);
 
 const assignStorageVisible: Ref<any> = ref(null);
 
@@ -63,8 +63,9 @@ const tableData: Ref<any[]> = ref([]);
 function parseItemsData() {
   allHeaders.value = [
     ...headers.value,
-    ...(props.fields?.map((field) => ({ name: field.value, label: field.text, type: field.type })) ?? []),
+    ...(props.fields?.filter((f) => f.active).map((field) => ({ name: field.value, label: field.text, type: field.type })) ?? []),
   ];
+  tabs.value = props.tabs;
   tableData.value = props
     .items!.filter((item) => item.sold === null)
     .map((item: any) => {
@@ -90,7 +91,7 @@ onMounted(() => {
 });
 
 watchEffect(() => {
-  if (tableData.value || props.fields) {
+  if (tableData.value || props.fields || props.tabs) {
     parseItemsData();
   }
 });
@@ -105,6 +106,7 @@ function openSellItemsModal() {
       modal: true,
     },
     onClose: () => {
+      selectedItems.value = [];
       router.reload();
     },
   });
@@ -181,6 +183,7 @@ const tableActions = [
     action: () => {
       openMoveItemsModal();
     },
+    disable: (selectedItems: Item[]) => selectedItems.length == 0,
   },
 ];
 

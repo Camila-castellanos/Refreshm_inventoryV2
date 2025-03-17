@@ -276,7 +276,8 @@ class SaleController extends Controller
                 'defaultFont' => 'sans-serif',
                 'isRemoteEnabled' => 'true',
             ]);
-        return $pdf->download("receipt.pdf");
+
+        return $pdf->download("$customer invoice #$sale->id.pdf");
     }
 
     /**

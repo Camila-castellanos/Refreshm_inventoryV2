@@ -51,7 +51,11 @@
           <Column field="model" header="Device"></Column>
           <Column field="issues" header="Issue"></Column>
           <Column field="imei" header="IMEI"></Column>
-          <Column field="selling_price" header="Selling Price"></Column>
+          <Column field="selling_price" header="Selling Price">
+            <template #body="slotProps">
+              <InputNumber v-model="slotProps.data.selling_price" class="w-full" mode="currency" currency="USD" />
+            </template>
+          </Column>
         </DataTable>
       </div>
 
@@ -88,16 +92,17 @@
 import { Tab } from "@/Lib/types";
 import AddTaxes from "@/Pages/Accounting/Modals/AddTaxes.vue";
 import CreateEdit from "@/Pages/Customers/CreateEdit.vue";
-import { router, useForm } from "@inertiajs/vue3";
+import { useForm } from "@inertiajs/vue3";
 import axios from "axios";
 import { format } from "date-fns";
-import { DatePicker, Select, Textarea, useDialog } from "primevue";
+import { DatePicker, InputNumber, Select, Textarea, useDialog, useToast } from "primevue";
 import Column from "primevue/column";
 import DataTable from "primevue/datatable";
-import { computed, inject, onMounted, Ref, ref, watch } from "vue";
+import { computed, inject, onMounted, Ref, ref } from "vue";
 
 const dialog = useDialog();
-// Subtotal: Sum of all selling prices
+const toast = useToast();
+
 const subtotal = computed(() => {
   if (!params.value?.items) return 0;
   return params.value.items.reduce((sum: number, item: any) => sum + (item.selling_price || 0), 0);
@@ -135,9 +140,10 @@ async function getTaxes() {
   taxes.value = response.data;
 }
 
-function parseCustomersData() {
-  if (!params.value.customers || params.value.customers.length == 0) return;
-  customers.value = params.value.customers.map((customer: any) => {
+async function parseCustomersData() {
+  const customerData = await axios.get(route("customer.list"));
+  customers.value = customerData.data.map((customer: any) => {
+    console.log(customer);
     return {
       ...customer,
     };
@@ -246,13 +252,18 @@ async function submitForm(e: Event, isConfirmed: boolean) {
     link.href = data;
     link.target = "_blank";
     link.rel = "noopener noreferrer";
+
     document.body.appendChild(link);
-    link.download = "receipt.pdf";
+
+    const invoiceNumber = data.split("sale/")[1].split("/")[0];
+    link.download = `${form.customer.customer} invoice #${invoiceNumber} .pdf`;
     link.click();
     document.body.removeChild(link);
+    toast.add({ severity: "success", summary: "Success", detail: "Sale submitted successfully!", life: 3000 });
     dialogRef.value.close();
   } catch (error) {
     console.error("Error submitting sale:", error);
+    toast.add({ severity: "error", summary: "Error", detail: "An error occurred", life: 3000 });
   }
 }
 </script>

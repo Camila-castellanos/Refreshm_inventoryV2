@@ -1,4 +1,7 @@
 <template>
+  <Dialog v-model:visible="showCustomFields" header="Edit fields" :modal="true">
+    <CustomFields :headers="headers" :custom-headers="fields ?? []" @update-headers="updateTableHeaders" />
+  </Dialog>
   <div>
     <section class="w-[95%] mx-auto mt-4">
       <ItemsTabs :custom-tabs="tabs">
@@ -6,7 +9,8 @@
           :title="tab?.name ?? 'No tab'"
           @update:selected="handleSelection"
           :items="tableData"
-          :headers="headers"
+          inventory
+          :headers="allHeaders"
           :actions="tableActions"></DataTable>
       </ItemsTabs>
     </section>
@@ -16,14 +20,15 @@
 <script setup lang="ts">
 import DataTable from "@/Components/DataTable.vue";
 import ItemsTabs from "@/Components/ItemsTabs.vue";
-import { Tab as ITab, Item, Tab } from "@/Lib/types";
+import { CustomField, Field, Tab as ITab, Item, Tab } from "@/Lib/types";
 import { router } from "@inertiajs/vue3";
 import { defineProps, onMounted, ref, Ref, watchEffect } from "vue";
 import { headers } from "./IndexData";
 import ItemsSell from "./Modals/ItemsSell.vue";
 import MoveItem from "./Modals/MoveItem.vue";
-import { useConfirm, useDialog, useToast } from "primevue";
+import { Dialog, useConfirm, useDialog, useToast } from "primevue";
 import axios from "axios";
+import CustomFields from "./Modals/CustomFields.vue";
 
 const dialog = useDialog();
 const confirm = useConfirm();
@@ -36,18 +41,30 @@ const props = defineProps({
     required: true,
   },
   current_tab: Number,
+  fields: Array<Field>,
 });
 let selectedItems: Ref<Item[]> = ref([]);
+const showCustomFields = ref(false);
+const allHeaders: Ref<CustomField[]> = ref([]);
+
+const updateTableHeaders = (updatedHeaders: CustomField[]) => {
+  allHeaders.value = updatedHeaders;
+};
 
 const handleSelection = (selected: Item[]) => {
   selectedItems.value = selected;
 };
 
 const tab: Ref<Tab | null> = ref(null);
+  const tabs = ref(props.tabs);
 
 const tableData: Ref<any[]> = ref([]);
 function parseItemsData() {
-  console.log(props);
+  allHeaders.value = [
+    ...headers.value,
+    ...(props.fields?.filter((f) => f.active).map((field) => ({ name: field.value, label: field.text, type: field.type })) ?? []),
+  ];
+  tabs.value = props.tabs;
   const tabId = props.current_tab;
   tab.value = props.tabs?.find((tab) => tab.id == Number(tabId)) ?? null;
   tableData.value = props
@@ -60,46 +77,12 @@ function parseItemsData() {
           ...item,
           location: `${name} - ${position}/${limit}`,
           vendor: item.vendor.vendor,
-          actions: [
-            {
-            label: "Label",
-            icon: "pi pi-file",
-            action: (item: Item) => {
-              window.location.assign(route('items.label', item.id));
-            },
-          },
-            {
-              label: "Move Tab",
-              icon: "pi pi-arrow-right-arrow-left",
-              extraClasses: "!font-black",
-              action: (item: Item) => {
-                openMoveItemsModal(item);
-              },
-            },
-          ],
         };
       }
       return {
         ...item,
         location: "No storage information",
         vendor: item.vendor.vendor,
-        actions: [
-          {
-            label: "Label",
-            icon: "pi pi-file",
-            action: (item: Item) => {
-              window.location.assign(route('items.label', item.id));
-            },
-          },
-          {
-            label: "Move Tab",
-            icon: "pi pi-arrow-right-arrow-left",
-            extraClasses: "!font-black",
-            action: (item: Item) => {
-              openMoveItemsModal(item);
-            },
-          },
-        ],
       };
     });
 }
@@ -108,10 +91,10 @@ onMounted(() => {
 });
 
 watchEffect(() => {
-  if (props.items) {
+  if (props.items || props.fields || props.tabs) {
     parseItemsData();
   }
-})
+});
 
 function openSellItemsModal() {
   dialog.open(ItemsSell, {
@@ -123,21 +106,7 @@ function openSellItemsModal() {
       modal: true,
     },
     onClose: () => {
-      router.reload({ only: ["items"] });
-    },
-  });
-}
-
-function openMoveItemsModal(item: Item) {
-  dialog.open(MoveItem, {
-    data: {
-      tabs: props.tabs.filter((customTab) => customTab.id !== tab.value!.id),
-      item: item,
-    },
-    props: {
-      modal: true,
-    },
-    onClose: () => {
+      selectedItems.value = [];
       router.reload({ only: ["items"] });
     },
   });
@@ -145,18 +114,18 @@ function openMoveItemsModal(item: Item) {
 
 const onClickReturnMove = () => {
   confirm.require({
-    message: "Are you sure you want to return these items to Active Inventory?", 
+    message: "Are you sure you want to return these items to Active Inventory?",
     header: "Confirmation",
     icon: "pi pi-exclamation-triangle",
     accept: async () => {
       try {
-        const itemsId = selectedItems.value.map(item => item.id);
+        const itemsId = selectedItems.value.map((item) => item.id);
         await axios.post(route("tab.returnmove"), {
           tab_id: tab.value?.id,
           item_ids: itemsId,
         });
         toast.add({ severity: "success", summary: "Success", detail: "Items returned to Active Inventory!", life: 3000 });
-        router.reload()
+        router.reload();
       } catch (error: any) {
         console.log(error);
         toast.add({
@@ -183,7 +152,9 @@ const tableActions = [
     label: "Return move",
     icon: "pi pi-undo",
     severity: "danger",
-    action: () => {onClickReturnMove()},
+    action: () => {
+      onClickReturnMove();
+    },
     disable: (selectedItems: Item[]) => selectedItems.length == 0,
   },
   {
@@ -191,6 +162,15 @@ const tableActions = [
     icon: "pi pi-dollar",
     action: () => {
       openSellItemsModal();
+    },
+    disable: (selectedItems: Item[]) => selectedItems.length == 0,
+  },
+  {
+    label: "Move Tab",
+    icon: "pi pi-arrow-right-arrow-left",
+    extraClasses: "!font-black",
+    action: () => {
+      openMoveItemsModal();
     },
     disable: (selectedItems: Item[]) => selectedItems.length == 0,
   },
@@ -203,10 +183,24 @@ const onEdit = () => {
   document.cookie = `paginate=${currentPaginate}`;
   document.cookie = `pagefilter=${filter}`;
 
-  let items = selectedItems.value
-    .map((item: any) => item.id)
-    .join(";");
+  let items = selectedItems.value.map((item: any) => item.id).join(";");
 
   router.get(route("items.edit", btoa(items)));
 };
+
+function openMoveItemsModal() {
+  dialog.open(MoveItem, {
+    data: {
+      tabs: props.tabs.filter((customTab) => customTab.id !== tab.value!.id),
+      items: selectedItems.value,
+    },
+    props: {
+      modal: true,
+      header: "Move items",
+    },
+    onClose: () => {
+      router.reload({ only: ["items"] });
+    },
+  });
+}
 </script>
