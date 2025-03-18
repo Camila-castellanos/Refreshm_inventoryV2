@@ -4,6 +4,7 @@ use App\Http\Controllers\BillController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\CustomFieldsController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmailsController;
 use App\Http\Controllers\ExpensesController;
 use Illuminate\Foundation\Application;
@@ -23,11 +24,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
-
-Route::get('/login', function () {
-    return Inertia::render('Auth/Login');
-})->name('login');
-
 Route::post('/logout', function (Request $request) {
     Auth::guard('web')->logout();
     $request->session()->invalidate();
@@ -44,8 +40,6 @@ Route::get('/', function () {
     ]);
 });
 
-
-
 Route::resource('storages', StorageController::class);
 Route::post('/storages/destroy', [StorageController::class, 'destroy']);
 
@@ -56,9 +50,10 @@ Route::middleware([
     config('jetstream.auth_session'),
     'verified',
 ])->group(function () {
-    Route::get('/dashboard', function () {
-        return Inertia::render('Dashboard');
-    })->name('dashboard');
+    Route::get("dashboard", DashboardController::class)->name("dashboard");
+    Route::post("dashboard/update_cash", [DashboardController::class, 'updateCashOnHand'])->name("update.cash");
+    Route::post("report/datewise", [DashboardController::class, 'reportDatewise'])->name("report.datewise");
+    Route::post("report/datewiseByDate", [DashboardController::class, 'repostDatewiseByDate'])->name("report.datewise.date");
 
     Route::post('/items/assign-storage', [ItemController::class, 'assignStorage'])->name('items.assign');
 
