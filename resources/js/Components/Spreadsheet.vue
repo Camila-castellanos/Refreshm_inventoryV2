@@ -14,12 +14,13 @@
 
 <script setup>
 import { fetchStorages } from "@/Pages/Storages/StoragesIndexData";
+import CreateVendor from "@/Pages/Vendors/CreateVendor/CreateVendor.vue";
 import fetchVendors from "@/Pages/Vendors/VendorsData";
 import { router } from "@inertiajs/vue3";
 import jspreadsheet from "jspreadsheet-ce";
 import "jspreadsheet-ce/dist/jspreadsheet.css";
 import "jsuites/dist/jsuites.css";
-import { useToast } from "primevue";
+import { useDialog, useToast } from "primevue";
 import { useConfirm } from "primevue/useconfirm";
 import { onMounted, ref } from "vue";
 
@@ -29,6 +30,7 @@ const props = defineProps({
 
 const confirm = useConfirm();
 const toast = useToast();
+const dialog = useDialog();
 const spreadsheet = ref(null);
 let instance = null;
 const storagesList = ref([]);
@@ -120,9 +122,42 @@ onMounted(() => {
         },
         oninsertrow: (ele, rowIndex, numOfRows) => renderPositions(numOfRows),
         ondeleterow: (ele, rowIndex, numOfRows) => renderPositions(numOfRows),
+        oneditionstart: (cell, editor, x, y) => {
+          if (x === "2") {
+            setTimeout(() => {
+              const dropdown = document.querySelector(".jdropdown.jdropdown-default.jdropdown-focus");
+              const dropdownContent = dropdown?.querySelector(".jdropdown-content");
+
+              if (dropdownContent && !dropdownContent.querySelector(".custom-footer")) {
+                const footerDiv = document.createElement("div");
+                footerDiv.classList.add("custom-footer", "jdropdown-item");
+                footerDiv.style.borderTop = "1px solid #e0e0e0";
+                footerDiv.style.textAlign = "center";
+                footerDiv.style.cursor = "pointer";
+                footerDiv.style.padding = "8px";
+                footerDiv.innerText = "+ Add Vendor";
+                footerDiv.onclick = (e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  dropdown.style.display = "none";
+                  dialog.open(CreateVendor, {
+                    props: { header: "Add New Vendor", style: { width: "450px" }, modal: true },
+                    onClose: async () => {
+                      const { data } = await fetchVendors();
+                      vendorsList.value = data;
+                      instance.options.columns[x].source = vendorsList.value.map((v) => v.vendor);
+                      instance.refresh(false);
+                    },
+                  });
+                };
+
+                dropdownContent.appendChild(footerDiv);
+              }
+            }, 0);
+          }
+        },
       });
 
-      console.log(!props.initialData || props.initialData?.length === 0, props.initialData, props.initialData?.length);
       if (!props.initialData || props.initialData?.length === 0) {
         instance.setData([{}]);
         renderPositions(1);
