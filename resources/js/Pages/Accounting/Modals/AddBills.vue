@@ -26,7 +26,11 @@
         </div>
         <div class="col-span-2">
           <label class="block text-sm font-medium">Tax (%):</label>
-          <Select v-model="bill.tax" :options="taxOptions" optionLabel="name" class="w-full" placeholder="Select Tax" />
+          <Select v-model="bill.tax" :options="taxOptions" optionLabel="name" class="w-full" placeholder="Select Tax">
+             <template #footer>
+              <Button label="Add New Tax" icon="pi pi-plus" class="p-button-sm w-full mt-2" @click="addTax" />
+            </template>
+          </Select>
         </div>
         <div class="col-span-2">
           <label class="block text-sm font-medium">Total:</label>
@@ -49,18 +53,22 @@
 
 <script setup lang="ts">
 import type { Tax, Vendor } from "@/Lib/types";
+import CreateVendor from "@/Pages/Vendors/CreateVendor/CreateVendor.vue";
+import fetchVendors from "@/Pages/Vendors/VendorsData";
 import axios from "axios";
 import { format } from "date-fns";
-import { DatePicker } from "primevue";
+import { DatePicker, useDialog } from "primevue";
 import Button from "primevue/button";
 import InputNumber from "primevue/inputnumber";
 import InputText from "primevue/inputtext";
 import Select from "primevue/select";
 import { useToast } from "primevue/usetoast";
 import { inject, onMounted, ref, watch } from "vue";
+import AddTaxes from "./AddTaxes.vue";
 
 const dialogRef: any = inject("dialogRef");
 const toast = useToast();
+const dialog = useDialog();
 const bills = ref<any[]>([]);
 const taxOptions = ref<Tax[]>([]);
 const vendorOptions = ref<Vendor[]>([]);
@@ -69,7 +77,6 @@ const isEditing = ref(false);
 
 onMounted(async () => {
   try {
-    console.log(dialogRef.value.data);
     const taxResponse = await axios.get<Tax[]>(route("tax.list"));
     taxOptions.value = taxResponse.data.map((tax: Tax) => ({ ...tax, name: `${tax.name} (${tax.percentage}%)` }));
     console.log(taxResponse.data);
@@ -107,11 +114,25 @@ const deleteBill = (index: number) => {
 };
 
 const addVendor = () => {
-  const newVendor = prompt("Enter new vendor name:");
-  if (newVendor) {
-    vendorOptions.value.push({ name: newVendor });
-    toast.add({ severity: "success", summary: "Vendor Added", detail: `Vendor ${newVendor} added successfully.`, life: 3000 });
-  }
+  dialog.open(CreateVendor, {
+    props: { header: "Add New Vendor", style: { width: "450px" }, modal: true },
+    onClose: async () => {
+      const { data } = await fetchVendors();
+      vendorOptions.value = data;
+    },
+  });
+};
+
+const addTax = () => {
+  dialog.open(AddTaxes, {
+    data: { shouldReturnData: true },
+    props: { header: "Add New Tax", style: { width: "450px" }, modal: true },
+    onClose: (data) => {
+      if (data?.data) {
+        taxOptions.value.push(...data.data);
+      }
+    },
+  });
 };
 
 const submitForm = async () => {
@@ -123,6 +144,7 @@ const submitForm = async () => {
       tax: Number(bill.tax.percentage),
       vendor: bill.vendor.vendor,
       vendor_id: bill.vendor.id,
+      status: bill.status === "Paid" ? 1 : 0,
     })),
   };
   let routeUrl = route("bills.store");

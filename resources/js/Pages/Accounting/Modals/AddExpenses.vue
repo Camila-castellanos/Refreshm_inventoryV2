@@ -26,7 +26,11 @@
         </div>
         <div class="col-span-2">
           <label class="block text-sm font-medium">Tax (%):</label>
-          <Dropdown v-model="expense.tax" :options="taxes" optionLabel="name" class="w-full" placeholder="Add Tax" @change="calcTotal" />
+          <Select v-model="expense.tax" :options="taxes" optionLabel="name" class="w-full" placeholder="Add Tax" @change="calcTotal">
+            <template #footer>
+              <Button label="Add New Tax" icon="pi pi-plus" class="p-button-sm w-full mt-2" @click="addTax" />
+            </template>
+          </Select>
         </div>
         <div class="col-span-2">
           <label class="block text-sm font-medium">Total:</label>
@@ -65,7 +69,7 @@
 import { Expense, Tax } from "@/Lib/types";
 import axios from "axios";
 import { format } from "date-fns";
-import { FileUpload, FileUploadSelectEvent, FileUploadUploadEvent } from "primevue";
+import { FileUpload, FileUploadSelectEvent, FileUploadUploadEvent, Select, useDialog } from "primevue";
 import Button from "primevue/button";
 import DatePicker from "primevue/datepicker";
 import Divider from "primevue/divider";
@@ -74,6 +78,7 @@ import InputNumber from "primevue/inputnumber";
 import InputText from "primevue/inputtext";
 import { useToast } from "primevue/usetoast";
 import { inject, onMounted, Ref, ref, watch, watchEffect } from "vue";
+import AddTaxes from "./AddTaxes.vue";
 
 const dialogRef: any = inject("dialogRef");
 const expenses: Ref<Expense[]> = ref([]);
@@ -82,6 +87,7 @@ const loadingUpload = ref(false);
 const loading = ref(false);
 const isEditing = ref(false);
 const toast = useToast();
+const dialog = useDialog();
 const taxes: Ref<Tax[]> = ref([]);
 
 onMounted(async () => {
@@ -118,7 +124,6 @@ const deleteExpense = (index: number) => {
 
 const uploadFile = async () => {
   if (!selectedFile.value) {
-    toast.add({ severity: "warn", summary: "Warning", detail: "Please select a file to upload.", life: 3000 });
     return;
   }
 
@@ -131,7 +136,7 @@ const uploadFile = async () => {
       headers: { "Content-Type": "multipart/form-data" },
     });
     toast.add({ severity: "success", summary: "Success", detail: "File uploaded successfully.", life: 3000 });
-    window.location.href = route("reports.expenses.show");
+    dialogRef.value?.close();
   } catch (error: any) {
     toast.add({ severity: "error", summary: "Error", detail: error.response?.data?.message || "Upload failed", life: 3000 });
   } finally {
@@ -158,7 +163,8 @@ const submitForm = async () => {
   try {
     const response = await axios.post(routeUrl, payload, { responseType: "blob" });
     if (response.status >= 200 && response.status < 400) {
-      window.location.href = route("reports.expenses.show");
+      toast.add({ severity: "success", summary: "Success", detail: "Expenses submitted successfully.", life: 3000 });
+      dialogRef.value?.close();
     }
   } catch (error: any) {
     toast.add({ severity: "error", summary: "Error", detail: error.response?.data?.message || "Submission failed", life: 3000 });
@@ -182,6 +188,18 @@ watch(
     }
   }
 );
+
+const addTax = () => {
+  dialog.open(AddTaxes, {
+    data: { shouldReturnData: true },
+    props: { header: "Add New Tax", style: { width: "450px" }, modal: true },
+    onClose: (data) => {
+      if (data?.data) {
+        taxes.value.push(...data.data);
+      }
+    },
+  });
+};
 
 const downloadDemo = () => {
   window.location.href = route("expenses.excel.demo.download");

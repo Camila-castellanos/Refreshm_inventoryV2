@@ -300,7 +300,7 @@ function updateDashboardStats(data: Dashboard) {
   accountingStats.value = [
     { label: "Accounts Receivable ($)", value: data.accountsReceivableThisMonth },
     { label: "Accounts Payable ($)", value: data.accountsPayableThisMonth },
-    { label: "Cash on Hand ($)", value: parseFloat(props.cashOnHand) },
+    { label: "Cash on Hand ($)", value: data?.cashOnHand ? parseFloat(props.cashOnHand) : 0 },
     { label: "Sales Tax Paid ($)", value: data.salesTaxPaid },
     { label: "Sales Tax Collected ($)", value: data.salesTaxCollected },
     { label: "Taxed Sales ($)", value: data.taxedSales },

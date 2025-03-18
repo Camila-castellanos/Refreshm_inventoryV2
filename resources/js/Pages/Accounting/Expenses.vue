@@ -17,7 +17,7 @@
 import AccountingTabs from "@/Components/AccountingTabs.vue";
 import DataTable, { ITableActions } from "@/Components/DataTable.vue";
 import { Expense } from "@/Lib/types";
-import { onMounted, ref, Ref } from "vue";
+import { onMounted, ref, Ref, watchEffect } from "vue";
 import { expensesHeaders } from "./data";
 import AppLayout from "@/Layouts/AppLayout.vue";
 import { ConfirmDialog, useConfirm, useDialog } from "primevue";
@@ -41,6 +41,12 @@ const handleSelection = (selected: Expense[]) => {
 
 onMounted(() => {
   tableData.value = props!.items;
+});
+
+watchEffect(() => {
+  if (props.items) {
+    tableData.value = props.items;
+  }
 });
 
 const actions: ITableActions[] = [
