@@ -58,7 +58,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, computed, onBeforeUnmount } from "vue";
 import Button from "primevue/button";
 import Drawer from "primevue/drawer";
 import { Menubar, Toast, Menu, ConfirmDialog } from "primevue";
@@ -129,11 +129,24 @@ onMounted(() => {
     navItems.value = navItems.value.filter((item) => item.roles.includes(user.role));
     dropdownNavItems.value = dropdownNavItems.value.filter((item) => item.roles.includes(user.role));
   }
+
+  window.addEventListener("beforeunload", handleBeforeUnload);
 });
 
 const openMenu = (event) => {
   menu.value.toggle(event);
 };
+
+onBeforeUnmount(() => {
+  window.removeEventListener("beforeunload", handleBeforeUnload);
+});
+
+function handleBeforeUnload(event) {
+  // Solo si el usuario está autenticado (puedes agregar más lógica si es necesario)
+  if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
+    navigator.sendBeacon(route('logout'));
+  }
+}
 </script>
 
 <style scoped>

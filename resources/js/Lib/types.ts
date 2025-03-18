@@ -267,7 +267,7 @@ export interface User {
   profile_photo_path: any;
   created_at: string;
   updated_at: string;
-  store_id: number;
+  store_id: number | any;
   location_id: any;
   invoice: any;
   column_headers: any;
@@ -302,4 +302,25 @@ export interface Storage {
   created_at: string;
   updated_at: string;
   items: Item[];
+}
+
+export interface Dashboard {
+  devicesInInventory: number;
+  tradesThisMonth: number;
+  soldThisMonth: number;
+  costSoldThisMonth: number;
+  inventoryValue: number;
+  saleValue: number;
+  soldValueThisMonth: number;
+  profitThisMonth: number;
+  startDate: string;
+  endDate: string;
+  cashOnHand: string;
+  expensesThisMonth: number;
+  accountsReceivableThisMonth: number;
+  accountsPayableThisMonth: number;
+  salesTaxCollected: number;
+  salesTaxPaid: number;
+  taxedSales: number;
+  nonTaxedSales: number;
 }
