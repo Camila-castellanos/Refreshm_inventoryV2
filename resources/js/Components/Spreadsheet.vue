@@ -1,9 +1,8 @@
 <template>
-  
   <Toast></Toast>
   <section class="flex flex-col mt-[200px] w-full px-4">
     <section>
-       <Button v-if="!props.initialData.length" @click="createDevices">Save devices</Button>
+      <Button v-if="!props.initialData?.length" @click="createDevices">Save devices</Button>
       <Button v-else @click="editDevices">Update devices</Button>
     </section>
 
@@ -26,7 +25,7 @@ import { onMounted, ref } from "vue";
 
 const props = defineProps({
   initialData: { type: Array, required: false },
-})
+});
 
 const confirm = useConfirm();
 const toast = useToast();
@@ -38,7 +37,7 @@ const vendorsList = ref([]);
 const tableData = ref(props.initialData || []);
 
 const columns = ref([
-  {type: "hidden", data: "id"},
+  { type: "hidden", data: "id" },
   { type: "calendar", title: "Date", data: "date", width: 120, options: { format: "YYYY-MM-DD" } },
   { type: "dropdown", title: "Vendor", data: "vendor", width: 150, source: ["Vendor A", "Vendor B"] },
   { type: "text", title: "Manufacturer", data: "manufacturer", width: 150 },
@@ -67,48 +66,67 @@ onMounted(() => {
 
       columns.value = updatedColumns;
 
-      tableData.value = props.initialData.map(item => {
-        const storage = resStorages.data.find(s => s.id === item.storage_id);
-        return {
-          ...item,
-          location: `${storage?.name} - ${item.position}/${storage?.limit}`,
-          vendor: resVendors.data.find(v => v.id === item.vendor_id)?.vendor || "",
-        }
-      });
+      tableData.value =
+        props.initialData && props.initialData.length > 0
+          ? props.initialData.map((item) => {
+              const storage = resStorages.data.find((s) => s.id === item.storage_id);
+              return {
+                ...item,
+                location: `${storage?.name} - ${item.position}/${storage?.limit}`,
+                vendor: resVendors.data.find((v) => v.id === item.vendor_id)?.vendor || "",
+              };
+            })
+          : [];
 
       instance = jspreadsheet(spreadsheet.value, {
         data: tableData.value.map((row) => columns.value.map((col) => row[col.data] || "")),
-        columns: columns.value.map((col) => ({ type: col.type, title: col.title, width: col.width, source: col.source || null, readOnly: col.data == 'location' && props.initialData.length > 0 ? true : col.readOnly })),
-        allowInsertRow: props.initialData.length === 0,
+        columns: columns.value.map((col) => ({
+          type: col.type,
+          title: col.title,
+          width: col.width,
+          source: col.source || null,
+        })),
+        allowInsertRow: !props.initialData || props.initialData?.length === 0,
         allowInsertColumn: false,
-        allowManualInsertRow: props.initialData.length === 0,
+        allowManualInsertRow: !props.initialData || props.initialData?.length === 0,
         editable: true,
         contextMenu: (obj, x, y, e) => {
-          return props.initialData.length === 0 ? [
-            {
-              title: "Insert Row Above",
-              onclick: () => instance.insertRow(1, y),
-            },
-            {
-              title: "Insert Row Below",
-              onclick: () => instance.insertRow(1, y + 1),
-            },
-            {
-              title: "Delete Row",
-              onclick: () => instance.deleteRow(y),
-            },
-            {
-              title: "Insert 50 Rows Below",
-              onclick: () => instance.insertRow(50, y + 1),
-            },
-          ] : [];
+          return !props.initialData || props.initialData.length === 0
+            ? [
+                {
+                  title: "Insert Row Above",
+                  onclick: () => instance.insertRow(1, y),
+                },
+                {
+                  title: "Insert Row Below",
+                  onclick: () => instance.insertRow(1, y + 1),
+                },
+                {
+                  title: "Delete Row",
+                  onclick: () => instance.deleteRow(y),
+                },
+                {
+                  title: "Insert 50 Rows Below",
+                  onclick: () => instance.insertRow(50, y + 1),
+                },
+              ]
+            : [];
         },
-        oneditionstart: (instance, cell, x, y) => {
-          if (y === 9) {
-            return false;
+        onselection: (instance, cell, x, y, newValue) => {},
+        onbeforechange: (instance, cell, x, y) => {
+          if (x === "10") {
+            return cell.value;
           }
         },
+        oninsertrow: (ele, rowIndex, numOfRows) => renderPositions(numOfRows),
+        ondeleterow: (ele, rowIndex, numOfRows) => renderPositions(numOfRows),
       });
+
+      console.log(!props.initialData || props.initialData?.length === 0, props.initialData, props.initialData?.length);
+      if (!props.initialData || props.initialData?.length === 0) {
+        instance.setData([{}]);
+        renderPositions(1);
+      }
     })
     .catch((error) => {
       console.error("Error fetching data:", error);
@@ -121,13 +139,13 @@ function mapSpreadsheetData(spreadsheetData) {
     Object.keys(row).forEach((index) => {
       const column = columns.value[index];
       if (column) {
-        if (index == 9) {
+        if (index == 10) {
           mappedRow["storage_id"] = storagesList.value.find((item) => item.name == row[index].split("-")[0].trim()).id;
           return;
         }
 
-        if (index == 1) {
-          mappedRow["vendor_id"] = vendorsList.value.find((item) => item.vendor == row[index]).id;
+        if (index == 2) {
+          mappedRow["vendor_id"] = vendorsList.value.find((item) => item.vendor == row[index])?.id;
           return;
         }
         mappedRow[column.data] = row[index];
@@ -165,14 +183,6 @@ function createDevices() {
   });
 }
 
-function getAvailableStorage(numOfRows) {
-  return storagesList.value.find((storage) => {
-    const itemsInDB = storage.items.length;
-    const itemsInTable = assignedPositions[storage.name] ? assignedPositions[storage.name].length : 0;
-    return itemsInDB + itemsInTable + numOfRows < storage.limit;
-  });
-}
-
 function getFirstAvailablePosition(occupiedPositions) {
   let position = 1;
   while (occupiedPositions.includes(position)) {
@@ -187,7 +197,7 @@ function renderPositions(numOfRows) {
 
   let storage = storagesList.value.find((storage) => {
     const itemsInDB = storage.items.length;
-    const itemsInTable = data.filter((row) => row[9]?.startsWith(storage.name)).length;
+    const itemsInTable = data.filter((row) => row[10]?.startsWith(storage.name)).length;
     return itemsInDB + itemsInTable + numOfRows <= storage.limit;
   });
 
@@ -198,8 +208,6 @@ function renderPositions(numOfRows) {
   }
 
   for (let index = 0; index < data.length; index++) {
-    let row = data[index];
-
     if (!assignedPositions[storage.name]) {
       assignedPositions[storage.name] = [];
     }
@@ -212,7 +220,7 @@ function renderPositions(numOfRows) {
     let label = `${storage.name} - ${newAvailablePosition} / ${storage.limit}`;
 
     let rowData = instance.getRowData(index);
-    rowData[9] = label;
+    rowData[10] = label;
     instance.setRowData(index, rowData);
   }
 }
@@ -232,7 +240,7 @@ const editDevices = async () => {
     return obj;
   });
 
-  const formattedData = tableData.map(row => {
+  const formattedData = tableData.map((row) => {
     return {
       id: row.id,
       manufacturer: row.manufacturer,
@@ -242,11 +250,11 @@ const editDevices = async () => {
       grade: row.grade,
       issues: row.issues,
       imei: row.imei,
-      storage_id: storagesList.value.find(item => item.name === row.location.split('-')[0].trim())?.id,
+      storage_id: storagesList.value.find((item) => item.name === row.location.split("-")[0].trim())?.id,
       cost: parseFloat(row.cost),
       selling_price: row.selling_price,
       date: row.date,
-      vendor_id: vendorsList.value.find(item => item.vendor === row.vendor)?.id,
+      vendor_id: vendorsList.value.find((item) => item.vendor === row.vendor)?.id,
     };
   });
 
@@ -258,7 +266,6 @@ const editDevices = async () => {
     toast.add({ severity: "error", summary: "Error", detail: "Something went wrong!", life: 3000 });
   }
 };
-
 </script>
 
 <style>
