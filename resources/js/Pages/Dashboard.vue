@@ -32,59 +32,42 @@
       </div>
 
       <!-- Secciones -->
-      <div class="grid grid-cols-3 gap-4 mt-6">
-        <Card v-for="stat in inventoryStats" :key="stat.label" class="shadow-md">
-          <template #title>
-            <span class="font-bold">{{ stat.label }}</span>
-          </template>
-          <template #content>
-            <p class="text-lg font-semibold">{{ stat.label.includes("$") ? `$${stat.value}` : stat.value }}</p>
-          </template>
-        </Card>
+      <div class="grid grid-cols-4 gap-4 mt-6">
+        <StatCard
+          v-for="stat in inventoryStats"
+          :key="stat.label"
+          :label="stat.label"
+          :value="stat.value"
+          :icon="getStatConfig(stat.label).icon"
+          :color="getStatConfig(stat.label).color"
+          :currency="stat.currency ? '$' : ''" />
       </div>
 
       <Divider />
 
-      <div class="grid grid-cols-3 gap-4 mt-6">
-        <Card v-for="stat in salesStats" :key="stat.label" class="shadow-md">
-          <template #title>
-            <span class="font-bold">{{ stat.label }}</span>
-          </template>
-          <template #content>
-            <p class="text-lg font-semibold">${{ stat.value }}</p>
-          </template>
-        </Card>
+      <div class="grid grid-cols-4 gap-4 mt-6">
+        <StatCard
+          v-for="stat in salesStats"
+          :key="stat.label"
+          :label="stat.label"
+          :value="stat.value"
+          :icon="getStatConfig(stat.label).icon"
+          :color="getStatConfig(stat.label).color"
+          :currency="stat.currency ? '$' : ''" />
       </div>
 
       <Divider />
 
-      <div class="grid grid-cols-3 gap-4 mt-6">
-        <Card v-for="stat in accountingStats" :key="stat.label" class="shadow-md">
-          <template #title>
-            <span class="font-bold">{{ stat.label }}</span>
-          </template>
-          <template #content>
-            <div v-if="stat.label === 'Cash on Hand ($)'">
-              <div v-if="alterCashOnHand">
-                <InputNumber v-model="datacashOnHand" mode="currency" currency="USD" :min="0" class="!w-full mb-2" size="small">
-                  <template #incrementbutton>
-                    <div class="flex">
-                      <Button icon="pi pi-check" severity="success" size="small" variant="text" @click="editCashOnHand" />
-                      <Button icon="pi pi-times" severity="secondary" size="small" variant="text" @click="cancelEditCashOnHand" />
-                    </div>
-                  </template>
-                </InputNumber>
-              </div>
-              <div v-else class="flex items-center justify-between">
-                <p class="text-lg font-semibold">${{ stat.value }}</p>
-                <Button icon="pi pi-pencil" size="small" @click="alterCashOnHand = true" variant="text" />
-              </div>
-            </div>
-            <div v-else>
-              <p class="text-lg font-semibold">${{ stat.value }}</p>
-            </div>
-          </template>
-        </Card>
+      <div class="grid grid-cols-4 gap-4 mt-6">
+        <StatCard
+          v-for="stat in accountingStats"
+          :key="stat.label"
+          :label="stat.label"
+          :value="stat.value"
+          :currency="'$'"
+          :icon="getStatConfig(stat.label).icon"
+          :color="getStatConfig(stat.label).color"
+          @update="handleCashOnHandUpdate" />
       </div>
     </div>
   </AppLayout>
@@ -102,6 +85,7 @@ import { Dashboard, User } from "@/Lib/types";
 import { FloatLabel, InputNumber, useToast } from "primevue";
 import axios from "axios";
 import { startOfMonth, startOfYear, subMonths, subYears } from "date-fns";
+import StatCard from "@/Components/StatCard.vue";
 
 const toast = useToast();
 
@@ -112,6 +96,7 @@ const calendarValue = ref<Date | Date[] | null>(null);
 interface Stat {
   label: string;
   value: number;
+  currency?: boolean;
 }
 
 const props = defineProps<{ auth: { user: User } } & Dashboard>();
@@ -149,11 +134,6 @@ const getSafeCalendarValue = computed(() => {
     return calendarValue.value instanceof Date ? calendarValue.value : null;
   }
 });
-
-function cancelEditCashOnHand() {
-  datacashOnHand.value = parseFloat(props.cashOnHand);
-  alterCashOnHand.value = false;
-}
 
 async function editCashOnHand() {
   try {
@@ -286,29 +266,75 @@ function updateDashboardStats(data: Dashboard) {
     { label: "Devices Added", value: data.tradesThisMonth },
     { label: "Devices Sold", value: data.soldThisMonth },
     { label: "Cost of Goods Sold", value: data.costSoldThisMonth },
-    { label: "Inventory Value ($)", value: data.inventoryValue },
-    { label: "Est. Sale Value of Inventory ($)", value: data.saleValue },
+    { label: "Inventory Value ($)", value: data.inventoryValue, currency: true },
+    { label: "Est. Sale Value of Inventory ($)", value: data.saleValue, currency: true },
   ];
 
   salesStats.value = [
-    { label: "Revenue ($)", value: data.soldValueThisMonth },
-    { label: "Gross Profit ($)", value: data.profitThisMonth },
-    { label: "Net Profit ($)", value: data.profitThisMonth - data.expensesThisMonth },
-    { label: "Expenses ($)", value: data.expensesThisMonth },
+    { label: "Revenue ($)", value: data.soldValueThisMonth, currency: true },
+    { label: "Net Profit ($)", value: data.profitThisMonth - data.expensesThisMonth, currency: true },
+    { label: "Expenses ($)", value: data.expensesThisMonth, currency: true },
+    { label: "Gross Profit ($)", value: data.profitThisMonth, currency: true },
   ];
 
   accountingStats.value = [
-    { label: "Accounts Receivable ($)", value: data.accountsReceivableThisMonth },
-    { label: "Accounts Payable ($)", value: data.accountsPayableThisMonth },
-    { label: "Cash on Hand ($)", value: data?.cashOnHand ? parseFloat(props.cashOnHand) : 0 },
-    { label: "Sales Tax Paid ($)", value: data.salesTaxPaid },
-    { label: "Sales Tax Collected ($)", value: data.salesTaxCollected },
-    { label: "Taxed Sales ($)", value: data.taxedSales },
-    { label: "Non-taxed Sales ($)", value: data.nonTaxedSales },
+    { label: "Accounts Receivable ($)", value: data.accountsReceivableThisMonth, currency: true },
+    { label: "Accounts Payable ($)", value: data.accountsPayableThisMonth, currency: true },
+    { label: "Cash on Hand ($)", value: data?.cashOnHand ? parseFloat(props.cashOnHand) : 0, currency: true },
+    { label: "Sales Tax Paid ($)", value: data.salesTaxPaid, currency: true },
+    { label: "Sales Tax Collected ($)", value: data.salesTaxCollected, currency: true },
+    { label: "Taxed Sales ($)", value: data.taxedSales, currency: true },
+    { label: "Non-taxed Sales ($)", value: data.nonTaxedSales, currency: true },
   ];
 }
 
 onMounted(() => {
   updateDashboardStats(props);
 });
+
+function getStatConfig(label: string) {
+  switch (label) {
+    case "Devices in Inventory":
+      return { icon: "pi-database", color: "blue" };
+    case "Devices Added":
+      return { icon: "pi-plus-circle", color: "green" };
+    case "Devices Sold":
+      return { icon: "pi-box", color: "purple" };
+    case "Cost of Goods Sold":
+      return { icon: "pi-money-bill", color: "orange" };
+    case "Inventory Value ($)":
+      return { icon: "pi-briefcase", color: "cyan" };
+    case "Est. Sale Value of Inventory ($)":
+      return { icon: "pi-tags", color: "indigo" };
+    case "Revenue ($)":
+      return { icon: "pi-dollar", color: "green" };
+    case "Gross Profit ($)":
+      return { icon: "pi-chart-line", color: "emerald" };
+    case "Net Profit ($)":
+      return { icon: "pi-wallet", color: "teal" };
+    case "Expenses ($)":
+      return { icon: "pi-arrow-down", color: "red" };
+    case "Accounts Receivable ($)":
+      return { icon: "pi-inbox", color: "amber" };
+    case "Accounts Payable ($)":
+      return { icon: "pi-send", color: "pink" };
+    case "Cash on Hand ($)":
+      return { icon: "pi-wallet", color: "blue" };
+    case "Sales Tax Paid ($)":
+      return { icon: "pi-percentage", color: "cyan" };
+    case "Sales Tax Collected ($)":
+      return { icon: "pi-percentage", color: "lime" };
+    case "Taxed Sales ($)":
+      return { icon: "pi-check-square", color: "teal" };
+    case "Non-taxed Sales ($)":
+      return { icon: "pi-times-circle", color: "gray" };
+    default:
+      return { icon: "pi-chart-bar", color: "gray" };
+  }
+}
+
+function handleCashOnHandUpdate(newValue: number) {
+  datacashOnHand.value = newValue;
+  editCashOnHand(); // Reutilizas tu función existente
+}
 </script>

@@ -6,6 +6,8 @@ import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
+import axios from 'axios';
+import SessionExpiredDialog from '@/Components/SessionExpiredDialog.vue';
 
 const props = defineProps({
     email: String,
@@ -20,13 +22,21 @@ const form = useForm({
 });
 
 const submit = () => {
-    form.post(route('password.update'), {
-        onFinish: () => form.reset('password', 'password_confirmation'),
-    });
+    axios
+        .post(route('password.update'), form.data())
+        .then(() => {
+            form.reset('password', 'password_confirmation');
+        })
+        .catch((error) => {
+            if (error.response?.status === 422) {
+                form.setErrors(error.response.data.errors);
+            }
+        });
 };
 </script>
 
 <template>
+    <SessionExpiredDialog />
     <Head title="Reset Password" />
 
     <AuthenticationCard>

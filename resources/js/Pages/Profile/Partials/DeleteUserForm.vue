@@ -75,6 +75,7 @@
 import { ref } from 'vue';
 import { useForm } from '@inertiajs/vue3';
 import { Button, Dialog, Card, Password } from 'primevue';
+import axios from 'axios';
 
 const confirmingUserDeletion = ref(false);
 const passwordInput = ref(null);
@@ -90,12 +91,16 @@ const confirmUserDeletion = () => {
 };
 
 const deleteUser = () => {
-  form.delete(route('current-user.destroy'), {
-    preserveScroll: true,
-    onSuccess: () => closeModal(),
-    onError: () => passwordInput.value?.$el.querySelector('input').focus(),
-    onFinish: () => form.reset(),
-  });
+  axios.delete(route('current-user.destroy'))
+    .then(() => {
+      closeModal();
+      form.reset();
+    })
+    .catch((error) => {
+      if (error.response?.status === 422) {
+        form.setError(error.response.data.errors);
+      }
+    });
 };
 
 const closeModal = () => {

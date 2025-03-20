@@ -3,6 +3,7 @@
     <DynamicDialog />
     <Toast />
     <ConfirmDialog/>
+    <SessionExpiredDialog />
 
     <Menubar :model="navItems">
       <template #start>
@@ -66,6 +67,7 @@ import Avatar from "primevue/avatar";
 import { router } from "@inertiajs/vue3";
 import { DynamicDialog } from "primevue";
 import { usePage } from "@inertiajs/vue3";
+import SessionExpiredDialog from "@/Components/SessionExpiredDialog.vue";
 
 const page = usePage();
 const user = page.props.auth?.user;
@@ -129,24 +131,11 @@ onMounted(() => {
     navItems.value = navItems.value.filter((item) => item.roles.includes(user.role));
     dropdownNavItems.value = dropdownNavItems.value.filter((item) => item.roles.includes(user.role));
   }
-
-  window.addEventListener("beforeunload", handleBeforeUnload);
 });
 
 const openMenu = (event) => {
   menu.value.toggle(event);
 };
-
-onBeforeUnmount(() => {
-  window.removeEventListener("beforeunload", handleBeforeUnload);
-});
-
-function handleBeforeUnload(event) {
-  // Solo si el usuario está autenticado (puedes agregar más lógica si es necesario)
-  if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
-    navigator.sendBeacon(route('logout'));
-  }
-}
 </script>
 
 <style scoped>

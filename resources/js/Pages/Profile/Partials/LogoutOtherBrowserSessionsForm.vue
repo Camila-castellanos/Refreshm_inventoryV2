@@ -103,6 +103,7 @@
 import { ref } from 'vue';
 import { useForm } from '@inertiajs/vue3';
 import { Button, Dialog, Card, Password } from 'primevue';
+import axios from 'axios';
 
 const props = defineProps({
   sessions: Array,
@@ -122,12 +123,16 @@ const confirmLogout = () => {
 };
 
 const logoutOtherBrowserSessions = () => {
-  form.delete(route('other-browser-sessions.destroy'), {
-    preserveScroll: true,
-    onSuccess: () => closeModal(),
-    onError: () => passwordInput.value?.$el.querySelector('input').focus(),
-    onFinish: () => form.reset(),
-  });
+  axios.delete(route('other-browser-sessions.destroy'))
+    .then(() => {
+      closeModal();
+      form.reset();
+    })
+    .catch((error) => {
+      if (error.response?.status === 422) {
+        form.setError(error.response.data.errors);
+      }
+    });
 };
 
 const closeModal = () => {
