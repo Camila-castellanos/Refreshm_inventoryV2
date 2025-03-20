@@ -21,8 +21,7 @@
               :feedback="false"
               class="w-full"
               inputClass="w-full"
-              autocomplete="current-password"
-            />
+              autocomplete="current-password" />
             <small v-if="form.errors.current_password" class="text-red-500">{{ form.errors.current_password }}</small>
           </div>
 
@@ -36,8 +35,7 @@
               toggleMask
               class="w-full"
               inputClass="w-full"
-              autocomplete="new-password"
-            />
+              autocomplete="new-password" />
             <small v-if="form.errors.password" class="text-red-500">{{ form.errors.password }}</small>
           </div>
 
@@ -51,20 +49,13 @@
               :feedback="false"
               class="w-full"
               inputClass="w-full"
-              autocomplete="new-password"
-            />
+              autocomplete="new-password" />
             <small v-if="form.errors.password_confirmation" class="text-red-500">{{ form.errors.password_confirmation }}</small>
           </div>
 
           <div class="flex justify-end gap-2">
             <span v-if="form.recentlySuccessful" class="text-green-500 self-center mr-2">Saved successfully</span>
-            <Button 
-              type="submit" 
-              :loading="form.processing" 
-              :disabled="form.processing"
-              label="Save"
-              icon="pi pi-save"
-            />
+            <Button type="submit" :loading="form.processing" :disabled="form.processing" label="Save" icon="pi pi-save" />
           </div>
         </form>
       </template>
@@ -76,6 +67,7 @@
 import { ref } from 'vue';
 import { useForm } from '@inertiajs/vue3';
 import { Password, Button, Card, useToast } from 'primevue';
+import axios from 'axios';
 
 const toast = useToast();
 const passwordInput = ref(null);
@@ -88,19 +80,19 @@ const form = useForm({
 });
 
 const updatePassword = () => {
-    form.put(route('user-password.update'), {
-        errorBag: 'updatePassword',
-        preserveScroll: true,
-        onSuccess: () => {
-            toast.add({
-                severity: 'success',
-                summary: 'Success',
-                detail: 'Password updated successfully',
-                life: 3000
-            });
-            form.reset();
-        },
-        onError: () => {
+    axios.put(route('user-password.update'), form.data())
+    .then(() => {
+        toast.add({
+            severity: 'success',
+            summary: 'Success',
+            detail: 'Password updated successfully',
+            life: 3000
+        });
+        form.reset();
+    })
+    .catch((error) => {
+        if (error.response?.status === 422) {
+            form.setError(error.response.data.errors);
             if (form.errors.password) {
                 form.reset('password', 'password_confirmation');
                 passwordInput.value.focus();
@@ -110,7 +102,7 @@ const updatePassword = () => {
                 form.reset('current_password');
                 currentPasswordInput.value.focus();
             }
-        },
+        }
     });
 };
 </script>

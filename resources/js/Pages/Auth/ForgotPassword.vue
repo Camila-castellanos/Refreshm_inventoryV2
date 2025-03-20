@@ -6,6 +6,7 @@ import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
+import axios from 'axios';
 
 defineProps({
     status: String,
@@ -16,7 +17,7 @@ const form = useForm({
 });
 
 const submit = () => {
-    form.post(route('password.email'));
+    axios.post(route('password.email'));
 };
 </script>
 

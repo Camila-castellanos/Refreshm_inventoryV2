@@ -78,6 +78,7 @@ import { nextTick, ref, onMounted } from "vue";
 import { Head, useForm } from "@inertiajs/vue3";
 import Button from "primevue/button";
 import InputText from "primevue/inputtext";
+import axios from "axios";
 
 const loaded = ref(false);
 const recovery = ref(false);
@@ -109,7 +110,16 @@ const toggleRecovery = async () => {
 };
 
 const submit = () => {
-  form.post(route("two-factor.login"));
+  axios
+    .post(route("two-factor.login"), form.data())
+    .then(() => {
+      form.reset();
+    })
+    .catch((error) => {
+      if (error.response?.status === 422) {
+        form.setErrors(error.response.data.errors);
+      }
+    });
 };
 </script>
 

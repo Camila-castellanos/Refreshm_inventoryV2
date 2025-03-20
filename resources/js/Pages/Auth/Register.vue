@@ -1,4 +1,5 @@
 <template>
+    <SessionExpiredDialog />
   <div
     class="bg-surface-0 bg-[white] dark:bg-surface-950 px-6 py-20 md:px-12 flex justify-center items-center lg:flex-row h-screen w-[100vw] h-[100vh]">
     <!-- Sección Izquierda (Imagen) -->
@@ -74,6 +75,8 @@ import Button from "primevue/button";
 import InputText from "primevue/inputtext";
 import Checkbox from "@/Components/Checkbox.vue";
 import { Password } from "primevue";
+import axios from "axios";
+import SessionExpiredDialog from "@/Components/SessionExpiredDialog.vue";
 
 const loaded = ref(false);
 
@@ -90,9 +93,16 @@ const form = useForm({
 });
 
 const submit = () => {
-  form.post(route("register"), {
-    onFinish: () => form.reset("password", "password_confirmation"),
-  });
+  axios
+    .post(route("register"), form.data())
+    .then(() => {
+      form.reset("password", "password_confirmation");
+    })
+    .catch((error) => {
+      if (error.response?.status === 422) {
+        form.setErrors(error.response.data.errors);
+      }
+    });
 };
 </script>
 

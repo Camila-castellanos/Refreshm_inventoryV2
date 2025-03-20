@@ -1,4 +1,5 @@
 <template>
+    <SessionExpiredDialog />
   <div
     class="bg-surface-0 bg-[white] dark:bg-surface-950 px-6 py-20 md:px-12 flex justify-center items-center lg:flex-row h-screen w-[100vw] h-[100vh]">
     <div class="hidden lg:block lg:w-1/2">
@@ -30,11 +31,13 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted, computed, onBeforeUnmount } from "vue";
 import { router, useForm, usePage } from "@inertiajs/vue3";
 import Button from "primevue/button";
 import InputText from "primevue/inputtext";
+import axios from "axios";
+import SessionExpiredDialog from "@/Components/SessionExpiredDialog.vue";
 
 const loaded = ref(false);
 
@@ -56,8 +59,7 @@ onBeforeUnmount(() => {
   window.removeEventListener("beforeunload", handleBeforeUnload);
 });
 
-function handleBeforeUnload(event) {
-  console.log(window.location.pathname !== "/login" && window.location.pathname !== "/register");
+function handleBeforeUnload(event: Event) {
   // Solo si el usuario está autenticado (puedes agregar más lógica si es necesario)
   if (window.location.pathname !== "/login" && window.location.pathname !== "/register") {
     navigator.sendBeacon(route("logout"));
@@ -72,12 +74,16 @@ const handleClick = async () => {
 };
 
 const submitLogin = () => {
-  router.post("/login", form, {
-    headers: {
-      "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').getAttribute("content"),
-    },
-    onFinish: () => form.reset("password"),
-  });
+  axios.post("/login", form.data())
+    .then((response) => {
+    router.visit("/dashboard");
+    })
+    .catch((error) => {
+        if (error.response?.status === 422) {
+            form.setError(error.response.data.errors);
+        }
+    })
+
 };
 </script>
 

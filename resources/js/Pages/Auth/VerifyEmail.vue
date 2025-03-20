@@ -4,6 +4,7 @@ import { Head, Link, useForm } from '@inertiajs/vue3';
 import AuthenticationCard from '@/Components/AuthenticationCard.vue';
 import AuthenticationCardLogo from '@/Components/AuthenticationCardLogo.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
+import axios from 'axios';
 
 const props = defineProps({
     status: String,
@@ -12,7 +13,7 @@ const props = defineProps({
 const form = useForm({});
 
 const submit = () => {
-    form.post(route('verification.send'));
+    axios.post(route('verification.send'));
 };
 
 const verificationLinkSent = computed(() => props.status === 'verification-link-sent');
