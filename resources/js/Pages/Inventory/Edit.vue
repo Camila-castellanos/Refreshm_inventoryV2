@@ -5,7 +5,6 @@
 </template>
 
 <script setup lang="ts">
-import Spreadsheet from '@/Components/Spreadsheet.vue';
 import NewSpreadsheet from '@/Components/Spreadsheetv2.vue';
 import { Item } from '@/Lib/types';
 

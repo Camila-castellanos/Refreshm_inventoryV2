@@ -1,5 +1,5 @@
 <template>
-    <div class="w-full h-[90vh]">
+   <div class="w-full py-8 h-[90vh]">
         <NewSpreadsheet/>
     </div>
 </template>

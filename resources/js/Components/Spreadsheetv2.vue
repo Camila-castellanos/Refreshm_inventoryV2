@@ -40,6 +40,7 @@ import { Button, ContextMenu, useDialog, useToast } from "primevue";
 import { useConfirm } from "primevue/useconfirm";
 import { nextTick, onMounted, ref } from "vue";
 import UniversalCell from "./UniversalCell.vue";
+import { format } from "date-fns";
 
 type VendorOption = { label: string; value: string };
 type ContextMenu = { visible: boolean; x: number; y: number; row: number | null };
@@ -239,7 +240,7 @@ function mapSpreadsheetData(data: ItemWithLocation[]): any[] {
   return data.map((row) => {
     const storageId = storagesList.value.find((s) => s.name === row.location?.split("-")[0].trim())?.id;
     const vendorId = vendorsList.value.find((v) => v.vendor === row.vendor)?.id;
-    return { ...row, storage_id: storageId, vendor_id: vendorId };
+    return { ...row, storage_id: storageId, vendor_id: vendorId, date: format(row.date, "yyyy-MM-dd") };
   });
 }
 
