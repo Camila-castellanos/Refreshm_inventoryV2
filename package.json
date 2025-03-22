@@ -28,6 +28,10 @@
     "dependencies": {
         "@primevue/forms": "^4.2.5",
         "@primevue/themes": "^4.2.5",
+        "@revolist/revogrid-column-date": "^2.0.25",
+        "@revolist/revogrid-column-numeral": "^2.0.8",
+        "@revolist/revogrid-column-select": "^3.1.9",
+        "@revolist/vue3-datagrid": "^4.14.5",
         "jspreadsheet-ce": "^4.15.0",
         "primeflex": "^3.3.1",
         "primeicons": "^7.0.0",
