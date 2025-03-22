@@ -2,8 +2,8 @@
   <Toast></Toast>
   <section class="flex flex-col w-full px-4 relative">
     <section>
-      <Button v-if="!props.initialData?.length" @click="createDevices">Save devices</Button>
-      <Button v-else @click="editDevices">Update devices</Button>
+      <Button :loading="isLoading" :disabled="isLoading" v-if="!props.initialData?.length" @click="createDevices">Save devices</Button>
+      <Button :loading="isLoading" :disabled="isLoading" v-else @click="editDevices">Update devices</Button>
     </section>
 
     <div class="spreadsheet-wrapper mt-8">
@@ -12,8 +12,9 @@
         :columns="columns"
         :source="tableData"
         :columnTypes="columnTypes"
-        :canFocus="true"
+        :canFocus="!isLoading"
         :range="true"
+        class="h-[80vh]"
         :resize="true"
         theme="default"
         @beforeedit="handleBeforeEdit"
@@ -47,16 +48,27 @@ type ContextMenu = { visible: boolean; x: number; y: number; row: number | null 
 
 type ItemWithLocation = Item & { location: string };
 
-const props = defineProps<{ initialData?: ItemWithLocation[] }>();
+const props = defineProps<{ initialData?: Item[] }>();
 
 const confirm = useConfirm();
 const toast = useToast();
-const dialog = useDialog();
 const revogrid = ref<InstanceType<typeof RevoGrid> | null>(null);
 const storagesList = ref<any[]>([]);
 const vendorsList = ref<any[]>([]);
 const vendorOptions = ref<VendorOption[]>([]);
 const tableData = ref<ItemWithLocation[]>([]);
+const isLoading = ref(false);
+
+const menuItems = [
+  { label: "Insert Row Above", command: () => insertRow("above") },
+  { label: "Insert Row Below", command: () => insertRow("below") },
+  { label: "Insert 50 Rows Below", command: () => insertRow("bulk") },
+  { separator: true },
+  { label: "Delete Row", icon: "pi pi-trash", class: "text-red-600", command: () => deleteRow() },
+];
+
+const contextRow = ref<number | null>(null);
+const menuRef = ref<any>(null);
 
 const columns = ref<ColumnRegular[]>([
   {
@@ -64,20 +76,21 @@ const columns = ref<ColumnRegular[]>([
     name: '',
     size: 50,
     readonly: true,
-     cellTemplate: VGridVueTemplate(UniversalCell),
+    cellTemplate: VGridVueTemplate(UniversalCell),
+     pin: "colPinStart",
   },
-  { prop: "date", name: "Date", columnType: "date", size: 150, cellTemplate: VGridVueTemplate(UniversalCell) },
+  { prop: "date", name: "Date", columnType: "date", size: 200, cellTemplate: VGridVueTemplate(UniversalCell) },
   {
     prop: "vendor",
     name: "Vendor",
-    size: 150,
+    size: 200,
     columnType: "select",
     source: [...vendorOptions.value],
     labelKey: "label",
     valueKey: "value",
     cellTemplate: VGridVueTemplate(UniversalCell),
   },
-  { prop: "manufacturer", name: "Manufacturer", size: 150, cellTemplate: VGridVueTemplate(UniversalCell) },
+  { prop: "manufacturer", name: "Manufacturer", size: 200, cellTemplate: VGridVueTemplate(UniversalCell) },
   { prop: "model", name: "Model", size: 150, cellTemplate: VGridVueTemplate(UniversalCell) },
   { prop: "colour", name: "Colour", size: 150, cellTemplate: VGridVueTemplate(UniversalCell) },
   { prop: "battery", name: "Battery", size: 80, cellTemplate: VGridVueTemplate(UniversalCell) },
@@ -115,12 +128,14 @@ onMounted(async () => {
   });
 
   tableData.value = props.initialData?.length
-    ? props.initialData.map((ItemWithLocation) => {
-        const storage = storages.data.find((s: Storage) => s.id === ItemWithLocation.storage_id);
+    ? props.initialData.map((item) => {
+      const storage = storages.data.find((s: Storage) => s.id === item.storage_id);
+        console.log(item)
         return {
-          ...ItemWithLocation,
-          location: `${storage?.name} - ${ItemWithLocation.position}/${storage?.limit}`,
-          vendor: vendors.data.find((v: Vendor) => v.id === ItemWithLocation.vendor_id)?.vendor || "",
+          ...item,
+          location: `${storage?.name} - ${item.position}/${storage?.limit}`,
+          vendor: vendors.data.find((v: Vendor) => v.id === item.vendor_id)?.vendor || "",
+          date: format(item.date, "yyyy-MM-dd"),
         };
       })
     : [{}] as ItemWithLocation[];
@@ -128,17 +143,6 @@ onMounted(async () => {
   await nextTick();
   if (!props.initialData?.length) renderPositions(1);
 });
-
-const menuItems = [
-  { label: "Insert Row Above", command: () => insertRow("above") },
-  { label: "Insert Row Below", command: () => insertRow("below") },
-  { label: "Insert 50 Rows Below", command: () => insertRow("bulk") },
-  { separator: true },
-  { label: "Delete Row", icon: "pi pi-trash", class: "text-red-600", command: () => deleteRow() },
-];
-
-const contextRow = ref<number | null>(null);
-const menuRef = ref<any>(null);
 
 function showContextMenu(e: CustomEvent<{ event: MouseEvent; rowIndex: number; prop: string }>) {
   e.preventDefault();
@@ -224,10 +228,12 @@ function createDevices(): void {
 }
 
 function editDevices(): void {
+  isLoading.value = true;
   const formattedData = mapSpreadsheetData(tableData.value);
   axios
     .post(route("items.update"), { items: formattedData }, { responseType: "blob" })
     .then(() => {
+      isLoading.value = false;
       toast.add({ severity: "success", summary: "Success", detail: "Devices updated successfully", life: 3000 });
       history.back();
     })
@@ -246,7 +252,9 @@ function mapSpreadsheetData(data: ItemWithLocation[]): any[] {
 
 async function submitSpreadsheet(body: any[]): Promise<void> {
   try {
+    isLoading.value = true;
     await axios.post("/inventory/items", { items: body }, { responseType: "blob" });
+    isLoading.value = false;
     toast.add({ severity: "success", summary: "Success", detail: "Devices created successfully", life: 3000 });
     router.visit("/inventory/items");
   } catch (err) {
