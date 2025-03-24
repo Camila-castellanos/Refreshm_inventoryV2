@@ -64,46 +64,46 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
-import { useForm } from '@inertiajs/vue3';
-import { Password, Button, Card, useToast } from 'primevue';
-import axios from 'axios';
+import { ref } from "vue";
+import { useForm } from "@inertiajs/vue3";
+import { Password, Button, Card, useToast } from "primevue";
+import axios from "axios";
 
 const toast = useToast();
 const passwordInput = ref(null);
 const currentPasswordInput = ref(null);
 
 const form = useForm({
-    current_password: '',
-    password: '',
-    password_confirmation: '',
+  current_password: "",
+  password: "",
+  password_confirmation: "",
 });
 
 const updatePassword = () => {
-    axios.put(route('user-password.update'), form.data())
-    .then(() => {
-        toast.add({
-            severity: 'success',
-            summary: 'Success',
-            detail: 'Password updated successfully',
-            life: 3000
-        });
-        form.reset();
-    })
-    .catch((error) => {
-        if (error.response?.status === 422) {
-            form.setError(error.response.data.errors);
-            if (form.errors.password) {
-                form.reset('password', 'password_confirmation');
-                passwordInput.value.focus();
-            }
+  form.put(route("user-password.update"), {
+    errorBag: "updatePassword",
+    preserveScroll: true,
+    onSuccess: () => {
+      toast.add({
+        severity: "success",
+        summary: "Success",
+        detail: "Password updated successfully",
+        life: 3000,
+      });
+      form.reset();
+    },
+    onError: () => {
+      if (form.errors.password) {
+        form.reset("password", "password_confirmation");
+        passwordInput.value.focus();
+      }
 
-            if (form.errors.current_password) {
-                form.reset('current_password');
-                currentPasswordInput.value.focus();
-            }
-        }
-    });
+      if (form.errors.current_password) {
+        form.reset("current_password");
+        currentPasswordInput.value.focus();
+      }
+    },
+  });
 };
 </script>
 

@@ -110,16 +110,7 @@ const toggleRecovery = async () => {
 };
 
 const submit = () => {
-  axios
-    .post(route("two-factor.login"), form.data())
-    .then(() => {
-      form.reset();
-    })
-    .catch((error) => {
-      if (error.response?.status === 422) {
-        form.setErrors(error.response.data.errors);
-      }
-    });
+  form.post(route("two-factor.login"));
 };
 </script>
 

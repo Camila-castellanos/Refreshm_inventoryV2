@@ -14,7 +14,6 @@ import PrimaryButton from "@/Components/PrimaryButton.vue";
 import SecondaryButton from "@/Components/SecondaryButton.vue";
 import SectionBorder from "@/Components/SectionBorder.vue";
 import TextInput from "@/Components/TextInput.vue";
-import axios from "axios";
 
 const props = defineProps({
   tokens: Array,
@@ -38,17 +37,13 @@ const managingPermissionsFor = ref(null);
 const apiTokenBeingDeleted = ref(null);
 
 const createApiToken = () => {
-  axios
-    .post(route("api-tokens.store"), createApiTokenForm.data())
-    .then(() => {
+  createApiTokenForm.post(route("api-tokens.store"), {
+    preserveScroll: true,
+    onSuccess: () => {
       displayingToken.value = true;
       createApiTokenForm.reset();
-    })
-    .catch((error) => {
-      if (error.response?.status === 422) {
-        createApiTokenForm.setErrors(error.response.data.errors);
-      }
-    });
+    },
+  });
 };
 
 const manageApiTokenPermissions = (token) => {
@@ -57,16 +52,11 @@ const manageApiTokenPermissions = (token) => {
 };
 
 const updateApiToken = () => {
-    axios.put(route("api-tokens.update", managingPermissionsFor.value), updateApiTokenForm.data())
-    .then((response) => {
-        managingPermissionsFor.value = null;
-    })
-    .catch((error) => {
-        if (error.response?.status === 422) {
-            updateApiTokenForm.setErrors(error.response.data.errors);
-        }
-    });
-
+  updateApiTokenForm.put(route("api-tokens.update", managingPermissionsFor.value), {
+    preserveScroll: true,
+    preserveState: true,
+    onSuccess: () => (managingPermissionsFor.value = null),
+  });
 };
 
 const confirmApiTokenDeletion = (token) => {
@@ -74,16 +64,11 @@ const confirmApiTokenDeletion = (token) => {
 };
 
 const deleteApiToken = () => {
-    axios.delete(route("api-tokens.destroy", apiTokenBeingDeleted.value))
-    .then((response) => {
-        apiTokenBeingDeleted.value = null;
-    })
-    .catch((error) => {
-        if (error.response?.status === 422) {
-            deleteApiTokenForm.setErrors(error.response.data.errors);
-        }
-    });
-
+  deleteApiTokenForm.delete(route("api-tokens.destroy", apiTokenBeingDeleted.value), {
+    preserveScroll: true,
+    preserveState: true,
+    onSuccess: () => (apiTokenBeingDeleted.value = null),
+  });
 };
 </script>
 

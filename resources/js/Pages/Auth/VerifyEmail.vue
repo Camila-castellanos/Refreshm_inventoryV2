@@ -13,7 +13,7 @@ const props = defineProps({
 const form = useForm({});
 
 const submit = () => {
-    axios.post(route('verification.send'));
+    form.post(route('verification.send'));
 };
 
 const verificationLinkSent = computed(() => props.status === 'verification-link-sent');

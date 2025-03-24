@@ -91,16 +91,12 @@ const confirmUserDeletion = () => {
 };
 
 const deleteUser = () => {
-  axios.delete(route('current-user.destroy'))
-    .then(() => {
-      closeModal();
-      form.reset();
-    })
-    .catch((error) => {
-      if (error.response?.status === 422) {
-        form.setError(error.response.data.errors);
-      }
-    });
+ form.delete(route('current-user.destroy'), {
+    preserveScroll: true,
+    onSuccess: () => closeModal(),
+    onError: () => passwordInput.value?.$el.querySelector('input').focus(),
+    onFinish: () => form.reset(),
+  });
 };
 
 const closeModal = () => {
