@@ -61,7 +61,7 @@ class DashboardController extends Controller
       foreach ($alt_items as $item) {
         if ($item->sale_id != null) {
           $sale = Sale::where('id', $item->sale_id)->first();
-          if (!in_array($sale->id, $salesTotal)) {
+          if ($sale && !in_array($sale->id, $salesTotal)) {
             $accountsReceivable += (float) $sale->balance_remaining;
             array_push($salesTotal, $sale->id);
           }
@@ -70,12 +70,12 @@ class DashboardController extends Controller
 
       foreach ($items as $item) {
         $sale = Sale::where('id', $item->sale_id)->first();
-        // if (!in_array($sale->id, $sales_id)) array_push($sales_id, $sale->id);
+        // if ($sale && !in_array($sale->id, $sales_id)) array_push($sales_id, $sale->id);
         $tax = intval(@$sale->tax) / 100;
         $total = (float) $item->selling_price + (float) ($item->selling_price * $tax);
         $profit += (float) $total - (float) $item->cost;
         $soldvalue += (float) $total;
-        if (!in_array($sale->id, $saleIdArray)) {
+        if ($sale && !in_array($sale->id, $saleIdArray)) {
           array_push($saleIdArray, $sale->id);
         }
         // dump($item->id);
@@ -132,7 +132,7 @@ class DashboardController extends Controller
       foreach ($alt_items as $item) {
         if ($item->sale_id != null) {
           $sale = Sale::where('id', $item->sale_id)->first();
-          if (!in_array($sale->id, $salesTotal)) {
+          if ($sale && !in_array($sale->id, $salesTotal)) {
             $accountsReceivable += (float) $sale->balance_remaining;
             array_push($salesTotal, $sale->id);
           }
@@ -141,12 +141,12 @@ class DashboardController extends Controller
 
       foreach ($items as $item) {
         $sale = Sale::where('id', $item->sale_id)->first();
-        // if (!in_array($sale->id, $sales_id)) array_push($sales_id, $sale->id);
+        // if ($sale && !in_array($sale->id, $sales_id)) array_push($sales_id, $sale->id);
         $tax = intval(@$sale->tax) / 100;
         $total = (float) $item->selling_price + (float) ($item->selling_price * $tax);
         $profit += (float) $total - (float) $item->cost;
         $soldvalue += (float) $total;
-        if (!in_array($sale->id, $saleIdArray)) {
+        if ($sale && !in_array($sale->id, $saleIdArray)) {
           array_push($saleIdArray, $sale->id);
         }
         // dump($item->id);
@@ -257,7 +257,7 @@ class DashboardController extends Controller
         $total = (float) $item->selling_price + (float) ($item->selling_price * $tax);
         $profit += (float) $total - (float) $item->cost;
         $soldvalue += (float) $total;
-        if (!in_array($sale->id, $saleIdArray)) {
+        if ($sale && !in_array($sale->id, $saleIdArray)) {
           $accountsReceivable += (float) $sale->balance_remaining;
           array_push($saleIdArray, $sale->id);
         }
@@ -314,7 +314,7 @@ class DashboardController extends Controller
         $total = (float) $item->selling_price + (float) ($item->selling_price * $tax);
         $profit += (float) $total - (float) $item->cost;
         $soldvalue += (float) $total;
-        if (!in_array($sale->id, $saleIdArray)) {
+        if ($sale && !in_array($sale->id, $saleIdArray)) {
           $accountsReceivable += (float) $sale->balance_remaining;
           array_push($saleIdArray, $sale->id);
         }
@@ -411,12 +411,12 @@ class DashboardController extends Controller
       $accountsReceivable = 0;
       foreach ($items as $item) {
         $sale = Sale::where('id', $item->sale_id)->first();
-        // if (!in_array($sale->id, $sales_id)) array_push($sales_id, $sale->id);
+        // if ($sale && !in_array($sale->id, $sales_id)) array_push($sales_id, $sale->id);
         $tax = intval(@$sale->tax) / 100;
         $total = (float) $item->selling_price + (float) ($item->selling_price * $tax);
         $profit += (float) $total - (float) $item->cost;
         $soldvalue += (float) $total;
-        if (!in_array($sale->id, $saleIdArray)) {
+        if ($sale && !in_array($sale->id, $saleIdArray)) {
           $accountsReceivable += (float) $sale->balance_remaining;
           array_push($saleIdArray, $sale->id);
         }
@@ -463,7 +463,7 @@ class DashboardController extends Controller
       $accountsReceivable = 0;
       foreach ($items as $item) {
         $sale = Sale::where('id', $item->sale_id)->first();
-        // if (!in_array($sale->id, $sales_id)) array_push($sales_id, $sale->id);
+        // if ($sale && !in_array($sale->id, $sales_id)) array_push($sales_id, $sale->id);
         $tax = intval(@$sale->tax) / 100;
         $total = (float) $item->selling_price + (float) ($item->selling_price * $tax);
         $profit += (float) $total - (float) $item->cost;
