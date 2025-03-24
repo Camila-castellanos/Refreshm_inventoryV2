@@ -93,16 +93,9 @@ const form = useForm({
 });
 
 const submit = () => {
-  axios
-    .post(route("register"), form.data())
-    .then(() => {
-      form.reset("password", "password_confirmation");
-    })
-    .catch((error) => {
-      if (error.response?.status === 422) {
-        form.setErrors(error.response.data.errors);
-      }
-    });
+ form.post(route("register"), {
+    onFinish: () => form.reset("password", "password_confirmation"),
+  });
 };
 </script>
 

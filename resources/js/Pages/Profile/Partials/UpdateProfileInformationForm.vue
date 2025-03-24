@@ -111,23 +111,19 @@ const updateProfileInformation = () => {
     form.photo = photoInput.value.files[0];
   }
 
-  axios
-    .post(route("user-profile-information.update"), form.data())
-    .then(() => {
+  form.post(route("user-profile-information.update"), {
+    errorBag: "updateProfileInformation",
+    preserveScroll: true,
+    onSuccess: () => {
       toast.add({
         severity: "success",
         summary: "Success",
         detail: "Profile updated successfully",
         life: 3000,
       });
-      form.recentlySuccessful = true;
       clearPhotoFileInput();
-    })
-    .catch((error) => {
-      if (error.response?.status === 422) {
-        form.setError(error.response.data.errors);
-      }
-    });
+    },
+  });
 };
 
 const sendEmailVerification = () => {

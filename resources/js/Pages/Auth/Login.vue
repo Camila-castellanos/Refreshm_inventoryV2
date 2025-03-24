@@ -74,15 +74,12 @@ const handleClick = async () => {
 };
 
 const submitLogin = () => {
-  axios.post("/login", form.data())
-    .then((response) => {
-    router.visit("/dashboard");
-    })
-    .catch((error) => {
-        if (error.response?.status === 422) {
-            form.setError(error.response.data.errors);
-        }
-    })
+  form.post("/login", {
+    headers: {
+      "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').getAttribute("content"),
+    },
+    onFinish: () => form.reset("password"),
+  });
 
 };
 </script>

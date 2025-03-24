@@ -123,16 +123,12 @@ const confirmLogout = () => {
 };
 
 const logoutOtherBrowserSessions = () => {
-  axios.delete(route('other-browser-sessions.destroy'))
-    .then(() => {
-      closeModal();
-      form.reset();
-    })
-    .catch((error) => {
-      if (error.response?.status === 422) {
-        form.setError(error.response.data.errors);
-      }
-    });
+  form.delete(route('other-browser-sessions.destroy'), {
+    preserveScroll: true,
+    onSuccess: () => closeModal(),
+    onError: () => passwordInput.value?.$el.querySelector('input').focus(),
+    onFinish: () => form.reset(),
+  });
 };
 
 const closeModal = () => {

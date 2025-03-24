@@ -7,7 +7,6 @@ import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
-import axios from 'axios';
 
 const form = useForm({
     password: '',
@@ -16,15 +15,12 @@ const form = useForm({
 const passwordInput = ref(null);
 
 const submit = () => {
-    axios.post(route('password.confirm'), form.data())
-    .then((response) => {
-        form.reset();
-        passwordInput.value.focus();
-    })
-    .catch((error) => {
-        if (error.response?.status === 422) {
-            form.setErrors(error.response.data.errors);
-        }
+    form.post(route('password.confirm'), {
+        onFinish: () => {
+            form.reset();
+
+            passwordInput.value.focus();
+        },
     });
 };
 </script>
