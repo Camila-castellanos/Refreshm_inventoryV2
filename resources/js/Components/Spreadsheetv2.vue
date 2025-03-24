@@ -235,7 +235,7 @@ function editDevices(): void {
     .then(() => {
       isLoading.value = false;
       toast.add({ severity: "success", summary: "Success", detail: "Devices updated successfully", life: 3000 });
-      history.back();
+      router.visit("/inventory/items", {only: ["items", "tabs"]});
     })
     .catch(() => {
       toast.add({ severity: "error", summary: "Error", detail: "Something went wrong!", life: 3000 });
@@ -256,7 +256,7 @@ async function submitSpreadsheet(body: any[]): Promise<void> {
     await axios.post("/inventory/items", { items: body }, { responseType: "blob" });
     isLoading.value = false;
     toast.add({ severity: "success", summary: "Success", detail: "Devices created successfully", life: 3000 });
-    router.visit("/inventory/items");
+    router.visit("/inventory/items", {only: ["items", "tabs"]});
   } catch (err) {
     toast.add({ severity: "error", summary: "Error", detail: "Something went wrong", life: 3000 });
   }
