@@ -1,13 +1,11 @@
 <template>
-    <div class="w-full flex justify-center items-center h-[90vh]">
-        <Spreadsheet :initial-data="editing" class="mx-auto">
-
-        </Spreadsheet>
+    <div class="w-full py-8 h-[90vh]">
+        <NewSpreadsheet :initial-data="editing"/>
     </div>
 </template>
 
 <script setup lang="ts">
-import Spreadsheet from '@/Components/Spreadsheet.vue';
+import NewSpreadsheet from '@/Components/Spreadsheetv2.vue';
 import { Item } from '@/Lib/types';
 
 const props = defineProps<{ editing: Item[] }>();
