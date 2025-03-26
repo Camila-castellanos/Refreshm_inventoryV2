@@ -85,7 +85,7 @@ async function onDateRangeSubmit() {
             ...storagesVar,
             ...item,
             ...Object.fromEntries(customValues.map((field: any) => [`${field.slug}_${field.id}`, field.value])),
-            vendor: item.vendor.vendor,
+            vendor: item.vendor?.vendor,
           };
         })
         .map((item: any) => ({
