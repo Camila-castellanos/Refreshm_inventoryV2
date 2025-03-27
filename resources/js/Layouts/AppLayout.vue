@@ -114,7 +114,6 @@ const navItems = ref([
   { label: "Inventory", icon: "pi pi-box", url: "/inventory/items", roles: ["OWNER", "USER", "ADMIN"] },
   { label: "Accounting", icon: "pi pi-box", url: "/accounting/payments", roles: ["ADMIN", "OWNER"] },
   { label: "Contacts", icon: "pi pi-users", url: "/customer", roles: ["OWNER", "USER", "ADMIN"] },
-  { label: "Vendors", icon: "pi pi-truck", url: "/vendor", roles: ["OWNER", "USER", "ADMIN"] },
   { label: "Stores", icon: "pi pi-store", url: "/stores", roles: ["OWNER"] },
   { label: "Users", icon: "pi pi-user", url: "/users", roles: ["OWNER"] },
 ]);
