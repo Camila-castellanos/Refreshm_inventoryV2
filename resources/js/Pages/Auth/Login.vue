@@ -2,9 +2,13 @@
     <SessionExpiredDialog />
   <div
     class="bg-surface-0 bg-[white] dark:bg-surface-950 px-6 py-20 md:px-12 flex justify-center items-center lg:flex-row h-screen w-[100vw] h-[100vh]">
-    <div class="hidden lg:block lg:w-1/2">
-      <img src="/images/BiggerLogo.png" class="mx-auto" alt="" />
-      <img src="/images/iphone12.png" class="" alt="" />
+    <div class="hidden lg:flex flex-col lg:w-1/2 h-full items-center">
+        <div class="h-[20%] w-full flex items-center justify-center">
+            <img src="/images/swiftstock_logo.jpeg" draggable="false"  class="object-contain max-h-full max-w-full pointer-events-none" alt="" />
+        </div>
+        <div class="h-[80%] w-full">
+            <img src="/images/iphone12.png" draggable="false" class="object-contain h-full w-full pointer-events-none " alt="" />
+        </div>
     </div>
     <Transition name="fade">
       <div v-if="loaded" class="sm:w-full lg:w-1/3 bg-surface-50 dark:bg-surface-900 p-6 shadow rounded-border mx-auto">
