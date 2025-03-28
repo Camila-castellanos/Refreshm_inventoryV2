@@ -32,6 +32,11 @@ Route::post('/logout', function (Request $request) {
 })->name('logout');
 
 Route::get('/', function () {
+
+    if (Auth::check()) {
+        return redirect()->route('dashboard');
+    }
+
     return Inertia::render('Auth/Login', [
         'canLogin' => Route::has('login'),
         'canRegister' => Route::has('register'),
