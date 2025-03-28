@@ -26,18 +26,27 @@
           </IconField>
           <slot />
         </div>
-        <div class="flex flex-no-wrap overflow-x-auto w-auto max-w-[900px] gap-8 whitespace-nowrap pb-2">
-          <Button
-            v-for="action in computedActions"
-            :key="action.label"
-            :severity="action.severity ? action.severity : 'primary'"
-            :class="[action.extraClasses, `rounded-md ${action.label.length > 0 ? 'min-w-fit' : 'min-w-[40px]'}`].join(' ')"
-            :icon="action.icon ? action.icon : ''"
-            :label="action?.label"
-            @click="action.action"
-            :disabled="action.disable" />
+        <div class="flex flex-no-wrap">
 
-          <Button icon="pi pi-file-export" label="Export CSV" severity="primary" @click="exportCSV" class="min-w-[150px]" />
+          <Button type="button" label="Actions" @click="toggle" class="min-w-48" />
+          <Popover ref="op">
+              <div class="flex gap-4">
+                  <div class="max-w-96 grid grid-cols-2 gap-6">
+                    <Button
+                      v-for="action in computedActions"
+                      :key="action.label"
+                      :severity="action.severity ? action.severity : 'primary'"
+                      :class="[action.extraClasses, `rounded-md`].join(' ')"
+                      :icon="action.icon ? action.icon : ''"
+                      :label="action?.label"
+                      @click="action.action"
+                      :disabled="action.disable" />
+
+                    <Button icon="pi pi-file-export" label="Export CSV" severity="primary" @click="exportCSV" class="" />
+                  </div>
+              </div>
+          </Popover>
+  
         </div>
       </div>
     </template>
@@ -80,6 +89,15 @@ import Button from "primevue/button";
 import Column from "primevue/column";
 import DataTable from "primevue/datatable";
 import { computed, Ref, ref, shallowRef, watch } from "vue";
+import Popover from 'primevue/popover';
+
+//Popover actions logic
+const op = ref();
+
+const toggle = (event: any) => {
+    op.value.toggle(event);
+}
+//end Popover
 
 const filters = ref({
   global: { value: null, matchMode: FilterMatchMode.CONTAINS },
