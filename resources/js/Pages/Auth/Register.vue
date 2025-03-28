@@ -1,20 +1,21 @@
 <template>
     <SessionExpiredDialog />
-  <div
-    class="bg-surface-0 bg-[white] dark:bg-surface-950 px-6 py-20 md:px-12 flex justify-center items-center lg:flex-row h-screen w-[100vw] h-[100vh]">
-    <!-- Sección Izquierda (Imagen) -->
-    <div class="hidden lg:flex flex-col lg:w-1/2 h-full items-center">
-        <div class="h-[20%] w-full flex items-center justify-center">
+
+    <div class="h-[12vh] bg-surface-0 bg-[white] dark:bg-surface-950 ">
+      <div class="w-full h-full flex lg:pl-12 pt-8 flex lg:justify-start justify-center">
             <img src="/images/swiftstock_logo.jpeg" draggable="false"  class="object-contain max-h-full max-w-full pointer-events-none" alt="" />
         </div>
+    </div>
+  <div
+    class="bg-surface-0 bg-[white] dark:bg-surface-950 lg:px-12 flex justify-center lg:items-center pt-24 lg:flex-row h-screen w-[100vw] h-[86vh]">
+    <div class="hidden lg:flex flex-col lg:w-1/2 h-full items-center  justify-center">
         <div class="h-[80%] w-full">
             <img src="/images/iphone12.png" draggable="false" class="object-contain h-full w-full pointer-events-none " alt="" />
         </div>
     </div>
-
     <!-- Sección Derecha (Formulario de Registro) -->
     <Transition name="fade">
-      <div v-if="loaded" class="sm:w-full lg:w-1/3 bg-surface-50 dark:bg-surface-900 p-6 shadow rounded-border mx-auto">
+      <div v-if="loaded" class="w-full lg:w-1/3 bg-surface-50 dark:bg-surface-900 p-6 md:w-1/2 shadow rounded-border mx-auto">
         <div class="text-center mb-8">
           <div class="text-surface-900 dark:text-surface-0 text-3xl font-medium mb-4">Create an Account</div>
         </div>
