@@ -23,6 +23,17 @@
           <label for="password" class="text-surface-900 dark:text-surface-0 font-medium mb-2 block">Password</label>
           <InputText id="password" type="password" v-model="form.password" placeholder="Password" class="w-full mb-4" />
 
+          
+          <div class="flex items-center mb-2">
+            <Checkbox inputId="remember" name="remember" v-model="form.remember" :binary="true" class="mr-2" />
+            <label class="text-surface-900 dark:text-surface-0 font-medium " for="remember">
+              Remember Me
+            </label>
+          </div>
+        
+        
+          
+
           <Button label="Sign In" type="submit" icon="pi pi-user" class="w-full" />
           <Button label="Sign Up" icon="pi pi-user-add" @click="handleClick" :disabled="isLoading" class="w-full mt-3" />
         </form>
@@ -36,6 +47,7 @@ import { ref, onMounted, computed, onBeforeUnmount } from "vue";
 import { router, useForm, usePage } from "@inertiajs/vue3";
 import Button from "primevue/button";
 import InputText from "primevue/inputtext";
+import { Checkbox } from "primevue";
 import axios from "axios";
 import SessionExpiredDialog from "@/Components/SessionExpiredDialog.vue";
 
@@ -49,6 +61,7 @@ onMounted(() => {
 const form = useForm({
   email: "",
   password: "",
+  remember: false,
 });
 
 const errors = computed(() => usePage().props.errors || {});
