@@ -111,6 +111,7 @@ const logout = () => {
   router.post('/logout', {}, {
     onSuccess: async () => {
           await renewCsrfToken();
+          router.visit(route('login')); 
         },
         onError: (errors) => {
             console.error('Logout failed:', errors);
