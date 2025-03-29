@@ -130,10 +130,7 @@ const logout = () => {
             } catch (error) {
                 console.error('Error fetching new CSRF token after logout:', error);
                 // Handle the error appropriately
-            } finally {
-                // Navigate to the login page using router.get()
-                router.get('/login');
-            }
+            } 
         },
         onError: (errors) => {
             console.error('Logout failed:', errors);
