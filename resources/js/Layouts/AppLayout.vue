@@ -68,6 +68,7 @@ import { router } from "@inertiajs/vue3";
 import { DynamicDialog } from "primevue";
 import { usePage } from "@inertiajs/vue3";
 import SessionExpiredDialog from "@/Components/SessionExpiredDialog.vue";
+import { getItemByPosition } from "@revolist/vue3-datagrid";
 
 const page = usePage();
 const user = page.props.auth?.user;
@@ -106,7 +107,39 @@ const logout = () => {
   localStorage.setItem(themeKey, "light");
   applyTheme();
 
-  router.post("/logout");
+  router.post('/logout', {}, {
+        onSuccess: async () => {
+            // Clear any client-side state
+
+            // Fetch a new CSRF token
+            try {
+                const response = await axios.get(route('csrf-token'));
+                const newToken = response.data?.csrf_token; // Use optional chaining
+
+                if (newToken) {
+                    // Update the csrf-token meta tag
+                    console.log(newToken)
+                    document.querySelector('meta[name="csrf-token"]').setAttribute('content', newToken);
+
+                    // Optionally, update Axios defaults
+                    axios.defaults.headers.common['X-CSRF-TOKEN'] = newToken;
+                } else {
+                    console.error('CSRF token refresh failed: Token is null or undefined');
+                    // Handle the case where the token couldn't be fetched
+                }
+            } catch (error) {
+                console.error('Error fetching new CSRF token after logout:', error);
+                // Handle the error appropriately
+            } finally {
+                // Navigate to the login page using router.get()
+                router.get('/login');
+            }
+        },
+        onError: (errors) => {
+            console.error('Logout failed:', errors);
+            // Handle logout errors
+        },
+    });
 };
 
 const navItems = ref([
