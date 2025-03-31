@@ -7,9 +7,9 @@
         </div>
     </div>
   <div
-    class="bg-surface-0 bg-[white] dark:bg-surface-950 lg:px-12 flex justify-center lg:items-center pt-24 lg:flex-row h-screen w-[100vw] h-[86vh]">
+    class="bg-surface-0 bg-[white] dark:bg-surface-950 lg:px-12 flex justify-center lg:items-center pt-24 lg:flex-row w-[100vw] h-[86vh]">
     <div class="hidden lg:flex flex-col lg:w-1/2 h-full items-center  justify-center">
-        <div class="h-[80%] w-full">
+        <div class="w-full">
             <img src="/images/iphone12.png" draggable="false" class="object-contain h-full w-full pointer-events-none " alt="" />
         </div>
     </div>
