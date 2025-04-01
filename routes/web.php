@@ -55,6 +55,11 @@ Route::middleware([
     config('jetstream.auth_session'),
     'verified',
 ])->group(function () {
+
+    Route::get("inventory/public", function () {
+        return Inertia::render('PublicInventory/Index');
+    })->name("inventory.public");
+
     Route::get("dashboard", DashboardController::class)->name("dashboard");
     Route::post("dashboard/update_cash", [DashboardController::class, 'updateCashOnHand'])->name("update.cash");
     Route::post("report/datewise", [DashboardController::class, 'reportDatewise'])->name("report.datewise");
