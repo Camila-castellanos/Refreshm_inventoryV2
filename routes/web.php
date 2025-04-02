@@ -20,6 +20,7 @@ use App\Http\Controllers\SaleController;
 use App\Http\Controllers\StoreController;
 use App\Http\Controllers\TaxController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\InventoryPublicController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -55,6 +56,9 @@ Route::middleware([
     config('jetstream.auth_session'),
     'verified',
 ])->group(function () {
+
+    Route::get("inventory/public", InventoryPublicController::class);
+
     Route::get("dashboard", DashboardController::class)->name("dashboard");
     Route::post("dashboard/update_cash", [DashboardController::class, 'updateCashOnHand'])->name("update.cash");
     Route::post("report/datewise", [DashboardController::class, 'reportDatewise'])->name("report.datewise");
@@ -189,6 +193,7 @@ Route::middleware([
     Route::resource("email_templates", EmailsController::class);
 
     Route::post("store/contact", [ContactController::class, "store"])->name("contact.store");
+    Route::post("public/request", [ItemController::class, "request"])->name("items.request");
 
     Route::resource("customfields", CustomFieldsController::class);
     Route::post("customfields/{id}/active", [CustomFieldsController::class, "updateActive"])->name("customFields.updateActive");
