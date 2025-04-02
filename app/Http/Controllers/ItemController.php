@@ -229,18 +229,20 @@ class ItemController extends Controller
 
     public function request(RequestItemsForm $request)
     {
-        $form = $request->validated();
+        $form = $request;
         $name = $form["name"];
         $email = $form["email"];
         $store = $form["store"];
         $notes = $form["notes"];
         $items = $form["items"];
-        $total = $form["total"];
 
         $uniqueItems = collect($items)->unique('id')->values()->all();
 
-        $mail = Mail::to('will@refreshmobile.ca')->send(new RequestItems($name, $email, $store, $notes, $uniqueItems, $total));
+
+
+        $mail = Mail::to('will@refreshmobile.ca')->send(new RequestItems($name, $email, $store, $notes, $uniqueItems));
         return response()->json($mail, 201);
+     
     }
 
     public function lcd()
