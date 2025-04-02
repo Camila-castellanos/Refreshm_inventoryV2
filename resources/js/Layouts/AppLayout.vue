@@ -2,7 +2,7 @@
   <div class="h-[100vh]">
     <DynamicDialog />
     <Toast />
-    <ConfirmDialog/>
+    <ConfirmDialog />
     <SessionExpiredDialog />
 
     <Menubar :model="navItems">
@@ -19,10 +19,12 @@
         <a v-ripple class="flex items-center" v-bind="props.action" :href="item.url">
           <span>{{ item.label }}</span>
           <Badge v-if="item.badge" :class="{ 'ml-auto': !root, 'ml-2': root }" :value="item.badge" />
-          <span v-if="item.shortcut" class="p-1 ml-auto text-xs border rounded border-surface bg-emphasis text-muted-color">{{
-            item.shortcut
-          }}</span>
-          <i v-if="hasSubmenu" :class="['pi pi-angle-down ml-auto', { 'pi-angle-down': root, 'pi-angle-right': !root }]"></i>
+          <span v-if="item.shortcut"
+            class="p-1 ml-auto text-xs border rounded border-surface bg-emphasis text-muted-color">{{
+              item.shortcut
+            }}</span>
+          <i v-if="hasSubmenu"
+            :class="['pi pi-angle-down ml-auto', { 'pi-angle-down': root, 'pi-angle-right': !root }]"></i>
         </a>
       </template>
       <template #end>
@@ -30,12 +32,8 @@
           <Button aria-label="Toggle light mode" icon="pi pi-sun" @click="toggleDarkMode()" />
           <Button aria-label="Logout" label="Logout" icon="pi pi-sign-out" @click="logout()" />
           <Menu ref="menu" :model="dropdownNavItems" popup />
-          <Avatar
-            :label="userInitial"
-            class="mr-2 cursor-pointer"
-            size="large"
-            style="background-color: #ece9fc; color: #2a1261"
-            @click="openMenu" />
+          <Avatar :label="userInitial" class="mr-2 cursor-pointer" size="large"
+            style="background-color: #ece9fc; color: #2a1261" @click="openMenu" />
         </div>
       </template>
     </Menubar>
@@ -46,7 +44,8 @@
 
     <Drawer v-model:visible="drawerVisible" class="">
       <div class="flex flex-col items-center justify-start w-full h-full gap-8">
-        <Button variant="outlined" class="w-full" severity="secondary" v-for="item in navItems" @click="router.visit(`${item.url}`); drawerVisible = false">
+        <Button variant="outlined" class="w-full" severity="secondary" v-for="item in navItems"
+          @click="router.visit(`${item.url}`); drawerVisible = false">
           {{ item.label }}
         </Button>
       </div>
@@ -68,7 +67,7 @@ import { router } from "@inertiajs/vue3";
 import { DynamicDialog } from "primevue";
 import { usePage } from "@inertiajs/vue3";
 import SessionExpiredDialog from "@/Components/SessionExpiredDialog.vue";
-import { renewCsrfToken } from '@/Utils/csrf.js'; 
+import { renewCsrfToken } from '@/Utils/csrf.js';
 import { getItemByPosition } from "@revolist/vue3-datagrid";
 
 const page = usePage();
@@ -110,18 +109,18 @@ const logout = () => {
 
   router.post('/logout', {}, {
     onSuccess: async () => {
-          await renewCsrfToken();
-          router.visit(route('login')); 
-        },
-        onError: (errors) => {
-            console.error('Logout failed:', errors);
-            // Handle logout errors
-        },
-    });
+      await renewCsrfToken();
+      router.visit(route('login'));
+    },
+    onError: (errors) => {
+      console.error('Logout failed:', errors);
+      // Handle logout errors
+    },
+  });
 };
 
 const navItems = ref([
-  { label: "Dashboard", icon: "pi pi-chart-bar", url: "/dashboard", roles: ["OWNER", "USER", "ADMIN"] },
+  { label: "Dashboard", icon: "pi pi-chart-bar", url: "/dashboard", roles: ["OWNER", "ADMIN"] },
   { label: "Inventory", icon: "pi pi-box", url: "/inventory/items", roles: ["OWNER", "USER", "ADMIN"] },
   { label: "Accounting", icon: "pi pi-box", url: "/accounting/payments", roles: ["ADMIN", "OWNER"] },
   { label: "Contacts", icon: "pi pi-users", url: "/customer", roles: ["OWNER", "USER", "ADMIN"] },
@@ -157,6 +156,7 @@ header {
 .fade-leave-active {
   transition: opacity 0.4s ease-in-out, transform 0.3s ease-in-out;
 }
+
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
