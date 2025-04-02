@@ -28,7 +28,6 @@ class RequestItemsForm extends FormRequest
       "email" => "required|email",
       "store" => "nullable|string",
       "notes" => "string|nullable",
-      "total" => "required|numeric",
       "items" => "required|array|min:1",
     ];
   }

@@ -16,14 +16,14 @@ class RequestItems extends Mailable
    *
    * @return void
    */
-  public function __construct($name, $email, $store, $notes, $items, $total)
+  public function __construct($name, $email, $store, $notes, $items)
   {
     $this->name   = $name;
     $this->email  = $email;
     $this->store  = $store;
     $this->notes = $notes;
     $this->items  = $items;
-    $this->total  = $total;
+
   }
 
   /**
@@ -41,7 +41,6 @@ class RequestItems extends Mailable
         'store' => $this->store,
         'notes' => $this->notes,
         'items' => $this->items,
-        'total' => $this->total,
       ]);
   }
 }
