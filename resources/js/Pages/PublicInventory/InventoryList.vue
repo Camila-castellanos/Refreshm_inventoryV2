@@ -1,5 +1,5 @@
 <template>
-
+  <Toast></Toast>
   <div class="max-w-7xl mx-auto py-4">
     <div class="w-full flex justify-end pb-4">
       <Dialog v-model:visible="showSelectedItems" header="Selected items" :modal="true" class="mx-4">
@@ -169,10 +169,13 @@ import Tag from 'primevue/tag';
 import { useToast } from 'primevue/usetoast';
 import { defineProps } from 'vue';
 import { router } from "@inertiajs/vue3";
+
 import axios from 'axios';
 
 
 import Textarea from 'primevue/textarea';
+
+const toast = useToast();
 
 const name = ref('');
 const email = ref('');
@@ -198,7 +201,6 @@ const filteredItems = computed(() => {
   });
 });
 
-const toast = useToast();
 
 const showSelectedItems = ref(false)
 
@@ -242,33 +244,35 @@ const onSubmit = async () => {
     const laravelRoute = route("items.request"); // Get the Laravel route URL using Inertia's helper
 
     const response = await axios.post(laravelRoute, request);
-    console.log('Request successful (Axios):', response.data);
     showSelectedItems.value = false
-
-    // Handle the successful response data from your Laravel backend
-    // For example, you might update a local state:
-    // successMessage.value = response.data.message;
-
+    toast.add({ severity: 'success', summary: 'Success', detail: response.data.message || 'Request submitted successfully.', life: 3000 });
   } catch (error) {
-    console.error('Error submitting request (Axios):', error);
+
+    let errorMessage = 'An unexpected error occurred.';
 
     if (error.response) {
-      // The request was made and the server responded with a status code
-      // that falls out of the range of 2xx
-      console.error('Server Error:', error.response.data);
-      console.error('Status Code:', error.response.status);
-      // Handle server-side validation errors or other error messages
+      if (error.response.data && error.response.data.errors) {
+        errorMessage = Object.values(error.response.data.errors).flat().join('\n');
+      } else if (error.response.data && error.response.data.message) {
+        errorMessage = error.response.data.message;
+      } else {
+        errorMessage = `Server error with status code: ${error.response.status}`;
+      }
+      toast.add({ severity: 'error', summary: 'Error', detail: errorMessage, life: 5000 });
       // errorMessages.value = error.response.data.errors; // If Laravel returns validation errors in this format
     } else if (error.request) {
       // The request was made but no response was received
-      console.error('No response received:', error.request);
+      errorMessage = 'No response received from the server. Please check your network connection.';
+      toast.add({ severity: 'error', summary: 'Error', detail: errorMessage, life: 5000 });
       // Display a network error message to the user
     } else {
       // Something happened in setting up the request that triggered an Error
-      console.error('Request setup error:', error.message);
+      errorMessage = `Error setting up the request: ${error.message}`;
+      toast.add({ severity: 'error', summary: 'Error', detail: errorMessage, life: 5000 });
       // Display a generic error message
     }
   }
+
 }
 
 </script>
