@@ -3,9 +3,7 @@
   <div class="max-w-7xl mx-auto py-4">
     <div class="w-full flex justify-end pb-4">
       <Dialog v-model:visible="showSelectedItems" header="Selected items" :modal="true" class="mx-4">
-
         <div class="max-w-7xl mx-auto ">
-
           <div class="flex flex-col gap-4">
             <div class="flex flex-col sm:flex-row gap-4">
               <div class="flex-1">
@@ -34,8 +32,6 @@
           </div>
 
           <div class="flex flex-col">
-
-
             <DataTable :value="selectedItems" responsiveLayout="scroll" class="p-datatable-striped">
               <Column field="model" header="Model" class="font-semibold hidden sm:table-cell" />
               <Column field="manufacturer" header="Manufacturer" class="hidden sm:table-cell" />
@@ -57,7 +53,7 @@
               <Column field="issues" header="Issues" class="hidden md:table-cell">
                 <template #body="{ data }">
                   <div v-if="data.issues" class="text-orange-500 text-sm italic">
-                    Note: {{ data.issues }}
+                    {{ data.issues }}
                   </div>
                 </template>
               </Column>
@@ -78,15 +74,13 @@
               </Column>
             </DataTable>
           </div>
-
-
         </div>
 
-        <h2 class="text-2xl justify-self-end font-black p-4 text-black">Total: ${{selectedItems.reduce((accumulator,
-          currentItem) => {
-          return accumulator + currentItem.selling_price;
-        }, 0)}},00</h2>
-
+        <h2 class="text-2xl justify-self-end font-black p-4 text-black">Total:
+          {{selectedItems.reduce((accumulator, currentItem) => {
+            return accumulator + currentItem.selling_price;
+          }, 0).toFixed(2)}}
+        </h2>
 
         <div class="flex w-full justify-around">
           <Button severity="secondary" @click="showSelectedItems = false">CANCEL</Button>
@@ -97,63 +91,160 @@
       <Button @click="getSelectedItems">REQUEST DEVICES</Button>
     </div>
 
-
-    <Card class="shadow-sm">
-      <template #content>
-        <div class="flex flex-col">
-          <div class="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4 mb-6">
-            <IconField>
-              <InputIcon>
-                <i class="pi pi-search" />
-              </InputIcon>
-              <InputText v-model="searchQuery" placeholder="Search" class="w-full" />
-            </IconField>
-            <div class="flex items-center gap-2">
-              <!-- <Button icon="pi pi-filter" label="Filter" class="p-button-outlined" /> -->
+    <div class="md:hidden mb-4 flex items-center gap-2">
+      <Dialog v-model:visible="showFilterModal" header="Filter Items" :modal="true"
+        :breakpoints="{ '960px': '75vw', '640px': '90vw' }">
+        <div class="flex flex-col gap-4">
+          <div>
+            <label class="block text-gray-700 text-sm font-bold mb-1">Manufacturer:</label>
+            <div class="flex flex-wrap gap-2">
+              <div v-for="manufacturer in uniqueManufacturers" :key="manufacturer">
+                <div class="flex items-center">
+                  <Checkbox :inputId="'manufacturer-' + manufacturer" :value="manufacturer"
+                    v-model="filters.manufacturer" />
+                  <label :for="'manufacturer-' + manufacturer" class="ml-2">{{ manufacturer }}</label>
+                </div>
+              </div>
             </div>
           </div>
-
-          <div class="mb-4 text-gray-500 text-xl">
-            Displaying {{ filteredItems.length }} Items
+          <div>
+            <label class="block text-gray-700 text-sm font-bold mb-1">Grade:</label>
+            <div class="flex flex-wrap gap-2">
+              <div v-for="grade in uniqueGrades" :key="grade">
+                <div class="flex items-center">
+                  <Checkbox :inputId="'grade-' + grade" :value="grade" v-model="filters.grade" />
+                  <label :for="'grade-' + grade" class="ml-2">{{ grade }}</label>
+                </div>
+              </div>
+            </div>
           </div>
+          <div>
+            <label class="block text-gray-700 text-sm font-bold mb-1">Has Issues:</label>
+            <div class="flex flex-col gap-2">
+              <div class="flex items-center">
+                <RadioButton inputId="has-issues-all" value="all" v-model="filters.hasIssues" />
+                <label for="has-issues-all" class="ml-2">All</label>
+              </div>
+              <div class="flex items-center">
+                <RadioButton inputId="has-issues-yes" :value="true" v-model="filters.hasIssues" />
+                <label for="has-issues-yes" class="ml-2">Yes</label>
+              </div>
+              <div class="flex items-center">
+                <RadioButton inputId="has-issues-no" :value="false" v-model="filters.hasIssues" />
+                <label for="has-issues-no" class="ml-2">No</label>
+              </div>
+            </div>
+          </div>
+          <Button label="Apply Filters" @click="showFilterModal = false" />
+        </div>
+      </Dialog>
+    </div>
 
-          <div class="space-y-4">
-
-
-            <div v-for="item in filteredItems" :key="item.id">
-              <Card class="hover:shadow-md transition-shadow duration-200">
-                <template #content>
-                  <div class="flex flex-col md:flex-row justify-between items-start md:items-center p-2">
-                    <div class="space-y-4">
-                      <h2 class="text-2xl font-semibold"> {{ item.model }}</h2>
-                      <div class="flex flex-wrap gap-2">
-                        <Tag :value="item.manufacturer" class="font-medium" />
-                        <Tag v-if="item.grade" :value="item.grade" severity="info" class="font-medium" />
-                        <Tag v-if="item.battery" :value="item.battery + '%'" severity="success" class="font-medium" />
-                        <Tag v-if="item.colour" :value="item.colour" class="'font-medium" />
-                      </div>
-                    </div>
-                    <div
-                      class="flex flex-col md:flex-row justify-end items-start md:items-center gap-4 mt-4 md:mt-0 w-full md:w-auto">
-                      <div v-if="item.issues" class="text-orange-500 text-sm italic mr-4">
-                        Note: {{ item.issues }}
-                      </div>
-                      <div class="text-xl md:text-2xl font-bold text-black">${{ item.selling_price.toFixed(2) }}</div>
-                      <Button v-if="item?.selected != true" icon="pi pi-plus"
-                        class="p-button-rounded p-button-outlined p-button-secondary self-end cursor"
-                        style="border-color: black; color: black;" @click="addItem(item)" />
-                      <Button v-if="item.selected" icon="pi pi-check"
-                        class="p-button-rounded p-button-outlined p-button-secondary self-end cursor"
-                        style="border-color: green; color: green;" @click="removeItem(item)" />
+    <div class="flex flex-col md:flex-row gap-4">
+      <div class="hidden sm:block md:w-1/4 ">
+        <Card class="shadow-sm ">
+          <template #content>
+            <h2 class="text-xl font-semibold mb-2">Filter Items</h2>
+            <div class="flex flex-col gap-4">
+              <div>
+                <label class="block text-gray-700 text-sm font-bold mb-1">Manufacturer:</label>
+                <div class="flex flex-col gap-2">
+                  <div v-for="manufacturer in uniqueManufacturers" :key="manufacturer">
+                    <div class="flex items-center">
+                      <Checkbox :inputId="'manufacturer-desktop-' + manufacturer" :value="manufacturer"
+                        v-model="filters.manufacturer" />
+                      <label :for="'manufacturer-desktop-' + manufacturer" class="ml-2">{{ manufacturer }}</label>
                     </div>
                   </div>
-                </template>
-              </Card>
+                </div>
+              </div>
+              <div>
+                <label class="block text-gray-700 text-sm font-bold mb-1">Grade:</label>
+                <div class="flex flex-col gap-2">
+                  <div v-for="grade in uniqueGrades" :key="grade">
+                    <div class="flex items-center">
+                      <Checkbox :inputId="'grade-desktop-' + grade" :value="grade" v-model="filters.grade" />
+                      <label :for="'grade-desktop-' + grade" class="ml-2">{{ grade }}</label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <label class="block text-gray-700 text-sm font-bold mb-1">Has Issues:</label>
+                <div class="flex flex-col gap-2">
+                  <div class="flex items-center">
+                    <RadioButton inputId="has-issues-all" value="all" v-model="filters.hasIssues" />
+                    <label for="has-issues-all" class="ml-2">All</label>
+                  </div>
+                  <div class="flex items-center">
+                    <RadioButton inputId="has-issues-yes" :value="true" v-model="filters.hasIssues" />
+                    <label for="has-issues-yes" class="ml-2">Yes</label>
+                  </div>
+                  <div class="flex items-center">
+                    <RadioButton inputId="has-issues-no" :value="false" v-model="filters.hasIssues" />
+                    <label for="has-issues-no" class="ml-2">No</label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </template>
+        </Card>
+      </div>
+      <Card class="shadow-sm md:w-3/4">
+        <template #content>
+          <div class="flex flex-col">
+            <div class="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4 mb-6">
+              <IconField class="w-full md:w-auto">
+                <InputIcon>
+                  <i class="pi pi-search" />
+                </InputIcon>
+                <InputText v-model="searchQuery" placeholder="Search" class="w-full" />
+              </IconField>
+              <div class="flex items-center gap-2 md:hidden">
+                <Button icon="pi pi-filter" @click="showFilterModal = true" />
+              </div>
+            </div>
+
+            <div class="mb-4 text-gray-500 text-xl">
+              Displaying {{ filteredItemsWithFilters.length }} Items
+            </div>
+
+            <div class="space-y-4">
+              <div v-for="item in filteredItemsWithFilters" :key="item.id">
+                <Card class="hover:shadow-md transition-shadow duration-200">
+                  <template #content>
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center p-2">
+                      <div class="space-y-4">
+                        <h2 class="text-2xl font-semibold"> {{ item.model }}</h2>
+                        <div class="flex flex-wrap gap-2">
+                          <Tag :value="item.manufacturer" class="font-medium" />
+                          <Tag v-if="item.grade" :value="item.grade" severity="info" class="font-medium" />
+                          <Tag v-if="item.battery" :value="item.battery + '%'" severity="success" class="font-medium" />
+                          <Tag v-if="item.colour" :value="item.colour" class="'font-medium" />
+                        </div>
+                      </div>
+                      <div
+                        class="flex flex-col md:flex-row justify-end items-start md:items-center gap-4 mt-4 md:mt-0 w-full md:w-auto">
+                        <div v-if="item.issues" class="text-orange-500 text-sm italic mr-4">
+                          Issues: {{ item.issues }}
+                        </div>
+                        <div class="text-xl md:text-2xl font-bold text-black">${{ item.selling_price.toFixed(2) }}</div>
+                        <Button v-if="!item?.selected" icon="pi pi-plus"
+                          class="p-button-rounded p-button-outlined p-button-secondary self-end cursor"
+                          style="border-color: black; color: black;" @click="addItem(item)" />
+                        <Button v-if="item.selected" icon="pi pi-check"
+                          class="p-button-rounded p-button-outlined p-button-secondary self-end cursor"
+                          style="border-color: green; color: green;" @click="removeItem(item)" />
+                      </div>
+                    </div>
+                  </template>
+                </Card>
+              </div>
             </div>
           </div>
-        </div>
-      </template>
-    </Card>
+        </template>
+      </Card>
+    </div>
   </div>
 </template>
 
@@ -161,7 +252,7 @@
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import { ref, computed } from 'vue';
-import { IconField, InputIcon, Dialog } from "primevue";
+import { IconField, InputIcon, Dialog, Checkbox, RadioButton } from "primevue";
 import Card from 'primevue/card';
 import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';
@@ -169,11 +260,9 @@ import Tag from 'primevue/tag';
 import { useToast } from 'primevue/usetoast';
 import { defineProps } from 'vue';
 import { router } from "@inertiajs/vue3";
-
 import axios from 'axios';
-
-
 import Textarea from 'primevue/textarea';
+import { onMounted } from 'vue';
 
 const toast = useToast();
 
@@ -187,42 +276,65 @@ const props = defineProps({
 });
 
 const searchQuery = ref('');
+const showSelectedItems = ref(false);
+const selectedItems = ref([]);
+const showFilterModal = ref(false); // For mobile filter modal
+const filters = ref({
+  manufacturer: [], // Use array for checkboxes
+  grade: [], // Use array for checkboxes
+  hasIssues: "all", // Can be true, false, or null
+});
 
-const filteredItems = computed(() => {
+const uniqueManufacturers = computed(() => Array.from([...new Set(props.items.map(item => item.manufacturer))]).sort());
+const uniqueGrades = computed(() => Array.from([...new Set(props.items.map(item => item.grade).filter(Boolean))]).sort());
+
+const filteredItemsBeforeFilters = computed(() => {
   const query = searchQuery.value.toLowerCase();
-  return props.items.filter(item => {
-    // Check if the query matches any of the object's properties
-    return Object.values(item).some(value => {
-      if (typeof value === 'string') {
-        return value.toLowerCase().includes(query);
+  return props.items.filter(item =>
+    Object.values(item).some(value =>
+      typeof value === 'string' && value.toLowerCase().includes(query)
+    )
+  );
+});
+
+const filteredItemsWithFilters = computed(() => {
+  return filteredItemsBeforeFilters.value.filter(item => {
+    const manufacturerMatch = filters.value.manufacturer.length === 0 || filters.value.manufacturer.includes(item.manufacturer);
+    const gradeMatch = filters.value.grade.length === 0 || filters.value.grade.includes(item.grade);
+    let issuesMatch = true; // Default to true if hasIssues is null
+
+    if (filters.value.hasIssues !== "all") {
+
+      if (filters.value.hasIssues === true) {
+        issuesMatch = !!item.issues; // true if item has issues
+        console.log(item.issues)
+      } else {
+        issuesMatch = !item.issues; // true if item has no issues
       }
-      return false; // Only search within string values for simplicity
-    });
+    }
+    return manufacturerMatch && gradeMatch && issuesMatch;
   });
 });
 
-
-const showSelectedItems = ref(false)
-
-const selectedItems = ref([])
-
 const addItem = (item) => {
-  item.selected = true
-  selectedItems.value.push(item)
+  item.selected = true;
+  selectedItems.value.push(item);
   toast.add({
-    severity: 'success', summary: 'Item Added', detail: `${item.model} 
-added successfully.`, life: 3000
+    severity: 'success',
+    summary: 'Item Added',
+    detail: `${item.model} added successfully.`,
+    life: 3000
   });
 };
 
 const removeItem = (item) => {
   selectedItems.value = selectedItems.value.filter(oldItem => oldItem.id !== item.id);
-  delete item.selected
-}
+  delete item.selected;
+};
 
 const getSelectedItems = () => {
-  showSelectedItems.value = true
-}
+  showSelectedItems.value = true;
+};
 
 const onSubmit = async () => {
   let request = {
@@ -230,26 +342,18 @@ const onSubmit = async () => {
     email: email.value,
     store: store.value,
     notes: notes.value,
-    items: [],
+    items: selectedItems.value.map(item => ({ ...item })), // Create a new array of selected items
   };
 
-  for (const item of selectedItems.value) {
-    request.items.push({
-      ...item,
-    });
-  }
-
-
   try {
-    const laravelRoute = route("items.request"); // Get the Laravel route URL using Inertia's helper
-
+    const laravelRoute = route("items.request");
     const response = await axios.post(laravelRoute, request);
-    showSelectedItems.value = false
+    showSelectedItems.value = false;
     toast.add({ severity: 'success', summary: 'Success', detail: response.data.message || 'Request submitted successfully.', life: 3000 });
+    selectedItems.value.forEach(item => delete item.selected); // Clear selected state after successful submission
+    selectedItems.value = []; // Clear selected items array
   } catch (error) {
-
     let errorMessage = 'An unexpected error occurred.';
-
     if (error.response) {
       if (error.response.data && error.response.data.errors) {
         errorMessage = Object.values(error.response.data.errors).flat().join('\n');
@@ -259,22 +363,26 @@ const onSubmit = async () => {
         errorMessage = `Server error with status code: ${error.response.status}`;
       }
       toast.add({ severity: 'error', summary: 'Error', detail: errorMessage, life: 5000 });
-      // errorMessages.value = error.response.data.errors; // If Laravel returns validation errors in this format
     } else if (error.request) {
-      // The request was made but no response was received
       errorMessage = 'No response received from the server. Please check your network connection.';
       toast.add({ severity: 'error', summary: 'Error', detail: errorMessage, life: 5000 });
-      // Display a network error message to the user
     } else {
-      // Something happened in setting up the request that triggered an Error
       errorMessage = `Error setting up the request: ${error.message}`;
       toast.add({ severity: 'error', summary: 'Error', detail: errorMessage, life: 5000 });
-      // Display a generic error message
     }
   }
+};
 
-}
-
+onMounted(() => {
+  // Ensure that the 'selected' property is not initially set on the props.items
+  if (props.items && props.items.length > 0) {
+    props.items.forEach(item => {
+      if (item.hasOwnProperty('selected')) {
+        delete item.selected;
+      }
+    });
+  }
+});
 </script>
 
 <style scoped>
@@ -285,5 +393,9 @@ const onSubmit = async () => {
   padding: 0.5rem;
   border-radius: 4px;
   font-size: 0.875rem;
+}
+
+.cursor {
+  cursor: pointer;
 }
 </style>
