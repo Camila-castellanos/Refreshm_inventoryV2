@@ -82,13 +82,18 @@
           }, 0).toFixed(2)}}
         </h2>
 
-        <div class="flex w-full justify-around">
+        <div class="flex w-full justify-around ">
           <Button severity="secondary" @click="showSelectedItems = false">CANCEL</Button>
           <Button @click="onSubmit">REQUEST DEVICES</Button>
         </div>
 
       </Dialog>
+
       <Button @click="getSelectedItems">REQUEST DEVICES</Button>
+
+    </div>
+    <div class="flex justify-end pb-4">
+
     </div>
 
     <div class="md:hidden mb-4 flex items-center gap-2">
@@ -194,52 +199,59 @@
         <template #content>
           <div class="flex flex-col">
             <div class="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4 mb-6">
-              <IconField class="w-full md:w-auto">
-                <InputIcon>
-                  <i class="pi pi-search" />
-                </InputIcon>
-                <InputText v-model="searchQuery" placeholder="Search" class="w-full" />
-              </IconField>
-              <button class=" px-6 py-4  border rounded-full border-gray-400 font-semibold shadow"
-                @click="changeExchange()">
-                <span v-if="country.toLowerCase() == 'ca'">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="32" height="16" viewBox="0 0 9600 4800">
-                    <title>Flag of Canada</title>
-                    <path fill="#f00" d="m0 0h2400l99 99h4602l99-99h2400v4800h-2400l-99-99h-4602l-99 99H0z" />
-                    <path fill="#fff"
-                      d="m2400 0h4800v4800h-4800zm2490 4430-45-863a95 95 0 0 1 111-98l859 151-116-320a65 65 0 0 1 20-73l941-762-212-99a65 65 0 0 1-34-79l186-572-542 115a65 65 0 0 1-73-38l-105-247-423 454a65 65 0 0 1-111-57l204-1052-327 189a65 65 0 0 1-91-27l-332-652-332 652a65 65 0 0 1-91 27l-327-189 204 1052a65 65 0 0 1-111 57l-423-454-105 247a65 65 0 0 1-73 38l-542-115 186 572a65 65 0 0 1-34 79l-212 99 941 762a65 65 0 0 1 20 73l-116 320 859-151a95 95 0 0 1 111 98l-45 863z" />
-                  </svg>
-                </span>
-                <span v-else>
-                  <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" fill="#FFF"
-                    width="32" height="16">
-                    <path d="M0 0h1235v650H0" />
-                    <path stroke="#BB133E" stroke-dasharray="50" stroke-width="2470" d="M0 0v651" />
-                    <path fill="#002664" d="M0 0h494v350H0" />
-                    <g id="e">
-                      <g id="d">
-                        <g id="f">
-                          <g id="c">
-                            <g id="b">
-                              <path id="a" d="m30 50.6 12-36 12 36-30.8-22H61" />
-                              <use xlink:href="#a" x="82" />
+              <div class="w-full flex items-center justify-between">
+                <IconField class="w-full md:w-auto pr-6">
+                  <InputIcon>
+                    <i class="pi pi-search" />
+                  </InputIcon>
+                  <InputText v-model="searchQuery" placeholder="Search" class="w-full" />
+                </IconField>
+                <button class="max-w-24 px-6 py-4  border rounded-full border-gray-400 font-semibold shadow"
+                  @click="changeExchange()">
+                  <span v-if="country.toLowerCase() == 'ca'" class="flex justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="16" viewBox="0 0 9600 4800">
+                      <title>Flag of Canada</title>
+                      <path fill="#f00" d="m0 0h2400l99 99h4602l99-99h2400v4800h-2400l-99-99h-4602l-99 99H0z" />
+                      <path fill="#fff"
+                        d="m2400 0h4800v4800h-4800zm2490 4430-45-863a95 95 0 0 1 111-98l859 151-116-320a65 65 0 0 1 20-73l941-762-212-99a65 65 0 0 1-34-79l186-572-542 115a65 65 0 0 1-73-38l-105-247-423 454a65 65 0 0 1-111-57l204-1052-327 189a65 65 0 0 1-91-27l-332-652-332 652a65 65 0 0 1-91 27l-327-189 204 1052a65 65 0 0 1-111 57l-423-454-105 247a65 65 0 0 1-73 38l-542-115 186 572a65 65 0 0 1-34 79l-212 99 941 762a65 65 0 0 1 20 73l-116 320 859-151a95 95 0 0 1 111 98l-45 863z" />
+                    </svg>
+                  </span>
+                  <span v-else>
+                    <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="32"
+                      height="16" viewBox="0 0 7410 3900">
+                      <path d="M0,0h7410v3900H0" fill="#b31942" />
+                      <path d="M0,450H7410m0,600H0m0,600H7410m0,600H0m0,600H7410m0,600H0" stroke="#FFF"
+                        stroke-width="300" />
+                      <path d="M0,0h2964v2100H0" fill="#0a3161" />
+                      <g fill="#FFF">
+                        <g id="s18">
+                          <g id="s9">
+                            <g id="s5">
+                              <g id="s4">
+                                <path id="s"
+                                  d="M247,90 317.534230,307.082039 132.873218,172.917961H361.126782L176.465770,307.082039z" />
+                                <use xlink:href="#s" y="420" />
+                                <use xlink:href="#s" y="840" />
+                                <use xlink:href="#s" y="1260" />
+                              </g>
+                              <use xlink:href="#s" y="1680" />
                             </g>
-                            <use xlink:href="#b" x="164" />
-                            <use xlink:href="#a" x="328" />
+                            <use xlink:href="#s4" x="247" y="210" />
                           </g>
-                          <use xlink:href="#a" x="410" />
+                          <use xlink:href="#s9" x="494" />
                         </g>
-                        <use xlink:href="#c" x="41" y="35" />
+                        <use xlink:href="#s18" x="988" />
+                        <use xlink:href="#s9" x="1976" />
+                        <use xlink:href="#s5" x="2470" />
                       </g>
-                      <use xlink:href="#d" y="70" />
-                    </g>
-                    <use xlink:href="#e" y="140" />
-                    <use xlink:href="#f" y="280" />
-                  </svg>
-                </span>
-              </button>
-              <div class="flex items-center gap-2 md:hidden">
-                <Button icon="pi pi-filter" @click="showFilterModal = true" />
+                    </svg>
+                  </span>
+                </button>
+              </div>
+
+
+              <div class="flex items-center gap-2 sm:hidden ">
+                <Button icon="pi pi-filter" label="Filters" @click="showFilterModal = true" />
               </div>
             </div>
 
@@ -318,11 +330,11 @@ const changeExchange = () => {
 }
 
 watch(exchangeActive, (newValue) => {
-  props.items.map(item => ({
-    ...item,
-    selling_price: newValue ? item.selling_price * exchangeRate.value : item.selling_price / exchangeRate.value,
-  }));
-  country.value = "USA"
+  props.items.forEach(item => {
+    item.selling_price = newValue ? Math.round(item.selling_price / exchangeRate.value.toFixed(2)) : Math.round(item.selling_price * exchangeRate.value.toFixed(2));
+  });
+
+  country.value = country.value === "USA" ? "CA" : "USA";
 });
 
 
