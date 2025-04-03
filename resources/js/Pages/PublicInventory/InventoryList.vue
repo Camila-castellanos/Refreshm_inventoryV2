@@ -200,6 +200,44 @@
                 </InputIcon>
                 <InputText v-model="searchQuery" placeholder="Search" class="w-full" />
               </IconField>
+              <button class=" px-6 py-4  border rounded-full border-gray-400 font-semibold shadow"
+                @click="changeExchange()">
+                <span v-if="country.toLowerCase() == 'ca'">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="32" height="16" viewBox="0 0 9600 4800">
+                    <title>Flag of Canada</title>
+                    <path fill="#f00" d="m0 0h2400l99 99h4602l99-99h2400v4800h-2400l-99-99h-4602l-99 99H0z" />
+                    <path fill="#fff"
+                      d="m2400 0h4800v4800h-4800zm2490 4430-45-863a95 95 0 0 1 111-98l859 151-116-320a65 65 0 0 1 20-73l941-762-212-99a65 65 0 0 1-34-79l186-572-542 115a65 65 0 0 1-73-38l-105-247-423 454a65 65 0 0 1-111-57l204-1052-327 189a65 65 0 0 1-91-27l-332-652-332 652a65 65 0 0 1-91 27l-327-189 204 1052a65 65 0 0 1-111 57l-423-454-105 247a65 65 0 0 1-73 38l-542-115 186 572a65 65 0 0 1-34 79l-212 99 941 762a65 65 0 0 1 20 73l-116 320 859-151a95 95 0 0 1 111 98l-45 863z" />
+                  </svg>
+                </span>
+                <span v-else>
+                  <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" fill="#FFF"
+                    width="32" height="16">
+                    <path d="M0 0h1235v650H0" />
+                    <path stroke="#BB133E" stroke-dasharray="50" stroke-width="2470" d="M0 0v651" />
+                    <path fill="#002664" d="M0 0h494v350H0" />
+                    <g id="e">
+                      <g id="d">
+                        <g id="f">
+                          <g id="c">
+                            <g id="b">
+                              <path id="a" d="m30 50.6 12-36 12 36-30.8-22H61" />
+                              <use xlink:href="#a" x="82" />
+                            </g>
+                            <use xlink:href="#b" x="164" />
+                            <use xlink:href="#a" x="328" />
+                          </g>
+                          <use xlink:href="#a" x="410" />
+                        </g>
+                        <use xlink:href="#c" x="41" y="35" />
+                      </g>
+                      <use xlink:href="#d" y="70" />
+                    </g>
+                    <use xlink:href="#e" y="140" />
+                    <use xlink:href="#f" y="280" />
+                  </svg>
+                </span>
+              </button>
               <div class="flex items-center gap-2 md:hidden">
                 <Button icon="pi pi-filter" @click="showFilterModal = true" />
               </div>
@@ -251,7 +289,7 @@
 <script setup>
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { IconField, InputIcon, Dialog, Checkbox, RadioButton } from "primevue";
 import Card from 'primevue/card';
 import InputText from 'primevue/inputtext';
@@ -264,16 +302,38 @@ import axios from 'axios';
 import Textarea from 'primevue/textarea';
 import { onMounted } from 'vue';
 
+const props = defineProps({
+  items: { type: Array }
+});
+
 const toast = useToast();
+
+const country = ref("CA")
+
+const exchangeRate = ref(1)
+const exchangeActive = ref(false)
+
+const changeExchange = () => {
+  exchangeActive.value = !exchangeActive.value
+}
+
+watch(exchangeActive, (newValue) => {
+  props.items.map(item => ({
+    ...item,
+    selling_price: newValue ? item.selling_price * exchangeRate.value : item.selling_price / exchangeRate.value,
+  }));
+  country.value = "USA"
+});
+
 
 const name = ref('');
 const email = ref('');
 const notes = ref('');
 const store = ref('');
 
-const props = defineProps({
-  items: { type: Array }
-});
+
+
+
 
 const searchQuery = ref('');
 const showSelectedItems = ref(false);
@@ -373,7 +433,20 @@ const onSubmit = async () => {
   }
 };
 
-onMounted(() => {
+onMounted(async () => {
+
+  try {
+    const response = await fetch('https://v6.exchangerate-api.com/v6/90fafe5c1eca42cafc565fb7/latest/USD/');
+    const data = await response.json();
+    const conversionRates = data.conversion_rates;
+    exchangeRate.value = parseFloat(conversionRates.CAD);
+    exchangeRate.value -= (exchangeRate.value * 0.03);
+    console.log(exchangeRate.value)
+  } catch (error) {
+    console.error('Error fetching exchange rates:', error);
+
+  }
+
   // Ensure that the 'selected' property is not initially set on the props.items
   if (props.items && props.items.length > 0) {
     props.items.forEach(item => {
