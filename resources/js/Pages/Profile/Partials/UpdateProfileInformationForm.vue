@@ -8,7 +8,16 @@
     </div>
 
     <Card class="shadow-none w-2/3">
+
       <template #content>
+        <div class="flex gap-4 items-center mb-4">
+          <h2>Public store:</h2>
+          <Button icon="pi pi-external-link" severity="secondary" label="Go To Store" @click="goToStore" />
+          <Button icon="pi pi-copy" severity="secondary" label="Copy Link" @click="copyToClipboard" />
+        </div>
+
+        <Toast ref="toast" />
+
         <form @submit.prevent="updateProfileInformation" class="space-y-6">
           <!-- Profile Photo -->
           <div v-if="$page.props.jetstream.managesProfilePhotos" class="mb-4">
@@ -16,17 +25,11 @@
               <label for="photo" class="block text-sm font-medium mb-1">Photo</label>
 
               <div class="flex gap-2">
-                <Button type="button" outlined size="small" icon="pi pi-image" label="Select New Photo" @click.prevent="selectNewPhoto" />
+                <Button type="button" outlined size="small" icon="pi pi-image" label="Select New Photo"
+                  @click.prevent="selectNewPhoto" />
 
-                <Button
-                  v-if="user.profile_photo_path"
-                  type="button"
-                  outlined
-                  severity="danger"
-                  size="small"
-                  icon="pi pi-trash"
-                  label="Remove Photo"
-                  @click.prevent="deletePhoto" />
+                <Button v-if="user.profile_photo_path" type="button" outlined severity="danger" size="small"
+                  icon="pi pi-trash" label="Remove Photo" @click.prevent="deletePhoto" />
               </div>
             </div>
 
@@ -40,8 +43,7 @@
 
             <!-- New Profile Photo Preview -->
             <div v-show="photoPreview" class="mt-2">
-              <span
-                class="block rounded-full size-20 bg-cover bg-no-repeat bg-center"
+              <span class="block rounded-full size-20 bg-cover bg-no-repeat bg-center"
                 :style="'background-image: url(\'' + photoPreview + '\');'" />
             </div>
 
@@ -64,7 +66,8 @@
             <div v-if="$page.props.jetstream.hasEmailVerification && user.email_verified_at === null" class="mt-2">
               <p class="text-sm">
                 Your email address is unverified.
-                <a href="#" class="underline text-sm text-primary hover:text-primary-dark" @click.prevent="sendEmailVerification">
+                <a href="#" class="underline text-sm text-primary hover:text-primary-dark"
+                  @click.prevent="sendEmailVerification">
                   Click here to re-send the verification email.
                 </a>
               </p>
@@ -77,7 +80,8 @@
 
           <div class="flex justify-end gap-2">
             <span v-if="form.recentlySuccessful" class="text-green-500 self-center mr-2">Saved successfully</span>
-            <Button type="submit" :loading="form.processing" :disabled="form.processing" label="Save" icon="pi pi-save" />
+            <Button type="submit" :loading="form.processing" :disabled="form.processing" label="Save"
+              icon="pi pi-save" />
           </div>
         </form>
       </template>
@@ -86,14 +90,20 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { ref, onMounted } from "vue";
 import { Link, router, useForm } from "@inertiajs/vue3";
 import { useToast, Button, Card, InputText } from "primevue";
+import createStoreUrl from "@/Utils/createPublicLink"
+
+
+const storeURL = ref("")
 
 const props = defineProps({
   user: Object,
 });
 const toast = useToast();
+
+
 
 const form = useForm({
   _method: "PUT",
@@ -163,6 +173,29 @@ const clearPhotoFileInput = () => {
     photoInput.value.value = null;
   }
 };
+
+const goToStore = () => {
+  window.open(storeURL.value, '_blank');
+};
+
+const copyToClipboard = () => {
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(storeURL.value)
+      .then(() => {
+        toast.add({ severity: 'success', summary: 'Link Copied', detail: 'The store link has been copied to your clipboard.', life: 3000 });
+      })
+      .catch(err => {
+        toast.add({ severity: 'error', summary: 'Copy Failed', detail: 'Failed to copy the link to the clipboard.', life: 3000 });
+        console.error('Could not copy text: ', err);
+      });
+  } else {
+    toast.add({ severity: 'warn', summary: 'Clipboard Not Supported', detail: 'Your browser does not support clipboard access.', life: 3000 });
+  }
+};
+
+onMounted(() => {
+  storeURL.value = createStoreUrl(props.user.name);
+});
 </script>
 
 <style scoped>
