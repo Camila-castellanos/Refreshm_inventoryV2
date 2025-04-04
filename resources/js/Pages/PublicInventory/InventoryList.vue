@@ -1,7 +1,7 @@
 <template>
   <Toast></Toast>
   <div class="max-w-7xl mx-auto py-4">
-    <div class="w-full flex justify-end pb-4">
+    <div class="w-full flex justify-end gap-4 pb-4">
       <Dialog v-model:visible="showSelectedItems" header="Selected items" :modal="true" class="mx-4">
         <div class="max-w-7xl mx-auto ">
           <div class="flex flex-col gap-4">
@@ -88,6 +88,10 @@
         </div>
 
       </Dialog>
+
+
+
+      <Button @click="handleDownload" label="Download spreadsheet" icon="pi pi-download" />
 
       <Button @click="getSelectedItems">REQUEST DEVICES</Button>
 
@@ -313,6 +317,7 @@ import { router } from "@inertiajs/vue3";
 import axios from 'axios';
 import Textarea from 'primevue/textarea';
 import { onMounted } from 'vue';
+import downloadSpreadsheet from '@/Utils/downloadSpreadsheet';
 
 const props = defineProps({
   items: { type: Array }
@@ -445,6 +450,15 @@ const onSubmit = async () => {
   }
 };
 
+const handleDownload = () => {
+  const keysToDownload = ["manufacturer", "model", "colour", "battery", "grade", "issues", "emei", "selling_price"]
+  try {
+    downloadSpreadsheet(selectedItems.value, keysToDownload, "request.xlsx")
+  } catch (error) {
+    toast.add({ severity: 'warn', summary: 'Alert', detail: error.message, life: 5000 });
+  }
+}
+
 onMounted(async () => {
 
   try {
@@ -479,6 +493,7 @@ onMounted(async () => {
   border-radius: 4px;
   font-size: 0.875rem;
 }
+
 
 .cursor {
   cursor: pointer;
