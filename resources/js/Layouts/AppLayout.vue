@@ -7,10 +7,10 @@
 
     <Menubar :model="navItems">
       <template #start>
-        <svg width="35" height="40" viewBox="0 0 35 40" fill="none" xmlns="http://www.w3.org/2000/svg" class="h-8">
-          <path d="..." fill="var(--p-primary-color)" />
-          <path d="..." fill="var(--p-text-color)" />
-        </svg>
+        <div class="h-12">
+          <img src="/images/swiftstock_logo.jpeg" draggable="false"
+            class="object-contain max-h-full max-w-full pointer-events-none" alt="" />
+        </div>
       </template>
       <template #button>
         <Button icon="pi pi-bars" aria-label="Save" @click="toggleDrawer" class="hide-breakpoint" />
@@ -27,10 +27,11 @@
             :class="['pi pi-angle-down ml-auto', { 'pi-angle-down': root, 'pi-angle-right': !root }]"></i>
         </a>
       </template>
+
       <template #end>
         <div class="flex items-center gap-2">
-          <Button aria-label="Toggle light mode" icon="pi pi-sun" @click="toggleDarkMode()" />
-          <Button aria-label="Logout" label="Logout" icon="pi pi-sign-out" @click="logout()" />
+          <!-- <Button aria-label="Toggle light mode" icon="pi pi-sun" @click="toggleDarkMode()" /> -->
+
           <Menu ref="menu" :model="dropdownNavItems" popup />
           <Avatar :label="userInitial" class="mr-2 cursor-pointer" size="large"
             style="background-color: #ece9fc; color: #2a1261" @click="openMenu" />
@@ -133,6 +134,7 @@ const dropdownNavItems = ref([
   { label: "Store", icon: "pi pi-home", url: user?.store_id ? route("stores.edit", user.store_id) : "#", roles: ["ADMIN"] },
   { label: "Locations", icon: "pi pi-map", url: route("locations.list"), roles: ["ADMIN"] },
   { label: "Users", icon: "pi pi-users", url: route("users.index"), roles: ["ADMIN"] },
+  { label: "Logout", icon: "pi pi-sign-out", command: logout, roles: ["OWNER", "USER", "ADMIN"] }
 ]);
 
 onMounted(() => {

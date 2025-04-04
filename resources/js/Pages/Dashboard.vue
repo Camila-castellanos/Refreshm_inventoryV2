@@ -4,69 +4,40 @@
       <h1 class="text-2xl font-bold">Welcome, {{ user.name }}</h1>
 
       <!-- Filtro de fecha y opciones -->
-      <div class="flex justify-between items-center mt-4">
+      <div class="flex justify-between flex-wrap gap-4 items-center mt-4">
         <Dropdown v-model="selectedFilter" :options="filters" class="w-40" />
         <div class="flex gap-2 w-full max-w-md">
           <FloatLabel variant="over" class="w-full">
-            <Calendar
-              v-model="getSafeCalendarValue"
-              :selectionMode="selectedFilter === 'Current' ? 'range' : 'single'"
-              showIcon
-              dateFormat="mm/dd/yy"
-              class="w-full"
-              id="date-filter"
-              ref="calendarRef"
-              @update:modelValue="handleCalendarChange"
-              :showTime="false" />
+            <Calendar v-model="getSafeCalendarValue" :selectionMode="selectedFilter === 'Current' ? 'range' : 'single'"
+              showIcon dateFormat="mm/dd/yy" class="w-full" id="date-filter" ref="calendarRef"
+              @update:modelValue="handleCalendarChange" :showTime="false" />
             <label for="date-filter">{{ selectedFilter === "Current" ? "Start date - End date" : "Start date" }}</label>
           </FloatLabel>
-          <Dropdown
-            v-model="quickFilter"
-            :options="quickFilterOptions"
-            optionLabel="label"
-            placeholder="Quick Filter"
-            class="w-48"
-            @change="handleQuickFilter"
-            optionValue="value" />
+          <Dropdown v-model="quickFilter" :options="quickFilterOptions" optionLabel="label" placeholder="Quick Filter"
+            class="w-48" @change="handleQuickFilter" optionValue="value" />
         </div>
       </div>
 
       <!-- Secciones -->
-      <div class="grid grid-cols-4 gap-4 mt-6">
-        <StatCard
-          v-for="stat in inventoryStats"
-          :key="stat.label"
-          :label="stat.label"
-          :value="stat.value"
-          :icon="getStatConfig(stat.label).icon"
-          :color="getStatConfig(stat.label).color"
+      <div class="grid grid-cols-2 grow  md:grid-cols-3 lg:grid-cols-4 gap-4 mt-6">
+        <StatCard v-for="stat in inventoryStats" :key="stat.label" :label="stat.label" :value="stat.value"
+          :icon="getStatConfig(stat.label).icon" :color="getStatConfig(stat.label).color"
           :currency="stat.currency ? '$' : ''" />
       </div>
 
       <Divider />
 
-      <div class="grid grid-cols-4 gap-4 mt-6">
-        <StatCard
-          v-for="stat in salesStats"
-          :key="stat.label"
-          :label="stat.label"
-          :value="stat.value"
-          :icon="getStatConfig(stat.label).icon"
-          :color="getStatConfig(stat.label).color"
+      <div class="grid grid-cols-2 grow  md:grid-cols-3 lg:grid-cols-4 gap-4 mt-6">
+        <StatCard v-for="stat in salesStats" :key="stat.label" :label="stat.label" :value="stat.value"
+          :icon="getStatConfig(stat.label).icon" :color="getStatConfig(stat.label).color"
           :currency="stat.currency ? '$' : ''" />
       </div>
 
       <Divider />
 
-      <div class="grid grid-cols-4 gap-4 mt-6">
-        <StatCard
-          v-for="stat in accountingStats"
-          :key="stat.label"
-          :label="stat.label"
-          :value="stat.value"
-          :currency="'$'"
-          :icon="getStatConfig(stat.label).icon"
-          :color="getStatConfig(stat.label).color"
+      <div class="grid grid-cols-2 grow  md:grid-cols-3 lg:grid-cols-4 gap-4 mt-6">
+        <StatCard v-for="stat in accountingStats" :key="stat.label" :label="stat.label" :value="stat.value"
+          :currency="'$'" :icon="getStatConfig(stat.label).icon" :color="getStatConfig(stat.label).color"
           @update="handleCashOnHandUpdate" />
       </div>
     </div>

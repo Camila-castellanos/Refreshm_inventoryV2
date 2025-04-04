@@ -454,7 +454,7 @@ const onSubmit = async () => {
 };
 
 const handleDownload = () => {
-  const keysToDownload = ["manufacturer", "model", "colour", "battery", "grade", "issues", "emei", "selling_price"]
+  const keysToDownload = ["manufacturer", "model", "colour", "battery", "grade", "issues", "selling_price"]
   try {
     downloadSpreadsheet(selectedItems.value, keysToDownload, "request.xlsx")
   } catch (error) {
