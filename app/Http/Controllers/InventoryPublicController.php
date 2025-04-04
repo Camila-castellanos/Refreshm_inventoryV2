@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Item;
 use Inertia\Inertia;
-use Illuminate\Support\Facades\Auth;
 use App\Models\User;
 
 class InventoryPublicController extends Controller
@@ -20,9 +19,9 @@ class InventoryPublicController extends Controller
 
         $user = User::whereRaw('LOWER(TRIM(name)) = ?', [strtolower(trim($potentialUsername))])->first();
 
-        if ($user === null) {
-           abort(404);
-        }
+        // if ($user === null) {
+        //    abort(404);
+        // }
 
         $items = Item::where("user_id", $user->id)
         ->whereNull("sold")
