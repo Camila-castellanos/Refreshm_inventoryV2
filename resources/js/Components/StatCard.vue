@@ -45,12 +45,14 @@ function cancel() {
 
 <template>
   <section>
-    <article class="card mb-0 p-4 rounded-lg shadow-sm bg-white dark:bg-surface-800 transition-all hover:shadow-md">
+    <article
+      class="card mb-0 h-full p-4 rounded-lg shadow-sm bg-white dark:bg-surface-800 transition-all hover:shadow-md">
       <header class="flex justify-between items-center mb-4">
         <div>
           <h3 class="block text-muted-color font-medium mb-2 text-sm">{{ label }}</h3>
           <div v-if="editable && isEditing">
-            <InputNumber v-model="editValue" mode="currency" currency="USD" :min="0" class="!w-full mb-2" size="small" />
+            <InputNumber v-model="editValue" mode="currency" currency="USD" :min="0" class="!w-full mb-2"
+              size="small" />
             <div class="flex gap-1">
               <Button icon="pi pi-check" severity="success" size="small" @click="save" />
               <Button icon="pi pi-times" severity="secondary" size="small" @click="cancel" />
@@ -58,10 +60,11 @@ function cancel() {
           </div>
           <p v-else class="text-surface-900 dark:text-surface-0 font-semibold text-xl">
             {{ currency }}{{ value }}
-            <Button v-if="editable" icon="pi pi-pencil" size="small" class="ml-2" @click="isEditing = true" variant="text" />
+            <Button v-if="editable" icon="pi pi-pencil" size="small" class="ml-2" @click="isEditing = true"
+              variant="text" />
           </p>
         </div>
-        <div class="flex items-center justify-center rounded-xl" :class="[bgClass]" style="width: 2.5rem; height: 2.5rem">
+        <div class="flex items-end justify-center rounded-xl" :class="[bgClass]" style="width: 2.5rem; height: 2.5rem">
           <i :class="[iconClass]"></i>
         </div>
       </header>
