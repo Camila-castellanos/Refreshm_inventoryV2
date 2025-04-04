@@ -16,7 +16,6 @@
           <Button icon="pi pi-copy" severity="secondary" label="Copy Link" @click="copyToClipboard" />
         </div>
 
-        <Toast ref="toast" />
 
         <form @submit.prevent="updateProfileInformation" class="space-y-6">
           <!-- Profile Photo -->
