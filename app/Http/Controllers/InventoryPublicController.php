@@ -12,16 +12,16 @@ class InventoryPublicController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function __invoke($usernameSlug): \Inertia\Response
+    public function index($usernameSlug): \Inertia\Response
     {
 
         $potentialUsername = str_replace('-', ' ', $usernameSlug);
 
         $user = User::whereRaw('LOWER(TRIM(name)) = ?', [strtolower(trim($potentialUsername))])->first();
 
-        // if ($user === null) {
-        //    abort(404);
-        // }
+        if ($user === null) {
+           abort(404);
+        }
 
         $items = Item::where("user_id", $user->id)
         ->whereNull("sold")

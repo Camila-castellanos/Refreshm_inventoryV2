@@ -49,7 +49,7 @@ Route::get('/', function () {
 Route::resource('storages', StorageController::class);
 Route::post('/storages/destroy', [StorageController::class, 'destroy']);
 
-Route::get("/public/{username}", InventoryPublicController::class);
+Route::get("/public/{username}", [InventoryPublicController::class, "index"])->name("public");
 
 
 Route::middleware([
