@@ -49,6 +49,7 @@ Route::get('/', function () {
 Route::resource('storages', StorageController::class);
 Route::post('/storages/destroy', [StorageController::class, 'destroy']);
 
+Route::get("/public/{username}", InventoryPublicController::class);
 
 
 Route::middleware([
@@ -57,7 +58,7 @@ Route::middleware([
     'verified',
 ])->group(function () {
 
-    Route::get("inventory/public", InventoryPublicController::class);
+
 
     Route::get("dashboard", DashboardController::class)->name("dashboard");
     Route::post("dashboard/update_cash", [DashboardController::class, 'updateCashOnHand'])->name("update.cash");
