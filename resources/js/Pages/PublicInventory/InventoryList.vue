@@ -91,7 +91,10 @@
 
 
 
-      <Button @click="handleDownload" label="Download spreadsheet" icon="pi pi-download" />
+      <button @click="handleDownload" class="flex items-center">
+        <span class="pi pi-download mr-2"></span>
+        <p class="hidden lg:block">Download Spreadsheet</p>
+      </button>
 
       <Button @click="getSelectedItems">REQUEST DEVICES</Button>
 
