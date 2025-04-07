@@ -2,25 +2,15 @@
   <Toast></Toast>
   <section class="flex flex-col w-full px-4 relative">
     <section>
-      <Button :loading="isLoading" :disabled="isLoading" v-if="!props.initialData?.length" @click="createDevices">Save devices</Button>
+      <Button :loading="isLoading" :disabled="isLoading" v-if="!props.initialData?.length" @click="createDevices">Save
+        devices</Button>
       <Button :loading="isLoading" :disabled="isLoading" v-else @click="editDevices">Update devices</Button>
     </section>
 
     <div class="spreadsheet-wrapper mt-8">
-      <RevoGrid
-        ref="revogrid"
-        :columns="columns"
-        :source="tableData"
-        :columnTypes="columnTypes"
-        :canFocus="!isLoading"
-        :range="true"
-        class="h-[80vh]"
-        :resize="true"
-        theme="default"
-        @beforeedit="handleBeforeEdit"
-        @beforeRowAdd="onInsertRow"
-        @universal-cell-contextmenu="showContextMenu"
-        @beforeRowDelete="onDeleteRow" />
+      <RevoGrid ref="revogrid" :columns="columns" :source="tableData" :columnTypes="columnTypes" :canFocus="!isLoading"
+        :range="true" class="h-[80vh]" :resize="true" theme="default" @beforeedit="handleBeforeEdit"
+        @beforeRowAdd="onInsertRow" @universal-cell-contextmenu="showContextMenu" @beforeRowDelete="onDeleteRow" />
 
       <ContextMenu ref="menuRef" :model="menuItems" />
     </div>
@@ -77,7 +67,7 @@ const columns = ref<ColumnRegular[]>([
     size: 50,
     readonly: true,
     cellTemplate: VGridVueTemplate(UniversalCell),
-     pin: "colPinStart",
+    pin: "colPinStart",
   },
   { prop: "date", name: "Date", columnType: "date", size: 200, cellTemplate: VGridVueTemplate(UniversalCell) },
   {
@@ -130,14 +120,14 @@ onMounted(async () => {
   tableData.value = props.initialData?.length
     ? props.initialData.map((item) => {
       const storage = storages.data.find((s: Storage) => s.id === item.storage_id);
-        console.log(item)
-        return {
-          ...item,
-          location: `${storage?.name} - ${item.position}/${storage?.limit}`,
-          vendor: vendors.data.find((v: Vendor) => v.id === item.vendor_id)?.vendor || "",
-          date: format(item.date, "yyyy-MM-dd"),
-        };
-      })
+      console.log(item)
+      return {
+        ...item,
+        location: `${storage?.name} - ${item.position}/${storage?.limit}`,
+        vendor: vendors.data.find((v: Vendor) => v.id === item.vendor_id)?.vendor || "",
+        date: format(item.date, "yyyy-MM-dd"),
+      };
+    })
     : [{}] as ItemWithLocation[];
 
   await nextTick();
@@ -158,12 +148,12 @@ function insertRow(position: "above" | "below" | "bulk") {
     tableData.value = [...tableData.value.slice(0, rowIndex), {} as any, ...tableData.value.slice(rowIndex)];
     renderPositions(1);
   }
-  
+
   if (position === "below") {
     tableData.value = [...tableData.value.slice(0, rowIndex + 1), {} as any, ...tableData.value.slice(rowIndex + 1)];
     renderPositions(1);
   }
-  
+
   if (position === "bulk") {
     const bulk: any[] = Array.from({ length: 50 }, () => ({}));
     tableData.value = [...tableData.value.slice(0, rowIndex + 1), ...bulk, ...tableData.value.slice(rowIndex + 1)];
@@ -192,21 +182,47 @@ function onDeleteRow(e: CustomEvent<{ count: number }>): void {
 }
 
 function renderPositions(numOfRows: number): void {
-  const assignedPositions: Record<string, number[]> = {};
-  const storage = storagesList.value.find((storage) => {
-    const dbCount = storage.items.length;
-    const inTable = tableData.value.filter((row) => row.location?.startsWith(storage.name)).length;
-    return dbCount + inTable + numOfRows <= storage.limit;
-  });
-  if (!storage) return;
-  tableData.value.forEach((row) => {
-    if (!assignedPositions[storage.name]) assignedPositions[storage.name] = [];
-    const dbPositions = storage.items.map((ItemWithLocation: ItemWithLocation) => ItemWithLocation.position);
-    let pos = 1;
-    while ([...assignedPositions[storage.name], ...dbPositions].includes(pos)) pos++;
-    assignedPositions[storage.name].push(pos);
-    row.location = `${storage.name} - ${pos} / ${storage.limit}`;
-  });
+  const newRowsToAssign = tableData.value.filter(row => !row.location);
+  let rowsAssigned = 0;
+
+  for (const row of newRowsToAssign) {
+    if (row.location) continue; // Skip if already assigned in a previous iteration
+
+    for (const storage of storagesList.value) {
+      const dbPositions = storage.items.map((item: Item) => item.position);
+      const inTablePositions: number[] = [];
+      tableData.value.forEach((r) => {
+        if (r.location?.startsWith(storage.name) && r !== row) { // Exclude the current row being assigned
+          const parts = r.location.split(" - ")[1]?.split(" / ");
+          if (parts && parts[0]) {
+            inTablePositions.push(parseInt(parts[0]));
+          }
+        }
+      });
+
+      const occupiedPositions = [...dbPositions, ...inTablePositions];
+      const availablePositions: number[] = [];
+      for (let i = 1; i <= storage.limit; i++) {
+        if (!occupiedPositions.includes(i)) {
+          availablePositions.push(i);
+        }
+      }
+
+      if (availablePositions.length > 0) {
+        row.location = `${storage.name} - ${availablePositions[0]} / ${storage.limit}`;
+        rowsAssigned++;
+        break; // Move to the next new row
+      }
+    }
+
+    if (!row.location) {
+      console.warn("Could not find storage for a new device:", row);
+    }
+  }
+
+  if (rowsAssigned < numOfRows) {
+    toast.add({ severity: "error", summary: "Error", detail: "Not enough combined storage capacity for all new devices.", life: 5000 });
+  }
 }
 
 function handleBeforeEdit(e: RevoGridCustomEvent<BeforeSaveDataDetails>): void {
@@ -235,7 +251,7 @@ function editDevices(): void {
     .then(() => {
       isLoading.value = false;
       toast.add({ severity: "success", summary: "Success", detail: "Devices updated successfully", life: 3000 });
-      router.visit("/inventory/items", {only: ["items", "tabs"]});
+      router.visit("/inventory/items", { only: ["items", "tabs"] });
     })
     .catch(() => {
       toast.add({ severity: "error", summary: "Error", detail: "Something went wrong!", life: 3000 });
@@ -256,7 +272,7 @@ async function submitSpreadsheet(body: any[]): Promise<void> {
     await axios.post("/inventory/items", { items: body }, { responseType: "blob" });
     isLoading.value = false;
     toast.add({ severity: "success", summary: "Success", detail: "Devices created successfully", life: 3000 });
-    router.visit("/inventory/items", {only: ["items", "tabs"]});
+    router.visit("/inventory/items", { only: ["items", "tabs"] });
   } catch (err) {
     toast.add({ severity: "error", summary: "Error", detail: "Something went wrong", life: 3000 });
   }
