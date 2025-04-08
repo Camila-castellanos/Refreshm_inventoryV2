@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Shop;
+
 use App\Http\Requests\ItemForm;
 use App\Http\Requests\RequestItemsForm;
 use App\Http\Requests\ItemExcelForm;
@@ -314,9 +316,18 @@ class ItemController extends Controller
     {
         $items = $request->validated();
 
+        $user = $request->user(); 
+        $company = $user->company;
+        $shops = $company?->shops;
+
+        $firstShop = $shops[0];
+
+        $shopId = $firstShop->id;
+
         $created = [];
         foreach ($items["items"] as $item) {
             $item['user_id'] = Auth::user()->id;
+            $item['shop_id'] = $shopId;
             $created[] = Item::create($item);
         }
         return response()->json($created, 201);
