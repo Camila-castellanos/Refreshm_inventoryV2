@@ -9,7 +9,7 @@ const currentUrl = window.location.origin;
 
 function createStoreUrl(companyName, shopName) {
     const storeSlug = slugify(companyName) + "/" + slugify(shopName);
-    return `${currentUrl}/public/${storeSlug}`;
+    return `${currentUrl}/publicstore/${storeSlug}`;
   }
 
 export default createStoreUrl
