@@ -1,23 +1,11 @@
 <template>
-  <DataTable
-    v-model:filters="filters"
-    :value="items"
-    v-model:selection="selectedItems"
-    dataKey="id"
-    stripedRows
-    ref="dt"
-    paginator
-    resizableColumns
-    column-resize-mode="fit"
-    :rows="20"
-    :rowsPerPageOptions="[5, 10, 20, 50]"
+  <DataTable v-model:filters="filters" :value="items" v-model:selection="selectedItems" dataKey="id" stripedRows
+    ref="dt" paginator resizableColumns column-resize-mode="fit" :rows="20" :rowsPerPageOptions="[5, 10, 20, 50]"
     :globalFilterFields="headers.filter((header) => header.name !== 'actions').map((header) => header.name)"
-    :class="inventory ? 'text-xs' : ''"
-    :selection-mode="selectionMode">
+    :class="inventory ? 'text-xs' : ''" :selection-mode="selectionMode">
     <template #header>
       <div class="flex flex-no-wrap items-center justify-between gap-2">
         <div :class="title !== '' ? 'flex justify-between items-center gap-12' : 'flex justify-start items-center'">
-          <span class="text-xl font-bold" v-show="title !== ''">{{ title }}</span>
           <IconField>
             <InputIcon>
               <i class="pi pi-search" />
@@ -30,48 +18,37 @@
 
           <Button type="button" label="Actions" @click="toggle" class="min-w-48" />
           <Popover ref="op">
-              <div class="flex gap-4">
-                  <div class="max-w-96 grid grid-cols-2 gap-6">
-                    <Button
-                      v-for="action in computedActions"
-                      :key="action.label"
-                      :severity="action.severity ? action.severity : 'primary'"
-                      :class="[action.extraClasses, `rounded-md`].join(' ')"
-                      :icon="action.icon ? action.icon : ''"
-                      :label="action?.label"
-                      @click="action.action"
-                      :disabled="action.disable" />
+            <div class="flex gap-4">
+              <div class="max-w-96 grid grid-cols-2 gap-6">
+                <Button v-for="action in computedActions" :key="action.label"
+                  :severity="action.severity ? action.severity : 'primary'"
+                  :class="[action.extraClasses, `rounded-md`].join(' ')" :icon="action.icon ? action.icon : ''"
+                  :label="action?.label" @click="action.action" :disabled="action.disable" />
 
-                    <Button icon="pi pi-file-export" label="Export CSV" severity="primary" @click="exportCSV" class="" />
-                  </div>
+                <Button icon="pi pi-file-export" label="Export CSV" severity="primary" @click="exportCSV" class="" />
               </div>
+            </div>
           </Popover>
-  
+
         </div>
       </div>
     </template>
     <template v-for="(header, index) in headers" :key="header.name">
-      <Column
-        v-if="index === 0"
-        selectionMode="multiple"
-        field="select"
-        headerStyle="width: 3rem; text-align: center;"
+      <Column v-if="index === 0" selectionMode="multiple" field="select" headerStyle="width: 3rem; text-align: center;"
         bodyStyle="width: 3rem; text-align: center;">
       </Column>
-      <Column
-        :field="header.name"
-        sortable
-        :header="header.label"
-        v-if="header.name !== 'actions'"
+      <Column :field="header.name" sortable :header="header.label" v-if="header.name !== 'actions'"
         header-style="width: fit !important">
         <template #body="slotProps" v-if="header.type === 'number'">
-          $ {{ slotProps.data[header.name] && slotProps.data[header.name] > 0 ? Number(slotProps.data[header.name]).toFixed(2) : 0 }}
+          $ {{ slotProps.data[header.name] && slotProps.data[header.name] > 0 ?
+            Number(slotProps.data[header.name]).toFixed(2) : 0 }}
         </template>
       </Column>
     </template>
     <Column header="Actions" name="actions" v-if="headers.filter((header) => header.name === 'actions').length > 0">
       <template #body="slotProps">
-        <Button icon="pi pi-ellipsis-v" class="p-button-text p-0 w-8 h-8" @click="toggleMenu($event, slotProps.index)" />
+        <Button icon="pi pi-ellipsis-v" class="p-button-text p-0 w-8 h-8"
+          @click="toggleMenu($event, slotProps.index)" />
 
         <!-- Menú contextual -->
         <Menu :ref="(el) => (menuRefs[slotProps.index] = el)" :model="getMenuItems(slotProps.data)" popup />
@@ -95,7 +72,7 @@ import Popover from 'primevue/popover';
 const op = ref();
 
 const toggle = (event: any) => {
-    op.value.toggle(event);
+  op.value.toggle(event);
 }
 //end Popover
 
