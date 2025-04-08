@@ -11,7 +11,7 @@
             <Calendar v-model="getSafeCalendarValue" :selectionMode="selectedFilter === 'Current' ? 'range' : 'single'"
               showIcon dateFormat="mm/dd/yy" class="w-full" id="date-filter" ref="calendarRef"
               @update:modelValue="handleCalendarChange" :showTime="false" />
-            <label for="date-filter">{{ selectedFilter === "Current" ? "Start date - End date" : "Start date" }}</label>
+            <label for="date-filter">{{ selectedFilter === "Current" ? "Start - End" : "Start date" }}</label>
           </FloatLabel>
           <Dropdown v-model="quickFilter" :options="quickFilterOptions" optionLabel="label" placeholder="Quick Filter"
             class="w-40" @change="handleQuickFilter" optionValue="value" />
