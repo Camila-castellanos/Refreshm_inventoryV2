@@ -6,15 +6,15 @@
       <!-- Filtro de fecha y opciones -->
       <div class="flex justify-between flex-wrap gap-4 items-center mt-4">
         <Dropdown v-model="selectedFilter" :options="filters" class="w-40" />
-        <div class="flex gap-2 w-full max-w-md">
-          <FloatLabel variant="over" class="w-full">
+        <div class="flex gap-2 w-full max-w-md flex-wrap">
+          <FloatLabel variant="over" class="w-58">
             <Calendar v-model="getSafeCalendarValue" :selectionMode="selectedFilter === 'Current' ? 'range' : 'single'"
               showIcon dateFormat="mm/dd/yy" class="w-full" id="date-filter" ref="calendarRef"
               @update:modelValue="handleCalendarChange" :showTime="false" />
             <label for="date-filter">{{ selectedFilter === "Current" ? "Start date - End date" : "Start date" }}</label>
           </FloatLabel>
           <Dropdown v-model="quickFilter" :options="quickFilterOptions" optionLabel="label" placeholder="Quick Filter"
-            class="w-48" @change="handleQuickFilter" optionValue="value" />
+            class="w-40" @change="handleQuickFilter" optionValue="value" />
         </div>
       </div>
 
@@ -251,7 +251,7 @@ function updateDashboardStats(data: Dashboard) {
   accountingStats.value = [
     { label: "Accounts Receivable ($)", value: data.accountsReceivableThisMonth, currency: true },
     { label: "Accounts Payable ($)", value: data.accountsPayableThisMonth, currency: true },
-    { label: "Cash on Hand ($)", value: data?.cashOnHand ? parseFloat(props.cashOnHand) : 0, currency: true },
+    { label: "Cash on Hand ($)", value: data?.cashOnHand ? parseFloat(props.cashOnHand).toFixed(2) : 0, currency: true },
     { label: "Sales Tax Paid ($)", value: data.salesTaxPaid, currency: true },
     { label: "Sales Tax Collected ($)", value: data.salesTaxCollected, currency: true },
     { label: "Taxed Sales ($)", value: data.taxedSales, currency: true },
