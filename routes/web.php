@@ -26,7 +26,7 @@ use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 
-Route::get("/public/{companyName}/{shopName}", [InventoryPublicController::class, "index"])->name('public.inventory.shop.index');
+Route::get('/public/{companyName}/{shopName}', [InventoryPublicController::class, "index"])->name('public.inventory.shop.index');
 Route::get('/public/{companyName}', function () {abort(404);});
 Route::get('/public', function () {abort(404);});
 
