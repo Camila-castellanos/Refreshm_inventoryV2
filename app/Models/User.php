@@ -9,6 +9,7 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Laravel\Jetstream\HasProfilePhoto;
 use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class User extends Authenticatable
 {
@@ -33,6 +34,7 @@ class User extends Authenticatable
         'role',
         'headers',
         'sold_headers',
+        'company_id',
     ];
 
     /**
@@ -72,6 +74,29 @@ class User extends Authenticatable
     public function store()
     {
         return $this->belongsTo(Store::class);
+    }
+
+        // ---- NEW RELATIONSHIPS ----
+
+    /**
+     * Define the relationship: A User BELONGS TO one Company.
+     * Eloquent assumes the foreign key is 'company_id' on this User model's table.
+     */
+    public function company(): BelongsTo
+    {
+        return $this->belongsTo(Company::class, 'company_id');
+    }
+
+      /**
+     * Define the relationship: A User might own one Company.
+     * This looks for the 'owner_id' column on the 'companies' table.
+     * Use HasOne if a user can only own one company.
+     */
+    public function ownedCompany(): HasOne
+    {
+        return $this->hasOne(Company::class, 'owner_id');
+        // If a user could own multiple companies, you would use:
+        // return $this->hasMany(Company::class, 'owner_id');
     }
 
     /**

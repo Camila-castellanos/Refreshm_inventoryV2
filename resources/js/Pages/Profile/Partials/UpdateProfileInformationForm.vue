@@ -10,10 +10,10 @@
     <Card class="shadow-none w-2/3">
 
       <template #content>
-        <div class="flex gap-4 items-center mb-4">
-          <h2>Public store:</h2>
-          <Button icon="pi pi-external-link" severity="secondary" label="Go To Store" @click="goToStore" />
-          <Button icon="pi pi-copy" severity="secondary" label="Copy Link" @click="copyToClipboard" />
+        <div v-for="(store) in storeURLs" class="flex gap-4 items-center mb-4">
+          <h2>Public store: {{ store.name }}</h2>
+          <Button icon="pi pi-external-link" severity="secondary" label="Go To Store" @click="goToStore(store.url)" />
+          <Button icon="pi pi-copy" severity="secondary" label="Copy Link" @click="copyToClipboard(store.url)" />
         </div>
 
 
@@ -93,9 +93,10 @@ import { ref, onMounted } from "vue";
 import { Link, router, useForm } from "@inertiajs/vue3";
 import { useToast, Button, Card, InputText } from "primevue";
 import createStoreUrl from "@/Utils/createPublicLink"
+import { stringifyQuery } from "vue-router";
 
 
-const storeURL = ref("")
+const storeURLs = ref([])
 
 const props = defineProps({
   user: Object,
@@ -173,13 +174,13 @@ const clearPhotoFileInput = () => {
   }
 };
 
-const goToStore = () => {
-  window.open(storeURL.value, '_blank');
+const goToStore = (storeURL) => {
+  window.open(storeURL);
 };
 
-const copyToClipboard = () => {
+const copyToClipboard = (storeURL) => {
   if (navigator.clipboard) {
-    navigator.clipboard.writeText(storeURL.value)
+    navigator.clipboard.writeText(storeURL)
       .then(() => {
         toast.add({ severity: 'success', summary: 'Link Copied', detail: 'The store link has been copied to your clipboard.', life: 3000 });
       })
@@ -193,7 +194,12 @@ const copyToClipboard = () => {
 };
 
 onMounted(() => {
-  storeURL.value = createStoreUrl(props.user.name);
+  props.user.shops.map(shop => {
+    const store = {}
+    store.name = shop.name
+    store.url = createStoreUrl(props.user.companyName, shop.name)
+    storeURLs.value.push(store);
+  })
 });
 </script>
 

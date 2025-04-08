@@ -10,19 +10,23 @@
     </nav>
 
     <main class="container mx-auto py-8 px-4">
-      <InventoryList :items=items></InventoryList>
+      <InventoryList :items=items :shopName=shopName :companyName=companyName></InventoryList>
     </main>
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 
 import { defineProps } from 'vue';
 import InventoryList from './InventoryList.vue';
 
-const props = defineProps({
-  items: { type: Array }
-});
+interface Props {
+  items?: any[]; // Using 'any[]' for simplicity, you can be more specific
+  shopName?: string;
+  companyName?: string;
+}
+
+const props = defineProps<Props>();
 
 
 </script>

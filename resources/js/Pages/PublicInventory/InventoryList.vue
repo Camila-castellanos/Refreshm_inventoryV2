@@ -204,8 +204,11 @@
       </div>
       <Card class="shadow-sm md:w-3/4">
         <template #content>
+          <h1>Company: {{ companyName }}</h1>
+          <h1>Shop: {{ shopName }}</h1>
           <div class="flex flex-col">
             <div class="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4 mb-6">
+
               <div class="w-full flex items-center justify-between">
                 <IconField class="w-full md:w-auto pr-6">
                   <InputIcon>
@@ -305,7 +308,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import { ref, computed, watch } from 'vue';
@@ -322,9 +325,13 @@ import Textarea from 'primevue/textarea';
 import { onMounted } from 'vue';
 import downloadSpreadsheet from '@/Utils/downloadSpreadsheet';
 
-const props = defineProps({
-  items: { type: Array }
-});
+interface Props {
+  items?: any[]; // Using 'any[]' for simplicity, you can be more specific
+  shopName?: string;
+  companyName?: string;
+}
+
+const props = defineProps<Props>();
 
 const toast = useToast();
 
@@ -338,7 +345,7 @@ const changeExchange = () => {
 }
 
 watch(exchangeActive, (newValue) => {
-  props.items.forEach(item => {
+  props?.items.forEach(item => {
     item.selling_price = newValue ? Math.round(item.selling_price / exchangeRate.value.toFixed(2)) : Math.round(item.selling_price * exchangeRate.value.toFixed(2));
   });
 
@@ -365,8 +372,8 @@ const filters = ref({
   hasIssues: "all", // Can be true, false, or null
 });
 
-const uniqueManufacturers = computed(() => Array.from([...new Set(props.items.map(item => item.manufacturer))]).sort());
-const uniqueGrades = computed(() => Array.from([...new Set(props.items.map(item => item.grade).filter(Boolean))]).sort());
+const uniqueManufacturers = computed(() => Array.from([...new Set(props.items?.map(item => item.manufacturer))]).sort());
+const uniqueGrades = computed(() => Array.from([...new Set(props.items?.map(item => item.grade).filter(Boolean))]).sort());
 
 const filteredItemsBeforeFilters = computed(() => {
   const query = searchQuery.value.toLowerCase();
@@ -387,7 +394,6 @@ const filteredItemsWithFilters = computed(() => {
 
       if (filters.value.hasIssues === true) {
         issuesMatch = !!item.issues; // true if item has issues
-        console.log(item.issues)
       } else {
         issuesMatch = !item.issues; // true if item has no issues
       }
@@ -470,7 +476,6 @@ onMounted(async () => {
     const conversionRates = data.conversion_rates;
     exchangeRate.value = parseFloat(conversionRates.CAD);
     exchangeRate.value -= (exchangeRate.value * 0.03);
-    console.log(exchangeRate.value)
   } catch (error) {
     console.error('Error fetching exchange rates:', error);
 

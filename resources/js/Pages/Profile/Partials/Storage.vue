@@ -10,40 +10,27 @@
     <Card class="shadow-none w-2/3">
       <template #content>
         <div class="flex flex-wrap gap-4 mb-4">
-          <div v-for="location in storageLocations" :key="location.id" class="flex items-center justify-between py-2 px-5 bg-[var(--bg-item)] rounded-3xl">
+          <div v-for="location in storageLocations" :key="location.id"
+            class="flex items-center justify-between py-2 px-5 bg-[var(--bg-item)] rounded-3xl">
             <span> {{ location.name }} - ({{ location.items.length }}/{{ location.limit }}) </span>
 
-            <Button
-              type="button"
-              icon="pi pi-ellipsis-v"
-              text
-              class="!p-2"
-              @click="(event) => toggleMenu(event, location.id)"
-              aria-haspopup="true"
+            <Button type="button" icon="pi pi-ellipsis-v" text class="!p-2"
+              @click="(event) => toggleMenu(event, location.id)" aria-haspopup="true"
               :aria-controls="`overlay_menu_${location.id}`" />
-            <Menu
-              :ref="(el) => (menuRefs[location.id] = el)"
-              :id="`overlay_menu_${location.id}`"
-              :model="getMenuItems(location)"
-              :popup="true" />
+            <Menu :ref="(el) => (menuRefs[location.id] = el)" :id="`overlay_menu_${location.id}`"
+              :model="getMenuItems(location)" :popup="true" />
           </div>
         </div>
 
         <div class="flex justify-end">
-          <Button
-            label="Create"
-            icon="pi pi-plus"
-            @click="openCreateDialog"/>
+          <Button label="Create" icon="pi pi-plus" @click="openCreateDialog" />
         </div>
       </template>
     </Card>
 
     <!-- Create/Edit Dialog -->
-    <Dialog
-      v-model:visible="dialogVisible"
-      :modal="true"
-      :header="editingLocation ? 'Edit Storage Location' : 'Create Storage Location'"
-      class="w-full max-w-lg">
+    <Dialog v-model:visible="dialogVisible" :modal="true"
+      :header="editingLocation ? 'Edit Storage Location' : 'Create Storage Location'" class="w-full max-w-lg">
       <form @submit.prevent="handleSubmit" class="space-y-4">
         <div class="field">
           <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Location Name</label>
@@ -86,7 +73,6 @@ const form = reactive({
 const fetchStorages = async () => {
   try {
     const { data } = await axios.get("/storages");
-    console.log(data);
     storageLocations.value = data;
   } catch (error) {
     toast.add({ severity: "error", summary: "Error", detail: "Failed to load storages", life: 3000 });
