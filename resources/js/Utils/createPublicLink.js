@@ -1,19 +1,14 @@
 function slugify(text) {
-    return text
+    return encodeURIComponent(text
       .toString()
-      .toLowerCase()
       .trim()
-      .replace(/\s+/g, '-')     // Replace spaces with -
-      .replace(/[^\w-]+/g, '') // Remove all non-word chars (except -)
-      .replace(/--+/g, '-')   // Replace multiple - with single -
-      .replace(/^-+/, '')     // Trim - from start of text
-      .replace(/-+$/, '');    // Trim - from end of text
+      .replace(/\s+/g, '_'))     // Replace spaces with -
 }
 
 const currentUrl = window.location.origin;
 
-function createStoreUrl(storeName) {
-    const storeSlug = slugify(storeName);
+function createStoreUrl(companyName, shopName) {
+    const storeSlug = slugify(companyName) + "/" + slugify(shopName);
     return `${currentUrl}/public/${storeSlug}`;
   }
 

@@ -25,6 +25,13 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
+
+Route::get("/public/{companyName}/{shopName}", [InventoryPublicController::class, "index"])->name('public.inventory.shop.index');
+Route::get('/public/{companyName}', function () {abort(404);});
+Route::get('/public', function () {abort(404);});
+
+
+
 Route::post('/logout', function (Request $request) {
     Auth::guard('web')->logout();
     $request->session()->invalidate();
@@ -56,9 +63,6 @@ Route::middleware([
     config('jetstream.auth_session'),
     'verified',
 ])->group(function () {
-
-
-    Route::get("/public/{username}", [InventoryPublicController::class, "index"])->name("public");
 
     Route::get("dashboard", DashboardController::class)->name("dashboard");
     Route::post("dashboard/update_cash", [DashboardController::class, 'updateCashOnHand'])->name("update.cash");

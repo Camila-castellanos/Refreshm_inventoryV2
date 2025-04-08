@@ -18,8 +18,13 @@ class Item extends Model
         "issues", "cost", "imei", "selling_price",
         "customer", "sold", "hold", "discount", "tax",
         "subtotal", "profit", 'user_id', 'vendor_id', "custom_values",
-        "sold_storage_id", "sold_position", "sold_storage_name"
+        "sold_storage_id", "sold_position", "sold_storage_name", 'shop_id',
     ];
+
+    public function shop(): BelongsTo
+    {
+        return $this->belongsTo(Shop::class, 'shop_id');
+    }
 
     public function sale(): BelongsTo
     {
