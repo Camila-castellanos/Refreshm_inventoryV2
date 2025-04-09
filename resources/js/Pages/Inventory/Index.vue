@@ -6,13 +6,8 @@
   <div>
     <section class="w-[95%] mx-auto mt-4">
       <ItemsTabs :custom-tabs="tabs">
-        <DataTable
-          title="Active Inventory"
-          @update:selected="handleSelection"
-          :actions="tableActions"
-          :items="tableData"
-          inventory
-          :headers="allHeaders"></DataTable>
+        <DataTable title="Active Inventory" @update:selected="handleSelection" :actions="tableActions"
+          :items="tableData" inventory :headers="allHeaders"></DataTable>
       </ItemsTabs>
     </section>
   </div>
@@ -130,6 +125,32 @@ function openMoveItemsModal() {
 
 const tableActions = [
   {
+    label: "Add Items",
+    important: true,
+    icon: "pi pi-plus",
+    action: () => {
+      router.visit("/inventory/items/excel/create");
+    },
+  },
+  {
+    label: "Sell",
+    icon: "pi pi-dollar",
+    important: true,
+    action: () => {
+      openSellItemsModal();
+    },
+    disable: (selectedItems: Item[]) => selectedItems.length == 0,
+  },
+  {
+    label: "Edit",
+    icon: "pi pi-pencil",
+    important: true,
+    action: () => {
+      onEdit();
+    },
+    disable: (selectedItems: Item[]) => selectedItems.length === 0,
+  },
+  {
     label: "Edit fields",
     icon: "pi pi-pen-to-square",
     action: () => {
@@ -137,11 +158,14 @@ const tableActions = [
     },
   },
   {
-    label: "Add Items",
-    icon: "pi pi-plus",
+    label: "Delete selected",
+    icon: "pi pi-trash",
+    severity: "danger",
+    important: true,
     action: () => {
-      router.visit("/inventory/items/excel/create");
+      onDeleteMultiple();
     },
+    disable: (selectedItems: Item[]) => selectedItems.length == 0,
   },
   {
     label: "Reassign location",
@@ -150,31 +174,6 @@ const tableActions = [
       toggleAssignStorageVisible();
     },
     disable: (selectedItems: Item[]) => selectedItems.length == 0,
-  },
-  {
-    label: "Sell",
-    icon: "pi pi-dollar",
-    action: () => {
-      openSellItemsModal();
-    },
-    disable: (selectedItems: Item[]) => selectedItems.length == 0,
-  },
-  {
-    label: "Delete selected",
-    icon: "pi pi-trash",
-    severity: "danger",
-    action: () => {
-      onDeleteMultiple();
-    },
-    disable: (selectedItems: Item[]) => selectedItems.length == 0,
-  },
-  {
-    label: "Edit selected",
-    icon: "pi pi-pencil",
-    action: () => {
-      onEdit();
-    },
-    disable: (selectedItems: Item[]) => selectedItems.length === 0,
   },
   {
     label: "Move Tab",

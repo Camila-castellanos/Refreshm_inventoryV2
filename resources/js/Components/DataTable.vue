@@ -14,13 +14,20 @@
           </IconField>
           <slot />
         </div>
-        <div class="flex flex-no-wrap">
+        <div class="flex gap-4 flex-no-wrap">
 
-          <Button type="button" label="Actions" @click="toggle" class="min-w-48" />
+
+          <Button v-for="action in computedPrimaryActions" :key="action.label"
+            :severity="action.severity ? action.severity : 'primary'"
+            :class="[action.extraClasses, `rounded-md`].join(' ')" :icon="action.icon ? action.icon : ''"
+            :label="action?.label" @click="action.action" :disabled="action.disable" />
+
+          <Button type="button" label="More" @click="toggle" class="min-w-48" icon="pi pi-angle-down"
+            icon-pos="right" />
           <Popover ref="op">
             <div class="flex gap-4">
               <div class="max-w-96 grid grid-cols-2 gap-6">
-                <Button v-for="action in computedActions" :key="action.label"
+                <Button v-for="action in computedSecondaryActions" :key="action.label"
                   :severity="action.severity ? action.severity : 'primary'"
                   :class="[action.extraClasses, `rounded-md`].join(' ')" :icon="action.icon ? action.icon : ''"
                   :label="action?.label" @click="action.action" :disabled="action.disable" />
@@ -67,10 +74,11 @@ import Column from "primevue/column";
 import DataTable from "primevue/datatable";
 import { computed, Ref, ref, shallowRef, watch } from "vue";
 import Popover from 'primevue/popover';
-
+import { useDialog } from "primevue/usedialog";
+import ExportCSV from "@/Pages/Inventory/Modals/ExportCSV.vue";
 //Popover actions logic
 const op = ref();
-
+const dialog = useDialog();
 const toggle = (event: any) => {
   op.value.toggle(event);
 }
@@ -117,7 +125,22 @@ const selectedItems = ref<any[]>([]);
 const menuRefs: Ref<any[]> = ref([]);
 
 const exportCSV = () => {
-  dt.value.exportCSV();
+  if (selectedItems.value.length === 0) {
+
+    dt.value.exportCSV();
+
+  } else {
+    dialog.open(ExportCSV, { // <-- Pass options object as the SECOND argument
+      props: {
+        modal: true,
+        header: 'Export Options', // Good practice to add a header
+        style: { width: '25rem' }, // Example style
+      },
+      data: {
+        dt: dt,                      // Pass the REF itself
+      },
+    });
+  }
 };
 
 const emit = defineEmits(["update:selected"]);
@@ -126,12 +149,32 @@ watch(selectedItems, (newSelection) => {
   emit("update:selected", newSelection);
 });
 
-const computedActions = computed(() => {
-  return props.actions?.map((action) => ({
-    ...action,
-    disable: action.disable ? action.disable(selectedItems.value) : false,
-  }));
+const computedPrimaryActions = computed(() => {
+  if (!props.actions || props.actions.length === 0) {
+    return [];
+  }
+
+  return props.actions
+    .filter(action => action.important === true)
+    .map((action) => ({
+      ...action,
+      disable: action.disable ? action.disable(selectedItems.value) : false,
+    }));
 });
+
+const computedSecondaryActions = computed(() => {
+  if (!props.actions || props.actions.length === 0) {
+    return [];
+  }
+
+  return props.actions
+    .filter(action => !action.important)
+    .map((action) => ({
+      ...action,
+      disable: action.disable ? action.disable(selectedItems.value) : false,
+    }));
+});
+
 
 function toggleMenu(event: Event, index: number) {
   menuRefs.value[index]?.toggle(event);
