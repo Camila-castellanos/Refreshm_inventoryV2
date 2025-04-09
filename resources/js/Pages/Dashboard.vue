@@ -19,12 +19,20 @@
       </div>
 
       <!-- Secciones -->
+      <div class="mt-12 -mb-2 font-bold">
+        <h2>Inventory</h2>
+      </div>
+      <Divider />
+
       <div class="grid grid-cols-2 grow  md:grid-cols-3 lg:grid-cols-4 gap-4 mt-6">
         <StatCard v-for="stat in inventoryStats" :key="stat.label" :label="stat.label" :value="stat.value"
           :icon="getStatConfig(stat.label).icon" :color="getStatConfig(stat.label).color"
           :currency="stat.currency ? '$' : ''" />
       </div>
 
+      <div class="mt-12 -mb-2 font-bold">
+        <h2>Sales</h2>
+      </div>
       <Divider />
 
       <div class="grid grid-cols-2 grow  md:grid-cols-3 lg:grid-cols-4 gap-4 mt-6">
@@ -33,6 +41,9 @@
           :currency="stat.currency ? '$' : ''" />
       </div>
 
+      <div class="mt-12 -mb-2 font-bold">
+        <h2>Accounting</h2>
+      </div>
       <Divider />
 
       <div class="grid grid-cols-2 grow  md:grid-cols-3 lg:grid-cols-4 gap-4 mt-6">
@@ -243,9 +254,9 @@ function updateDashboardStats(data: Dashboard) {
 
   salesStats.value = [
     { label: "Revenue ($)", value: data.soldValueThisMonth, currency: true },
-    { label: "Net Profit ($)", value: data.profitThisMonth - data.expensesThisMonth, currency: true },
-    { label: "Expenses ($)", value: data.expensesThisMonth, currency: true },
     { label: "Gross Profit ($)", value: data.profitThisMonth, currency: true },
+    { label: "Expenses ($)", value: data.expensesThisMonth, currency: true },
+    { label: "Net Profit ($)", value: data.profitThisMonth - data.expensesThisMonth, currency: true },
   ];
 
   accountingStats.value = [
