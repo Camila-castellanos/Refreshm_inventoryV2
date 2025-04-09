@@ -151,6 +151,9 @@ class LocationController extends Controller
   {
     if (Auth::user()->role == 'ADMIN') {
       $store = Auth::user()->store;
+      if ($store == null ) {
+        return Inertia::render('Locations/NoLocation');
+      } 
       return redirect()->route("stores.locations.index", $store);
     }
     abort(403, 'Unauthorized.');
