@@ -20,10 +20,10 @@
           <Button v-for="action in computedPrimaryActions" :key="action.label"
             :severity="action.severity ? action.severity : 'primary'"
             :class="[action.extraClasses, `rounded-md`].join(' ')" :icon="action.icon ? action.icon : ''"
-            :label="action?.label" @click="action.action" :disabled="action.disable" />
+            :label="action?.label" @click="action.action(exportCSV)" :disabled="action.disable" />
 
-          <Button type="button" label="More" @click="toggle" class="min-w-48" icon="pi pi-angle-down"
-            icon-pos="right" />
+          <Button v-if="computedSecondaryActions.length > 0" type="button" label="More" @click="toggle" class="min-w-48"
+            icon="pi pi-angle-down" icon-pos="right" />
           <Popover ref="op">
             <div class="flex gap-4">
               <div class="max-w-96 grid grid-cols-2 gap-6">
@@ -44,8 +44,12 @@
       <Column v-if="index === 0" selectionMode="multiple" field="select" headerStyle="width: 3rem; text-align: center;"
         bodyStyle="width: 3rem; text-align: center;">
       </Column>
-      <Column :field="header.name" sortable :header="header.label" v-if="header.name !== 'actions'"
-        header-style="width: fit !important">
+      <Column :field="header.name" sortable :header="header.label" v-if="header.name !== 'actions'" " header-style="
+        width: fit !important">
+        <template #body="slotProps" v-if="header.name == 'status'">
+          <Tag :value="slotProps.data[header.name]"
+            :severity="slotProps.data[header.name] == 'Paid' ? 'success' : 'danger'"></Tag>
+        </template>
         <template #body="slotProps" v-if="header.type === 'number'">
           $ {{ slotProps.data[header.name] && slotProps.data[header.name] > 0 ?
             Number(slotProps.data[header.name]).toFixed(2) : 0 }}
@@ -76,6 +80,7 @@ import { computed, Ref, ref, shallowRef, watch } from "vue";
 import Popover from 'primevue/popover';
 import { useDialog } from "primevue/usedialog";
 import ExportCSV from "@/Pages/Inventory/Modals/ExportCSV.vue";
+import Tag from 'primevue/tag';
 //Popover actions logic
 const op = ref();
 const dialog = useDialog();

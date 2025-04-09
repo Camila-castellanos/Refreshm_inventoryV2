@@ -11,7 +11,7 @@
             </TabList>
           </Tabs>
         </div>
-        <DataTable title="Payments" :items="tableData" :headers="headers"></DataTable>
+        <DataTable title="Payments" :items="tableData" :headers="headers" :actions="tableActions"></DataTable>
       </AccountingTabs>
     </section>
   </div>
@@ -40,6 +40,17 @@ const tableData: any = ref([]);
 const currentTab = ref("/payments");
 const dialog = useDialog();
 
+
+const tableActions = [
+  {
+    label: "Export CSV",
+    important: true,
+    icon: "pi pi-file-export",
+    action: (callback) => {
+      callback()
+    },
+  },
+]
 onMounted(() => {
   currentTab.value = `/payments${props.data_status !== "all" ? `?status=${props.data_status}` : ""}`;
 
