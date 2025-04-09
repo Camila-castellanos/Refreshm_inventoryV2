@@ -99,6 +99,16 @@ class PaymentController extends Controller
             $credited_items[] = $creditedItem;
           }
 
+            
+          if (is_numeric($customer)) {
+            $customerOb = Customer::whereId($customer)->select('customer', 'billing_address', 'billing_address_country', 'billing_address_state', 'billing_address_city', 'billing_address_postal', 'email', 'phone')->first();
+            if ($customerOb)
+              $customer = $customerOb->customer;
+            
+            else
+              $customer = $item->customer;
+          }
+
           $i["id"] = $item->id;
           $i["date"] = $sold->format("Y-m-d");
           $i["customer"] = $customer;
