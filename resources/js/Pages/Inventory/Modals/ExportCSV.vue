@@ -18,19 +18,15 @@
 import Button from 'primevue/button';
 import { inject } from "vue";
 
-const emit = defineEmits(['export-selected', 'export-all']);
-
 const dialogRef = inject("dialogRef");
 
 
 const handleExportSelected = () => {
-    console.log('Export Selected Clicked - Implement Logic Here');
     dialogRef.value.data.dt.exportCSV({ selectionOnly: true })
     dialogRef.value.close()
 };
 
 const handleExportAll = () => {
-    console.log('Export All Clicked - Implement Logic Here');
     dialogRef.value.data.dt.exportCSV()
     dialogRef.value.close()
 };
