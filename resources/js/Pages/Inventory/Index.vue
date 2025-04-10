@@ -101,7 +101,7 @@ function openSellItemsModal() {
       modal: true,
     },
     onClose: () => {
-      selectedItems.value = [];
+      selectedItems.value.length = 0;
       router.reload();
     },
   });

@@ -19,7 +19,8 @@
 
           <template #footer>
             <div class="p-3">
-              <Button label="Add New Tax" fluid severity="secondary" text size="small" icon="pi pi-plus" @click="addTax" />
+              <Button label="Add New Tax" fluid severity="secondary" text size="small" icon="pi pi-plus"
+                @click="addTax" />
             </div>
           </template>
         </Select>
@@ -30,7 +31,8 @@
         <Select v-model="form.customer" :options="customers" optionLabel="customer" placeholder="Select" class="w-full">
           <template #footer>
             <div class="p-3">
-              <Button label="Add New Customer" fluid severity="secondary" text size="small" icon="pi pi-plus" @click="addCustomer" />
+              <Button label="Add New Customer" fluid severity="secondary" text size="small" icon="pi pi-plus"
+                @click="addCustomer" />
             </div>
           </template>
         </Select>
@@ -38,12 +40,14 @@
 
       <div class="col-span-3">
         <label for="icondisplay" class="block mb-2 font-bold"> Payment Method </label>
-        <Select v-model="form.payment_method" :options="payment_method" optionLabel="name" placeholder="Select" class="w-full"> </Select>
+        <Select v-model="form.payment_method" :options="payment_method" optionLabel="name" placeholder="Select"
+          class="w-full"> </Select>
       </div>
 
       <div class="col-span-3">
         <label for="icondisplay" class="block mb-2 font-bold"> Payment Account </label>
-        <Select v-model="form.payment_account" :options="payment_account" optionLabel="name" placeholder="Select" class="w-full"> </Select>
+        <Select v-model="form.payment_account" :options="payment_account" optionLabel="name" placeholder="Select"
+          class="w-full"> </Select>
       </div>
 
       <div class="col-span-6">
@@ -198,12 +202,12 @@ function addCustomer() {
 
 function addTax() {
   dialog.open(AddTaxes, {
-    data: {shouldReturnData: true},
+    data: { shouldReturnData: true },
     props: { modal: true, header: "Add new tax" },
     onClose: (data) => {
       console.log(data);
       if (data?.data) {
-         taxes.value.push(...data.data); 
+        taxes.value.push(...data.data);
       }
     },
   });
@@ -261,6 +265,7 @@ async function submitForm(e: Event, isConfirmed: boolean) {
     document.body.removeChild(link);
     toast.add({ severity: "success", summary: "Success", detail: "Sale submitted successfully!", life: 3000 });
     dialogRef.value.close();
+
   } catch (error) {
     console.error("Error submitting sale:", error);
     toast.add({ severity: "error", summary: "Error", detail: "An error occurred", life: 3000 });
