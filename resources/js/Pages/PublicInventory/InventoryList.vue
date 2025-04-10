@@ -273,8 +273,8 @@
               <div v-for="item in filteredItemsWithFilters" :key="item.id">
                 <Card class="hover:shadow-md transition-shadow duration-200">
                   <template #content>
-                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center p-2">
-                      <div class="space-y-4">
+                    <div class="flex flex-col h-full md:flex-row justify-between items-start md:items-center p-2">
+                      <div class="space-y-4 ">
                         <h2 class="text-2xl font-semibold"> {{ item.model }}</h2>
                         <div class="flex flex-wrap gap-2">
                           <Tag :value="item.manufacturer" class="font-medium" />
@@ -283,17 +283,23 @@
                           <Tag v-if="item.colour" :value="item.colour" class="'font-medium" />
                         </div>
                       </div>
+
                       <div
-                        class="flex flex-col md:flex-row justify-end items-start md:items-center gap-4 mt-4 md:mt-0 w-full md:w-auto">
-                        <div v-if="item.issues" class="text-orange-500 text-sm italic mr-4">
-                          Issues: {{ item.issues }}
+                        class=" grow md:h-24 flex flex-col md:flex-row justify-end items-start md:items-center gap-4 mt-4 md:mt-0 w-full md:w-auto">
+                        <div v-if="item.issues" class="h-full md:w-64 flex items-start pt-1">
+                          <div
+                            class="h-full text-orange-500  md:text-center md:flex justify-center items-center w-full text-sm italic font-semibold md:border border-black rounded-md md:p-4">
+                            Issues: {{ item.issues }}
+                          </div>
                         </div>
-                        <div class="text-xl md:text-2xl font-bold text-black">${{ item.selling_price.toFixed(2) }}</div>
+                        <div class="text-xl md:text-2xl font-bold text-black w-24">${{
+                          item.selling_price.toFixed(2) }}
+                        </div>
                         <Button v-if="!item?.selected" icon="pi pi-plus"
-                          class="p-button-rounded p-button-outlined p-button-secondary self-end cursor"
+                          class="p-button-rounded p-button-outlined  p-button-secondary md:self-center self-end cursor"
                           style="border-color: black; color: black;" @click="addItem(item)" />
                         <Button v-if="item.selected" icon="pi pi-check"
-                          class="p-button-rounded p-button-outlined p-button-secondary self-end cursor"
+                          class="p-button-rounded p-button-outlined p-button-secondary md:self-center self-end cursor"
                           style="border-color: green; color: green;" @click="removeItem(item)" />
                       </div>
                     </div>
