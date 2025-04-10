@@ -2,15 +2,12 @@
   <form @submit.prevent="submitForm" class="flex flex-col gap-6">
     <div class="flex flex-col gap-4 max-h-96 overflow-y-auto p-2 border rounded">
       <div v-for="(expense, index) in expenses" :key="index" class="grid grid-cols-8 gap-4 border-b pb-4 relative">
-        <Button
-          :class="`!absolute bottom-2 py-2 right-0 ${index === 0 || isEditing ? '!hidden' : ''}`"
-          severity="danger"
-          size="small"
-          icon="pi pi-times"
-          @click="deleteExpense(index)" />
+        <Button :class="`!absolute bottom-2 py-2 right-0 ${index === 0 || isEditing ? '!hidden' : ''}`"
+          severity="danger" size="small" icon="pi pi-times" @click="deleteExpense(index)" />
         <div class="col-span-2">
           <label class="block text-sm font-medium">Date:</label>
-          <DatePicker v-model="(expense.date as Date)" class="w-full" showIcon dateFormat="yy-mm-dd" :max-date="new Date()" />
+          <DatePicker v-model="(expense.date as Date)" class="w-full" showIcon dateFormat="yy-mm-dd"
+            :max-date="new Date()" />
         </div>
         <div class="col-span-2">
           <label class="block text-sm font-medium">Name:</label>
@@ -22,11 +19,12 @@
         </div>
         <div class="col-span-2">
           <label class="block text-sm font-medium">Amount:</label>
-          <InputNumber v-model="expense.amount" class="w-full" mode="currency" currency="USD" @change="calcTotal" />
+          <InputNumber v-model="expense.subtotal" class="w-full" mode="currency" currency="USD" @change="calcTotal" />
         </div>
         <div class="col-span-2">
           <label class="block text-sm font-medium">Tax (%):</label>
-          <Select v-model="expense.tax" :options="taxes" optionLabel="name" class="w-full" placeholder="Add Tax" @change="calcTotal">
+          <Select v-model="expense.tax" :options="taxes" optionLabel="name" class="w-full" placeholder="Add Tax"
+            @change="calcTotal">
             <template #footer>
               <Button label="Add New Tax" icon="pi pi-plus" class="p-button-sm w-full mt-2" @click="addTax" />
             </template>
@@ -50,16 +48,10 @@
     <div class="flex flex-col items-center mt-4" v-if="!isEditing">
       <label class="block text-sm font-medium mb-2">Upload Expenses via Excel/CSV:</label>
       <div class="flex justify-center gap-3 items-center">
-        <FileUpload
-          mode="basic"
-          choose-label="Choose and upload"
-          auto
-          name="file"
-          accept=".csv,.xls,.xlsx"
-          class="!col-span-2"
-          customUpload
-          @select="handleFileUpload" />
-        <Button label="Download Excel Demo" class="p-button-secondary col-span-1" @click="downloadDemo" :loading="loadingUpload" />
+        <FileUpload mode="basic" choose-label="Choose and upload" auto name="file" accept=".csv,.xls,.xlsx"
+          class="!col-span-2" customUpload @select="handleFileUpload" />
+        <Button label="Download Excel Demo" class="p-button-secondary col-span-1" @click="downloadDemo"
+          :loading="loadingUpload" />
       </div>
     </div>
   </form>
@@ -101,16 +93,16 @@ onMounted(async () => {
     });
     isEditing.value = true;
   } else if (expenses.value.length === 0) {
-    expenses.value = [{ date: null, name: "", category: "", amount: 0, tax: null, total: 0 }];
+    expenses.value = [{ date: new Date(), name: "", category: "", subtotal: 0, tax: null, total: 0 }];
   }
 });
 
 const addExpense = () => {
-  expenses.value.push({ date: null, name: "", category: "", amount: 0, tax: null, total: 0 });
+  expenses.value.push({ date: null, name: "", category: "", subtotal: 0, tax: null, total: 0 });
 };
 
 const resetForm = () => {
-  expenses.value = [{ date: null, name: "", category: "", amount: 0, tax: null, total: 0 }];
+  expenses.value = [{ date: null, name: "", category: "", subtotal: 0, tax: null, total: 0 }];
 };
 
 const handleFileUpload = (event: FileUploadSelectEvent) => {
@@ -151,8 +143,8 @@ const submitForm = async () => {
     items: expenses.value.map((expense: any) => ({
       ...expense,
       date: format(expense.date, "yyyy-MM-dd"),
-      tax_id: expense.tax.id,
-      tax: expense.tax.percentage,
+      tax_id: expense.tax?.id,
+      tax: expense.tax?.percentage,
     })),
   };
   let routeUrl = route("expenses.store");
@@ -161,7 +153,7 @@ const submitForm = async () => {
   }
 
   try {
-    const response = await axios.post(routeUrl, payload, { responseType: "blob" });
+    const response = await axios.post(routeUrl, payload);
     if (response.status >= 200 && response.status < 400) {
       toast.add({ severity: "success", summary: "Success", detail: "Expenses submitted successfully.", life: 3000 });
       dialogRef.value?.close();
@@ -176,12 +168,12 @@ const submitForm = async () => {
 function calcTotal() {
   expenses.value.forEach((expense: any) => {
     const tax = expense.tax ? Number(expense.tax.percentage) / 100 : 0;
-    expense.total = expense.amount + expense.amount * tax;
+    expense.total = expense.subtotal + expense.subtotal * tax;
   });
 }
 
 watch(
-  () => expenses.value.map((bill) => ({ amount: bill.amount, tax: bill.tax })),
+  () => expenses.value.map((bill) => ({ subtotal: bill.subtotal, tax: bill.tax })),
   (newAmounts, oldAmounts) => {
     if (newAmounts !== oldAmounts) {
       calcTotal();

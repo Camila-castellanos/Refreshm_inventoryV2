@@ -52,6 +52,9 @@ class ExpensesController extends Controller
     $items = $request->validated();
     $user = Auth::user();
     $amount = 0;
+
+    
+
     $created = [];
     foreach ($items["items"] as $item) {
       $item['user_id'] = Auth::user()->id;

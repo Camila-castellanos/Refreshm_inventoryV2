@@ -141,7 +141,7 @@ export interface Expense {
   date?: string | null | Date;
   name?: string;
   category?: string;
-  amount?: number;
+  subtotal?: number;
   user_id?: number;
   created_at?: string;
   updated_at?: string;
