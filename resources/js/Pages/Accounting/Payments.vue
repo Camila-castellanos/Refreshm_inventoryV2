@@ -23,7 +23,7 @@ import DataTable from "@/Components/DataTable.vue";
 import AppLayout from "@/Layouts/AppLayout.vue";
 import { EmailTemplate, PaymentResponse as IPaymentResponse } from "@/Lib/types";
 import { Tab, TabList, Tabs, useDialog } from "primevue";
-import { onMounted, ref } from "vue";
+import { onMounted, ref, computed } from "vue";
 import { headers } from "./data";
 import ShowPayments from "./Modals/ShowPayments.vue";
 import { router } from "@inertiajs/vue3";
@@ -36,7 +36,6 @@ const props = defineProps({
   email_templates: Array<EmailTemplate>,
 });
 
-const tableData: any = ref([]);
 const currentTab = ref("/payments");
 const dialog = useDialog();
 
@@ -53,21 +52,6 @@ const tableActions = [
 ]
 onMounted(() => {
   currentTab.value = `/payments${props.data_status !== "all" ? `?status=${props.data_status}` : ""}`;
-
-  tableData.value = props.items!.map((item) => {
-    return {
-      ...item,
-      amount_paid: "$ " + item.amount_paid,
-      total: "$ " + item.total,
-      balance_remaining: "$ " + item.balance_remaining,
-      /*
-       * Actions
-       * if item is paid, show: invoice, view payments, edit and send
-       * if item is unpaid, show: invoice, record / view payments, edit, send
-       */
-      actions: getItemActions(item),
-    };
-  });
 });
 
 const filterPayments = () => {
@@ -109,7 +93,9 @@ const getItemActions = (item: IPaymentResponse) => {
           dialog.open(SaleEdit, {
             data: { saleId: item.sale_id, payment: item },
             props: { modal: true, header: "Edit sale" },
-            onClose: () => router.reload(),
+            onClose: () => {
+              router.reload();
+            },
           });
         },
       },
@@ -121,7 +107,9 @@ const getItemActions = (item: IPaymentResponse) => {
           dialog.open(SendEmail, {
             data: { customer_id: item.customer_id, invoice_id: item.id, templates: props.email_templates },
             props: { modal: true },
-            onClose: () => router.reload(),
+            onClose: () => {
+              router.reload();
+            },
           });
         },
         disable: () => !(Array.isArray(item.customer_email) && item.customer_email.length > 0),
@@ -165,7 +153,7 @@ const getItemActions = (item: IPaymentResponse) => {
         dialog.open(SaleEdit, {
           data: { saleId: item.sale_id, payment: item },
           props: { modal: true, header: "Edit sale" },
-          onClose: () => router.reload(),
+          onClose: () => { router.reload(); },
         });
       },
     },
@@ -177,13 +165,28 @@ const getItemActions = (item: IPaymentResponse) => {
         dialog.open(SendEmail, {
           data: { customer_id: item.customer_id, invoice_id: item.id, templates: props.email_templates },
           props: { modal: true },
-          onClose: () => router.reload(),
+          onClose: () => { router.reload(); },
         });
       },
       disable: () => !(Array.isArray(item.customer_email) && item.customer_email.length > 0),
     },
   ];
 };
+
+const tableData = computed(() => {
+  if (!props.items) {
+    return [];
+  }
+  return props.items.map((item) => {
+    return {
+      ...item,
+      amount_paid: "$ " + item.amount_paid,
+      total: "$ " + item.total,
+      balance_remaining: "$ " + item.balance_remaining,
+      actions: getItemActions(item),
+    };
+  });
+});
 
 defineOptions({ layout: AppLayout });
 </script>
