@@ -2,11 +2,7 @@
   <div>
     <section class="w-[90%] mx-auto mt-4">
       <AccountingTabs>
-        <DataTable
-          title="Expenses"
-          :items="tableData"
-          :headers="expensesHeaders"
-          :actions="actions"
+        <DataTable title="Expenses" :items="tableData" :headers="expensesHeaders" :actions="actions"
           @update:selected="handleSelection"></DataTable>
       </AccountingTabs>
     </section>

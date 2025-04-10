@@ -1,5 +1,5 @@
 <template>
-  
+
   <TabView v-if="view === 'all'">
     <TabPanel header="Record Payment" :value="'record'">
       <form @submit.prevent="invoicePaid" class="flex flex-col gap-4 w-50">
@@ -161,7 +161,7 @@ const headers = [
 
 const invoicePaid = async () => {
   if (!paidAmount.value || paidAmount.value <= 0) {
-    toast.add({ severity: "warn", summary: "Warning", detail: "Value Must be Valid !!", life: 3000 });
+    toast.add({ severity: "error", summary: "Error", detail: "Amount is required", life: 3000 });
     return;
   }
   toast.add({
@@ -184,7 +184,7 @@ const invoicePaid = async () => {
     dialogRef.value.close();
   } catch (error: any) {
     console.error(error);
-    toast.add({ severity: "error", summary: "Error", detail: error.message, life: 3000 });
+    toast.add({ severity: "error", summary: "Error", detail: error.response?.data?.message || "Submission failed", life: 3000 });
   }
 };
 
