@@ -1,26 +1,35 @@
 <template>
-    <SessionExpiredDialog />
+  <SessionExpiredDialog />
 
-    <div class="h-[12vh] bg-surface-0 bg-[white] dark:bg-surface-950 ">
-      <div class="w-full h-full flex lg:pl-12 pt-8 flex lg:justify-start justify-center">
-            <img src="/images/swiftstock_logo.jpeg" draggable="false"  class="object-contain max-h-full max-w-full pointer-events-none" alt="" />
-        </div>
+  <div class="h-[12vh] bg-surface-0 bg-[white] dark:bg-surface-950 ">
+    <div class="w-full h-full flex lg:pl-12 pt-8 flex lg:justify-start justify-center">
+      <img src="/images/swiftstock_logo.jpeg" draggable="false"
+        class="object-contain max-h-full max-w-full pointer-events-none" alt="" />
     </div>
+  </div>
   <div
     class="bg-surface-0 bg-[white] dark:bg-surface-950 lg:px-12 flex justify-center lg:items-center pt-24 lg:flex-row h-screen w-[100vw] h-[86vh]">
     <div class="hidden lg:flex flex-col lg:w-1/2 h-full items-center  justify-center">
-        <div class="h-[80%] w-full">
-            <img src="/images/iphone12.png" draggable="false" class="object-contain h-full w-full pointer-events-none " alt="" />
-        </div>
+      <div class="h-[80%] w-full">
+        <img src="/images/iphone12.png" draggable="false" class="object-contain h-full w-full pointer-events-none "
+          alt="" />
+      </div>
     </div>
     <!-- Sección Derecha (Formulario de Registro) -->
     <Transition name="fade">
-      <div v-if="loaded" class="w-full lg:w-1/3 bg-surface-50 dark:bg-surface-900 p-6 md:w-1/2 shadow rounded-border mx-auto">
+      <div v-if="loaded"
+        class="w-full lg:w-1/3 bg-surface-50 dark:bg-surface-900 p-6 md:w-1/2 shadow rounded-border mx-auto">
         <div class="text-center mb-8">
           <div class="text-surface-900 dark:text-surface-0 text-3xl font-medium mb-4">Create an Account</div>
         </div>
 
         <form @submit.prevent="submit">
+          <!-- Company name -->
+          <label for="companyName" class="text-surface-900 dark:text-surface-0 font-medium mb-2 block">Company
+            Name</label>
+          <InputText id="companyName" type="text" v-model="form.companyName" placeholder="Enter your company name"
+            class="w-full mb-4" />
+          <div v-if="form.errors.companyName" class="text-red-500 text-sm">{{ form.errors.companyName }}</div>
           <!-- Nombre -->
           <label for="name" class="text-surface-900 dark:text-surface-0 font-medium mb-2 block">Full Name</label>
           <InputText id="name" type="text" v-model="form.name" placeholder="Enter your full name" class="w-full mb-4" />
@@ -33,20 +42,17 @@
 
           <!-- Contraseña -->
           <label for="password" class="text-surface-900 dark:text-surface-0 font-medium mb-2 block">Password</label>
-          <Password toggle-mask fluid id="password" v-model="form.password" class="w-full mb-4" />
+          <Password toggle-mask fluid id="password" v-model="form.password" placeholder="Enter your password"
+            class="w-full mb-4" />
           <div v-if="form.errors.password" class="text-red-500 text-sm">{{ form.errors.password }}</div>
 
           <!-- Confirmación de Contraseña -->
-          <label for="password_confirmation" class="text-surface-900 dark:text-surface-0 font-medium mb-2 block">Confirm Password</label>
-          <Password
-            toggle-mask
-            fluid
-            id="password_confirmation"
-            :feedback="false"
-            v-model="form.password_confirmation"
-            placeholder="Re-enter your password"
-            class="w-full mb-4" />
-          <div v-if="form.errors.password_confirmation" class="text-red-500 text-sm">{{ form.errors.password_confirmation }}</div>
+          <label for="password_confirmation" class="text-surface-900 dark:text-surface-0 font-medium mb-2 block">Confirm
+            Password</label>
+          <Password toggle-mask fluid id="password_confirmation" :feedback="false" v-model="form.password_confirmation"
+            placeholder="Re-enter your password" class="w-full mb-4" />
+          <div v-if="form.errors.password_confirmation" class="text-red-500 text-sm">{{
+            form.errors.password_confirmation }}</div>
 
           <!-- Aceptación de términos -->
           <div v-if="$page.props.jetstream.hasTermsAndPrivacyPolicyFeature" class="flex items-center mt-4">
@@ -91,6 +97,7 @@ onMounted(() => {
 
 const form = useForm({
   name: "",
+  companyName: "",
   email: "",
   password: "",
   password_confirmation: "",
@@ -98,7 +105,7 @@ const form = useForm({
 });
 
 const submit = () => {
- form.post(route("register"), {
+  form.post(route("register"), {
     onFinish: () => form.reset("password", "password_confirmation"),
   });
 };

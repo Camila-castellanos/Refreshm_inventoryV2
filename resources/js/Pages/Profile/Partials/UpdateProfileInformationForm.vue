@@ -10,10 +10,15 @@
     <Card class="shadow-none w-2/3">
 
       <template #content>
-        <div v-for="(store) in storeURLs" class="flex gap-4 items-center mb-4">
-          <h2>Public store: {{ store.name }}</h2>
-          <Button icon="pi pi-external-link" severity="secondary" label="Go To Store" @click="goToStore(store.url)" />
-          <Button icon="pi pi-copy" severity="secondary" label="Copy Link" @click="copyToClipboard(store.url)" />
+
+        <div class="flex gap-4 items-center mb-4">
+          <h2>Company: {{ user.companyName }}</h2>
+          <div v-for="(store) in storeURLs">
+            <h2>Public store: {{ store.name }}</h2>
+            <Button icon="pi pi-external-link" severity="secondary" label="Go To Store" @click="goToStore(store.url)" />
+            <Button icon="pi pi-copy" severity="secondary" label="Copy Link" @click="copyToClipboard(store.url)" />
+          </div>
+
         </div>
 
 
