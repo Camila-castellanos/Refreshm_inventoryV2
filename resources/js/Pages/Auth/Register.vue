@@ -25,10 +25,25 @@
 
         <form @submit.prevent="submit">
           <!-- Company name -->
-          <label for="companyName" class="text-surface-900 dark:text-surface-0 font-medium mb-2 block">Company
+
+
+          <label v-if="companyName" for="companyName"
+            class="text-surface-900 dark:text-surface-0 font-medium mb-2 block">Invitation
+            to join</label>
+
+          <label v-else for="companyName" class="text-surface-900 dark:text-surface-0 font-medium mb-2 block">Company
             Name</label>
-          <InputText id="companyName" type="text" v-model="form.companyName" placeholder="Enter your company name"
-            class="w-full mb-4" />
+
+
+
+
+          <InputText v-if="companyName" id="companyName" type="text" v-model="companyName"
+            placeholder="Enter your company name" disabled="true" class="w-full mb-4" />
+
+          <InputText v-else id="companyName" type="text" v-model="form.companyName"
+            placeholder="Enter your company name" class="w-full mb-4" />
+
+
           <div v-if="form.errors.companyName" class="text-red-500 text-sm">{{ form.errors.companyName }}</div>
           <!-- Nombre -->
           <label for="name" class="text-surface-900 dark:text-surface-0 font-medium mb-2 block">Full Name</label>
@@ -90,9 +105,14 @@ import axios from "axios";
 import SessionExpiredDialog from "@/Components/SessionExpiredDialog.vue";
 
 const loaded = ref(false);
+const companyName = ref()
 
 onMounted(() => {
   loaded.value = true;
+  const urlParams = new URLSearchParams(window.location.search);
+  const encodedCompany = urlParams.get("company")
+  companyName.value = encodedCompany ? atob(encodedCompany) : "";
+  console.log(companyName)
 });
 
 const form = useForm({
@@ -101,10 +121,16 @@ const form = useForm({
   email: "",
   password: "",
   password_confirmation: "",
+  invitation: false,
   terms: false,
 });
 
 const submit = () => {
+  if (companyName.length > 0) {
+    form.invitation = true
+    form.companyName = companyName.value
+  }
+
   form.post(route("register"), {
     onFinish: () => form.reset("password", "password_confirmation"),
   });
