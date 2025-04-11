@@ -126,7 +126,7 @@ const form = useForm({
 });
 
 const submit = () => {
-  if (companyName.length > 0) {
+  if (companyName.value.length > 0) {
     form.invitation = true
     form.companyName = companyName.value
   }

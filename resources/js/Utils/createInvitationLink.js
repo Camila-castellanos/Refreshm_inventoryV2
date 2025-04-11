@@ -1,7 +1,7 @@
 const currentUrl = window.location.origin;
 
 function createInvitationLink(companyName) {
-    const createInvitationLink =  currentUrl + "/register?company=" + btoa(companyName);
+    const createInvitationLink =  currentUrl + "/invitation?company=" + btoa(companyName);
     return createInvitationLink
   }
 

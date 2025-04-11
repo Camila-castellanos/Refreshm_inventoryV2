@@ -94,13 +94,14 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
-import { Link, router, useForm } from "@inertiajs/vue3";
+import { ref, onMounted, watchEffect, nextTick } from "vue";
+import { Link, router, useForm, usePage } from "@inertiajs/vue3";
 import { useToast, Button, Card, InputText } from "primevue";
 import createStoreUrl from "@/Utils/createPublicLink"
 import createInvitationLink from "@/Utils/createInvitationLink"
 import { stringifyQuery } from "vue-router";
 
+const page = usePage()
 
 const storeURLs = ref([])
 const invitationLink = ref("")
@@ -200,6 +201,27 @@ const copyToClipboard = (storeURL) => {
   }
 };
 
+watchEffect(async () => {
+  console.log(page.props)
+  if (page.props.flash && page.props.flash.success) {
+
+    console.log("SUCCESS FLASH DETECTED! Attempting to show toast:", page.props.flash.success);
+    await nextTick(); // Or use .then() if not using async/await
+
+    try {
+      toast.add({
+        severity: 'success',
+        summary: 'Success',
+        detail: page.props.flash.success,
+        life: 3000
+      });
+      console.log("Toast added successfully after nextTick.");
+    } catch (e) {
+      console.error("Error calling toast.add:", e);
+    }
+  }
+});
+
 onMounted(() => {
   invitationLink.value = createInvitationLink(props.user.companyName)
   props.user.shops.map(shop => {
@@ -207,7 +229,6 @@ onMounted(() => {
     store.name = shop.name
     store.url = createStoreUrl(props.user.companyName, shop.name)
     storeURLs.value.push(store);
-
   })
 });
 </script>

@@ -21,6 +21,7 @@ use App\Http\Controllers\StoreController;
 use App\Http\Controllers\TaxController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\InventoryPublicController;
+use App\Http\Controllers\InvitationController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -52,6 +53,8 @@ Route::get('/', function () {
         'phpVersion' => PHP_VERSION,
     ]);
 });
+
+Route::get("invitation", [InvitationController::class, "index"])->name("invitation");
 
 Route::resource('storages', StorageController::class);
 Route::post('/storages/destroy', [StorageController::class, 'destroy']);
@@ -198,7 +201,11 @@ Route::middleware([
     Route::resource("email_templates", EmailsController::class);
 
     Route::post("store/contact", [ContactController::class, "store"])->name("contact.store");
+
     Route::post("public/request", [ItemController::class, "request"])->name("items.request");
+
+
+    Route::post("invitation", [InvitationController::class, "accept"])->name("invitation");
 
     Route::resource("customfields", CustomFieldsController::class);
     Route::post("customfields/{id}/active", [CustomFieldsController::class, "updateActive"])->name("customFields.updateActive");
