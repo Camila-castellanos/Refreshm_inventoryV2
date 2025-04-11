@@ -61,7 +61,7 @@
               <Column field="model" header="Model" class="sm:hidden font-semibold" />
               <Column field="selling_price" header="Price">
                 <template #body="{ data }" class="text-right">
-                  <div class="text-xl font-bold text-black">${{ data.selling_price.toFixed(2) }}</div>
+                  <div class="text-xl font-bold text-black">${{ data.selling_price?.toFixed(2) }}</div>
                 </template>
               </Column>
 
@@ -293,7 +293,7 @@
                           </div>
                         </div>
                         <div class="text-xl md:text-2xl font-bold text-black w-24">${{
-                          item.selling_price.toFixed(2) }}
+                          item.selling_price?.toFixed(2) }}
                         </div>
                         <Button v-if="!item?.selected" icon="pi pi-plus"
                           class="p-button-rounded p-button-outlined  p-button-secondary md:self-center self-end cursor"
@@ -490,6 +490,7 @@ onMounted(async () => {
   // Ensure that the 'selected' property is not initially set on the props.items
   if (props.items && props.items.length > 0) {
     props.items.forEach(item => {
+
       if (item.hasOwnProperty('selected')) {
         delete item.selected;
       }
