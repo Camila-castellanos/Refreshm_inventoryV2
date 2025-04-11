@@ -10,7 +10,11 @@
     <Card class="shadow-none w-2/3">
 
       <template #content>
-        <h2>Company: {{ user.companyName }}</h2>
+        <div class="flex gap-4 items-center mb-4 mt-5">
+          <h2>Company: {{ user.companyName }}</h2>
+          <Button icon="pi pi-copy" severity="secondary" label="Invitation Link"
+            @click="copyToClipboard(invitationLink)" />
+        </div>
         <div v-for="(store) in storeURLs" class="flex gap-4 items-center mb-4 mt-5">
           <h2>Public store: {{ store.name }}</h2>
           <Button icon="pi pi-external-link" severity="secondary" label="Go To Store" @click="goToStore(store.url)" />
@@ -94,10 +98,12 @@ import { ref, onMounted } from "vue";
 import { Link, router, useForm } from "@inertiajs/vue3";
 import { useToast, Button, Card, InputText } from "primevue";
 import createStoreUrl from "@/Utils/createPublicLink"
+import createInvitationLink from "@/Utils/createInvitationLink"
 import { stringifyQuery } from "vue-router";
 
 
 const storeURLs = ref([])
+const invitationLink = ref("")
 
 const props = defineProps({
   user: Object,
@@ -183,7 +189,7 @@ const copyToClipboard = (storeURL) => {
   if (navigator.clipboard) {
     navigator.clipboard.writeText(storeURL)
       .then(() => {
-        toast.add({ severity: 'success', summary: 'Link Copied', detail: 'The store link has been copied to your clipboard.', life: 3000 });
+        toast.add({ severity: 'success', summary: 'Link Copied', detail: 'The link has been copied to your clipboard.', life: 3000 });
       })
       .catch(err => {
         toast.add({ severity: 'error', summary: 'Copy Failed', detail: 'Failed to copy the link to the clipboard.', life: 3000 });
@@ -195,11 +201,13 @@ const copyToClipboard = (storeURL) => {
 };
 
 onMounted(() => {
+  invitationLink.value = createInvitationLink(props.user.companyName)
   props.user.shops.map(shop => {
     const store = {}
     store.name = shop.name
     store.url = createStoreUrl(props.user.companyName, shop.name)
     storeURLs.value.push(store);
+
   })
 });
 </script>
