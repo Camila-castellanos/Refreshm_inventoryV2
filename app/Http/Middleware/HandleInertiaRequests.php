@@ -37,9 +37,17 @@ class HandleInertiaRequests extends Middleware
             'user' => $request->user() ? $this->getUserAuthData($request->user()) : null,
         ];
 
+        $flashData = function () use ($request) {
+            return [
+                'success' => $request->session()->get('success'),
+                'error'   => $request->session()->get('error'),
+            ];
+        };
+
         return array_merge($parentShare, [
             'layout' => fn () => $request->is('inventory*') ? 'InventoryLayout' : null,
             'auth' => $authData,
+            'flash' => $flashData,
         ]);
     }
 
