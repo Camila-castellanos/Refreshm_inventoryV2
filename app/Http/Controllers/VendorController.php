@@ -36,7 +36,9 @@ class VendorController extends Controller
     {
         $vendors = Vendor::whereUserId(Auth::id())->get();
         foreach ($vendors as $vendor) {
-            $items = Item::where("vendor_id", $vendor->id)->whereYear('sold', date('Y'))->get();
+            $items = Item::where("vendor_id", $vendor->id)
+                ->whereBetween('sold', [now()->subYears(4)->startOfDay(), now()->endOfDay()])
+                ->get();
 
             $total = [];
             $profit = [];
@@ -56,7 +58,7 @@ class VendorController extends Controller
                 $profit[] = $value - $item->cost;
             }
 
-            $bills = Bill::where("vendor_id", $vendor->id)->whereYear('date', date('Y'))->get();
+            $bills = Bill::where("vendor_id", $vendor->id)->whereBetween('date', [now()->subYears(4)->startOfDay(), now()->endOfDay()])->get();
             foreach ($bills as $bill) {
                 $balance[] = $bill->balance_remaining;
                 $total_spend[] = $bill->total;

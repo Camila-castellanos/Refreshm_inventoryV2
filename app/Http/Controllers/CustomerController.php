@@ -40,7 +40,7 @@ class CustomerController extends Controller
             $profit = [];
             $balance = [];
             $sales = Sale::whereIn("id", $sale_pks)
-                ->whereYear('created_at', date('Y'))
+                ->whereBetween('created_at', [now()->subYears(4)->startOfDay(), now()->endOfDay()])
                 ->with('items') 
                 ->get();
             foreach ($sales as $sale) {

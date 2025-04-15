@@ -9,7 +9,21 @@
               :headers="VendorHeaders"
               :actions="tableActions"
               @edit=""
-              @delete="confirmDeleteVendor"></DataTable>
+              @delete="confirmDeleteVendor">
+              <div class="w-full">
+            <form class="flex flex-row justify-around" @submit.prevent="onDateRangeSubmit">
+              <DatePicker
+                v-model="dates"
+                :max-date="new Date()"
+                selectionMode="range"
+                dateFormat="dd/mm/yy"
+                class="w-full"
+                id="date"
+                placeholder="Date range for calculations"></DatePicker>
+              <Button label="Update" class="mx-2" size="large" type="submit" />
+            </form>
+          </div>
+            </DataTable>
       </ContactTabs>
     </section>
   </div>
@@ -29,7 +43,8 @@ import { useToast } from "primevue/usetoast";
 import { onMounted, ref, Ref, watchEffect } from "vue";
 import { VendorHeaders } from "./VendorsData";
 import CreateEdit from "./CreateEdit.vue";
-import { useDialog } from "primevue";
+import { useDialog, DatePicker } from "primevue";
+import { format } from "date-fns";
 
 const dialog = useDialog();
 
@@ -88,6 +103,52 @@ watchEffect(() => {
     parseItemsData();
   }
 });
+
+const dates: Ref<Date | Date[] | (Date | null)[] | null | undefined> = ref([]);
+async function onDateRangeSubmit(): Promise<void> {
+  // validation
+  if (!dates.value || dates.value.length !== 2 || !dates.value[0] || !dates.value[1]) {
+    console.error("Invalid date range selected");
+    return;
+  }
+
+  // Format
+  const startDate: string = format(dates.value[0], "y-M-d");
+  const endDate: string = format(dates.value[1], "y-M-d");
+
+  try {
+    // sent request
+    const response = await axios.post(route("vendor.datewise"), { startDate, endDate });
+
+    // transform utility
+    vendorTableData.value = transformVendorData(response.data);
+
+    console.log("Data successfully fetched and updated");
+  } catch (error) {
+    // errors 
+    console.error("Error fetching data:", error);
+  }
+}
+
+// utility
+function transformVendorData(data: Vendor[]): any[] {
+  return data.map((vendor: Vendor) => ({
+    ...vendor,
+    actions: [
+      {
+        label: "Edit",
+        icon: "pi pi-pencil",
+        action: () => editVendor(vendor),
+      },
+      {
+        label: "Delete",
+        icon: "pi pi-trash",
+        severity: "danger",
+        action: () => confirmDeleteVendor(vendor),
+      },
+    ],
+  }));
+};
 
 const tableActions: ITableActions[] = [
   {

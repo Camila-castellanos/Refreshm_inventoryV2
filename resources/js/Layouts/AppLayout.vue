@@ -7,13 +7,13 @@
 
     <Menubar :model="navItems">
       <template #start>
-        <div class="h-12">
+        <div class="h-16 mr-12">
           <img src="/images/swiftstock_logo.jpeg" draggable="false"
             class="object-contain max-h-full max-w-full pointer-events-none" alt="" />
         </div>
       </template>
-      <template #button>
-        <Button icon="pi pi-bars" aria-label="Save" @click="toggleDrawer" class="hide-breakpoint" />
+      <template >
+        <Button icon="p#buttoni pi-bars" aria-label="Save" @click="toggleDrawer" class="hide-breakpoint" />
       </template>
       <template #item="{ item, props, hasSubmenu, root }">
         <a v-ripple class="flex items-center" v-bind="props.action" :href="item.url">
