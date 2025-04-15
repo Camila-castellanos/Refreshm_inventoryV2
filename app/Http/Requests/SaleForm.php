@@ -43,6 +43,7 @@ class SaleForm extends FormRequest
             "items.*.profit" => "required|numeric",
             "items.*.position" => "numeric|nullable",
             "items.*.storage_id" => "exists:storages,id|nullable",
+            "items.*.selling_price" => "required|numeric",
             "tax_id" => "required",
         ];
     }
