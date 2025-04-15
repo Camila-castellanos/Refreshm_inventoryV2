@@ -34,7 +34,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, defineExpose, defineProps } from "vue";
+import { ref, defineExpose, defineEmits } from "vue";
 import Chip from "primevue/chip";
 import Dialog from "primevue/dialog";
 import { fetchStorages } from "../StoragesIndexData";
@@ -104,21 +104,23 @@ function getSelectedStorage() {
 }
 
 // Assign items to the selected storage
+const emit = defineEmits(["refreshTable"]);
 function assignLocation() {
   if (!selectedStorage.value) return;
 
-  const selected = storages.value.find((s) => s.id === selectedStorage.value);
-  if (selected) {
-    selected.items = [...selected.items.map(item => item.id), ...props.items.map(item => item.id)]; // Simulate adding items
-  }
+  // const selected = storages.value.find((s) => s.id === selectedStorage.value);
+  // if (selected) {
+  //   selected.items = [...selected.items.map(item => item.id), ...props.items.map(item => item.id)]; // Simulate adding items
+  // }
+  const selected_items = [...props.items.map(item => item.id)] || [];
 
   const payload = {
     storage_id: selectedStorage.value,
-    items: selected?.items,
+    items: selected_items,
   };
 
   axios.post(route("items.assign"), payload).then((res) => router.reload());
-
+  emit("refreshTable");
   closeDialog(); // Close dialog after assignment
 }
 

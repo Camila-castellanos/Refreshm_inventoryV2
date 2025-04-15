@@ -1,5 +1,5 @@
 <template>
-  <StoragesAssign :items="selectedItems" ref="assignStorageVisible"></StoragesAssign>
+  <StoragesAssign :items="selectedItems" ref="assignStorageVisible" @refreshTable="refreshTableData"></StoragesAssign>
   <Dialog v-model:visible="showCustomFields" header="Edit fields" :modal="true">
     <CustomFields :headers="headers" :custom-headers="fields ?? []" @update-headers="updateTableHeaders" />
   </Dialog>
@@ -61,15 +61,15 @@ function parseItemsData() {
     ...(props.fields?.filter((f) => f.active).map((field) => ({ name: field.value, label: field.text, type: field.type })) ?? []),
   ];
   tabs.value = props.tabs;
+  console.log(props.items);
   tableData.value = props
     .items!.filter((item) => item.sold === null)
     .map((item: any) => {
       if (item.storage) {
-        const { name, limit } = item.storage;
-        const { position } = item;
+        const { name, limit, items_count } = item.storage;
         return {
           ...item,
-          location: `${name} - ${position}/${limit}`,
+          location: `${name} - ${items_count}/${limit}`,
           vendor: item.vendor?.vendor,
         };
       }
@@ -78,6 +78,34 @@ function parseItemsData() {
         location: "No storage information",
         vendor: item.vendor?.vendor,
       };
+    });
+}
+
+function refreshTableData() {
+  axios
+    .get(route("items.getItems")) // Asegúrate de que esta ruta coincida con la definida en el backend
+    .then((response) => {
+      console.log("Response data:", response.data);
+      // Actualiza los datos de la tabla con los ítems obtenidos del backend
+      tableData.value = response.data.map((item: any) => {
+        if (item.storage) {
+          const { name, limit } = item.storage;
+          const { position } = item;
+          return {
+            ...item,
+            location: `${name} - ${position}/${limit}`, // Formatea la columna "location"
+            vendor: item.vendor?.vendor, // Incluye el nombre del vendor si está disponible
+          };
+        }
+        return {
+          ...item,
+          location: "No storage information", // Valor predeterminado si no hay almacenamiento
+          vendor: item.vendor?.vendor,
+        };
+      });
+    })
+    .catch((error) => {
+      console.error("Error refreshing table data:", error);
     });
 }
 
