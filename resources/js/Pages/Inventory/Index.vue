@@ -7,7 +7,7 @@
     <section class="w-[95%] mx-auto mt-4">
       <ItemsTabs :custom-tabs="tabs">
         <DataTable title="Active Inventory" @update:selected="handleSelection" :actions="tableActions"
-          :items="tableData" inventory :headers="allHeaders"></DataTable>
+          :items="tableData" inventory :headers="allHeaders" ></DataTable>
       </ItemsTabs>
     </section>
   </div>
@@ -254,3 +254,7 @@ const updateTableHeaders = (updatedHeaders: CustomField[]) => {
   allHeaders.value = updatedHeaders;
 };
 </script>
+
+<style scoped lang="css">
+
+</style>
