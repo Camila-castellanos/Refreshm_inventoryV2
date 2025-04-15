@@ -252,10 +252,10 @@ class SaleController extends Controller
         if ($user_role == "OWNER") {
             $header = $user_data->invoice_header;
             $footer = $user_data->invoice_footer;
-            if (!is_null($user_data->invoice_logo)) {
-                $logo = base64_encode(file_get_contents(storage_path() . "/app/" . $user_data->invoice_logo));
+            if (!is_null($user_data->invoice_logo) && file_exists(storage_path("app/" . $user_data->invoice_logo))) {
+                $logo = base64_encode(file_get_contents(storage_path("app/" . $user_data->invoice_logo)));
             } else {
-                $logo = base64_encode(file_get_contents(public_path() . "/img/_REFRESHMOBILE.png"));
+                $logo = base64_encode(file_get_contents(public_path("img/_REFRESHMOBILE.png")));
             }
         } else {
 
