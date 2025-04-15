@@ -53,7 +53,10 @@ class ItemController extends Controller
         if (Auth::user()->role == ('ADMIN')) {
             $context = [
                 'items' => Item::where("user_id", $user->id)
-                    ->with(['storage:id,name,limit', 'vendor:id,vendor'])
+                ->with(['storage' => function ($query) {
+                    $query->select('id', 'name', 'limit') // other columns
+                    ->withCount('items'); // current count of items in storage
+            }, 'vendor:id,vendor'])
                     ->whereNull("sold")
                     ->whereNull("hold")
                     ->whereNotIn('id', TabItem::pluck('item_id'))
@@ -64,7 +67,10 @@ class ItemController extends Controller
         } else if (Auth::user()->role == ('USER')) {
             $context = [
                 'items' => Item::where("user_id", $user->id)
-                    ->with(['storage:id,name,limit', 'vendor:id,vendor'])
+                ->with(['storage' => function ($query) {
+                    $query->select('id', 'name', 'limit') // other columns
+                    ->withCount('items'); // current count of items in storage
+            }, 'vendor:id,vendor'])
                     ->whereNull("sold")
                     ->whereNull("hold")
                     ->whereNotIn('id', TabItem::pluck('item_id'))
@@ -75,7 +81,10 @@ class ItemController extends Controller
         } else {
             $context = [
                 'items' => Item::where("user_id", $user->id)
-                    ->with(['storage:id,name,limit', 'vendor:id,vendor'])
+                ->with(['storage' => function ($query) {
+                    $query->select('id', 'name', 'limit') // other columns
+                    ->withCount('items'); // current count of items in storage
+            }, 'vendor:id,vendor'])
                     ->whereNull("sold")
                     ->whereNull("hold")
                     ->whereNotIn('id', TabItem::pluck('item_id'))
@@ -87,6 +96,23 @@ class ItemController extends Controller
 
         $context['customers'] = Customer::all();
         return Inertia::render('Inventory/Index', $context);
+    }
+
+    public function getItems(): \Illuminate\Http\JsonResponse
+        {
+    $user = Auth::user();
+
+    $items = Item::where("user_id", $user->id)
+    ->with(['storage' => function ($query) {
+        $query->select('id', 'name', 'limit') // other columns
+        ->withCount('items'); // current count of items in storage
+}, 'vendor:id,vendor'])
+        ->whereNull("sold")
+        ->whereNull("hold")
+        ->whereNotIn('id', TabItem::pluck('item_id'))
+        ->get();
+
+    return response()->json($items);
     }
 
 
@@ -107,7 +133,9 @@ class ItemController extends Controller
 
         if ($currentItemCount + count($items) > $storage->limit) {
             return response()->json([
-                'message' => 'Not enough space in the selected storage.'
+                'message' => 'Not enough space in the selected storage.',
+                'current_count' => $currentItemCount,
+                'items_received' => count($items),
             ], 400);
         }
 

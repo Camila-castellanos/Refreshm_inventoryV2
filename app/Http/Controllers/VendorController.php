@@ -37,7 +37,7 @@ class VendorController extends Controller
         $vendors = Vendor::whereUserId(Auth::id())->get();
         foreach ($vendors as $vendor) {
             $items = Item::where("vendor_id", $vendor->id)
-                ->whereBetween('sold', [now()->subYears(4)->startOfDay(), now()->endOfDay()])
+            ->whereBetween('sold', [now()->subYear()->startOfDay(), now()->endOfDay()])
                 ->get();
 
             $total = [];
