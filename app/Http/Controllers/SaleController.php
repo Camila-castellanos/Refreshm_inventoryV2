@@ -293,7 +293,7 @@ class SaleController extends Controller
             $items = Item::whereNotNull('sold')
             ->whereNotNull('sale_id')
             ->where('sold', '>=', now()->subYear())
-            ->with(['vendor:id,vendor'])
+            ->with(['vendor:id,vendor', 'sale'])
             ->get();
             $context = [
                 'tabs' => $tabs,

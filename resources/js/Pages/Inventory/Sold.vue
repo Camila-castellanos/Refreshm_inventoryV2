@@ -85,8 +85,9 @@ function parseItemsData() {
         ...item,
         cost: `$ ${item.cost}`,
         profit: `$ ${item.profit}`,
-        subtotal: `$ ${item.subtotal ?? item.cost}`,
-        total: `$  ${item.total ?? item.cost + item.tax}`,
+        selling_price: `$ ${item.selling_price}`,
+        subtotal: `$ ${item.sale.subtotal ?? 'unknown'}`,
+        total: `$  ${item.sale.total ?? 'unknown'}`,
         location: item.sold_storage_name || "unknown",
         vendor: item.vendor?.vendor,
         actions: [
