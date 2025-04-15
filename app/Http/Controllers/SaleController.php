@@ -51,7 +51,6 @@ class SaleController extends Controller
             $sale_item['sold_position'] = $sale_item['position'];
             $sale_item['sold_storage_id'] = $sale_item['storage_id'];
             $sale_item['sold_storage_name'] = Storage::find($sale_item['storage_id'])?->name;
-
             unset($sale_item["selected"]);
             $item = Item::find($sale_item["id"]);
 
@@ -67,6 +66,7 @@ class SaleController extends Controller
                     'updated_at' => now(),
                 ]);
             }
+            Log::info($sale_item);
             $item->update($sale_item);
 
             if ($item) {
@@ -221,7 +221,7 @@ class SaleController extends Controller
             return response()->json($request, 201);
         } catch (Exception $e) {
             dd($e);
-            return response()->json($e->getMessage(), 500);
+            return Inertia::render('Error', ['message' => $e->getMessage()]);
         }
     }
 
@@ -285,17 +285,27 @@ class SaleController extends Controller
      */
     public function showReport(): Response
     {
-        $user = Auth::user();
-
-        $tabs = Tab::where('user_id', $user->id)->orderBy('order', 'asc')->get();
-        $fields = CustomField::where('user_id', $user->id)->get();
-
-        $context = [
-            'tabs' => $tabs,
-            'fields' => $fields,
-        ];
-
-        return Inertia::render("Inventory/Sold", $context);
+        try{
+            $user = Auth::user();
+    
+            $tabs = Tab::where('user_id', $user->id)->orderBy('order', 'asc')->get();
+            $fields = CustomField::where('user_id', $user->id)->get();
+            $items = Item::whereNotNull('sold')
+            ->whereNotNull('sale_id')
+            ->where('sold', '>=', now()->subYear())
+            ->with(['vendor:id,vendor'])
+            ->get();
+            $context = [
+                'tabs' => $tabs,
+                'fields' => $fields,
+                'items' => $items,
+            ];
+            return Inertia::render("Inventory/Sold", $context);
+        }
+        catch (Exception $e) {
+            Log::error($e);
+            return Inertia::render('Error', ['message' => $e->getMessage()]);
+        }
     }
 
     /**

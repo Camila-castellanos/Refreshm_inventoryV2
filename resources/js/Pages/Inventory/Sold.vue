@@ -11,7 +11,9 @@
           :items="tableData"
           inventory
           :headers="allHeaders"
-          :actions="tableActions">
+          :actions="tableActions"
+          :sortField="'sold'"
+          :sortOrder="-1">
           <div class="max-w-[400px] w-full">
             <form class="flex flex-row justify-around" @submit.prevent="onDateRangeSubmit">
               <DatePicker
@@ -51,6 +53,7 @@ const toast = useToast();
 const props = defineProps({
   tabs: { type: Array<ITab>, required: true },
   fields: Array<Field>,
+  items: { type: Array<Item>, required: true },
 });
 
 const dates: Ref<Date | Date[] | (Date | null)[] | null | undefined> = ref([]);
@@ -68,6 +71,45 @@ const handleSelection = (selected: Item[]) => {
 };
 
 const tableData: Ref<any[]> = ref([]);
+
+function parseItemsData() {
+  allHeaders.value = [
+    ...soldHeaders.value,
+    ...(props.fields?.filter((f) => f.active).map((field) => ({ name: field.value, label: field.text, type: field.type })) ?? []),
+  ];
+  console.log(props.items);
+  tableData.value = props
+    .items!.filter((item) => item.sold != null)
+    .map((item: any) => {
+      return {
+        ...item,
+        cost: `$ ${item.cost}`,
+        profit: `$ ${item.profit}`,
+        subtotal: `$ ${item.subtotal ?? item.cost}`,
+        total: `$  ${item.total ?? item.cost + item.tax}`,
+        location: item.sold_storage_name || "unknown",
+        vendor: item.vendor?.vendor,
+        actions: [
+            {
+              label: "Edit Items",
+              icon: "pi pi-pencil",
+              action: () => {
+                selectedItems.value = [item];
+                onEdit();
+              },
+            },
+            {
+              label: "Return",
+              icon: "pi pi-undo",
+              severity: "danger",
+              action: () => {
+                onReturn(item);
+              },
+            },
+          ],
+      };
+    });
+}
 
 async function onDateRangeSubmit() {
   const start = format((dates.value as Date[])[0], "yyyy-MM-dd");
@@ -152,10 +194,7 @@ const onReturn = (item: Item) => {
 };
 
 onMounted(() => {
-  allHeaders.value = [
-    ...soldHeaders.value,
-    ...(props.fields?.filter((f) => f.active).map((field) => ({ name: field.value, label: field.text, type: field.type })) ?? []),
-  ];
+  parseItemsData();
 });
 
 const tableActions = [

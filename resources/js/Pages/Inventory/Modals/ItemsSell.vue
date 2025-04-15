@@ -251,6 +251,7 @@ async function submitForm(e: Event, isConfirmed: boolean) {
   };
 
   try {
+    console.log("Sale Payload:", salePayload);
     const { data } = await axios.post<string>(route("sales.store"), salePayload);
     const link = document.createElement("a");
     link.href = data;
