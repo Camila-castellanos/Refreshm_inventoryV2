@@ -1,6 +1,6 @@
 <template>
   <DataTable v-model:filters="filters" :value="items" v-model:selection="selectedItems" dataKey="id" stripedRows
-    ref="dt" paginator resizableColumns column-resize-mode="fit" :rows="20" :rowsPerPageOptions="[5, 10, 20, 50]"
+    ref="dt" paginator :resizableColumns="isResizable" column-resize-mode="fit" :rows="20" :rowsPerPageOptions="[5, 10, 20, 50]"
     :globalFilterFields="headers.filter((header) => header.name !== 'actions').map((header) => header.name)"
     :class="inventory ? 'text-xs' : ''" :selection-mode="selectionMode">
     <template #header>
@@ -44,7 +44,7 @@
       <Column v-if="index === 0" selectionMode="multiple" field="select" headerStyle="width: 3rem; text-align: center;"
         bodyStyle="width: 3rem; text-align: center;">
       </Column>
-      <Column :field="header.name" sortable :header="header.label" v-if="header.name !== 'actions'" " header-style="
+      <Column :field="header.name" sortable :header="header.label" v-if="header.name !== 'actions'" headerStyle="
         width: fit !important">
         <template #body="slotProps" v-if="header.name == 'status'">
           <Tag :value="slotProps.data[header.name]"
@@ -81,6 +81,7 @@ import Popover from 'primevue/popover';
 import { useDialog } from "primevue/usedialog";
 import ExportCSV from "@/Pages/Inventory/Modals/ExportCSV.vue";
 import Tag from 'primevue/tag';
+import { onMounted, onBeforeUnmount } from "vue";
 //Popover actions logic
 const op = ref();
 const dialog = useDialog();
@@ -194,4 +195,19 @@ function getMenuItems(data: any) {
     class: action.extraClasses || "",
   }));
 }
+
+const isResizable = ref(false);
+const minWidth = 1624; // minimun width for activate resizable columns
+function updateResizable() {
+  isResizable.value = window.innerWidth > minWidth; // activate resizable columns only on large screens
+}
+
+onMounted(() => {
+  updateResizable(); // initial check
+  window.addEventListener("resize", updateResizable); // add event listener
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener("resize", updateResizable);  // remove event listener
+});
 </script>
