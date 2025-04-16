@@ -11,7 +11,7 @@
     <Select
       v-else-if="props.column.columnType === 'select'"
       v-model="model[props.prop]"
-      :options="props.column.source"
+      :options="source"
       optionLabel="label"
       optionValue="value"
       class="w-full">
@@ -35,6 +35,7 @@ const dialog = useDialog();
 
 const props = defineProps<ColumnDataSchemaModel>();
 const cell = ref<HTMLElement>();
+const source = ref(props.column.source || []);
 
 const displayValue = computed(() => {
   return props.model[props.prop] || "";
@@ -57,7 +58,8 @@ function openAddVendorDialog(): void {
     props: { header: "Add New Vendor", style: { width: "450px" }, modal: true },
     onClose: async () => {
       const { data } = await fetchVendors();
-      props.column.source = data.map((v: Vendor) => ({ label: v.vendor, value: v.vendor }));
+      console.log("nuevos_vendedores: ", data);
+      source.value = data.map((v: Vendor) => ({ label: v.vendor, value: v.vendor }));
     },
   });
 }
