@@ -293,7 +293,7 @@ class SaleController extends Controller
             $fields = CustomField::where('user_id', $user->id)->get();
             $items = Item::whereNotNull('sold')
             ->whereNotNull('sale_id')
-            ->where('sold', '>=', now()->subYear())
+            ->where('sold', '>=', now()->subDays(7))
             ->with(['vendor:id,vendor', 'sale'])
             ->get();
             $context = [
