@@ -275,7 +275,8 @@ class SaleController extends Controller
             ->setOptions([
                 'defaultFont' => 'sans-serif',
                 'isRemoteEnabled' => 'true',
-            ]);
+            ])
+            ->setPaper('a4', 'portrait');
 
         return $pdf->download("$customer invoice #$sale->id.pdf");
     }
