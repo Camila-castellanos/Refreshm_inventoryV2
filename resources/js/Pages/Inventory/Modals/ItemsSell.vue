@@ -52,15 +52,38 @@
 
       <div class="col-span-6">
         <DataTable :value="params.items" tableStyle="min-width: 50rem">
-          <Column field="model" header="Device"></Column>
-          <Column field="issues" header="Issue"></Column>
-          <Column field="imei" header="IMEI"></Column>
-          <Column field="selling_price" header="Selling Price">
-            <template #body="slotProps">
-              <InputNumber v-model="slotProps.data.selling_price" class="w-full" mode="currency" currency="USD" />
-            </template>
-          </Column>
+          <!-- Columna para el modelo del dispositivo -->
+  <Column field="model" header="Device">
+    <template #body="slotProps">
+      <span v-if="!slotProps.data.isNew">{{ slotProps.data.model }}</span>
+      <InputText v-else v-model="slotProps.data.model" class="w-full" placeholder="Enter device model" />
+    </template>
+  </Column>
+
+  <!-- Columna para los problemas -->
+  <Column field="issues" header="Issue">
+    <template #body="slotProps">
+      <span v-if="!slotProps.data.isNew">{{ slotProps.data.issues }}</span>
+      <InputText v-else v-model="slotProps.data.issues" class="w-full" placeholder="Enter issue" />
+    </template>
+  </Column>
+
+  <!-- Columna para el IMEI -->
+  <Column field="imei" header="IMEI">
+    <template #body="slotProps">
+      <span v-if="!slotProps.data.isNew">{{ slotProps.data.imei }}</span>
+      <InputText v-else v-model="slotProps.data.imei" class="w-full" placeholder="Enter IMEI" />
+    </template>
+  </Column>
+
+  <!-- Columna para el precio de venta -->
+  <Column field="selling_price" header="Selling Price">
+    <template #body="slotProps">
+      <InputNumber v-model="slotProps.data.selling_price" class="w-full" mode="currency" currency="USD" />
+    </template>
+  </Column>
         </DataTable>
+        <Button label="" icon="pi pi-plus" class="mt-2" @click="addNewRow" />
       </div>
 
       <div class="col-span-6">
@@ -99,7 +122,7 @@ import CreateEdit from "@/Pages/Customers/CreateEdit.vue";
 import { useForm } from "@inertiajs/vue3";
 import axios from "axios";
 import { format } from "date-fns";
-import { DatePicker, InputNumber, Select, Textarea, useDialog, useToast } from "primevue";
+import { DatePicker, InputNumber, Select, Textarea, useDialog, useToast, InputText } from "primevue";
 import Column from "primevue/column";
 import DataTable from "primevue/datatable";
 import { computed, inject, onMounted, Ref, ref } from "vue";
@@ -162,6 +185,23 @@ const form = useForm({
   payment_account: "",
   memo_notes: "",
 });
+
+// extra rows feature section
+const newRowTemplate = {
+  id: null,
+  model: "",
+  issues: "",
+  imei: "",
+  selling_price: 0,
+  position: "",
+  storage_id: null,
+  cost: 0,
+  profit: 0,
+};
+
+function addNewRow() {
+  params.value.items.push({ ...newRowTemplate, isNew: true });
+}
 
 const taxes: Ref<Tab[]> = ref([]);
 
@@ -235,7 +275,9 @@ async function submitForm(e: Event, isConfirmed: boolean) {
     paid: isConfirmed ? 1 : 0, // 1 = Fully Paid, 0 = Unpaid
     balance_remaining: isConfirmed ? 0 : total.value,
     amount_paid: isConfirmed ? total.value : 0,
-    items: params.value.items.map((item: any) => ({
+    items: params.value.items
+    .filter((item: any) => !item.isNew) // Filtrar los elementos originales
+    .map((item: any) => ({
       id: item.id,
       model: item.model,
       imei: item.imei,
@@ -247,7 +289,20 @@ async function submitForm(e: Event, isConfirmed: boolean) {
       storage_id: item.storage_id,
       profit: item.selling_price - (item.cost || 0), // Ensure cost exists
     })),
-    newItems: [],
+
+  newItems: params.value.items
+    .filter((item: any) => item.isNew) // Filtrar los elementos nuevos
+    .map((item: any) => ({
+      model: item.model,
+      imei: item.imei,
+      selling_price: item.selling_price,
+      issues: item.issues,
+      sold: format(form.date, "yyyy-MM-dd"),
+      customer: form.customer.customer,
+      position: item.position,
+      storage_id: item.storage_id,
+      profit: item.selling_price - (item.cost || 0), // Ensure cost exists
+    })),
   };
 
   try {
