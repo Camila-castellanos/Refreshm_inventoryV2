@@ -237,7 +237,7 @@ class SaleController extends Controller
         $user_role = $user_data->role;
 
         $customer = $sale->items[0]->customer;
-        if (is_numeric($sale->items[0]->customer)) {
+        if (is_numeric($customer)) {
             $customer = Customer::whereId($sale->items[0]->customer)->select('customer', 'billing_address', 'billing_address_country', 'billing_address_state', 'billing_address_city', 'billing_address_postal', 'email', 'phone')->first();
             if ($customer)
                 $customer = $customer;
@@ -248,7 +248,8 @@ class SaleController extends Controller
         $header = null;
         $footer = null;
         $logo = null;
-
+        $sales = collect([$sale]);
+        $returned_items = collect([]);
         if ($user_role == "OWNER") {
             $header = $user_data->invoice_header;
             $footer = $user_data->invoice_footer;
@@ -271,14 +272,16 @@ class SaleController extends Controller
             }
         }
 
-        $pdf = Pdf::loadView("sale-receipt", compact("sale", "customer", "header", "footer", "logo"))
+        $pdf = Pdf::loadView("sale-receipt-invoice", compact("sales", "customer", "header", "footer", "logo", "returned_items"))
             ->setOptions([
                 'defaultFont' => 'sans-serif',
                 'isRemoteEnabled' => 'true',
             ])
             ->setPaper('a4', 'portrait');
 
-        return $pdf->download("$customer invoice #$sale->id.pdf");
+        $customer_name = $customer->customer;
+        
+        return $pdf->download("$customer_name invoice #$sale->id.pdf");
     }
 
     /**

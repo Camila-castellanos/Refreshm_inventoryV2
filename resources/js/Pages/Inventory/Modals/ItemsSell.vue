@@ -284,7 +284,7 @@ async function submitForm(e: Event, isConfirmed: boolean) {
       selling_price: item.selling_price,
       issues: item.issues,
       sold: format(form.date, "yyyy-MM-dd"),
-      customer: form.customer.customer,
+      customer: form.customer.id,
       position: item.position,
       storage_id: item.storage_id,
       profit: item.selling_price - (item.cost || 0), // Ensure cost exists
@@ -298,7 +298,7 @@ async function submitForm(e: Event, isConfirmed: boolean) {
       selling_price: item.selling_price,
       issues: item.issues,
       sold: format(form.date, "yyyy-MM-dd"),
-      customer: form.customer.customer,
+      customer: form.customer.id,
       position: item.position,
       storage_id: item.storage_id,
       profit: item.selling_price - (item.cost || 0), // Ensure cost exists
