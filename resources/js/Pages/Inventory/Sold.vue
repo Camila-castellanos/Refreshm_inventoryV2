@@ -120,7 +120,7 @@ async function refreshingTableData() {
   
   try {
     let response;
-    if (Array.isArray(dates.value) && dates.value.length > 2) {
+    if (Array.isArray(dates.value) && dates.value.length === 2) {
       const start = format((dates.value as Date[])[0], "yyyy-MM-dd");
       const end = format((dates.value as Date[])[1], "yyyy-MM-dd");
       response = await axios.get(route("sales.getSoldItems", { start, end }));
