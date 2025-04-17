@@ -7,6 +7,7 @@
       <ItemsTabs :custom-tabs="tabs">
         <DataTable
           title="Sold"
+          v-model:selection="selectedItems"
           @update:selected="handleSelection"
           :items="tableData"
           inventory
@@ -27,6 +28,7 @@
               <Button label="Generate" class="mx-2" size="large" type="submit" />
             </form>
           </div>
+          
         </DataTable>
       </ItemsTabs>
     </section>
@@ -68,6 +70,7 @@ const updateTableHeaders = (updatedHeaders: CustomField[]) => {
 
 const handleSelection = (selected: Item[]) => {
   selectedItems.value = selected;
+  console.log("Selected items:", selectedItems.value);
 };
 
 const tableData: Ref<any[]> = ref([]);
@@ -77,39 +80,57 @@ function parseItemsData() {
     ...soldHeaders.value,
     ...(props.fields?.filter((f) => f.active).map((field) => ({ name: field.value, label: field.text, type: field.type })) ?? []),
   ];
-  console.log(props.items);
-  tableData.value = props
-    .items!.filter((item) => item.sold != null)
-    .map((item: any) => {
-      return {
-        ...item,
-        cost: `$ ${item.cost}`,
-        profit: `$ ${item.profit}`,
-        selling_price: `$ ${item.selling_price}`,
-        subtotal: `$ ${item.sale.subtotal ?? 'unknown'}`,
-        total: `$  ${item.sale.total ?? 'unknown'}`,
-        location: item.sold_storage_name || "unknown",
-        vendor: item.vendor?.vendor,
-        actions: [
-            {
-              label: "Edit Items",
-              icon: "pi pi-pencil",
-              action: () => {
-                selectedItems.value = [item];
-                onEdit();
-              },
-            },
-            {
-              label: "Return",
-              icon: "pi pi-undo",
-              severity: "danger",
-              action: () => {
-                onReturn(item);
-              },
-            },
-          ],
-      };
-    });
+  updateTableData(props.items);
+}
+
+function updateTableData(data: any[]) {
+  tableData.value = data.map((item: any) => {
+    return {
+      ...item,
+      cost: `$ ${item.cost}`,
+      profit: `$ ${item.profit}`,
+      selling_price: `$ ${item.selling_price}`,
+      subtotal: `$ ${item.sale.subtotal ?? 'unknown'}`,
+      total: `$  ${item.sale.total ?? 'unknown'}`,
+      location: item.sold_storage_name || "unknown",
+      vendor: item.vendor?.vendor,
+      actions: [
+        {
+          label: "Edit Items",
+          icon: "pi pi-pencil",
+          action: () => {
+            selectedItems.value = [item];
+            onEdit();
+          },
+        },
+        {
+          label: "Return",
+          icon: "pi pi-undo",
+          severity: "danger",
+          action: () => {
+            onReturn(item);
+          },
+        },
+      ],
+    };
+  });
+}
+
+async function refreshingTableData() {
+  
+  try {
+    let response;
+    if (Array.isArray(dates.value) && dates.value.length > 2) {
+      const start = format((dates.value as Date[])[0], "yyyy-MM-dd");
+      const end = format((dates.value as Date[])[1], "yyyy-MM-dd");
+      response = await axios.get(route("sales.getSoldItems", { start, end }));
+    } else {
+      response = await axios.get(route("sales.getSoldItems"));
+    }
+    updateTableData(response.data);
+  } catch (error) {
+    console.log(error);
+  }
 }
 
 async function onDateRangeSubmit() {
@@ -170,18 +191,27 @@ const onEdit = () => {
   router.get(route("items.edit", btoa(items)));
 };
 
-const onReturn = (item: Item) => {
+const onReturn = (items: Item | Item[]) => {
+  const itemsArray = Array.isArray(items) ? items : [items]; // if only one item is passed, convert to array
+
   confirm.require({
-    message: "Are you sure you want to return this item?",
+    message: itemsArray.length > 1 ? `Are you sure you want to return ${itemsArray.length} items?` :
+    `Are you sure you want to return this item?`,
     header: "Confirmation",
     icon: "pi pi-exclamation-triangle",
     accept: async () => {
       try {
-        const response = await axios.put(route("items.return"), { item });
+        const response = await axios.put(route("items.return"), { selectedItems: itemsArray });
         if (response.status >= 200 && response.status < 400) {
-          toast.add({ severity: "success", summary: "Success", detail: "Item returned!", life: 3000 });
+          toast.add({
+            severity: "success",
+            summary: "Success",
+            detail: `${itemsArray.length} item(s) returned successfully!`,
+            life: 3000,
+          });
         }
-        onDateRangeSubmit();
+        handleSelection([]); // clear selected items after returning
+        refreshingTableData(); // refresh the table data after returning items
       } catch (error: any) {
         toast.add({
           severity: "error",
@@ -206,5 +236,14 @@ const tableActions = [
       showCustomFields.value = true;
     },
   },
+  {
+    label: "Return items",
+    icon: "pi pi-undo",
+    important: true,
+    disable: () => selectedItems.value.length === 0,
+    action: () => {
+      onReturn(selectedItems.value);
+    },
+  }
 ];
 </script>

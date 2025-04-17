@@ -424,4 +424,29 @@ class SaleController extends Controller
 
         return response()->json($soldItems);
     }
+
+    public function getSolditems(Request $request): JsonResponse
+    {
+        $start = Carbon::parse($request->start)->startOfDay();
+        $end = Carbon::parse($request->end)->endOfDay();
+        try{
+            $query = Item::whereNotNull('sold')
+                ->whereNotNull('sale_id')
+                ->with(['vendor:id,vendor', 'sale']);
+
+            if ($request->has('start') && $request->has('end')) {
+                $query->whereBetween('sold', [$start, $end]);
+            } else {
+                $query->where('sold', '>=', now()->subDays(7));
+            }
+
+            $soldItems = $query->get();
+
+            return response()->json($soldItems, 200);
+        }
+
+        catch (Exception $e) {
+            return response()->json(['message' => "{$e}"], 500);
+        }
+    }
 }
