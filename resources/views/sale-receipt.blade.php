@@ -17,12 +17,11 @@
     <style>
         @page {
         size: A4 portrait; /* pdf size and orientation */
-        margin: 10mm; /* margin */
     }
     </style>
 </head>
 
-<body class="font-sans antialiased">
+<body class="font-sans antialiased" style="font-size: 14px;>
     @isset($logo)
     <div class="row">
         <div class="col-12">
