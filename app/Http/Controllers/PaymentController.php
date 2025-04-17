@@ -24,6 +24,7 @@ use App\Models\Payment;
 use Illuminate\Support\Facades\Auth;
 use App\Models\EmailTemplate;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\Log;
 
 class PaymentController extends Controller
 {
@@ -158,14 +159,17 @@ class PaymentController extends Controller
   {
     $item = Item::where('id', $request->id)->first();
     $itm_id_pluck = Item::where('sale_id', $item->sale_id)->pluck('sale_id');
-
     $customer = $item->customer;
+    Log::info($item->customer);
     if (is_numeric($item->customer)) {
       $customer = Customer::whereId($item->customer)->select('customer', 'billing_address', 'billing_address_country', 'billing_address_state', 'billing_address_city', 'billing_address_postal', 'email', 'phone')->first();
       if ($customer)
         $customer = $customer;
       else
         $customer = $item->customer;
+    }
+    else{
+      $customer = Customer::where('customer', $item->customer)->select('customer', 'billing_address', 'billing_address_country', 'billing_address_state', 'billing_address_city', 'billing_address_postal', 'email', 'phone')->first();
     }
 
     $useId = $item->user_id;
