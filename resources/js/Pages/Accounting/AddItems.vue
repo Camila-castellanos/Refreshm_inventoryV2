@@ -47,13 +47,13 @@ function parseItemsData() {
         return {
           ...item,
           location: `${name} - ${position}/${limit}`,
-          vendor: item.vendor.vendor == 'Unknown' ? "N/A" : item.vendor.vendor,
+          vendor: item.vendor?.vendor == 'Unknown' ? "N/A" : item.vendor?.vendor,
         };
       }
       return {
         ...item,
         location: "No storage information",
-        vendor: item.vendor.vendor == 'Unknown' ? "N/A" : item.vendor.vendor,
+        vendor: item.vendor?.vendor == 'Unknown' ? "N/A" : item.vendor?.vendor,
       };
     });
   console.log("data despues de filtrar: ", tableData.value);
