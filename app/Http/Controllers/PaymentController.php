@@ -159,19 +159,31 @@ class PaymentController extends Controller
   {
     $item = Item::where('id', $request->id)->first();
     $itm_id_pluck = Item::where('sale_id', $item->sale_id)->pluck('sale_id');
-    $customer = $item->customer;
-    Log::info($item->customer);
     if (is_numeric($item->customer)) {
       $customer = Customer::whereId($item->customer)->select('customer', 'billing_address', 'billing_address_country', 'billing_address_state', 'billing_address_city', 'billing_address_postal', 'email', 'phone')->first();
-      if ($customer)
-        $customer = $customer;
-      else
-        $customer = $item->customer;
+      if ($customer) {
+          foreach ($customer->getAttributes() as $key => $value) {
+          if (is_null($value)) {
+          $customer->$key = 'N/A';
+          }
+          }
+      } else {
+          $customer = (object) [
+          'customer' => $item->customer,
+          'billing_address' => 'N/A',
+          'billing_address_country' => 'N/A',
+          'billing_address_state' => 'N/A',
+          'billing_address_city' => 'N/A',
+          'billing_address_postal' => 'N/A',
+          'email' => 'N/A',
+          'phone' => 'N/A',
+          ];
+      }
     }
     else{
       $customer = Customer::where('customer', $item->customer)->select('customer', 'billing_address', 'billing_address_country', 'billing_address_state', 'billing_address_city', 'billing_address_postal', 'email', 'phone')->first();
     }
-
+    Log::info($customer);
     $useId = $item->user_id;
     $user_data = User::where('id', $useId)->first();
     $store_id = $user_data->store_id;
@@ -330,6 +342,8 @@ class PaymentController extends Controller
 
   public function editPayment(Request $request)
   {
+    Log::info("llego a traer los elementos del sale");
+    Log::info([$request->all()]);
     $payment = Payment::where('id', $request->id)->first();
     $oldAmount = $payment->amount_paid;
     $newAmount = $request->paymentAmount;
@@ -397,6 +411,8 @@ class PaymentController extends Controller
    */
   public function edit($id): \Inertia\Response
   {
+    Log::info("llego a editar el item");
+    Log::info([$id]);
     $user = Auth::user();
 
     if (Auth::user()->role == ('ADMIN')) {
@@ -424,7 +440,7 @@ class PaymentController extends Controller
         'items' => Item::where("user_id", $user->id)->with(['storage:id,name,limit', 'vendor:id,vendor'])->whereNull("sold")->whereNull("hold")->get(),
       ];
     }
-
+    
     return Inertia::render('Accounting/AddItems', $context);
   }
 

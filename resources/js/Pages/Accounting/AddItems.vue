@@ -37,6 +37,7 @@ const handleSelection = (selected: Item[]) => {
 
 const tableData: Ref<any[]> = ref([]);
 function parseItemsData() {
+  console.log("data que viene del controller: ", props.items);
   tableData.value = props
     .items!.filter((item) => item.sold === null)
     .map((item: any) => {
@@ -46,15 +47,16 @@ function parseItemsData() {
         return {
           ...item,
           location: `${name} - ${position}/${limit}`,
-          vendor: item.vendor.vendor,
+          vendor: item.vendor.vendor == 'Unknown' ? "N/A" : item.vendor.vendor,
         };
       }
       return {
         ...item,
         location: "No storage information",
-        vendor: item.vendor.vendor,
+        vendor: item.vendor.vendor == 'Unknown' ? "N/A" : item.vendor.vendor,
       };
     });
+  console.log("data despues de filtrar: ", tableData.value);
 }
 
 onMounted(() => {
