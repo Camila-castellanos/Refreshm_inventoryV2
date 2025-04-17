@@ -216,8 +216,8 @@ class PaymentController extends Controller
       $pdf = Pdf::loadView("sale-receipt-invoice", compact("sales", "header", "footer", "logo", "customer", "returned_items"))->setOptions(["defaultFont" => "sans-serif", "isRemoteEnabled" => "true"])->setPaper("a6", "landscape");
 
 
-
-      $filename = $customer . " Invoice " . $sales[0]->id . ".pdf";
+      $customer_name = $customer->customer ?? $customer;
+      $filename = $customer_name . " Invoice " . "#" . $sales[0]->id . ".pdf";
 
       return $pdf->stream($filename);
     }
