@@ -58,6 +58,17 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
     ];
 
+    protected static function booted()
+    {
+        static::created(function ($user) {
+            // Crear el storage predeterminado para el usuario
+            $user->storages()->create([
+                'name' => 'Default Location',
+                'limit' => 50, // Ajusta el límite predeterminado según sea necesario
+            ]);
+        });
+    }
+
     /**
      * The accessors to append to the model's array form.
      *
@@ -106,4 +117,9 @@ class User extends Authenticatable
     {
         return $this->belongsTo(Location::class);
     }
+
+    public function storages()
+{
+    return $this->hasMany(Storage::class, 'user_id');
+}
 }

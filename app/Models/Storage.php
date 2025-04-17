@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Scopes\UserStorageScope;
 
 class Storage extends Model
 {
@@ -25,4 +26,14 @@ class Storage extends Model
                 ]);
         });
     }
+
+    protected static function booted()
+    {
+        static::addGlobalScope(new UserStorageScope());
+    }
+
+    public function user()
+{
+    return $this->belongsTo(User::class, 'user_id');
+}
 }
