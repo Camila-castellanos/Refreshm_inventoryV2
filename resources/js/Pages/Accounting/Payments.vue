@@ -24,11 +24,15 @@ import AppLayout from "@/Layouts/AppLayout.vue";
 import { EmailTemplate, PaymentResponse as IPaymentResponse } from "@/Lib/types";
 import { Tab, TabList, Tabs, useDialog } from "primevue";
 import { onMounted, ref, computed } from "vue";
+import axios from "axios";
 import { headers } from "./data";
 import ShowPayments from "./Modals/ShowPayments.vue";
 import { router } from "@inertiajs/vue3";
 import SaleEdit from "./Modals/SaleEdit.vue";
 import SendEmail from "./Modals/SendEmail.vue";
+import ConfirmDialog from 'primevue/confirmdialog';
+import { useConfirm } from "primevue/useconfirm";
+import { useToast } from "primevue/usetoast";
 
 const props = defineProps({
   items: Array<IPaymentResponse>,
@@ -38,6 +42,8 @@ const props = defineProps({
 
 const currentTab = ref("/payments");
 const dialog = useDialog();
+const confirm = useConfirm();
+const toast = useToast();
 
 
 const tableActions = [
@@ -114,6 +120,12 @@ const getItemActions = (item: IPaymentResponse) => {
         },
         disable: () => !(Array.isArray(item.customer_email) && item.customer_email.length > 0),
       },
+      {
+      label: "Delete and Return",
+      icon: "pi pi-trash",
+      severity: "danger",
+      action: () => deleteAndReturn(item),
+    },
     ];
   }
 
@@ -170,13 +182,54 @@ const getItemActions = (item: IPaymentResponse) => {
       },
       disable: () => !(Array.isArray(item.customer_email) && item.customer_email.length > 0),
     },
+    {
+      label: "Delete and Return",
+      icon: "pi pi-trash",
+      severity: "danger",
+      action: () => deleteAndReturn(item),
+    },
   ];
+};
+
+const deleteAndReturn = (item: IPaymentResponse) => {
+  confirm.require({
+    message: "Are you sure you want to delete this sale and return the items?",
+    header: "Confirm Deletion",
+    icon: "pi pi-exclamation-triangle",
+    accept: () => {
+      // request to controller
+      axios
+        .post(route("payments.delete", {invoices: [item]}))
+        .then(() => {
+          toast.add({
+            severity: "success",
+            summary: "Success",
+            detail: "Sale deleted and items returned successfully.",
+            life: 3000,
+          });
+          router.reload(); // reload the page after deletion 
+        })
+        .catch((error) => {
+          console.error(error);
+          toast.add({
+            severity: "error",
+            summary: "Error",
+            detail: "An error occurred while deleting the sale.",
+            life: 3000,
+          });
+        });
+    },
+    reject: () => {
+      console.log("Deletion cancelled.");
+    },
+  });
 };
 
 const tableData = computed(() => {
   if (!props.items) {
     return [];
   }
+  console.log(props.items);
   return props.items.map((item) => {
     return {
       ...item,
