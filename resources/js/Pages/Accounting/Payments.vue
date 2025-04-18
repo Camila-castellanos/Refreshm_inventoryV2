@@ -141,12 +141,14 @@ const getItemActions = (item: IPaymentResponse) => {
       label: "Record / View Payments",
       icon: "pi pi-save",
       action: () => {
+        console.log(item);
         dialog.open(ShowPayments, {
           data: {
             paidPayments: item.payments,
             paidId: item.id,
             view: "all",
             saleId: item.sale_id,
+            paidAmount: item.balance_remaining,
           },
           props: {
             modal: true,
