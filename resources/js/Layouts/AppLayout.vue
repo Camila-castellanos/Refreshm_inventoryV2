@@ -47,7 +47,7 @@
       <div class="flex flex-col items-center justify-start w-full h-full gap-8">
         <Button variant="outlined" class="w-full" severity="secondary" v-for="item in navItems"
           @click="router.visit(`${item.url}`); drawerVisible = false">
-          {{ item.label }}
+          {{ item.label }} 
         </Button>
       </div>
     </Drawer>
@@ -125,15 +125,16 @@ const navItems = ref([
   { label: "Inventory", icon: "pi pi-box", url: "/inventory/items", roles: ["OWNER", "USER", "ADMIN"] },
   { label: "Accounting", icon: "pi pi-box", url: "/accounting/payments", roles: ["ADMIN", "OWNER"] },
   { label: "Contacts", icon: "pi pi-users", url: "/customer", roles: ["OWNER", "USER", "ADMIN"] },
-  { label: "Stores", icon: "pi pi-store", url: "/stores", roles: ["OWNER"] },
-  { label: "Users", icon: "pi pi-user", url: "/users", roles: ["OWNER"] },
+  { label: "Stores", icon: "pi pi-store", url: route("stores.index", {filter: "all"}), roles: ["OWNER"] },
+  { label: "Users", icon: "pi pi-user", url: route("users.index", {filter: "all"}), roles: ["OWNER"] },
 ]);
 
 const dropdownNavItems = ref([
   { label: "Profile", icon: "pi pi-user", url: route("profile.show"), roles: ["OWNER", "USER", "ADMIN"] },
+  { label: "Users", icon: "pi pi-users", url: route("users.index"), roles: ["ADMIN", "OWNER"] },
   // { label: "Store", icon: "pi pi-home", url: user?.store_id ? route("stores.edit", user.store_id) : "#", roles: ["ADMIN"] },
-  { label: "Locations", icon: "pi pi-map", url: route("locations.list"), roles: ["ADMIN"] },
-  // { label: "Users", icon: "pi pi-users", url: route("users.index"), roles: ["ADMIN"] },
+  { label: "Locations", icon: "pi pi-map", url: route("stores.index"), roles: ["ADMIN", "OWNER"] },
+  { label: "Dark Mode", icon: "pi pi-moon", command: toggleDarkMode, roles: ["OWNER", "USER", "ADMIN"] },
   { label: "Logout", icon: "pi pi-sign-out", command: logout, roles: ["OWNER", "USER", "ADMIN"] }
 ]);
 

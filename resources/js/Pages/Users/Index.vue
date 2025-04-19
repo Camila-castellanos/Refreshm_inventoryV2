@@ -82,7 +82,8 @@ watchEffect(() => {
 });
 
 function parseItems() {
-  tableData.value = props.users.map((user) => ({
+  const users = props.users || [];
+  tableData.value = users.map((user) => ({
     ...user,
     actions: [
       {

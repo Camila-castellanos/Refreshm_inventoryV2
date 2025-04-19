@@ -90,6 +90,7 @@ class HandleInertiaRequests extends Middleware
 
             // --- UPDATED ---
             'companyName' => $company?->name, // Company name remains
+            'role' => $user->role, // User role
             'shops' => $shopsArray, // Now an array of shop objects [{id: 1, name: 'Shop A'}, ...]
             // 'company_id' => $company?->id, // Optional: Include company ID if needed
         ];

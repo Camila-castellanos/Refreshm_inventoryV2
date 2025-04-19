@@ -17,25 +17,35 @@ class UserController extends Controller
    *
    * @return \Illuminate\Http\Response
    */
-  public function index()
-  {
+  public function index(Request $request)
+{
     $users = [];
+    $filter = $request->query('filter', 'own'); // obtain the filter from the query string, default to 'own'
+    
     switch (Auth::user()->role) {
-      case "ADMIN":
-        $store = Auth::user()->store;
-        $users = @$store->users;
-        break;
-      case "OWNER":
-        $users = User::all();
-        break;
-      default:
-        abort(403, 'Unauthorized.');
-        break;
+        case "ADMIN":
+            $store = Auth::user()->store;
+            $users = @$store->users;
+            break;
+        case "OWNER":
+            if ($filter === 'own') {
+                //  the owner wants to see only their own users
+                $store = Auth::user()->store;
+                $users = $store ? $store->users : collect([]);
+            } else if ($filter === 'all') {
+                // The owner wants to see all users (default behavior)
+                $users = User::all();
+            }
+            break;
+        default:
+            abort(403, 'Unauthorized.');
+            break;
     }
+    
     return Inertia::render('Users/Index', [
-      "users" => $users,
+        "users" => $users,
     ]);
-  }
+}
 
   /**
    * Show the form for creating a new resource.
