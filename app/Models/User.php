@@ -84,7 +84,7 @@ class User extends Authenticatable
      */
     public function store()
     {
-        return $this->belongsTo(Store::class);
+        return $this->belongsTo(Store::class, 'store_id');
     }
 
         // ---- NEW RELATIONSHIPS ----

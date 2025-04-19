@@ -20,16 +20,20 @@ class StoreController extends Controller
    *
    * @return \Illuminate\Http\Response
    */
-  public function index()
+  public function index(Request $request)
   {
     $stores = [];
-
+    $filter = $request->query('filter', 'own'); // obtain the filter from the query string, default to 'own'
     switch (Auth::user()->role) {
       case "ADMIN":
         $stores = [Auth::user()->store];
         break;
       case "OWNER":
-        $stores = Store::all();
+        if ($filter === 'all') {
+          $stores = Store::all();
+        } else {
+          $stores = [Auth::user()->store]; // filter stores by owner
+        }
         break;
       default:
         abort(403, 'Unauthorized.');
