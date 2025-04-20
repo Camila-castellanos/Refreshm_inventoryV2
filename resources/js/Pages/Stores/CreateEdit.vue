@@ -23,36 +23,6 @@
             </div>
           </div>
 
-          <!-- Create Default Admin Section -->
-          <div class="space-y-4" v-if="!storeEdit?.id">
-            <h3 class="text-lg font-medium">Create Default Admin</h3>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div class="field">
-                <label class="block mb-2">Admin Name:</label>
-                <InputText v-model="form.adminname" placeholder="Enter admin name" class="w-full" />
-              </div>
-
-              <div class="field">
-                <label class="block mb-2">Email:</label>
-                <InputText v-model="form.email" type="email" placeholder="Enter admin email" class="w-full" />
-              </div>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div class="field w-full">
-                <label class="block mb-2">Password:</label>
-                <Password v-model="form.password" placeholder="Enter password" class="w-full" toggleMask fluid :feedback="false" />
-              </div>
-
-              <div class="field w-full">
-                <label class="block mb-2">Confirm Password:</label>
-                <Password v-model="form.confirmPassword" placeholder="Confirm password" class="w-full" toggleMask fluid :feedback="false" />
-                <Message severity="error" v-if="form.password !== form.confirmPassword">Password must match</Message>
-              </div>
-            </div>
-          </div>
-
           <!-- Receipt Settings Section -->
           <div class="space-y-4">
             <h3 class="text-lg font-medium">Receipt Settings</h3>
@@ -85,7 +55,7 @@
 
             <div class="flex justify-end gap-2 pt-4">
               <Button label="Reset" outlined @click="resetForm" />
-              <Button label="Confirm" @click="onFormSubmit" :disabled="form.password !== '' && form.confirmPassword !== form.password" />
+              <Button label="Confirm" @click="onFormSubmit" />
             </div>
           </div>
         </div>
@@ -121,7 +91,6 @@ onMounted(() => {
 
     form.name = props.storeEdit.name || "";
     form.address = props.storeEdit.address || "";
-    form.email = props.storeEdit.email || "";
     form.header = props.storeEdit.header || "";
     form.footer = props.storeEdit.footer || "";
 
@@ -133,22 +102,14 @@ onMounted(() => {
 const form: {
   name: string;
   address: string;
-  email: string;
   header: string;
   footer: string;
-  adminname: string;
-  password: string;
-  confirmPassword: string;
   logo: string | null;
 } = reactive({
   name: "",
   address: "",
-  email: "",
   header: "",
   footer: "",
-  adminname: "",
-  password: "",
-  confirmPassword: "",
   logo: null,
 });
 
@@ -167,20 +128,17 @@ const onFormSubmit = () => {
   formData.append("address", form.address);
   formData.append("header", form.header);
   formData.append("footer", form.footer);
-  formData.append("email", form.email);
+
 
   if (form.logo) formData.append("logo", form.logo);
 
   if (!props?.storeEdit?.id) {
-    formData.append("adminname", form.adminname);
-    formData.append("password", form.password);
-    formData.append("password_confirmation", form.confirmPassword);
-
+    // if no id is provided, create a new store
     axios
       .post(requestUrl.value, formData, { headers: { "Content-Type": "multipart/form-data", Accept: "application/json" } })
       .then((response) => {
-        toast.add({ severity: "success", summary: "Success", detail: `Store saved successfully: ${response.data.name}`, life: 3000 });
-        resetForm();
+        toast.add({ severity: "success", summary: "Success", detail: `Location saved successfully: ${response.data.name}`, life: 3000 });
+        router.visit(route("stores.index"));
       })
       .catch((error) => {
         let textMsg = error.response ? Object.values(error.response.data.errors).join("\n") : "An error occurred";
@@ -189,7 +147,7 @@ const onFormSubmit = () => {
     return;
   }
   formData.append("_method", "PUT");
-
+  // if id is provided, update the existing store
   axios
     .post(requestUrl.value, formData, { headers: { "Content-Type": "multipart/form-data", Accept: "application/json" } })
     .then((response) => {
@@ -206,12 +164,8 @@ const resetForm = () => {
   Object.assign(form, {
     name: "",
     address: "",
-    email: "",
     header: "",
     footer: "",
-    adminname: "",
-    password: "",
-    confirmPassword: "",
     logo: null,
   });
 };

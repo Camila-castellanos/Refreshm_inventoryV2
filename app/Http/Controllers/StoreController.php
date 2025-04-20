@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
 class StoreController extends Controller
@@ -26,13 +27,13 @@ class StoreController extends Controller
     $filter = $request->query('filter', 'own'); // obtain the filter from the query string, default to 'own'
     switch (Auth::user()->role) {
       case "ADMIN":
-        $stores = [Auth::user()->store];
+        $stores = array_merge([Auth::user()->store], Auth::user()->stores->toArray());
         break;
       case "OWNER":
         if ($filter === 'all') {
           $stores = Store::all();
         } else {
-          $stores = [Auth::user()->store]; // filter stores by owner
+          $stores = array_merge([Auth::user()->store], Auth::user()->stores->toArray()); // filter stores by owner
         }
         break;
       default:
@@ -64,10 +65,6 @@ class StoreController extends Controller
    */
   public function store(StoreForm $request)
   {
-    $count = User::where('email', $request->email)->count();
-    if ($count) {
-      return response()->json(['response' => 'Email addres already exits!'], 500);
-    } else {
       // $logo = $request["logo"]->store("logos");
 
       // $data = [
@@ -82,21 +79,29 @@ class StoreController extends Controller
 
       // $store = Store::create($data);
 
-      $store = Store::create($request->validated());
-      $user = User::create([
-        "name" => $request->adminname,
-        "email" => $request->email,
-        "password" => Hash::make($request->password),
-        "role"  => 'ADMIN',
-        'store_id' => @$store->id,
-      ]);
-    }
+      // data for new store
+      try{
+        $admin_user = Auth::user();
+  
+        $store = Store::create([
+            "name" => $request->name,
+            "address" => $request->address,
+            "header" => $request->header,
+            "footer" => $request->footer,
+            "logo" => $request->logo ? $request->logo->store("logos") : null,
+            "email" => $admin_user->email,
+            "user_id" => $admin_user->id,
+        ]);
+        
+        return response()->json($store, 201);
+      }
+      catch(\Exception $e){
+        return response()->json($e->getMessage(), 500);
+      }
     // if (Auth::user()->role == "OWNER") {
     //     $user->store_id = @$store->id;
     //     $user->save();
     // }
-
-    return response()->json($store, 201);
   }
 
   /**

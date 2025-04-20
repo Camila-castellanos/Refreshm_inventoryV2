@@ -27,13 +27,10 @@ class   StoreForm extends FormRequest
   {
     return [
       "name" => "required",
-      "email" => "required",
       "address" => "required",
-      "header" => "required",
-      "footer" => "required",
-      "adminname" => "required",
-      "password" => $this->passwordRules(),
-      "logo" => "required",
+      "header" => "nullable",
+      "footer" => "nullable",
+      "logo" => "nullable",
     ];
   }
 }
