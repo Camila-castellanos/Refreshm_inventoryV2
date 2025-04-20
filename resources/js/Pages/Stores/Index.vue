@@ -31,7 +31,7 @@ const tableData: Ref<Store[]> = ref([]);
 const selectedItems: Ref<Store[]> = ref([]);
 const tableActions = ref([
   {
-    label: "Create store",
+    label: "Add Location",
     icon: "pi pi-plus",
     action: () => {router.visit(route('stores.create'))},
   },
