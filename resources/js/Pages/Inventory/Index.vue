@@ -7,7 +7,7 @@
     <section class="w-[95%] mx-auto mt-4">
       <ItemsTabs :custom-tabs="tabs">
         <DataTable title="Active Inventory" @update:selected="handleSelection" :actions="tableActions"
-          :items="tableData" inventory :headers="allHeaders" ></DataTable>
+          :items="tableData" inventory :headers="allHeaders"></DataTable>
       </ItemsTabs>
     </section>
   </div>
@@ -256,5 +256,13 @@ const updateTableHeaders = (updatedHeaders: CustomField[]) => {
 </script>
 
 <style scoped lang="css">
+/* General style for all table cells */
+:deep(.p-datatable .p-datatable-tbody > tr > td) {
+  font-size: 0.85rem; 
+}
 
+/* General style for all table headers */
+:deep(.p-datatable .p-datatable-thead > tr > th) {
+  font-size: 0.85rem;
+}
 </style>

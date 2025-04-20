@@ -16,7 +16,7 @@
         <Button icon="p#buttoni pi-bars" aria-label="Save" @click="toggleDrawer" class="hide-breakpoint" />
       </template>
       <template #item="{ item, props, hasSubmenu, root }">
-        <a v-ripple class="flex items-center" v-bind="props.action" :href="item.url">
+        <a v-ripple class="flex items-center text-xl" v-bind="props.action" :href="item.url">
           <span>{{ item.label }}</span>
           <Badge v-if="item.badge" :class="{ 'ml-auto': !root, 'ml-2': root }" :value="item.badge" />
           <span v-if="item.shortcut"
