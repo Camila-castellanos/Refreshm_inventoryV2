@@ -4,7 +4,7 @@
       <template #title>
         <div class="flex items-center">
           <Button icon="pi pi-arrow-left" link class="mr-2" @click="router.visit(route('stores.index'))" />
-          <h2 class="text-xl font-semibold">{{ storeEdit?.id ? "Edit" : "Create" }} Store</h2>
+          <h2 class="text-xl font-semibold">{{ storeEdit?.id ? "Edit" : "Add" }} Location</h2>
         </div>
       </template>
 
