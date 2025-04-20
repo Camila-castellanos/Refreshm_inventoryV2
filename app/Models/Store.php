@@ -12,7 +12,7 @@ class Store extends Model
     use SoftDeletes;
 
 
-    protected $fillable = ["name", "address", "email", "header", "footer", "logo", "price_percent"];
+    protected $fillable = ["name", "address", "email", "header", "footer", "logo", "price_percent", "user_id"];
 
     /**
      * A Store can have many Users

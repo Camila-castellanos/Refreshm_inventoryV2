@@ -5,11 +5,11 @@
     <ConfirmDialog />
     <SessionExpiredDialog />
 
-    <Menubar :model="navItems">
+    <Menubar :model="navItems" class="centered-menubar">
       <template #start>
-        <div class="h-16 mr-12">
+        <div>
           <img src="/images/swiftstock_logo.jpeg" draggable="false"
-            class="object-contain max-h-full max-w-full pointer-events-none" alt="" />
+            class="h-36 relative left-20 object-contain max-h-full max-w-full pointer-events-none" alt="" />
         </div>
       </template>
       <template >
@@ -170,5 +170,15 @@ header {
   .hide-breakpoint {
     display: none;
   }
+  /* Use :deep to access internal components of PrimeVue */
+.centered-menubar :deep(.p-menubar-root-list) {
+  @apply flex justify-center w-full mx-auto;
+}
+
+/* Adjust buttons and end elements if necessary */
+.centered-menubar :deep(.p-menubar-button),
+.centered-menubar :deep(.p-menubar-end) {
+  @apply ml-auto;
+}
 }
 </style>
