@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Carbon\Carbon;
 use Exception;
+use Illuminate\Support\Facades\Log;
 
 class CustomerController extends Controller
 {
@@ -265,9 +266,13 @@ class CustomerController extends Controller
             $query->orWhere('first_name', 'LIKE', '%' . $customer . '%');
             $query->orWhere('last_name', 'LIKE', '%' . $customer . '%');
         })->select('id', 'customer', 'first_name', 'last_name', 'credit')->get();
+        Log::info($customers);
         foreach ($customers as $customer) {
-            $customer->customer_name = $customer->first_name[0] . " " . $customer->last_name[0];
-        }
+        // Check if the arrays have values before accessing them
+        $firstName = is_array($customer->first_name) && !empty($customer->first_name) ? $customer->first_name[0] : '';
+        $lastName = is_array($customer->last_name) && !empty($customer->last_name) ? $customer->last_name[0] : '';
+        $customer->customer_name = $firstName . ($firstName && $lastName ? " " : "") . $lastName;
+    }
         return response()->json($customers, 200);
     }
 

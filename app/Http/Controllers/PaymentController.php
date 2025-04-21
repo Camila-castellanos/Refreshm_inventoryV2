@@ -161,29 +161,21 @@ class PaymentController extends Controller
     $itm_id_pluck = Item::where('sale_id', $item->sale_id)->pluck('sale_id');
     if (is_numeric($item->customer)) {
       $customer = Customer::whereId($item->customer)->select('customer', 'billing_address', 'billing_address_country', 'billing_address_state', 'billing_address_city', 'billing_address_postal', 'email', 'phone')->first();
-      if ($customer) {
-          foreach ($customer->getAttributes() as $key => $value) {
-          if (is_null($value)) {
-          $customer->$key = 'N/A';
-          }
-          }
-      } else {
-          $customer = (object) [
-          'customer' => $item->customer,
-          'billing_address' => 'N/A',
-          'billing_address_country' => 'N/A',
-          'billing_address_state' => 'N/A',
-          'billing_address_city' => 'N/A',
-          'billing_address_postal' => 'N/A',
-          'email' => 'N/A',
-          'phone' => 'N/A',
-          ];
-      }
     }
-    else{
+      else{
       $customer = Customer::where('customer', $item->customer)->select('customer', 'billing_address', 'billing_address_country', 'billing_address_state', 'billing_address_city', 'billing_address_postal', 'email', 'phone')->first();
     }
-    Log::info($customer);
+      $customer = (object) [
+      'customer' => $customer->customer ?? 'N/A',
+      'billing_address' => $customer->billing_address ?? 'N/A',
+      'billing_address_country' => $customer->billing_address_country ?? 'N/A',
+      'billing_address_state' => $customer->billing_address_state ?? 'N/A',
+      'billing_address_city' => $customer->billing_address_city ?? 'N/A',
+      'billing_address_postal' => $customer->billing_address_postal ?? 'N/A',
+      'email' => empty($customer->email) ? ['N/A'] : $customer->email,
+      'phone' => empty($customer->phone) ? ['N/A'] : $customer->phone,
+      ];
+    Log::info("customer final para enviar el receipt,", [$customer]);
     $useId = $item->user_id;
     $user_data = User::where('id', $useId)->first();
     $store_id = $user_data->store_id;
