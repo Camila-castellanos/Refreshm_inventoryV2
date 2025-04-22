@@ -4,6 +4,9 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Storage;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
+
 class StorageController extends Controller
 {
     /**
@@ -14,7 +17,7 @@ class StorageController extends Controller
     public function index(Request $request)
     {
         $storages = Storage::with('items')->get();
-
+        Log::info($storages);
         return response()->json($storages);
     }
 
@@ -36,6 +39,7 @@ class StorageController extends Controller
             Storage::create([
                 'name' => $storage['name'],
                 'limit' => $storage['limit'],
+                'user_id' => Auth::id(),
             ]);
         }
     
@@ -59,7 +63,11 @@ class StorageController extends Controller
     ]);
 
     foreach ($validated['storages'] as $storage) {
-        Storage::create($storage);
+        Storage::create([
+            'name' => $storage['name'],
+            'limit' => $storage['limit'],
+            'user_id' => Auth::id(),
+        ]);
     }
 
     return response()->json('Storages created successfully', 201);
