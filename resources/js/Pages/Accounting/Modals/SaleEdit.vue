@@ -207,6 +207,7 @@ onMounted(async () => {
       axios.get(route("sales.sold", saleId.value)),
       axios.get(route("tax.list")),
     ]);
+    console.log("items in the sold", itemsResponse.data);
     customers.value = customersResponse.data;
     tableData.value = itemsResponse.data;
     taxes.value = taxesResponse.data.map((tax: Tax) => ({ ...tax, name: `${tax.name} (${tax.percentage}%)` }));

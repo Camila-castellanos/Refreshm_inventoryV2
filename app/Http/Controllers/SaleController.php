@@ -51,6 +51,7 @@ class SaleController extends Controller
             $sale_item['sold_position'] = $sale_item['position'];
             $sale_item['sold_storage_id'] = $sale_item['storage_id'];
             $sale_item['sold_storage_name'] = Storage::find($sale_item['storage_id'])?->name;
+            $sale_item['sold'] = Carbon::now();
             unset($sale_item["selected"]);
             $item = Item::find($sale_item["id"]);
 
@@ -102,7 +103,7 @@ class SaleController extends Controller
                 'customer' => $new_item['customer'],
                 'discount' => $request->discount,
                 'tax' => $request->tax,
-                'sold' => $new_item['sold'],
+                'sold' => Carbon::now(),
                 'user_id' => $form["user_id"],
                 'profit' => $new_item['profit'],
                 'created_at' => now(),

@@ -59,6 +59,7 @@ class ItemController extends Controller
             }, 'vendor:id,vendor'])
                     ->whereNull("sold")
                     ->whereNull("hold")
+                    ->whereNull("sold_id")
                     ->whereNotIn('id', TabItem::pluck('item_id'))
                     ->get(),
                 'tabs' => $tabs,
