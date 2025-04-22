@@ -297,7 +297,12 @@ class SaleController extends Controller
             $fields = CustomField::where('user_id', $user->id)->get();
             $items = Item::whereNotNull('sold')
             ->whereNotNull('sale_id')
-            ->where('sold', '>=', now()->subDays(7))
+            ->where(function($query) {
+                $query->where('sold', '>=', now()->subDays(7))
+                      ->orWhereHas('sale', function($q) {
+                          $q->where('created_at', '>=', now()->subDays(7));
+                      });
+            })
             ->with(['vendor:id,vendor', 'sale'])
             ->get();
             $context = [
@@ -326,11 +331,17 @@ class SaleController extends Controller
         $end = strtotime("1 day", strtotime($request->end));
         $user = Auth::user();
 
-        $items = Item::where([
+        $items = Item::where(function ($query) use ($start, $end, $user) {
+            $query->where([
             ["sold", ">=", $start],
             ["sold", "<=", date("Y-m-d", $end)],
             ["user_id", $user->id]
-        ])
+            ])
+            ->orWhereHas('sale', function ($q) use ($start, $end, $user) {
+            $q->whereBetween('created_at', [$start, date("Y-m-d", $end)])
+              ->where('user_id', $user->id);
+            });
+        })
             ->whereNotNull("sale_id")
             // ->whereHas('sale', function($query){
             //     $query->where('paid', 1);

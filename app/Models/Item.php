@@ -113,5 +113,15 @@ class Item extends Model
     }
 }
 
+public function getSoldAttributeFallback($value)
+{
+    // Si sold ya tiene valor, retorna ese valor
+    if (!is_null($value)) {
+        return $value;
+    }
+    // Si sold es null y hay relación sale, retorna sale->created_at
+    return $this->sale ? $this->sale->created_at : null;
+}
+
     
 }
