@@ -24,7 +24,7 @@ import { CustomField, Field, Tab as ITab, Item } from "@/Lib/types";
 import axios from "axios";
 import { Dialog, useConfirm, useDialog, useToast } from "primevue";
 import { defineProps, onMounted, ref, Ref, watchEffect } from "vue";
-import { headers } from "./IndexData";
+import { onHoldHeaders as headers } from "./IndexData";
 import ItemsSell from "./Modals/ItemsSell.vue";
 import CustomFields from "./Modals/CustomFields.vue";
 import { router } from "@inertiajs/vue3";

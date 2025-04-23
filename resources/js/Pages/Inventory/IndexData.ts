@@ -156,3 +156,76 @@ export const soldHeaders: Ref<CustomField[]> = ref([
     type: "string",
   },
 ]);
+
+export const onHoldHeaders: Ref<CustomField[]> = ref([
+  {
+    label: "Date",
+    name: "date",
+    type: "string",
+  },
+  {
+    label: "Vendor",
+    name: "vendor",
+    type: "string",
+  },
+  {
+    label: "Manufacturer",
+    name: "manufacturer",
+    type: "string",
+  },
+  {
+    label: "Customer",
+    name: "customer",
+    type: "string",
+  },
+  {
+    label: "Manufacturer",
+    name: "manufacturer",
+    type: "string",
+  },
+  {
+    label: "Model",
+    name: "model",
+    type: "string",
+  },
+  {
+    label: "Colour",
+    name: "colour",
+    type: "string",
+  },
+  {
+    label: "Battery",
+    name: "battery",
+    type: "string",
+  },
+  {
+    label: "Grade",
+    name: "grade",
+    type: "string",
+  },
+  {
+    label: "Issues",
+    name: "issues",
+    type: "string",
+  },
+  {
+    label: "IMEI/Serial",
+    name: "imei",
+    type: "string",
+  },
+  {
+    label: "Cost",
+    name: "cost",
+    type: "number",
+  },
+  {
+    label: "Selling Price",
+    name: "selling_price",
+    type: "number",
+  },
+  {
+    label: "Location",
+    name: "location",
+    type: "string",
+  },
+]);
