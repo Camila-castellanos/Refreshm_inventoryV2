@@ -5,18 +5,18 @@
     <ConfirmDialog />
     <SessionExpiredDialog />
 
-    <Menubar :model="navItems" class="centered-menubar">
+    <Menubar :model="navItems" class="flex menuBar !items-end">
       <template #start>
         <div>
           <img src="/images/swiftstock_logo.jpeg" draggable="false"
-            class="h-36 relative left-20 object-contain max-h-full max-w-full pointer-events-none" alt="" />
+            class="h-28 pl-28 py-1 object-contain max-h-full max-w-full pointer-events-none" alt="" />
         </div>
       </template>
       <template >
         <Button icon="p#buttoni pi-bars" aria-label="Save" @click="toggleDrawer" class="hide-breakpoint" />
       </template>
       <template #item="{ item, props, hasSubmenu, root }">
-        <a v-ripple class="flex items-center text-xl" v-bind="props.action" :href="item.url">
+        <a v-ripple class="flex items-center text-lg" v-bind="props.action" :href="item.url">
           <span>{{ item.label }}</span>
           <Badge v-if="item.badge" :class="{ 'ml-auto': !root, 'ml-2': root }" :value="item.badge" />
           <span v-if="item.shortcut"
@@ -171,13 +171,13 @@ header {
     display: none;
   }
   /* Use :deep to access internal components of PrimeVue */
-.centered-menubar :deep(.p-menubar-root-list) {
-  @apply flex justify-center w-full mx-auto;
+.menuBar :deep(.p-menubar-root-list) {
+  @apply flex justify-start ml-[230px];
 }
 
 /* Adjust buttons and end elements if necessary */
-.centered-menubar :deep(.p-menubar-button),
-.centered-menubar :deep(.p-menubar-end) {
+.menuBar :deep(.p-menubar-button),
+.menuBar :deep(.p-menubar-end) {
   @apply ml-auto;
 }
 }
