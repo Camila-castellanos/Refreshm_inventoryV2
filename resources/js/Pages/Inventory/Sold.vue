@@ -36,7 +36,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, Ref } from "vue";
+import { ref, onMounted, Ref, computed } from "vue";
 import DataTable from "@/Components/DataTable.vue";
 import ItemsTabs from "@/Components/ItemsTabs.vue";
 import { CustomField, Field, Tab as ITab, Item } from "@/Lib/types";
@@ -94,6 +94,14 @@ function updateTableData(data: any[]) {
       total: `$  ${item.sale.total ?? 'unknown'}`,
       location: item.sold_storage_name || "unknown",
       vendor: item.vendor?.vendor,
+      battery: computed(() => {
+        if (item.battery && !String(item.battery).endsWith("%")) {
+          if (!isNaN(Number(item.battery)) && item.battery !== null) {
+            return `${item.battery}%`;
+          }
+        }
+        return item.battery;
+      }),
       actions: [
         {
           label: "Edit Items",
