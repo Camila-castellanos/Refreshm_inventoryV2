@@ -65,7 +65,16 @@
             selection-mode="multiple"
             header-style="width: 3rem; text-align: center;"
             body-style="width: 3rem; text-align: center;"></Column>
-          <Column field="model" header="Device"></Column>
+          <Column field="model" header="Device">
+  <template #body="slotProps">
+    <template v-if="slotProps.data.isNew">
+      <InputText v-model="slotProps.data.model" class="w-full" />
+    </template>
+    <template v-else>
+      {{ slotProps.data.model }}
+    </template>
+  </template>
+</Column>
           <Column field="issues" header="Issue"></Column>
           <Column field="imei" header="IMEI"></Column>
           <Column field="selling_price" header="Selling Price">
@@ -81,13 +90,14 @@
           </Column>
         </DataTable>
         <div class="flex space-x-2 my-3">
+           <Button label="" icon="pi pi-plus" @click="addNewRow" />
           <Button label="Select Items" class="p-button-outlined" @click="addItem" />
           <Button v-if="form.credit > 0" label="Edit Credit" class="p-button-sm p-button-warning" @click="editCredit" />
           <Button
             v-if="Number(balance_remaining) > 0 && form.customer_credit > 0"
             label="Add Credit"
             class="p-button-sm p-button-success ml-2"
-            @click="addCredit" />>
+            @click="addCredit" />
           <Button
             v-if="selectedItems.length > 0"
             label="Delete Items"
@@ -98,7 +108,7 @@
                 returnItems();
                 deleteItems();
               }
-            " />
+            "/>
         </div>
       </div>
 
@@ -140,7 +150,7 @@
 import { ref, onMounted, inject, computed, Ref } from "vue";
 import axios from "axios";
 import { useToast } from "primevue/usetoast";
-import { Button, Column, ConfirmDialog, DataTable, DatePicker, InputNumber, Select, Textarea, useConfirm, useDialog } from "primevue";
+import { Button, Column, ConfirmDialog, DataTable, DatePicker, InputNumber, Select, Textarea, useConfirm, useDialog, InputText } from "primevue";
 import { Customer, Item, PaymentResponse, Tax } from "@/Lib/types";
 import { DynamicDialogCloseOptions, DynamicDialogInstance } from "primevue/dynamicdialogoptions";
 import AddTaxes from "./AddTaxes.vue";
@@ -270,6 +280,10 @@ const deleteItems = () => {
 };
 
 const returnItem = async (item: Item) => {
+  if (item.isNew) {
+    deleteItem(item);
+    return;
+  }
   confirm.require({
     message: `Are you sure you want to return the item "${item.model}"?`,
     header: "Confirmation",
@@ -330,8 +344,8 @@ const onEdit = async () => {
     payment_method: form.value.payment_method,
     payment_account: form.value.payment_account,
     notes: form.value.memo_notes,
-    items: tableData.value,
-    newItems: [],
+    items: tableData.value.filter(item => !item.isNew),
+    newItems: tableData.value.filter(item => item.isNew),
     subtotal: subTotal,
     tax: form.value.tax.percentage,
     flatTax: flatTax.toFixed(2),
@@ -412,4 +426,21 @@ const addCredit = () => {
     toast.add({ severity: "success", summary: "Credit Applied", detail: "Customer credit applied successfully.", life: 3000 });
   }
 };
+
+const newRowTemplate = {
+  id: null,
+  model: "",
+  issues: "",
+  imei: "",
+  selling_price: 0,
+  position: "",
+  storage_id: null,
+  cost: 0,
+  profit: 0,
+  isNew: true
+};
+
+function addNewRow() {
+  tableData.value.push(newRowTemplate);
+}
 </script>
