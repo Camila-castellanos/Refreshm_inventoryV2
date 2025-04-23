@@ -70,6 +70,9 @@ function parseItemsData() {
           console.log("batery", item.battery);
           item.battery = `${item.battery}%`;
         }
+        else {
+          item.battery = "No battery info";
+        }
       }
       if (item.storage) {
         const { name, limit, items_count } = item.storage;

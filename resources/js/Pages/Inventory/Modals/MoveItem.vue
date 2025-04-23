@@ -3,8 +3,8 @@
     <form @submit.prevent="moveItems" method="post" class="w-full flex justify-center items-center flex-col">
       <Select v-model="selectedTab" :options="tabs" optionLabel="name" optionValue="id" class="w-full mb-5">
       </Select>
-      
-      <input v-if="selectedTab === 'OnHold'" v-model="customerName" type="text" placeholder="Customer Name" class="w-full mb-5 p-2 border rounded" />
+      <span v-if="selectedTab === 'On Hold'" class="text-sm text-gray-500 mb-2">You can add a customer name for these items.</span>
+      <input v-if="selectedTab === 'On Hold'" v-model="customerName" type="text" placeholder="Customer Name" class="w-full mb-5 border rounded placeholder:text-center focus:ring-0 focus:border-black" />
       
       <Button type="submit" class="w-full">Move</Button>
     </form>
