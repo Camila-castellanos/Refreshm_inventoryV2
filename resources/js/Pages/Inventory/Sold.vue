@@ -84,6 +84,7 @@ function parseItemsData() {
 }
 
 function updateTableData(data: any[]) {
+  console.log("Data:", data);
   tableData.value = data.map((item: any) => {
     return {
       ...item,

@@ -67,12 +67,12 @@ export const headers: Ref<CustomField[]> = ref([
 export const soldHeaders: Ref<CustomField[]> = ref([
   {
     label: "Sale Date",
-    name: "date",
+    name: "sold",
     type: "string",
   },
   {
     label: "Purchase Date",
-    name: "sold",
+    name: "date",
     type: "string",
   },
   {
