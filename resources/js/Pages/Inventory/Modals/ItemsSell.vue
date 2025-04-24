@@ -28,7 +28,7 @@
 
       <div class="col-span-2">
         <label for="icondisplay" class="block mb-2 font-bold"> Customer </label>
-        <Select v-model="form.customer" :options="customers" optionLabel="customer" placeholder="Select" class="w-full">
+        <Select v-model="form.customer" :options="customers" filter optionLabel="customer" placeholder="Select" class="w-full">
           <template #footer>
             <div class="p-3">
               <Button label="Add New Customer" fluid severity="secondary" text size="small" icon="pi pi-plus"
