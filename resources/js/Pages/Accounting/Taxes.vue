@@ -41,6 +41,7 @@ const handleSelection = (selected: Tax[]) => {
 };
 
 onMounted(() => {
+  console.log("mounted", props.items);
   tableData.value = props.items!.map((item: Tax) => {
     return {
       ...item,
