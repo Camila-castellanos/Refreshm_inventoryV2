@@ -117,7 +117,8 @@ const getItemActions = (item: Bill) => {
             paidPayments: item.payments,
             paidId: item.id,
             view: "all",
-            saleId: item.sale_id
+            saleId: item.sale_id,
+            amount: item.balance_remaining
           },
           props: {
             modal: true
