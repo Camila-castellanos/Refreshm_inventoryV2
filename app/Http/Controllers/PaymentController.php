@@ -221,7 +221,18 @@ class PaymentController extends Controller
 
 
       $customer_name = $customer->customer ?? $customer;
-      $filename = $customer_name . " Invoice " . "#" . $sales[0]->id . ".pdf";
+
+      // Busca primero el nombre de la compañía del usuario
+      $user_company = $user_data->company->name ?? null;
+
+      // Si no hay compañía, busca el nombre del store
+      $store_name = $store->name ?? null;
+
+      // Si no hay compañía ni store, usa el nombre del cliente
+      $invoice_ref_name = $user_company ?: ($store_name ?: $customer_name);
+
+
+      $filename = $invoice_ref_name . " Invoice " . "#" . $sales[0]->id . ".pdf";
 
       return $pdf->stream($filename);
     }

@@ -119,19 +119,19 @@
       <div class="col-span-6">
         <div class="flex flex-col items-end justify-between">
           <span class="mt-1">
-            <div>Subtotal: $ {{ subtotal }}</div>
+            <div>Subtotal: $ {{ subtotal.toFixed(2) }}</div>
           </span>
           <span class="mt-1">
-            <div>Tax: $ {{ taxAmount }}</div>
+            <div>Tax: $ {{ taxAmount.toFixed(2) }}</div>
           </span>
           <span class="mt-1">
-            <div>Total: $ {{ total }}</div>
+            <div>Total: $ {{ total.toFixed(2) }}</div>
           </span>
           <span v-if="form.credit > 0" class="mt-1">
-            <div>Credit: $ {{ parseFloat(final_credit) }}</div>
+            <div>Credit: $ {{ parseFloat(final_credit).toFixed(2) }}</div>
           </span>
           <span class="mt-1">
-            <div>Amount Paid: $ {{ amount_paid }}</div>
+            <div>Amount Paid: $ {{ amount_paid.toFixed(2) }}</div>
           </span>
           <span class="mt-1">
             <div>Balance Remaining: $ {{ balance_remaining }}</div>
@@ -389,15 +389,19 @@ const refundItem = async (item: Item) => {
   });
 };
 
+function round(num) {
+  return Math.round((num + Number.EPSILON) * 100) / 100;
+}
+
 const subtotal = computed(() => {
-  return tableData.value.reduce((sum, item) => sum + (item.selling_price || 0), 0);
+  return round(tableData.value.reduce((sum, item) => sum + (item.selling_price || 0), 0));
 });
 
 const taxAmount = computed(() => {
-  return form.value.tax?.percentage ? (subtotal.value * form.value.tax.percentage) / 100 : 0;
+  return round(form.value.tax?.percentage ? (subtotal.value * form.value.tax.percentage) / 100 : 0);
 });
 
-const total = computed(() => subtotal.value + taxAmount.value);
+const total = computed(() => round(subtotal.value + taxAmount.value));
 
 const final_credit = computed(() => {
   return (
@@ -408,13 +412,14 @@ const final_credit = computed(() => {
 });
 
 const amount_paid = computed(() => {
-  return dialogRef.value.data.payment?.amount_paid || 0;
+  const raw = dialogRef.value.data.payment?.amount_paid;
+  return raw ? round(Number(raw)) : 0;
 });
 
 const balance_remaining = computed(() => {
   let balance = total.value - amount_paid.value;
   balance -= parseFloat(final_credit.value);
-  return balance.toFixed(2);
+  return round(balance);
 });
 
 const editCredit = () => {
