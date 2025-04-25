@@ -103,7 +103,7 @@ onMounted(() => {
   if (dialogRef.value?.data) {
     view.value = dialogRef.value.data.view || "all";
     paidId.value = dialogRef.value.data.paidId || null;
-    paidAmount.value = dialogRef.value.data.amount || null;
+    paidAmount.value = dialogRef.value.data.paidAmount || null;
     if (view.value !== "record") {
       tableData.value = dialogRef.value.data.paidPayments.map((payment: PaymentResponse) => ({
         ...payment,

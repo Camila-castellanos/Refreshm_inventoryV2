@@ -45,6 +45,9 @@ onMounted(() => {
     return {
       ...item,
       percentage: item.percentage + " %",
+      paid: "$ " + item.paid,
+      total_sales: "$ " + item.total_sales,
+      total_purchases: "$ " + item.total_purchases,
     };
   });
 });
@@ -91,6 +94,9 @@ watch(
         ...item,
         percentage: item.percentage + " %",
         collected: "$ " + item.collected,
+        paid: "$ " + item.paid,
+        total_sales: "$ " + item.total_sales,
+        total_purchases: "$ " + item.total_purchases,
       };
     });
   }
