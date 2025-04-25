@@ -262,7 +262,16 @@ function mapSpreadsheetData(data: ItemWithLocation[]): any[] {
   return data.map((row) => {
     const storageId = storagesList.value.find((s) => s.name === row.location?.split("-")[0].trim())?.id;
     const vendorId = vendorsList.value.find((v) => v.vendor === row.vendor)?.id;
-    return { ...row, storage_id: storageId, vendor_id: vendorId, date: format(row.date, "yyyy-MM-dd") };
+    let cost = row.cost;
+    let selling_price = row.selling_price;
+
+    if (cost?.toString().startsWith("$")) {
+      cost = Number(cost.toString().slice(1));
+    }
+    if (selling_price?.toString().startsWith("$")) {
+      selling_price = Number(selling_price.toString().slice(1));
+    }
+    return { ...row, storage_id: storageId, vendor_id: vendorId, date: format(row.date, "yyyy-MM-dd"), cost, selling_price };
   });
 }
 

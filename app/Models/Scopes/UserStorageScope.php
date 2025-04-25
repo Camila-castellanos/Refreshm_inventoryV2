@@ -16,7 +16,6 @@ class UserStorageScope implements Scope
     public function apply(Builder $builder, Model $model): void
     {
         if (Auth::check()) {
-            Log::info('UserStorageScope applied for user: ' . Auth::id());
             $builder->where('user_id', Auth::id());
         }
     }
