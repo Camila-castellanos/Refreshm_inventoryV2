@@ -7,6 +7,7 @@ use App\Models\Tax;
 use App\Models\Bill;
 use App\Models\Sale;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Exception;
 use PhpOffice\PhpSpreadsheet\Style\NumberFormat\Wizard\Percentage;
@@ -24,10 +25,10 @@ class TaxController extends Controller
       $response = [];
 
       foreach ($taxes as $tax) {
-        $paid = Bill::where('tax_id', $tax->id)->whereBetween('date', [$firstDayOfMonth, $currentDate])->where('user_id', $user->id)->sum('flat_tax');
-        $collected = Sale::where('tax_id', $tax->id)->whereBetween('date', [$firstDayOfMonth, $currentDate])->where('user_id', $user->id)->sum('flatTax');
+        $paid = Bill::where('tax_id', $tax->id)->where('user_id', $user->id)->sum('flat_tax');
+        $collected = Sale::where('tax_id', $tax->id)->where('user_id', $user->id)->sum('flatTax');
         $total_sales = round(Sale::where('tax_id', $tax->id)->where('user_id', $user->id)->sum('total'));
-        $total_purchases = Bill::where('tax_id', $tax->id)->whereBetween('date', [$firstDayOfMonth, $currentDate])->where('user_id', $user->id)->sum('total');
+        $total_purchases = Bill::where('tax_id', $tax->id)->where('user_id', $user->id)->sum('total');
         $i["id"] = $tax->id;
         $i["name"] = $tax->name;
         $i["percentage"] = (float)$tax->percentage;
