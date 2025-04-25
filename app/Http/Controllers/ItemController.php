@@ -348,9 +348,9 @@ class ItemController extends Controller
         $company = $user->company;
         $shops = $company?->shops;
 
-        $firstShop = $shops[0];
+        $firstShop = $shops[0] ?? null;
 
-        $shopId = $firstShop->id;
+        $shopId = $firstShop ? $firstShop->id : null;
 
         $created = [];
         foreach ($items["items"] as $item) {
@@ -872,7 +872,6 @@ class ItemController extends Controller
     {
         try {
             $check = $request->validated();
-            Log::info('Validated data:', $check);
             $test = Excel::import(new ItemsImport, $check['file']);
             return response()->json($test, 201);
         } catch (Exception $e) {
