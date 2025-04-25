@@ -3,7 +3,9 @@
     <section class="w-[90%] mx-auto mt-4">
       <AccountingTabs>
         <DataTable title="Expenses" :items="tableData" :headers="expensesHeaders" :actions="actions"
-          @update:selected="handleSelection"></DataTable>
+          @update:selected="handleSelection"
+          sortField="date"
+          :sortOrder="-1"></DataTable>
       </AccountingTabs>
     </section>
   </div>
@@ -36,12 +38,18 @@ const handleSelection = (selected: Expense[]) => {
 };
 
 onMounted(() => {
-  tableData.value = props!.items;
+  tableData.value = props!.items.map(({ total, ...rest }) => ({
+    ...rest,
+    total: `$ ${total}`,
+  }));
 });
 
 watchEffect(() => {
   if (props.items) {
-    tableData.value = props.items;
+    tableData.value = props.items.map(({ total, ...rest }) => ({
+      ...rest,
+      total: `$ ${total}`,
+    }));
   }
 });
 
@@ -49,6 +57,7 @@ const actions: ITableActions[] = [
   {
     label: "Add expenses",
     icon: "pi pi-plus",
+    important: true,
     action: () => {
       dialog.open(AddExpenses, {
         props: { modal: true, header: "Add new expense" },
@@ -59,8 +68,9 @@ const actions: ITableActions[] = [
     },
   },
   {
-    label: "",
+    label: "Edit",
     icon: "pi pi-pencil",
+    important: true,
     disable: (selectedItems) => selectedItems.length === 0,
     action: () => {
       dialog.open(AddExpenses, {
@@ -73,8 +83,9 @@ const actions: ITableActions[] = [
     },
   },
   {
-    label: "",
+    label: "Delete",
     icon: "pi pi-trash",
+    important: true,
     disable: (selectedItems) => selectedItems.length === 0,
     severity: "danger",
     action: () => {
@@ -95,6 +106,14 @@ const actions: ITableActions[] = [
           console.log("Reject");
         },
       });
+    },
+  },
+ {
+    label: "Export CSV",
+    important: true,
+    icon: "pi pi-file-export",
+    action: (callback) => {
+      callback();   
     },
   },
 ];
