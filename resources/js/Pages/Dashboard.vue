@@ -49,7 +49,7 @@
       <div class="grid grid-cols-2 grow  md:grid-cols-3 lg:grid-cols-4 gap-4 mt-6">
         <StatCard v-for="stat in accountingStats" :key="stat.label" :label="stat.label" :value="stat.value"
           :currency="'$'" :icon="getStatConfig(stat.label).icon" :color="getStatConfig(stat.label).color"
-          @update="handleCashOnHandUpdate" />
+          @update="handleCashOnHandUpdate" :editable="stat?.editable"/>
       </div>
     </div>
   </AppLayout>
@@ -262,7 +262,7 @@ function updateDashboardStats(data: Dashboard) {
   accountingStats.value = [
     { label: "Accounts Receivable ($)", value: data.accountsReceivableThisMonth, currency: true },
     { label: "Accounts Payable ($)", value: data.accountsPayableThisMonth, currency: true },
-    { label: "Cash on Hand ($)", value: data?.cashOnHand ? parseFloat(props.cashOnHand).toFixed(2) : 0, currency: true },
+    { label: "Cash on Hand ($)", value: data?.cashOnHand ? parseFloat(props.cashOnHand).toFixed(2) : 0, currency: true, editable: true },
     { label: "Sales Tax Paid ($)", value: data.salesTaxPaid, currency: true },
     { label: "Sales Tax Collected ($)", value: data.salesTaxCollected, currency: true },
     { label: "Taxed Sales ($)", value: data.taxedSales, currency: true },
