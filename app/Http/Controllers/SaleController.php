@@ -108,6 +108,7 @@ class SaleController extends Controller
                 'profit' => $new_item['profit'],
                 'created_at' => now(),
                 'updated_at' => now(),
+                'is_custom_charge' => empty($new_item['imei']),
             ]);
 
             if ($request->paid == 1) {
@@ -174,6 +175,7 @@ class SaleController extends Controller
                         'customer' => $request->customer,
                         'sale_id' => $request->id,
                         'user_id' => $user->id,
+                        'is_custom_charge' => empty($item['imei']),
                     ]);
 
                     $total += $item['selling_price'];
