@@ -111,13 +111,13 @@
         <Button type="submit" @click="(e) => submitForm(e, false)" label="Save" class="w-1/2">
           <span class="flex flex-col items-center">
           Save
-        <span class="flex flex-col items-center text-sm">Record Payment Later</span>
+        <span class="flex flex-col items-center text-sm">(Record Payment Later)</span>
         </span>
         </Button>
         <Button type="submit" @click="(e) => submitForm(e, true)" label="Confirm" class="w-1/2">
           <span class="flex flex-col items-center">
           Confirm
-        <span class="flex flex-col items-center">Mark as Paid</span>
+        <span class="flex flex-col items-center text-sm">(Mark as Paid)</span>
         </span>
         </Button>
       </div>
