@@ -29,7 +29,7 @@ import RevoGrid, { BeforeSaveDataDetails, RevoGridCustomEvent, VGridVueTemplate,
 import axios from "axios";
 import { Button, ContextMenu, useDialog, useToast } from "primevue";
 import { useConfirm } from "primevue/useconfirm";
-import { nextTick, onMounted, ref } from "vue";
+import { nextTick, onMounted, ref, onBeforeUnmount } from "vue";
 import UniversalCell from "./UniversalCell.vue";
 import { format } from "date-fns";
 
@@ -117,17 +117,8 @@ onMounted(async () => {
     return col;
   });
 
-  await nextTick();
-  if (wrapper.value) {
-    console.log("tamaño del contenedor!: ", wrapper.value.clientWidth);
-    const totalWidth = wrapper.value.clientWidth;
-    const count = columns.value.length;
-    const colW = Math.floor(totalWidth / count);
-    columns.value = columns.value.map(col => ({ 
-      ...col, 
-      width: colW  // asigna ancho uniforme
-    }));
-  }
+   await adjustColumnSizes();
+  window.addEventListener('resize', adjustColumnSizes);
 
   tableData.value = props.initialData?.length
     ? props.initialData.map((item) => {
@@ -144,6 +135,10 @@ onMounted(async () => {
 
   await nextTick();
   if (!props.initialData?.length) renderPositions(1);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', adjustColumnSizes);
 });
 
 function showContextMenu(e: CustomEvent<{ event: MouseEvent; rowIndex: number; prop: string }>) {
@@ -297,5 +292,19 @@ async function submitSpreadsheet(body: any[]): Promise<void> {
   } catch (err) {
     toast.add({ severity: "error", summary: "Error", detail: "Something went wrong", life: 3000 });
   }
+}
+// adjust column sizes to screen size
+async function adjustColumnSizes() {
+  await nextTick();
+  if (!wrapper.value) return;
+  const totalWidth = wrapper.value.clientWidth;
+  const count = columns.value.length;
+  const baseSize = Math.floor(totalWidth / count);
+  const used = baseSize * count;
+  const remainder = totalWidth - used;
+  columns.value = columns.value.map((col, i) => ({
+    ...col,
+    size: i === count - 1 ? baseSize + remainder : baseSize
+  }));
 }
 </script>

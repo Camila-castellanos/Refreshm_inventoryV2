@@ -1,8 +1,10 @@
 <template>
+  <div ref="tableContainer" class="w-full">
   <DataTable v-model:filters="filters" :value="items" v-model:selection="selectedItems" dataKey="id" stripedRows
-    ref="dt" paginator :resizableColumns="isResizable" column-resize-mode="fit" :rows="20" :rowsPerPageOptions="[5, 10, 20, 50]"
+    ref="dt" paginator resizableColumns @column-resize-end="adjustColumnWidths" column-resize-mode="fit" :rows="20" :rowsPerPageOptions="[5, 10, 20, 50]"
     :globalFilterFields="headers.filter((header) => header.name !== 'actions').map((header) => header.name)"
-    :class="inventory ? 'text-xs' : ''" :selection-mode="selectionMode">
+    :class="inventory ? 'text-xs' : ''" :selection-mode="selectionMode"
+    tableStyle="table-layout: fixed; width: 100%;">
     <template #header>
       <div class="flex flex-no-wrap items-center justify-between gap-2">
         <div :class="title !== '' ? 'flex justify-between items-center gap-12' : 'flex justify-start items-center'">
@@ -44,8 +46,7 @@
       <Column v-if="index === 0" selectionMode="multiple" field="select" headerStyle="width: 3rem; text-align: center;"
         bodyStyle="width: 3rem; text-align: center;">
       </Column>
-      <Column :field="header.name" sortable :header="header.label" v-if="header.name !== 'actions'" headerStyle="
-        width: fit !important">
+      <Column :field="header.name" sortable :header="header.label" v-if="header.name !== 'actions'" :style="{ width: columnWidths[index + (selectionMode==='multiple' ? 1 : 0)] + 'px', 'word-wrap': 'break-word', 'overflow-wrap': 'break-word', 'white-space': 'normal' }">
         <template #body="slotProps" v-if="header.name == 'status'">
           <Tag :value="slotProps.data[header.name]"
             :severity="slotProps.data[header.name] == 'Paid' ? 'success' : 'danger'"></Tag>
@@ -68,6 +69,7 @@
     <template #footer> In total there are {{ items ? items.length : 0 }} items. </template>
     <template #empty> No data found. </template>
   </DataTable>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -81,7 +83,7 @@ import Popover from 'primevue/popover';
 import { useDialog } from "primevue/usedialog";
 import ExportCSV from "@/Pages/Inventory/Modals/ExportCSV.vue";
 import Tag from 'primevue/tag';
-import { onMounted, onBeforeUnmount } from "vue";
+import { onMounted, onBeforeUnmount, nextTick } from "vue";
 //Popover actions logic
 const op = ref();
 const dialog = useDialog();
@@ -196,18 +198,43 @@ function getMenuItems(data: any) {
   }));
 }
 
-const isResizable = ref(false);
-const minWidth = 1624; // minimun width for activate resizable columns
-function updateResizable() {
-  isResizable.value = window.innerWidth > minWidth; // activate resizable columns only on large screens
-}
-
+// adjust column widths to screen size section
+const columnWidths = ref<number[]>([]);
+const tableContainer = ref<HTMLElement|null>(null);
+const hasActions = computed(() => props.headers.some(h => h.name==='actions'));
 onMounted(() => {
-  updateResizable(); // initial check
-  window.addEventListener("resize", updateResizable); // add event listener
+  adjustColumnWidths();
+  window.addEventListener('resize', adjustColumnWidths);
 });
-
 onBeforeUnmount(() => {
-  window.removeEventListener("resize", updateResizable);  // remove event listener
+  window.removeEventListener('resize', adjustColumnWidths);
 });
+async function adjustColumnWidths() {
+  await nextTick();
+  if (!tableContainer.value) return;
+
+  async function adjustColumnWidths() {
+  await nextTick();
+  if (!tableContainer.value) return;
+
+  const container = tableContainer.value;
+  // restamos el padding horizontal
+  const style = getComputedStyle(container);
+  const paddingLR = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
+
+  // usamos clientWidth (sin scroll) menos padding
+  const availableWidth = container.clientWidth - paddingLR;
+
+  const count = props.headers.length;
+  const base = Math.floor(availableWidth / count);
+  const used = base * count;
+  const remainder = availableWidth - used;
+
+  const arr: number[] = [];
+  for (let i = 0; i < count; i++) {
+    arr.push(i === count - 1 ? base + remainder : base);
+  }
+  columnWidths.value = arr;
+}
+}
 </script>
