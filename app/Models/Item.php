@@ -75,12 +75,21 @@ class Item extends Model
             if (is_null($originalStorageId) && !is_null($item->storage_id)) {
                 $item->position = self::getNextAvailablePosition($item->storage_id);
             }
+            // if the item is being sold and the sale_id is set, set the sold date
+        $originalSaleId = $item->getOriginal('sale_id');
+        if (is_null($originalSaleId) && $item->sale_id) {
+            $item->sold = now();
+        }
         });
         static::creating(function ($item) {
             if ($item->storage_id) {
                 DB::transaction(function () use ($item) {
                     $item->position = self::getNextAvailablePosition($item->storage_id);
                 });
+            }
+            // if the item is being sold and the sale_id is set, set the sold date
+            if ($item->sale_id && is_null($item->sold)) {
+            $item->sold = now();
             }
         });
 
