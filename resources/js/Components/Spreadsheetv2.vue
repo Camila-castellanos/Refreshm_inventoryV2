@@ -7,9 +7,9 @@
       <Button :loading="isLoading" :disabled="isLoading" v-else @click="editDevices">Update devices</Button>
     </section>
 
-    <div class="spreadsheet-wrapper mt-8">
+    <div class="spreadsheet-wrapper mt-8 w-full" ref="wrapper">
       <RevoGrid ref="revogrid" :columns="columns" :source="tableData" :columnTypes="columnTypes" :canFocus="!isLoading"
-        :range="true" class="h-[80vh]" :resize="true" theme="default" @beforeedit="handleBeforeEdit"
+        :range="true" class="h-[80vh] w-full" :resize="true" theme="default" @beforeedit="handleBeforeEdit"
         @beforeRowAdd="onInsertRow" @universal-cell-contextmenu="showContextMenu" @beforeRowDelete="onDeleteRow" />
 
       <ContextMenu ref="menuRef" :model="menuItems" />
@@ -59,7 +59,7 @@ const menuItems = [
 
 const contextRow = ref<number | null>(null);
 const menuRef = ref<any>(null);
-
+const wrapper = ref<HTMLElement|null>(null);
 const columns = ref<ColumnRegular[]>([
   {
     prop: "id",
@@ -116,6 +116,18 @@ onMounted(async () => {
     }
     return col;
   });
+
+  await nextTick();
+  if (wrapper.value) {
+    console.log("tamaño del contenedor!: ", wrapper.value.clientWidth);
+    const totalWidth = wrapper.value.clientWidth;
+    const count = columns.value.length;
+    const colW = Math.floor(totalWidth / count);
+    columns.value = columns.value.map(col => ({ 
+      ...col, 
+      width: colW  // asigna ancho uniforme
+    }));
+  }
 
   tableData.value = props.initialData?.length
     ? props.initialData.map((item) => {

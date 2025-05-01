@@ -76,9 +76,10 @@ function parseItemsData() {
       }
       if (item.storage) {
         const { name, limit, items_count } = item.storage;
+        const { position } = item;
         return {
           ...item,
-          location: `${name} - ${items_count}/${limit}`,
+          location: `${name} - ${position}/${limit}`,
           vendor: item.vendor?.vendor,
         };
       }
