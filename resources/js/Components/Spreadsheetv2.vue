@@ -10,7 +10,8 @@
     <div class="spreadsheet-wrapper mt-8 w-full" ref="wrapper">
       <RevoGrid ref="revogrid" :columns="columns" :source="tableData" :columnTypes="columnTypes" :canFocus="!isLoading"
         :range="true" class="h-[80vh] w-full" :resize="true" theme="default" @beforeedit="handleBeforeEdit"
-        @beforeRowAdd="onInsertRow" @universal-cell-contextmenu="showContextMenu" @beforeRowDelete="onDeleteRow" />
+        @beforeRowAdd="onInsertRow" @universal-cell-contextmenu="showContextMenu" @beforeRowDelete="onDeleteRow"
+        :clipboard="{ copyable: true, pasteable: true }" />
 
       <ContextMenu ref="menuRef" :model="menuItems" />
     </div>
@@ -119,6 +120,7 @@ onMounted(async () => {
 
    await adjustColumnSizes();
   window.addEventListener('resize', adjustColumnSizes);
+  window.addEventListener('paste', handleGlobalPaste);
 
   tableData.value = props.initialData?.length
     ? props.initialData.map((item) => {
@@ -139,6 +141,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   window.removeEventListener('resize', adjustColumnSizes);
+  window.removeEventListener('paste', handleGlobalPaste);
 });
 
 function showContextMenu(e: CustomEvent<{ event: MouseEvent; rowIndex: number; prop: string }>) {
@@ -191,7 +194,7 @@ function onDeleteRow(e: CustomEvent<{ count: number }>): void {
 function renderPositions(numOfRows: number): void {
   const newRowsToAssign = tableData.value.filter(row => !row.location);
   let rowsAssigned = 0;
-
+  console.log("new rows to assign", newRowsToAssign);
   for (const row of newRowsToAssign) {
     if (row.location) continue; // Skip if already assigned in a previous iteration
 
@@ -306,5 +309,49 @@ async function adjustColumnSizes() {
     ...col,
     size: i === count - 1 ? baseSize + remainder : baseSize
   }));
+}
+// handle paste event globally
+
+const pasteOrder = [
+  "manufacturer",
+  "model",
+  "colour",
+  "battery",
+  "grade",
+  "issues",
+  "cost",
+  "imei",
+];
+
+// helper para saber si una fila está “vacía”
+function isEmptyRow(row: Record<string, any>): boolean {
+  return pasteOrder.every(prop => {
+    const v = row[prop]
+    return v === undefined || v === null || v === ''
+  })
+}
+
+function handleGlobalPaste(e: ClipboardEvent) {
+  e.preventDefault()
+  const text = e.clipboardData?.getData('text/plain') || ''
+  const lines = text.split(/\r?\n/).filter(line => line.trim() !== '')
+  if (!lines.length) return
+
+  const newRows = lines.map(line => {
+    const values = line.split('\t')
+    const row: any = {}
+
+    // Recorremos columnas en orden y asignamos solo a las no id/location
+     pasteOrder.forEach((prop, i) => {
+      row[prop] = values[i] ?? "";
+    });
+    return row
+  })
+  if(isEmptyRow(tableData.value[0])) {
+    tableData.value = newRows
+  } else {
+    tableData.value = [...tableData.value, ...newRows]
+  }
+  renderPositions(newRows.length)
 }
 </script>
