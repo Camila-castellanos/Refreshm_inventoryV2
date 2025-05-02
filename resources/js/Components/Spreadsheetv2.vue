@@ -30,7 +30,7 @@ import RevoGrid, { BeforeSaveDataDetails, RevoGridCustomEvent, VGridVueTemplate,
 import axios from "axios";
 import { Button, ContextMenu, useDialog, useToast } from "primevue";
 import { useConfirm } from "primevue/useconfirm";
-import { nextTick, onMounted, ref, onBeforeUnmount } from "vue";
+import { nextTick, onMounted, ref, onBeforeUnmount, watch } from "vue";
 import UniversalCell from "./UniversalCell.vue";
 import { format } from "date-fns";
 
@@ -121,6 +121,7 @@ onMounted(async () => {
    await adjustColumnSizes();
   window.addEventListener('resize', adjustColumnSizes);
   window.addEventListener('paste', handleGlobalPaste);
+  window.addEventListener('keydown', onKeyDown, {capture: true});
 
   tableData.value = props.initialData?.length
     ? props.initialData.map((item) => {
@@ -142,6 +143,7 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   window.removeEventListener('resize', adjustColumnSizes);
   window.removeEventListener('paste', handleGlobalPaste);
+  window.removeEventListener('keydown', onKeyDown, {capture: true});
 });
 
 function showContextMenu(e: CustomEvent<{ event: MouseEvent; rowIndex: number; prop: string }>) {
@@ -323,7 +325,7 @@ const pasteOrder = [
   "imei",
 ];
 
-// helper para saber si una fila está “vacía”
+// helper to check if a row is "empty"
 function isEmptyRow(row: Record<string, any>): boolean {
   return pasteOrder.every(prop => {
     const v = row[prop]
@@ -341,7 +343,7 @@ function handleGlobalPaste(e: ClipboardEvent) {
     const values = line.split('\t')
     const row: any = {}
 
-    // Recorremos columnas en orden y asignamos solo a las no id/location
+    // assign values to the row based on the pasteOrder
      pasteOrder.forEach((prop, i) => {
       row[prop] = values[i] ?? "";
     });
@@ -354,4 +356,53 @@ function handleGlobalPaste(e: ClipboardEvent) {
   }
   renderPositions(newRows.length)
 }
+
+// history system section
+// history array
+const history = ref<ItemWithLocation[][]>([])
+// max history size
+const MAX_HISTORY = 50
+let skipSnapshot = false
+// save a snapshot of the current table data
+function snapshot(data: ItemWithLocation[]) {
+  history.value.push(JSON.parse(JSON.stringify(data)))
+  if (history.value.length > MAX_HISTORY) history.value.shift()
+}
+// function to comeback to the previous state of the table
+function undo() {
+  // imit of 2 to avoid going back to the initial state
+  if (history.value.length > 2) {
+    const prev = history.value.pop()
+    if (prev) {
+      skipSnapshot = true
+      tableData.value = prev
+
+    }
+  }
+}
+
+// capture crtl + z to undo
+function onKeyDown(e: KeyboardEvent) {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+    e.preventDefault()
+    e.stopImmediatePropagation()
+    undo()
+  }
+}
+
+// watcher to save a snapshot of the table data when it changes
+// watcher automático
+watch(
+  // deep tabledata clone to save the orriginal previous state
+  () => tableData.value.map(row => ({ ...row })),
+  (newVal, oldVal) => {
+    // evita hacer snapshopt en la inicialización y cuando se hace undo
+    if (skipSnapshot) {
+      skipSnapshot = false   // reseteamos el flag
+      return
+    }
+    snapshot(oldVal)
+  },
+  { deep: true }
+)
 </script>
