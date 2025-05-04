@@ -117,7 +117,7 @@ onMounted(async () => {
     }
     return col;
   });
-
+   initialColumns.value = columns.value.map(col => ({ ...col }))
    await adjustColumnSizes();
   window.addEventListener('resize', adjustColumnSizes);
   window.addEventListener('paste', handleGlobalPaste);
@@ -299,10 +299,20 @@ async function submitSpreadsheet(body: any[]): Promise<void> {
   }
 }
 // adjust column sizes to screen size
+const initialColumns = ref<ColumnRegular[]>([])
 async function adjustColumnSizes() {
   await nextTick();
   if (!wrapper.value) return;
+  
   const totalWidth = wrapper.value.clientWidth;
+
+  // si es móvil, volvemos a las columnas iniciales
+  if (totalWidth < 768) {
+    console.log("mobile", initialColumns.value);
+    columns.value = initialColumns.value.map(col => ({ ...col }))
+    return
+  }
+
   const count = columns.value.length;
   const baseSize = Math.floor(totalWidth / count);
   const used = baseSize * count;
