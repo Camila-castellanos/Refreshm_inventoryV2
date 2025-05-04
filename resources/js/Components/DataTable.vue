@@ -3,8 +3,7 @@
   <DataTable v-model:filters="filters" :value="items" v-model:selection="selectedItems" dataKey="id" stripedRows
     ref="dt" paginator resizableColumns @column-resize-end="adjustColumnWidths" column-resize-mode="fit" :rows="20" :rowsPerPageOptions="[5, 10, 20, 50]"
     :globalFilterFields="headers.filter((header) => header.name !== 'actions').map((header) => header.name)"
-    :class="inventory ? 'text-xs' : ''" :selection-mode="selectionMode"
-    tableStyle="table-layout: fixed; width: 100%;">
+    :class="inventory ? 'text-xs my-datatable' : 'my-datatable'" :selection-mode="selectionMode">
     <template #header>
       <div class="flex flex-no-wrap items-center justify-between gap-2">
         <div :class="title !== '' ? 'flex justify-between items-center gap-12' : 'flex justify-start items-center'">
@@ -238,3 +237,16 @@ async function adjustColumnWidths() {
 }
 }
 </script>
+
+<style>
+.my-datatable table{
+  table-layout: fixed;
+  width: 100%;
+}
+
+@media (max-width: 767px) {
+  .my-datatable table {
+    table-layout: auto !important;
+  }
+}
+</style>
