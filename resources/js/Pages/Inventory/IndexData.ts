@@ -131,11 +131,6 @@ export const soldHeaders: Ref<CustomField[]> = ref([
     type: "string",
   },
   {
-    label: "Selling Price",
-    name: "selling_price",
-    type: "string",
-  },
-  {
     label: "Subtotal",
     name: "subtotal",
     type: "string",
