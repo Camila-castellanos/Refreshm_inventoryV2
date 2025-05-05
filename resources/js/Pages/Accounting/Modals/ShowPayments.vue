@@ -10,7 +10,7 @@
           </div>
           <div class="col-span-12 flex items-center gap-2">
             <label class="w-2/6 text-right">Amount:</label>
-            <InputNumber v-model="paidAmount" class="w-4/6" mode="currency" currency="USD" />
+            <InputNumber v-model="paidAmount" class="w-4/6" mode="currency" currency="USD" locale="en-US" />
           </div>
           <div class="col-span-12 flex items-center gap-2">
             <label class="w-2/6 text-right">Payment Method:</label>
