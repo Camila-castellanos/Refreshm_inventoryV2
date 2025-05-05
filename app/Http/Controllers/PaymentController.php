@@ -24,6 +24,7 @@ use App\Models\Payment;
 use Illuminate\Support\Facades\Auth;
 use App\Models\EmailTemplate;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 
 class PaymentController extends Controller
@@ -223,13 +224,13 @@ class PaymentController extends Controller
       $customer_name = $customer->customer ?? $customer;
 
       // Busca primero el nombre de la compañía del usuario
-      $user_company = $user_data->company->name ?? null;
+      // $user_company = $user_data->company->name ?? null;
 
       // Si no hay compañía, busca el nombre del store
-      $store_name = $store->name ?? null;
+      // $store_name = $store->name ?? null;
 
       // Si no hay compañía ni store, usa el nombre del cliente
-      $invoice_ref_name = $user_company ?: ($store_name ?: $customer_name);
+      $invoice_ref_name = $customer_name;
 
 
       $filename = $invoice_ref_name . " Invoice " . "#" . $sales[0]->id . ".pdf";
@@ -514,9 +515,10 @@ class PaymentController extends Controller
     $finalSubTotal = $sale->subtotal;
 
     foreach ($items as $item) {
+      Log::info("dale_date:", [$request->sale_date]);
       $itemData = Item::find($item['id']);
       Item::where('id', $item['id'])->update([
-        'sold' => $request->sale_date,
+        'sold' => $request->sale_date ?? Carbon::now(),
         'selling_price' => $item['selling_price'],
         'customer' => $request->customer,
         'profit' => $item['selling_price'] - $itemData->cost,
