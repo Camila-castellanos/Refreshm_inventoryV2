@@ -19,7 +19,7 @@
         </div>
         <div class="col-span-2">
           <label class="block text-sm font-medium">Amount:</label>
-          <InputNumber v-model="expense.subtotal" class="w-full" mode="currency" currency="USD" @change="calcTotal" />
+          <InputNumber v-model="expense.subtotal" class="w-full" mode="currency" currency="USD" locale="en-US" @change="calcTotal"/>
         </div>
         <div class="col-span-2">
           <label class="block text-sm font-medium">Tax (%):</label>
@@ -32,7 +32,7 @@
         </div>
         <div class="col-span-2">
           <label class="block text-sm font-medium">Total:</label>
-          <InputNumber v-model="(expense.total as number)" class="w-full" mode="currency" currency="USD" disabled />
+          <InputNumber v-model="(expense.total as number)" class="w-full" mode="currency" currency="USD" locale="en-US"  disabled />
         </div>
       </div>
     </div>
