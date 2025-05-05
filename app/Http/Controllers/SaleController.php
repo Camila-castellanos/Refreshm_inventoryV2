@@ -291,26 +291,104 @@ class SaleController extends Controller
      * Show report for Sale
      */
     public function showReport(): Response
-    {
+    { 
         try{
+            $end = Carbon::now()->endOfDay();
+            $start = Carbon::now()->subDays(7)->startOfDay();
             $user = Auth::user();
     
             $tabs = Tab::where('user_id', $user->id)->orderBy('order', 'asc')->get();
             $fields = CustomField::where('user_id', $user->id)->get();
-            $items = Item::whereNotNull('sold')
-            ->whereNotNull('sale_id')
-            ->where(function($query) {
-                $query->where('sold', '>=', now()->subDays(7))
-                      ->orWhereHas('sale', function($q) {
-                          $q->where('created_at', '>=', now()->subDays(7));
-                      });
-            })
-            ->with(['vendor:id,vendor', 'sale'])
+            $items = Item::where(function ($query) use ($start, $end, $user) {
+            $query->where([
+            ["sold", ">=", $start],
+            ["sold", "<=", $end],
+            ["user_id", $user->id]
+            ])
+            ->orWhereHas('sale', function ($q) use ($start, $end, $user) {
+            $q->whereBetween('created_at', [$start, $end])
+              ->where('user_id', $user->id);
+            });
+        })
+            ->whereNotNull("sale_id")
+            // ->whereHas('sale', function($query){
+            //     $query->where('paid', 1);
+            // })
+            ->select("sale_id")
+            ->distinct()
+            ->with(['vendor:id,vendor'])
             ->get();
+
+        $sale_pks = $items->map(function ($item) {
+            return $item->sale_id;
+        })->toArray();
+
+        $sales = Sale::whereIn("id", $sale_pks);
+        if (Auth::user()->role != "OWNER") {
+            $store = Auth::user()->store;
+            if (!$store) {
+                return Inertia::render('Error', ['message' => 'No Store Available']);
+            }
+
+            $ids = $store->users->pluck("id");
+
+            switch (Auth::user()->role) {
+                case "ADMIN":
+                    $store = Auth::user()->store;
+                    $ids = $store->users->pluck("id");
+                    $sales->whereIn("user_id", $ids->toArray());
+                    break;
+                case "USER":
+                    $sales->whereIn("user_id", [Auth::id()]);
+                    break;
+                default:
+                    abort(403, "Unauthorized.");
+                    break;
+            }
+        }
+
+        $sales = $sales->get();
+        $formatted_items = [];
+        foreach ($sales as $sale) {
+            $tax = intval($sale->tax) / 100;
+            foreach ($sale->items as $item) {
+
+                $battery = $item->battery;
+                if (is_numeric($item->battery)) {
+                    $battery = "$battery %";
+                }
+
+                if (is_numeric($item->customer)) {
+                    $customers = Customer::whereId($item->customer)->select('customer', 'billing_address', 'billing_address_country', 'billing_address_state', 'billing_address_city', 'billing_address_postal', 'email', 'phone')->first();
+                    if ($customers)
+                        $item->customer = $customers->customer;
+                }
+
+                $cost = number_format(floatval($item->cost), 2);
+                $subtotal = number_format($item->selling_price, 2);
+                $total = $item->selling_price + $item->selling_price * $tax;
+                $profit = (float) $total - (float) $item->cost;
+
+                $sold = new DateTime($item->sold);
+
+                $total = number_format($total, 2);
+                $profit = number_format($profit, 2);
+                $item["sold"] = $sold->format("Y-m-d");
+                $item["cost"] = "$ $cost";
+                $item["subtotal"] = "$ $subtotal";
+                $item["total"] = "$ $total";
+                $item["profit"] = "$ $profit";
+                $item["battery"] = $battery;
+                $item["supplier"] = $item->vendor?->vendor ?? null;
+
+                $formatted_items[] = $item;
+    
+            }
+        }
             $context = [
                 'tabs' => $tabs,
                 'fields' => $fields,
-                'items' => $items,
+                'items' => $formatted_items,
             ];
             return Inertia::render("Inventory/Sold", $context);
         }

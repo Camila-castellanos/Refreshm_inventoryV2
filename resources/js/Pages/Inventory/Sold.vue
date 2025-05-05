@@ -88,12 +88,12 @@ function updateTableData(data: any[]) {
   tableData.value = data.map((item: any) => {
     return {
       ...item,
-      cost: `$ ${item.cost}`,
-      profit: `$ ${item.profit}`,
-      selling_price: `$ ${item.selling_price}`,
-      subtotal: `$ ${item.sale.subtotal ?? 'unknown'}`,
-      total: `$  ${item.sale.total ?? 'unknown'}`,
-      location: item.sold_storage_name || "unknown",
+      cost: `${item.cost}`,
+      profit: `${item.profit}`,
+      selling_price: `${item.selling_price}`,
+      subtotal: `${item.subtotal ?? 'unknown'}`,
+      total: `${item.total ?? 'unknown'}`,
+      location: `${item.sold_storage_name ?? 'N/A'} - (${item.sold_position ?? 'N/A'})`,
       vendor: item.vendor?.vendor,
       battery: computed(() => {
         if (item.battery && !String(item.battery).endsWith("%")) {
