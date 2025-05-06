@@ -75,8 +75,26 @@
     </template>
   </template>
 </Column>
-          <Column field="issues" header="Issue"></Column>
-          <Column field="imei" header="IMEI"></Column>
+          <Column field="issues" header="Issue">
+            <template #body="slotProps">
+              <template v-if="slotProps.data.isNew">
+                <InputText v-model="slotProps.data.issues" class="w-full" />
+              </template>
+              <template v-else>
+                {{ slotProps.data.issues }}
+              </template>
+            </template>
+          </Column>
+          <Column field="imei" header="IMEI">
+            <template #body="slotProps">
+              <template v-if="slotProps.data.isNew">
+                <InputText v-model="slotProps.data.imei" class="w-full" />
+              </template>
+              <template v-else>
+                {{ slotProps.data.imei }}
+              </template>
+            </template>
+          </Column>
           <Column field="selling_price" header="Selling Price">
             <template #body="slotProps">
               <InputNumber v-model="slotProps.data.selling_price" class="w-full" mode="currency" currency="USD" />
@@ -446,6 +464,6 @@ const newRowTemplate = {
 };
 
 function addNewRow() {
-  tableData.value.push(newRowTemplate);
+  tableData.value = [...tableData.value, { ...newRowTemplate }];
 }
 </script>
