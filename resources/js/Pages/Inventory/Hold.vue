@@ -58,11 +58,12 @@ function parseItemsData() {
   tableData.value = props
     .items!.filter((item) => item.sold === null)
     .map((item: any) => {
-      if ( !String(item.battery).endsWith("%")) {
-        if(!isNaN(Number(item.battery)) && item.battery !== null) {
-          console.log("batery", item.battery);
-          item.battery = `${item.battery}%`;
-        }
+      if (item.battery === null){
+        console.log("Battery is null");
+        item.battery = "";
+      }
+      else if (!String(item.battery).endsWith("%") && !isNaN(Number(item.battery)) && item.battery !== "") {
+        item.battery = `${item.battery} %`;
       }
       if (item.storage) {
         const { name, limit } = item.storage;
