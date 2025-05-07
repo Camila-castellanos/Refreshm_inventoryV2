@@ -220,6 +220,12 @@ const tableActions = [
     },
     disable: (selectedItems: Item[]) => selectedItems.length == 0,
   },
+  {
+    label: "Print Items Labels",
+    icon: "pi pi-print",
+    action: () => openLabel(selectedItems.value[0]),
+    disable: (selectedItems: Item[]) => selectedItems.length == 0,
+  },
 ];
 
 const onEdit = () => {
@@ -261,6 +267,17 @@ const onDeleteMultiple = () => {
 const updateTableHeaders = (updatedHeaders: CustomField[]) => {
   allHeaders.value = updatedHeaders;
 };
+
+// Function to open the label in a new tab
+async function openLabel(item) {
+  const res = await axios.get(route('items.label', { item }), {
+    responseType: 'blob'
+  })
+  const blob = new Blob([res.data], { type: 'application/pdf' })
+  const url  = URL.createObjectURL(blob)
+  window.open(url, '_blank')
+  URL.revokeObjectURL(url)
+}
 </script>
 
 <style scoped lang="css">
