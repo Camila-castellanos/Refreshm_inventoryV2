@@ -24,7 +24,7 @@ import DataTable, { ITableActions } from "@/Components/DataTable.vue";
 import AppLayout from "@/Layouts/AppLayout.vue";
 import { Bill, Expense } from "@/Lib/types";
 import { Tab, TabList, Tabs, useDialog } from "primevue";
-import { onMounted, ref, Ref } from "vue";
+import { onMounted, ref, Ref, watch } from "vue";
 import { billHeaders } from "./data";
 import AddBills from "./Modals/AddBills.vue";
 import ShowPayments from "./Modals/ShowPayments.vue";
@@ -41,6 +41,18 @@ const tableData: Ref<Bill[]> = ref([]);
 const selectedItems: Ref<Bill[]> = ref([]);
 
 const currentTab = ref("/bills");
+
+// watcher to update table data when items prop changes
+watch(
+  () => props.items,
+  newItems => {
+    tableData.value = newItems.map(item => ({
+      ...item,
+      actions: getItemActions(item),
+      status: item.status === 1 ? "Paid" : "Unpaid",
+    }))
+  }
+)
 
 onMounted(() => {
   currentTab.value = `/bills${props.data_status !== "all" ? `?status=${props.data_status}` : ""}`;
