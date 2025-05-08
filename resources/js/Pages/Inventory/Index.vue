@@ -223,7 +223,7 @@ const tableActions = [
   {
     label: "Print Items Labels",
     icon: "pi pi-print",
-    action: () => openLabel(selectedItems.value[0]),
+    action: () => openLabels(),
     disable: (selectedItems: Item[]) => selectedItems.length == 0,
   },
 ];
@@ -269,14 +269,17 @@ const updateTableHeaders = (updatedHeaders: CustomField[]) => {
 };
 
 // Function to open the label in a new tab
-async function openLabel(item) {
-  const res = await axios.get(route('items.label', { item }), {
+async function openLabels() {
+  if (selectedItems.value.length === 0) return;
+  // Construye "1,2,5"
+  const itemsParam = selectedItems.value.map(item => item.id).join(',');
+  const res = await axios.get(route('items.labels', { items: itemsParam }), {
     responseType: 'blob'
-  })
-  const blob = new Blob([res.data], { type: 'application/pdf' })
-  const url  = URL.createObjectURL(blob)
-  window.open(url, '_blank')
-  URL.revokeObjectURL(url)
+  });
+  const blob = new Blob([res.data], { type: 'application/pdf' });
+  const url  = URL.createObjectURL(blob);
+  window.open(url, '_blank');
+  URL.revokeObjectURL(url);
 }
 </script>
 

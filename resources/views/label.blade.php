@@ -3,6 +3,35 @@
   $image_path = public_path('images/swiftstock_logo.jpeg');
   $type = pathinfo($image_path, PATHINFO_EXTENSION);
   $image_data = base64_encode(file_get_contents($image_path));
+
+  //avoid null id on new items not saved yet
+  $itemId = is_array($item)
+    ? ($item['id'] ?? '')
+    : ($item->id   ?? '');
+  // Definimos los campos a mostrar y sus etiquetas
+  $fields = [
+    'manufacturer' => 'Manufacturer',
+    'model'        => 'Model',
+    'storage'      => 'Storage',
+    'colour'       => 'Colour',
+    'battery'      => 'Battery Health',
+    'imei'         => 'IMEI',
+  ];
+
+  // Recorremos cada campo y decidimos tamaño de fuente según longitud
+  $fontSizes = [];
+  foreach($fields as $key => $label) {
+        if ($key === 'storage') {
+            $value = trim((string)(
+                ($item->storage->name ?? 'N/A')
+                . ' - '
+                . ($item->position ?? 'N/A')
+            ));
+        } else {
+            $value = trim((string)($item[$key] ?? ''));
+        }
+      $fontSizes[$key] = mb_strlen($value) > 17 ? '2.5mm' : '3.8mm';
+  }
 @endphp
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
@@ -40,6 +69,9 @@
             border-bottom: 1px solid #000;
             width: 95%;
             margin: auto;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         .labeltag_main_data div:last-child {
             border-bottom: none;
@@ -75,37 +107,28 @@
 <body>
     <div class="labeltag_container">
         <div class="labeltag_main_data">
+            @foreach($fields as $key => $label)
             <div>
-                <strong>Manufacturer:</strong>
-                <span>{{ $item['manufacturer'] ?? '' }}</span>
+              <strong>{{ $label }}:</strong>
+              <span style="font-size: {{ $fontSizes[$key] }}">
+                @if($key === 'storage')
+                     {{ $item->storage->name ?? 'N/A' }} - {{ $item->position ?? 'N/A' }}
+                @else
+                    {{ $item[$key] ?? '' }}    
+                @endif 
+              </span>
             </div>
-            <div>
-                <strong>Model:</strong>
-                <span>{{ $item['model'] ?? '' }}</span>
-            </div>
-            <div>
-            <strong>Storage:</strong>
-            <span>{{ $item['storage'] ?? '' }}</span>
-        </div>
-        <div>
-            <strong>Colour:</strong>
-            <span>{{ $item['colour'] ?? '' }}</span>
-        </div>
-        <div>
-            <strong>Battery Health:</strong>
-            <span>{{ $item['battery'] ?? '' }}</span>
-        </div>
-        <div>
-            <strong>IMEI:</strong>
-            <span>{{ $item['imei'] ?? '' }}</span>
-        </div>
+            @endforeach
         </div>
         <div class="logo_container">
             <img src="data:image/{{ $type }};base64,{{ $image_data }}" class="logo">
         </div>
         <div class="labeltag_contact_data">
                 <div>Sign up for a<br>swiftstock account</div>
-                <div>{!! DNS2D::getBarcodeHTML(str_pad($item['id'],10,'0'), 'QRCODE', 3, 3) !!}</div>
+                <div>{!! DNS2D::getBarcodeHTML(
+                        str_pad($itemId, 10, '0'),
+                        'QRCODE', 3, 3
+)                   !!}</div>
         </div>
     </div>
 </body>
