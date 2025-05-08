@@ -5,6 +5,17 @@
       <Button :loading="isLoading" :disabled="isLoading" v-if="!props.initialData?.length" @click="createDevices">Save
         devices</Button>
       <Button :loading="isLoading" :disabled="isLoading" v-else @click="editDevices">Update devices</Button>
+      <Button
+          icon="pi pi-print"
+          class="ml-2 !w-fit !h-fit !px-2"
+          @click="openLabelsFromTable"
+          :disabled="
+            tableData.length < 1 ||
+            (tableData.length === 1 && isEmptyRow(tableData[0]))
+          "
+        >
+          Print Unsaved Items Labels
+        </Button>
     </section>
 
     <div class="spreadsheet-wrapper mt-8 w-full" ref="wrapper">
@@ -415,4 +426,22 @@ watch(
   },
   { deep: true }
 )
+
+// function to create labels from the actual items in the table that are not saved yet
+async function openLabelsFromTable() {
+  if (!tableData.value.length) return;
+  try {
+    const res = await axios.post(
+      route('items.newlabels'),
+    {records: tableData.value},
+      { responseType: 'blob' }
+    );
+    const blob = new Blob([res.data], { type: 'application/pdf' });
+    const url  = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error(err);
+  }
+}
 </script>

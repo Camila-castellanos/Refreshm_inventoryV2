@@ -35,6 +35,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Maatwebsite\Excel\Facades\Excel;
 use Response;
+use Illuminate\Support\Collection;
 
 class ItemController extends Controller
 {
@@ -444,6 +445,51 @@ class ItemController extends Controller
         $pdf = Pdf::loadView("label", compact("item"))->setOptions(["defaultFont" => "sans-serif", "isRemoteEnabled" => "true"])->setPaper("a5", "portrait");
         return $pdf->stream();
     }
+
+    public function getLabels(string $items): \Illuminate\Http\Response
+{
+    // “1,2,5” → [1,2,5]
+    $ids = array_filter(explode(',', $items), fn($id) => is_numeric($id));
+    $records = Item::whereIn('id', $ids)->get();
+
+    // Cargamos una vista que incluye cada etiqueta + salto de página
+    $pdf = Pdf::loadView('labels', compact('records'))
+        ->setOptions(['defaultFont' => 'sans-serif','isRemoteEnabled'=>'true'])
+        ->setPaper('a5','portrait');
+
+    return $pdf->stream('labels.pdf');
+}
+
+public function getLabelsNewItems(Request $request): \Illuminate\Http\Response
+{
+    $data = $request->validate([
+      'records'       => 'required|array',
+      // etc.
+    ]);
+
+    // Reconstruye la colección de Items (con sus relaciones si quieres)
+    $records = collect($data['records'])->map(function($r){
+      return isset($r['id'])
+        ? Item::with('storage')->find($r['id'])
+        : (object)$r;
+    })->filter();
+
+    // Convierte todo a array para DomPDF
+    $array = $records->map(function($item){
+      return $item instanceof Item
+        ? $item->toArray()
+        : (array)$item;
+    })->all();
+
+    // PASA un array asociativo:
+    $pdf = Pdf::loadView('labels', ['records' => $array])
+        ->setOptions(['defaultFont'=>'sans-serif','isRemoteEnabled'=>true])
+        ->setPaper('a5','portrait');
+
+    return $pdf->stream('labels.pdf');
+}
+
+
 
 
     /**

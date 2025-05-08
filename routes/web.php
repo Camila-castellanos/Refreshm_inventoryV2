@@ -91,6 +91,9 @@ Route::middleware([
         Route::post("items/correct", [ItemController::class, "correct"])->name("items.correct");
         Route::post("items/update", [ItemController::class, "update"])->name("items.update");
         Route::get("items/{item}/label", [ItemController::class, "label"])->name("items.label");
+        Route::get("items/labels/{items}", [ItemController::class, "getLabels"])->name("items.labels");
+        Route::post("items/newlabels", [ItemController::class, "getLabelsNewItems"])->name("items.newlabels");
+
         Route::get("items/getItems", [ItemController::class, "getItems"])->name("items.getItems");
         Route::resource("items", ItemController::class)
             ->except(["show", "update", "edit"]);
