@@ -21,17 +21,25 @@
   // Recorremos cada campo y decidimos tamaño de fuente según longitud
   $fontSizes = [];
   foreach($fields as $key => $label) {
-        if ($key === 'storage') {
-            $value = trim((string)(
-                ($item->storage->name ?? 'N/A')
-                . ' - '
-                . ($item->position ?? 'N/A')
-            ));
-        } else {
-            $value = trim((string)($item[$key] ?? ''));
-        }
-      $fontSizes[$key] = mb_strlen($value) > 17 ? '2.5mm' : '3.8mm';
+        $value = match($key) {
+      'storage' => (!empty($item->storage->name) && !empty($item->position))
+                    ? trim($item->storage->name.' - '.$item->position)
+                    : 'N/A',
+
+    'battery' => isset($item->battery)
+        ? (str_ends_with(trim((string)$item->battery), '%')
+          ? trim((string)$item->battery)
+          : trim((string)$item->battery) . ' %'
+        )
+        : 'Unknown',
+
+      default   => trim((string)($item[$key] ?? '')),
+    };
+
+    $item[$key]    = $value;
+    $fontSizes[$key] = mb_strlen($value) > 20 ? '3mm' : '3.8mm';
   }
+   
 @endphp
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
@@ -47,6 +55,8 @@
     body {
             font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
             box-sizing: border-box;
+            height: 100%;
+            width: 100%;
         }
         .labeltag_container {
             width: 98%;
@@ -54,6 +64,9 @@
             padding: 0;
             border: 2px solid #000;
             font-size: 3.8mm;
+            height: 97mm;
+            max-height: 97mm;
+            box-sizing: border-box;
         }
 
         .labeltag_main_data {
@@ -69,7 +82,6 @@
             border-bottom: 1px solid #000;
             width: 95%;
             margin: auto;
-            white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
@@ -82,9 +94,16 @@
             width: 100%;
             padding: 10px 0;
             text-align: center;
+            align-items: baseline;
         }
         .logo{
-            width: 35mm;
+            height: auto;
+            width: 90%;
+            position: relative;
+            top: 15%;
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
         }
         .labeltag_contact_data {
         width: 100%;
@@ -111,11 +130,7 @@
             <div>
               <strong>{{ $label }}:</strong>
               <span style="font-size: {{ $fontSizes[$key] }}">
-                @if($key === 'storage')
-                     {{ $item->storage->name ?? 'N/A' }} - {{ $item->position ?? 'N/A' }}
-                @else
                     {{ $item[$key] ?? '' }}    
-                @endif 
               </span>
             </div>
             @endforeach
@@ -123,13 +138,13 @@
         <div class="logo_container">
             <img src="data:image/{{ $type }};base64,{{ $image_data }}" class="logo">
         </div>
-        <div class="labeltag_contact_data">
+        <!-- <div class="labeltag_contact_data">
                 <div>Sign up for a<br>swiftstock account</div>
                 <div>{!! DNS2D::getBarcodeHTML(
                         str_pad($itemId, 10, '0'),
                         'QRCODE', 3, 3
 )                   !!}</div>
-        </div>
+        </div> -->
     </div>
 </body>
 </html>
