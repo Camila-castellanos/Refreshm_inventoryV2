@@ -113,6 +113,11 @@ function updateTableData(data: any[]) {
           },
         },
         {
+          label: "Print Label",
+          icon: "pi pi-print",
+          action: () => openLabels({value: [item]}),
+        },
+        {
           label: "Return",
           icon: "pi pi-undo",
           severity: "danger",
@@ -172,6 +177,11 @@ async function onDateRangeSubmit() {
                 onEdit();
               },
             },
+             {
+          label: "Print Label",
+          icon: "pi pi-print",
+          action: () => openLabels({value: [item]}),
+        },
             {
               label: "Return",
               icon: "pi pi-undo",
@@ -253,6 +263,26 @@ const tableActions = [
     action: () => {
       onReturn(selectedItems.value);
     },
-  }
+  },
+   {
+    label: "Print Items Labels",
+    icon: "pi pi-print",
+    action: () => openLabels(selectedItems),
+    disable: (selectedItems: Item[]) => selectedItems.length == 0,
+  },
 ];
+
+// Function to open the item labels in a new tab
+async function openLabels(selectedItems) {
+  if (selectedItems.value.length === 0) return;
+  // Construye "1,2,5"
+  const itemsParam = selectedItems.value.map(item => item.id).join(',');
+  const res = await axios.get(route('items.labels', { items: itemsParam }), {
+    responseType: 'blob'
+  });
+  const blob = new Blob([res.data], { type: 'application/pdf' });
+  const url  = URL.createObjectURL(blob);
+  window.open(url, '_blank');
+  URL.revokeObjectURL(url);
+}
 </script>
