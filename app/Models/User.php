@@ -35,6 +35,7 @@ class User extends Authenticatable
         'headers',
         'sold_headers',
         'company_id',
+        'printable_tag_fields',
     ];
 
     /**
@@ -56,6 +57,7 @@ class User extends Authenticatable
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
+        'printable_tag_fields' => 'array',
     ];
 
     protected static function booted()

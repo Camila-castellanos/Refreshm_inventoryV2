@@ -8,7 +8,8 @@
   $itemId = is_array($item)
     ? ($item['id'] ?? '')
     : ($item->id   ?? '');
-  // Definimos los campos a mostrar y sus etiquetas
+
+// Define the fields to display and their labels
   $fields = [
     'manufacturer' => 'Manufacturer',
     'model'        => 'Model',
@@ -18,7 +19,38 @@
     'imei'         => 'IMEI',
   ];
 
-  // Recorremos cada campo y decidimos tamaño de fuente según longitud
+// Retrieve the user's selection or use all by default
+  $userFields = auth()->user()->printable_tag_fields ?? array_keys($fields);
+
+// Filter only the active fields
+  $fields = Arr::only($fields, $userFields);
+
+  // define logo postion depending on the number of fields
+  switch (count($fields)) {
+        case 1:
+            $logoTopPosition = '35%';
+            break;
+        case 2:
+            $logoTopPosition = '30%';
+            break;
+        case 3:
+            $logoTopPosition = '28%';
+            break;
+        case 4:
+            $logoTopPosition = '26%';
+            break;
+        case 5:
+            $logoTopPosition = '24%';
+            break;
+        case 6:
+            $logoTopPosition = '20%';
+            break;
+        default:
+            $logoTopPosition = '50%';
+            break;
+    }
+
+// Iterate through each field and determine font size based on its length
   $fontSizes = [];
   foreach($fields as $key => $label) {
         $value = match($key) {
@@ -59,14 +91,16 @@
             width: 100%;
         }
         .labeltag_container {
+            display: flex;
+            flex-direction: column;
             width: 98%;
             margin: 0 auto;
             padding: 0;
             border: 2px solid #000;
             font-size: 3.8mm;
             height: 97mm;
-            max-height: 97mm;
             box-sizing: border-box;
+            /* background-color: blue; sólo para debug */
         }
 
         .labeltag_main_data {
@@ -75,6 +109,7 @@
             width: 100%;
             margin: 0 auto;
             border-bottom: #000 solid 2px;
+            /* background-color: green; sólo para debug */
         }
         .labeltag_main_data div {
             padding-top: 5px;
@@ -88,22 +123,15 @@
         .labeltag_main_data div:last-child {
             border-bottom: none;
         }
-
-        .logo_container {
-            display: flex;
-            width: 100%;
-            padding: 10px 0;
+        .logo_container{
             text-align: center;
-            align-items: baseline;
+            position: relative;
         }
         .logo{
-            height: auto;
-            width: 90%;
-            position: relative;
-            top: 15%;
-            max-width: 100%;
-            max-height: 100%;
+            max-width: 90%;
             object-fit: contain;
+            position: relative;
+            top: {{$logoTopPosition}};
         }
         .labeltag_contact_data {
         width: 100%;

@@ -7,7 +7,7 @@ import TwoFactorAuthenticationForm from '@/Pages/Profile/Partials/TwoFactorAuthe
 import UpdatePasswordForm from '@/Pages/Profile/Partials/UpdatePasswordForm.vue';
 import UpdateProfileInformationForm from '@/Pages/Profile/Partials/UpdateProfileInformationForm.vue';
 import Storage from './Partials/Storage.vue';
-
+import PrintableLabelActiveFields from './Partials/PrintableLabelActiveFields.vue';
 defineProps({
     confirmsTwoFactorAuthentication: Boolean,
     sessions: Array,
@@ -33,6 +33,11 @@ defineProps({
                 <div>
                     <Storage class="mt-10 sm:mt-0" />
 
+                    <SectionBorder />
+                </div>
+
+                <div>
+                    <PrintableLabelActiveFields />
                     <SectionBorder />
                 </div>
 

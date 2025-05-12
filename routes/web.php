@@ -182,6 +182,8 @@ Route::middleware([
     Route::put("stores/{store}/cut", [StoreController::class, "updateStorePercent"])->name("stores.updateStorePercent");
 
     Route::get("user/locations", [LocationController::class, "userLocations"])->name("locations.list");
+    Route::get('user/printable-tag-fields',[UserController::class, 'getPrintableTagFields'])->name('user.printableTagFields');
+    Route::put('user/printable-tag-fields',[UserController::class, 'updatePrintableTagFields'])->name('user.updatePrintableTagFields');
     Route::resource("stores.locations", LocationController::class)->shallow();
     Route::get("locations/{location}/users", [LocationController::class, "listUsers"])->name("locations.usersList");
     Route::post("locations/{location}/users", [LocationController::class, "users"])->name("locations.users");
