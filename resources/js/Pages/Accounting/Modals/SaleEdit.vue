@@ -247,7 +247,7 @@ onMounted(async () => {
     form.value.customer = customers.value.find((customer) => customer.customer === payment.value.customer);
     form.value.credit = payment.value.customer_credit;
     if (itemsResponse.data.length > 0) {
-      form.value.date = new Date(itemsResponse.data[0].soldDate || new Date());
+      form.value.date = new Date(itemsResponse.data[0].sold || new Date());
     }
   } catch (error) {
     console.error("Error fetching data:", error);
@@ -422,12 +422,12 @@ const taxAmount = computed(() => {
 const total = computed(() => round(subtotal.value + taxAmount.value));
 
 const final_credit = computed(() => {
-  return (
-    parseFloat(form.value.credit.toString()) +
-    (parseFloat(form.value.credit.toString()) * parseFloat(form.value.tax?.percentage || "0")) / 100 -
-    parseFloat(form.value.removed_credit.toString())
-  ).toFixed(2);
-});
+  const credit = parseFloat(form.value.credit?.toString() || '0')
+  const removed = parseFloat(form.value.removed_credit?.toString() || '0')
+  const taxPct = parseFloat(form.value.tax?.percentage?.toString() || '0')
+  const creditWithTax = credit + (credit * taxPct) / 100
+  return (creditWithTax - removed).toFixed(2)
+})
 
 const amount_paid = computed(() => {
   const raw = dialogRef.value.data.payment?.amount_paid;
