@@ -70,11 +70,16 @@ class CustomerController extends Controller
             $customer->balance = $balance < 0 ? 0 : $balance;
             $customer->credit = (float) $customer->credit;
 
-            foreach ($customer->first_name as $key => $fname) {
-                $customer->name .= $fname . " " . $customer->last_name[$key] . ", ";
-            }
+            if (is_array($customer->first_name)) {
+    foreach ($customer->first_name as $key => $fname) {
+        $last = $customer->last_name[$key] ?? '';       // si no existe, cadena vacía
+        $full = trim("$fname $last");
+        if ($full !== '') {
+            $customer->name .= $full . ', ';
+        }
+    }
+}
 
-            $customer->name = rtrim($customer->name, ", ");
             $customer->email = implode(", ", $customer->email);
             $customer->phone = implode(", ", $customer->phone);
         }
@@ -322,12 +327,16 @@ class CustomerController extends Controller
                 $customer->balance = $balance < 0 ? 0 : $balance;
                 $customer->credit = (float) $customer->credit;
 
-                $customer->name = '';
-                foreach ($customer->first_name as $key => $fname) {
-                    $customer->name .= $fname . " " . $customer->last_name[$key] . ", ";
-                }
+                       if (is_array($customer->first_name)) {
+    foreach ($customer->first_name as $key => $fname) {
+        $last = $customer->last_name[$key] ?? '';       // si no existe, cadena vacía
+        $full = trim("$fname $last");
+        if ($full !== '') {
+            $customer->name .= $full . ', ';
+        }
+    }
+}
 
-                $customer->name = rtrim($customer->name, ", ");
                 $customer->email = implode(", ", $customer->email);
                 $customer->phone = implode(", ", $customer->phone);
             }

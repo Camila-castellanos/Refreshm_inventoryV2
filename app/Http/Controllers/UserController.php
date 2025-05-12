@@ -182,4 +182,40 @@ class UserController extends Controller
       return response()->json($e->getMessage(), 500);
     }
   }
+
+  // Get the printable tag fields for the current user
+  public function getPrintableTagFields()
+    {
+        try {
+            $user = Auth::user();
+            // as JSON the column may already be an array or a JSON string
+            $fields = is_array($user->printable_tag_fields)
+                ? $user->printable_tag_fields
+                : json_decode($user->printable_tag_fields, true) ?? [];
+
+            return response()->json($fields, 200);
+        } catch (Exception $e) {
+            return response()->json([
+                'error' => 'Could not retrieve printable tag fields',
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
+    public function updatePrintableTagFields(Request $request)
+    {
+        // Validate that we received an array of allowed keys
+        $data = $request->validate([
+            'fields'   => 'required|array',
+        ]);
+
+        $user = Auth::user();
+        // Store directly as an array (cast to JSON in the column)
+        $user->printable_tag_fields = $data['fields'];
+        $user->save();
+
+        return response()->json([
+            'success' => true,
+            'fields'  => $user->printable_tag_fields,
+        ], 200);
+    }
 }
