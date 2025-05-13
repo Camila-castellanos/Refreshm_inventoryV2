@@ -86,7 +86,7 @@ function parseItemsData() {
       }
       return {
         ...item,
-        location: "No storage information",
+        location: "N/A",
         vendor: item.vendor.vendor,
         actions: [
           {
