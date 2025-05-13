@@ -9,14 +9,20 @@
     ? ($item['id'] ?? '')
     : ($item->id   ?? '');
 
-// Define the fields to display and their labels
+// Define the fields that can be displayed and their labels
   $fields = [
-    'manufacturer' => 'Manufacturer',
-    'model'        => 'Model',
-    'storage'      => 'Storage',
-    'colour'       => 'Colour',
-    'battery'      => 'Battery Health',
-    'imei'         => 'IMEI',
+    'date'          => 'Date',
+    'vendor'        => 'Vendor',
+    'manufacturer'  => 'Manufacturer',
+    'model'         => 'Model',
+    'colour'        => 'Colour',
+    'battery'       => 'Battery',
+    'grade'         => 'Grade',
+    'issues'        => 'Issues',
+    'imei'          => 'IMEI',
+    'cost'          => 'Cost',
+    'selling_price' => 'Selling Price',
+    'storage'      => 'Location',
   ];
 
 // Retrieve the user's selection or use all by default
@@ -64,6 +70,9 @@
           : trim((string)$item->battery) . ' %'
         )
         : 'Unknown',
+    'vendor' => isset($item->vendor)
+       ? trim((string)$item->vendor->vendor)
+       : 'N/A',
 
       default   => trim((string)($item[$key] ?? '')),
     };

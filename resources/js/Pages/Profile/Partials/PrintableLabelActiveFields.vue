@@ -10,22 +10,22 @@
     <Card class="shadow-none w-2/3">
       <template #content>
         <div class="space-y-4">
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div
-              v-for="(label, key) in allFields"
-              :key="key"
+              v-for="item in headers"
+              :key="item.name"
               class="flex items-center"
             >
               <Checkbox
-                :value="key"
+                :value="item.name"
                 v-model="selectedFields"
               />
-              <label class="ml-2">{{ label }}</label>
+              <label class="ml-2">{{ item.label }}</label>
             </div>
           </div>
           <div class="flex justify-end">
             <Button
-              label="Guardar"
+              label="Save"
               icon="pi pi-save"
               @click="submit"
               :loading="loading"
@@ -44,19 +44,11 @@ import Checkbox from 'primevue/checkbox'
 import Button   from 'primevue/button'
 import Card     from 'primevue/card'
 import { useToast } from 'primevue'
+import {headers} from "@/Pages/Inventory/IndexData"
 
 const toast = useToast()
 const loading = ref(false)
 const selectedFields = ref<string[]>([])
-
-const allFields: Record<string,string> = {
-  manufacturer: 'Manufacturer',
-  model:        'Model',
-  storage:      'Storage',
-  colour:       'Colour',
-  battery:      'Battery Health',
-  imei:         'IMEI',
-}
 
 onMounted(async () => {
   try {
