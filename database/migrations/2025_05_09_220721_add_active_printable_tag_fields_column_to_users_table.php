@@ -12,7 +12,15 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->json('printable_tag_fields')->nullable();
+            $table->json('printable_tag_fields')->nullable()
+            ->default(json_encode([
+                'manufacturer',
+                'model',
+                'storage',
+                'colour',
+                'battery',
+                'imei',
+            ]));
         });
     }
 
