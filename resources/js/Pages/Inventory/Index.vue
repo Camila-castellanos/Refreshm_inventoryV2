@@ -83,7 +83,7 @@ function parseItemsData() {
       }
       return {
         ...item,
-        location: "No storage information",
+        location: "N/A",
         vendor: item.vendor?.vendor,
       };
     });
@@ -107,7 +107,7 @@ function refreshTableData() {
         }
         return {
           ...item,
-          location: "No storage information", // Valor predeterminado si no hay almacenamiento
+          location: "N/A", // Valor predeterminado si no hay almacenamiento
           vendor: item.vendor?.vendor,
         };
       });
