@@ -6,7 +6,7 @@
     /* Ajusta márgenes si hace falta */
      @page {
   size: 101.6mm 50.8mm portrait;
-  margin: 0mm;
+  margin: 1.5mm;
 }
     body { margin: 0; padding: 0; }
   </style>

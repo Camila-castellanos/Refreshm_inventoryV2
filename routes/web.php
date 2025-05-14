@@ -216,4 +216,6 @@ Route::middleware([
 
     Route::resource("customfields", CustomFieldsController::class);
     Route::post("customfields/{id}/active", [CustomFieldsController::class, "updateActive"])->name("customFields.updateActive");
+
+    
 });

@@ -38,18 +38,25 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import axios from 'axios'
 import Checkbox from 'primevue/checkbox'
 import Button   from 'primevue/button'
 import Card     from 'primevue/card'
 import { useToast } from 'primevue'
-import {headers} from "@/Pages/Inventory/IndexData"
+import {headers as original} from "@/Pages/Inventory/IndexData"
 
 const toast = useToast()
 const loading = ref(false)
 const selectedFields = ref<string[]>([])
-
+const headers = computed(() =>
+  original.value.map(({ name, label, ...rest }) => {
+    if (name === 'location') {
+      return { name: 'storage', label: 'Location', ...rest }
+    }
+    return { name, label, ...rest }
+  })
+)
 onMounted(async () => {
   try {
     const { data } = await axios.get(route('user.printableTagFields'))

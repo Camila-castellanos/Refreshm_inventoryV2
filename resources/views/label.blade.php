@@ -31,33 +31,64 @@
 // Filter only the active fields
   $fields = Arr::only($fields, $userFields);
 
-  // define logo postion depending on the number of fields
-  switch (count($fields)) {
-        case 1:
-            $logoTopPosition = '35%';
-            break;
-        case 2:
-            $logoTopPosition = '30%';
-            break;
-        case 3:
-            $logoTopPosition = '28%';
-            break;
-        case 4:
-            $logoTopPosition = '26%';
-            break;
-        case 5:
-            $logoTopPosition = '24%';
-            break;
-        case 6:
-            $logoTopPosition = '20%';
-            break;
-        default:
-            $logoTopPosition = '50%';
-            break;
-    }
+  // count of user active fields
+  $count = count($fields);
 
+  // define logo postion depending on the number of fields
+  $logoTopPosition = match($count) {
+    1 => '35%',
+    2 => '30%',
+    3 => '28%',
+    4 => '26%',
+    5 => '24%',
+    6 => '20%',
+    default => '15%',
+  };
+// define padding between fields depending on the number of fields
+  $fieldPadding   = match(true) {
+    $count >= 11 => '1mm',
+    $count == 10 => '1.2mm',
+    $count <= 3 => '3mm',
+    $count <= 5 => '2.5mm',
+    default     => '2mm',
+  };
+// define font size depending on the number of fields
+ $baseFontSize = match(true) {
+    $count <= 3 => '5mm',
+    $count <= 5 => '4mm',
+    default     => '3.5mm',
+  };
+
+// define the logo width depending on the number of fields
+  $logoWidth = match(true) {
+    $count == 12 && strlen($item['issues'] ?? '') > 17 => '35%',
+    $count == 12 => '50%',
+    $count == 11 => '60%',
+    $count == 10 => '80%',
+    $count == 9 => '55%',
+    $count == 8 => '60%',
+    $count ==  7 => '70%',
+    $count == 6 => '80%',
+    $count <= 5 => '90%',
+    default     => '60%',
+  };  
+
+  // define the logo margin depending on the number of fields
+  $logoMargin = match(true) {
+    $count == 12 => '1mm',
+    $count == 11 => '2.5mm',
+    $count == 10 => '2mm',
+    $count == 8 => '4mm',
+    $count == 7 => '8mm',
+    $count == 6 => '10mm',
+    $count == 5 => '10mm',
+    $count == 4 => '13mm',
+    $count == 3 => '15mm',
+    $count == 2 => '20mm',
+    $count == 1 => '25mm',
+    default     => '1mm',
+  };
 // Iterate through each field and determine font size based on its length
-  $fontSizes = [];
   foreach($fields as $key => $label) {
         $value = match($key) {
       'storage' => (!empty($item->storage->name) && !empty($item->position))
@@ -78,7 +109,6 @@
     };
 
     $item[$key]    = $value;
-    $fontSizes[$key] = mb_strlen($value) > 20 ? '3mm' : '3.8mm';
   }
    
 @endphp
@@ -106,7 +136,7 @@
             margin: 0 auto;
             padding: 0;
             border: 2px solid #000;
-            font-size: 3.8mm;
+            font-size: {{ $baseFontSize }};
             height: 97mm;
             box-sizing: border-box;
             /* background-color: blue; sólo para debug */
@@ -121,8 +151,7 @@
             /* background-color: green; sólo para debug */
         }
         .labeltag_main_data div {
-            padding-top: 5px;
-            padding-bottom: 10px;
+            padding: {{ $fieldPadding }} 0px;
             border-bottom: 1px solid #000;
             width: 95%;
             margin: auto;
@@ -134,13 +163,14 @@
         }
         .logo_container{
             text-align: center;
-            position: relative;
+            height: auto;
+            margin-top: {{$logoMargin}};  
         }
         .logo{
-            max-width: 90%;
+            display: block;
+            margin: 0 auto;
+            width: {{ $logoWidth }};
             object-fit: contain;
-            position: relative;
-            top: {{$logoTopPosition}};
         }
         .labeltag_contact_data {
         width: 100%;
@@ -166,7 +196,7 @@
             @foreach($fields as $key => $label)
             <div>
               <strong>{{ $label }}:</strong>
-              <span style="font-size: {{ $fontSizes[$key] }}">
+              <span>
                     {{ $item[$key] ?? '' }}    
               </span>
             </div>
