@@ -104,6 +104,21 @@
     'vendor' => isset($item->vendor)
        ? trim((string)$item->vendor->vendor)
        : 'N/A',
+    'cost' => isset($item->cost)
+        ? (str_starts_with(trim((string)$item->cost), '$')
+          ? trim((string)$item->cost)
+          : '$ ' . trim((string)$item->cost)
+        )
+        : 'N/A',   
+    'selling_price' => isset($item->selling_price)
+        ? (str_starts_with(trim((string)$item->selling_price), '$')
+          ? trim((string)$item->selling_price)
+          : '$ ' . trim((string)$item->selling_price)
+        )
+        : 'N/A',
+    'issues' => isset($item->issues)
+        ? trim((string)$item->issues)
+        : 'N/A',
 
       default   => trim((string)($item[$key] ?? '')),
     };
