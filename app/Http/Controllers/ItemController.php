@@ -453,9 +453,7 @@ class ItemController extends Controller
     $records = Item::whereIn('id', $ids)->get();
 
     // Cargamos una vista que incluye cada etiqueta + salto de página
-    $pdf = Pdf::loadView('labels', compact('records'))
-        ->setOptions(['defaultFont' => 'sans-serif','isRemoteEnabled'=>'true'])
-        ->setPaper('a5','portrait');
+    $pdf = Pdf::loadView('labels', compact('records'));
 
     return $pdf->stream('labels.pdf');
 }
@@ -482,9 +480,7 @@ public function getLabelsNewItems(Request $request): \Illuminate\Http\Response
     })->all();
 
     // PASA un array asociativo:
-    $pdf = Pdf::loadView('labels', ['records' => $array])
-        ->setOptions(['defaultFont'=>'sans-serif','isRemoteEnabled'=>true])
-        ->setPaper('a5','portrait');
+    $pdf = Pdf::loadView('labels', ['records' => $array]);
 
     return $pdf->stream('labels.pdf');
 }
