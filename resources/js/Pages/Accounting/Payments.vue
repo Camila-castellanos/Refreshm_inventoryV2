@@ -70,9 +70,12 @@ const getItemActions = (item: IPaymentResponse) => {
       {
         label: "Invoice",
         icon: "pi pi-receipt",
-        action: () => {
-          window.location.assign(route("reports.payments.invoice", item.id));
-        },
+        action: () => openInvoice(item.id),
+      },
+      {
+        label: "Download Invoice",
+        icon: "pi pi-download",
+        action: () => openInvoice(item.id, true),
       },
       {
         label: "View Payments",
@@ -133,10 +136,13 @@ const getItemActions = (item: IPaymentResponse) => {
     {
       label: "Invoice",
       icon: "pi pi-receipt",
-      action: () => {
-        window.location.assign(route("reports.payments.invoice", item.id));
-      },
+      action: () => openInvoice(item.id),
     },
+    {
+        label: "Download Invoice",
+        icon: "pi pi-download",
+        action: () => openInvoice(item.id, true),
+      },
     {
       label: "Record / View Payments",
       icon: "pi pi-save",
@@ -243,5 +249,46 @@ const tableData = computed(() => {
   });
 });
 
+// obtain the headers from the data file to has the same file name that server send
+function getFilenameFromDisposition(disposition: string): string {
+  let fileName = 'download.pdf'
+  const match = disposition.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/)
+  if (match && match[1]) {
+    fileName = decodeURIComponent(match[1])
+  }
+  return fileName
+}
+
+/**
+ * Download or open the PDF using the filename sent by the server
+ */
+async function openInvoice(id: number|string, download = false) {
+  const url = route("reports.payments.invoice", id);
+
+  if (!download) {
+    // 1) vista inline con el filename que envía el servidor
+    window.open(url, "_blank");
+    return;
+  }
+
+  // 2) descarga forzada vía blob + <a download>
+  try {
+    const res = await axios.get(url, { responseType: "blob" });
+    const disp = res.headers["content-disposition"] || "";
+    const filename = getFilenameFromDisposition(disp);
+    const blob = new Blob([res.data], { type: "application/pdf" });
+    const blobUrl = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = blobUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(blobUrl);
+  } catch (e) {
+    toast.add({ severity: "error", summary: "Error", detail: "No se pudo descargar la factura.", life: 3000 });
+  }
+}
 defineOptions({ layout: AppLayout });
 </script>
