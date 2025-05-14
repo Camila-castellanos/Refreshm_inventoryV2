@@ -60,6 +60,10 @@ class User extends Authenticatable
         'printable_tag_fields' => 'array',
     ];
 
+     protected $attributes = [
+        'printable_tag_fields' => '["manufacturer","model","storage","colour","battery","imei"]',
+    ];
+
     protected static function booted()
     {
         static::created(function ($user) {
