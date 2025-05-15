@@ -170,6 +170,9 @@ onMounted(() => {
   params.value = dialogRef.value.data;
   getTaxes();
   parseCustomersData();
+  if (!Array.isArray(params.value.items) || params.value.items.length === 0) {
+    addNewRow()
+  }
 });
 
 async function getTaxes() {

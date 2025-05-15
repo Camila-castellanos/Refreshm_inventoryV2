@@ -234,8 +234,6 @@ class PaymentController extends Controller
 
 
       $filename = $invoice_ref_name . " Invoice " . "#" . $sales[0]->id . ".pdf";
-
-      Log::info("filename enviado al front", [$filename]);
       return $pdf->stream($filename);
     }
   }
