@@ -175,7 +175,6 @@ const tableActions = [
     action: () => {
       openSellItemsModal();
     },
-    disable: (selectedItems: Item[]) => selectedItems.length == 0,
   },
   {
     label: "Edit",
