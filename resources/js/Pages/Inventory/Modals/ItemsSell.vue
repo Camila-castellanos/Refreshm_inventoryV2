@@ -79,7 +79,7 @@
   <!-- Columna para el precio de venta -->
   <Column field="selling_price" header="Selling Price">
     <template #body="slotProps">
-      <InputNumber v-model="slotProps.data.selling_price" class="w-full" mode="currency" currency="USD" />
+      <InputNumber v-model="slotProps.data.selling_price" class="w-full" mode="currency" currency="USD" locale="en-US"/>
     </template>
   </Column>
         </DataTable>
