@@ -65,6 +65,20 @@
             selection-mode="multiple"
             header-style="width: 3rem; text-align: center;"
             body-style="width: 3rem; text-align: center;"></Column>
+
+             <!-- Columna para el tipo de item -->
+  <Column field="type" header="Type">
+    <template #body="slotProps">
+      <span v-if="!slotProps.data.isNew">{{ getItemTypeLabel(slotProps.data.type) }}</span>
+      <Dropdown
+  v-else
+  v-model="slotProps.data.type"
+  :options="ITEM_TYPE_OPTIONS"
+  optionLabel="label"
+  optionValue="value"
+/>
+    </template>
+  </Column>
           <Column field="model" header="Device">
   <template #body="slotProps">
     <template v-if="slotProps.data.isNew">
@@ -174,7 +188,8 @@ import { DynamicDialogCloseOptions, DynamicDialogInstance } from "primevue/dynam
 import AddTaxes from "./AddTaxes.vue";
 import CreateEdit from "@/Pages/Customers/CreateEdit.vue";
 import { format } from "date-fns";
-import { router } from "@inertiajs/vue3";
+import { ITEM_TYPE_OPTIONS, ItemType, getItemTypeLabel } from '@/Enums/itemType';
+import Dropdown from 'primevue/dropdown';
 
 const toast = useToast();
 const dialog = useDialog();
@@ -377,6 +392,7 @@ const onEdit = async () => {
   };
 
   try {
+    console.log("Sale data to update:", sale);
     const response = await axios.post(route("sales.update"), sale);
     if (response.status >= 200 && response.status < 400) {
       dialogRef.value.close();
@@ -452,6 +468,7 @@ const addCredit = () => {
 
 const newRowTemplate = {
   id: null,
+  type: ItemType.FEE,
   model: "",
   issues: "",
   imei: "",

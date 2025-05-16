@@ -485,7 +485,7 @@ class PaymentController extends Controller
         if ($sale) {
           // Delete the extra items associated with the sale
           Item::where('sale_id', $sale->id)
-            ->where('is_custom_charge', true)
+            ->whereNotIn('type', ['device', 'accessory'])
             ->delete();
           // update the normal items to remove the sale_id and sold date  
           Item::where('sale_id', $sale->id)->update(["sold" => null, "sale_id" => null]);

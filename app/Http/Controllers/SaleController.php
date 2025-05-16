@@ -48,6 +48,7 @@ class SaleController extends Controller
 
         foreach ($form["items"] as $sale_item) {
             $sale_item["sale_id"] = $sale->id;
+            $sale_item["type"] = $sale_item["type"];
             $sale_item['sold_position'] = $sale_item['position'];
             $sale_item['sold_storage_id'] = $sale_item['storage_id'];
             $sale_item['sold_storage_name'] = Storage::find($sale_item['storage_id'])?->name;
@@ -95,6 +96,7 @@ class SaleController extends Controller
 
             $item = Item::create([
                 'date' => $request->payment_date,
+                'type' => $new_item['type'],
                 'model' => $new_item['model'],
                 'issues' => $new_item['issues'],
                 'imei' => $new_item['imei'],
@@ -108,7 +110,6 @@ class SaleController extends Controller
                 'profit' => $new_item['profit'],
                 'created_at' => now(),
                 'updated_at' => now(),
-                'is_custom_charge' => empty($new_item['imei']),
             ]);
 
             if ($request->paid == 1) {
@@ -175,7 +176,7 @@ class SaleController extends Controller
                         'customer' => $request->customer,
                         'sale_id' => $request->id,
                         'user_id' => $user->id,
-                        'is_custom_charge' => empty($item['imei']),
+                        'type' => $item['type'],
                     ]);
 
                     $total += $item['selling_price'];
