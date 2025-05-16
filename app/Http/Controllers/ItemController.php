@@ -58,6 +58,7 @@ class ItemController extends Controller
                     $query->select('id', 'name', 'limit') // other columns
                     ->withCount('items'); // current count of items in storage
             }, 'vendor:id,vendor'])
+            ->whereIn('type', ['device', 'accessory'])
                     ->whereNull("sold")
                     ->whereNull("hold")
                     ->whereNotIn('id', TabItem::pluck('item_id'))
@@ -72,6 +73,7 @@ class ItemController extends Controller
                     $query->select('id', 'name', 'limit') // other columns
                     ->withCount('items'); // current count of items in storage
             }, 'vendor:id,vendor'])
+            ->whereIn('type', ['device', 'accessory'])
                     ->whereNull("sold")
                     ->whereNull("hold")
                     ->whereNotIn('id', TabItem::pluck('item_id'))
@@ -86,6 +88,7 @@ class ItemController extends Controller
                     $query->select('id', 'name', 'limit') // other columns
                     ->withCount('items'); // current count of items in storage
             }, 'vendor:id,vendor'])
+            ->whereIn('type', ['device', 'accessory'])
                     ->whereNull("sold")
                     ->whereNull("hold")
                     ->whereNotIn('id', TabItem::pluck('item_id'))
@@ -108,6 +111,7 @@ class ItemController extends Controller
         $query->select('id', 'name', 'limit') // other columns
         ->withCount('items'); // current count of items in storage
 }, 'vendor:id,vendor'])
+->whereIn('type', ['device', 'accessory'])
         ->whereNull("sold")
         ->whereNull("hold")
         ->whereNotIn('id', TabItem::pluck('item_id'))
@@ -209,6 +213,7 @@ class ItemController extends Controller
 
         $items = Item::where("user_id", $user)
             ->whereNull("sold")
+            ->whereIn('type', ['device', 'accessory'])
             ->whereNull("hold")
             ->get();
 

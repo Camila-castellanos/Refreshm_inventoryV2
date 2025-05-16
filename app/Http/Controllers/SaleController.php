@@ -312,6 +312,7 @@ class SaleController extends Controller
             });
         })
             ->whereNotNull("sale_id")
+            ->whereIn('type', ['device', 'accessory'])
             // ->whereHas('sale', function($query){
             //     $query->where('paid', 1);
             // })
@@ -427,6 +428,7 @@ class SaleController extends Controller
             // ->whereHas('sale', function($query){
             //     $query->where('paid', 1);
             // })
+            ->whereIn('type', ['device', 'accessory'])
             ->select("sale_id")
             ->distinct()
             ->with(['vendor:id,vendor'])
