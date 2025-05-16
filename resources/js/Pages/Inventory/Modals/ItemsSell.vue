@@ -52,7 +52,22 @@
 
       <div class="col-span-6">
         <DataTable :value="params.items" tableStyle="min-width: 50rem">
-          <!-- Columna para el modelo del dispositivo -->
+
+ <!-- Columna para el tipo de item -->
+  <Column field="type" header="Type">
+    <template #body="slotProps">
+      <span v-if="!slotProps.data.isNew">{{ getItemTypeLabel(slotProps.data.type) }}</span>
+      <Dropdown
+  v-else
+  v-model="slotProps.data.type"
+  :options="ITEM_TYPE_OPTIONS"
+  optionLabel="label"
+  optionValue="value"
+/>
+    </template>
+  </Column>
+
+  <!-- Columna para el modelo del dispositivo -->
   <Column field="model" header="Device">
     <template #body="slotProps">
       <span v-if="!slotProps.data.isNew">{{ slotProps.data.model }}</span>
@@ -133,10 +148,11 @@ import { useForm } from "@inertiajs/vue3";
 import axios from "axios";
 import { format } from "date-fns";
 import { DatePicker, InputNumber, Select, Textarea, useDialog, useToast, InputText } from "primevue";
+import Dropdown from 'primevue/dropdown';
 import Column from "primevue/column";
 import DataTable from "primevue/datatable";
 import { computed, inject, onMounted, Ref, ref } from "vue";
-
+import { ITEM_TYPE_OPTIONS, ItemType, getItemTypeLabel } from '@/Enums/itemType';
 const dialog = useDialog();
 const toast = useToast();
 
@@ -202,6 +218,7 @@ const form = useForm({
 // extra rows feature section
 const newRowTemplate = {
   id: null,
+  type: ItemType.ACCESSORY,
   model: "",
   issues: "",
   imei: "",
@@ -292,6 +309,7 @@ async function submitForm(e: Event, isConfirmed: boolean) {
     .filter((item: any) => !item.isNew) // Filtrar los elementos originales
     .map((item: any) => ({
       id: item.id,
+      type: item.type,
       model: item.model,
       imei: item.imei,
       selling_price: item.selling_price,
@@ -307,6 +325,7 @@ async function submitForm(e: Event, isConfirmed: boolean) {
     .filter((item: any) => item.isNew) // Filtrar los elementos nuevos
     .map((item: any) => ({
       model: item.model,
+      type: item.type,
       imei: item.imei,
       selling_price: item.selling_price,
       issues: item.issues,

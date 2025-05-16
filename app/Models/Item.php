@@ -19,7 +19,7 @@ class Item extends Model
         "customer", "sold", "hold", "discount", "tax",
         "subtotal", "profit", 'user_id', 'vendor_id', "custom_values",
         "sold_storage_id", "sold_position", "sold_storage_name", 'shop_id',
-        'is_custom_charge'
+        'type'
     ];
     
     public function shop(): BelongsTo
