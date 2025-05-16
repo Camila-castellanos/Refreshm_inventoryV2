@@ -355,6 +355,23 @@ function isEmptyRow(row: Record<string, any>): boolean {
 }
 
 function handleGlobalPaste(e: ClipboardEvent) {
+
+  const activeFocusElement = document.activeElement as HTMLElement | null;
+  // Si el foco está en un INPUT, TEXTAREA un elemento contentEditable o en una celda de la tabla, no interceptamos el evento de pegado
+  // dejamos que el pegado se comporte por defecto en esa celda
+  if (
+    activeFocusElement &&
+    (
+      activeFocusElement.tagName === 'INPUT' ||
+      activeFocusElement.tagName === 'TEXTAREA' ||
+      activeFocusElement.isContentEditable ||
+      activeFocusElement.getAttribute('role') === 'gridcell' ||
+      activeFocusElement.classList.contains('rgCell')
+    )
+  ) {
+    return;
+  }
+  // Si no, interceptamos el evento de pegado
   e.preventDefault()
   const text = e.clipboardData?.getData('text/plain') || ''
   const lines = text.split(/\r?\n/).filter(line => line.trim() !== '')
