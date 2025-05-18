@@ -9,7 +9,7 @@
       inputClass="w-full"         
       optionLabel="label"
       :delay="300"
-      :minLength="4"
+      :minLength="3"
     />
     <label>Global Search</label>
   </FloatLabel>
