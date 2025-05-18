@@ -6,6 +6,10 @@
       <!-- Filtro de fecha y opciones -->
       <div class="flex justify-between flex-wrap gap-4 items-center mt-4">
         <Dropdown v-model="selectedFilter" :options="filters" class="w-40" />
+        <!-- Buscador Global -->
+        <div class="w-2/4">
+          <GlobalSearchBar class="w-full"/>
+        </div>
         <div class="flex gap-2 w-full max-w-md flex-wrap">
           <FloatLabel variant="over" class="w-58">
             <Calendar v-model="getSafeCalendarValue" :selectionMode="selectedFilter === 'Current' ? 'range' : 'single'"
@@ -64,10 +68,11 @@ import Card from "primevue/card";
 import Divider from "primevue/divider";
 import AppLayout from "@/Layouts/AppLayout.vue";
 import { Dashboard, User } from "@/Lib/types";
-import { FloatLabel, InputNumber, useToast } from "primevue";
+import { FloatLabel, InputNumber, useToast, InputText } from "primevue";
 import axios from "axios";
 import { startOfMonth, startOfYear, subMonths, subYears } from "date-fns";
 import StatCard from "@/Components/StatCard.vue";
+import GlobalSearchBar from "@/Components/GlobalSearchBar.vue";
 
 const toast = useToast();
 

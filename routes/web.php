@@ -99,7 +99,7 @@ Route::middleware([
             ->except(["show", "update", "edit"]);
 
         Route::get("items/{item}/edit", [ItemController::class, "edit"])->name("items.edit");
-
+        Route::get("items/search", [ItemController::class, 'search'])->name('items.search');
         Route::get("items/excel/create", [ItemController::class, "excelCreate"])->name("items.excel.create");
         Route::post("items/excel/store", [ItemController::class, "excelStore"])->name("items.excel.store");
         Route::get("items/excelDemo/download", [ItemController::class, "excelDemoDownload"])->name("items.excel.demo.download");

@@ -36,6 +36,7 @@ use Illuminate\Support\Facades\Log;
 use Maatwebsite\Excel\Facades\Excel;
 use Response;
 use Illuminate\Support\Collection;
+use Illuminate\Http\JsonResponse;
 
 class ItemController extends Controller
 {
@@ -934,5 +935,27 @@ public function getLabelsNewItems(Request $request): \Illuminate\Http\Response
             ->pluck('formatted_vendor')
             ->toArray();
         return Excel::download(new ItemsExample($vendors), 'items.xlsx');
+    }
+
+    /**
+     * Global search: incluye items activos, vendidos y en hold.
+     */
+    public function search(Request $request): JsonResponse
+    {
+        $q    = $request->query('q', '');
+        $user = Auth::user();
+        $limit = (int) $request->query('limit', 10);
+
+        $items = Item::with(['storage:id,name', 'vendor:id,vendor'])
+            ->where('user_id', $user->id)
+            ->when($q, fn($query) => $query->where(function($q2) use ($q) {
+                $q2->where('model',  'like', "%{$q}%")
+                   ->orWhere('imei',   'like', "%{$q}%")
+                   ->orWhere('colour', 'like', "%{$q}%");
+            }))
+            ->limit($limit)
+            ->get();
+
+        return response()->json($items);
     }
 }
