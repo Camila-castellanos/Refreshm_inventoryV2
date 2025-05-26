@@ -1,6 +1,6 @@
 <template>
+  <div class="min-h-screen flex flex-col bg-surface-0 dark:bg-surface-950">
   <SessionExpiredDialog />
-
   <div class="h-[12vh] bg-surface-0 bg-[white] dark:bg-surface-950 ">
     <div class="w-full h-full flex lg:pl-12 pt-8 flex lg:justify-start justify-center">
       <img src="/images/swiftstock_logo.jpeg" draggable="false"
@@ -8,7 +8,7 @@
     </div>
   </div>
   <div
-    class="bg-surface-0 bg-[white] dark:bg-surface-950 lg:px-12 flex justify-center lg:items-center pt-24 lg:flex-row w-[100vw] h-[88vh]">
+    class="bg-surface-0 bg-[white] dark:bg-surface-950 lg:px-12 flex justify-center lg:items-center lg:flex-row h-full flex-1">
     <div class="hidden lg:flex flex-col lg:w-1/2 h-full items-center  justify-center">
       <div class="w-full">
         <img src="/images/iphone12.png" draggable="false" class="object-contain h-full w-full pointer-events-none "
@@ -17,7 +17,7 @@
     </div>
     <Transition name="fade">
       <div v-if="loaded"
-        class="w-full lg:w-1/3 bg-surface-50 dark:bg-surface-900 p-6 md:w-1/2 shadow rounded-border mx-auto">
+        class="w-full lg:w-1/3 bg-surface-50 dark:bg-surface-900 p-6 md:w-1/2 shadow rounded-border mx-auto h-full mt-28 lg:mt-0">
         <div class="text-center mb-8">
           <div class="text-surface-900 dark:text-surface-0 text-3xl font-medium mb-4">Login</div>
         </div>
@@ -50,6 +50,7 @@
         </form>
       </div>
     </Transition>
+  </div>
   </div>
 </template>
 
