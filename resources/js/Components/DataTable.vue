@@ -6,7 +6,7 @@
     :class="inventory ? 'text-xs my-datatable' : 'my-datatable'" :selection-mode="selectionMode">
     <template #header>
       <div class="flex flex-col sm:flex-row sm:flex-no-wrap items-center justify-between gap-2">
-        <div :class="title !== '' ? 'flex justify-center sm:justify-between items-center gap-12' + ' w-full sm:w-auto' : 'flex justify-start items-center'">
+        <div :class="title !== '' ? 'flex flex-col gap-3 sm:flex-row justify-center sm:justify-between items-center sm:gap-12' + ' w-full sm:w-auto' : 'flex justify-start items-center'">
           <IconField class="w-full">
             <InputIcon>
               <i class="pi pi-search" />
@@ -15,15 +15,15 @@
           </IconField>
           <slot />
         </div>
-        <div class="sm:flex grid grid-cols-2 w-full mt-2 sm:mt-0 sm:flex-row gap-2 sm:gap-4  sm:w-auto">
+        <div class="sm:flex grid grid-cols-2 mt-2 w-full sm:mt-0 sm:flex-row gap-2 sm:gap-4  sm:w-auto">
 
 
           <Button v-for="action in computedPrimaryActions" :key="action.label"
             :severity="action.severity ? action.severity : 'primary'"
-            :class="[action.extraClasses, `rounded-md !text-xs sm:!text`].join(' ')" :icon="action.icon ? action.icon : ''"
+            :class="[action.extraClasses, `rounded-md !text-xs sm:!text-base`].join(' ')" :icon="action.icon ? action.icon : ''"
             :label="action?.label" @click="action.action(exportCSV)" :disabled="action.disable" />
 
-          <Button v-if="computedSecondaryActions.length > 0" type="button" label="More" @click="toggle" class="col-span-2 w-full sm:min-w-48"
+          <Button v-if="computedSecondaryActions.length > 0" type="button" label="More" @click="toggle" class="col-span-2 w-full sm:w-auto sm:min-w-48"
             icon="pi pi-angle-down" icon-pos="right" />
           <Popover ref="op">
             <div class="flex gap-4">
