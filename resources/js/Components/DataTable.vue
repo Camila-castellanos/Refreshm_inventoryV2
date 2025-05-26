@@ -5,25 +5,25 @@
     :globalFilterFields="headers.filter((header) => header.name !== 'actions').map((header) => header.name)"
     :class="inventory ? 'text-xs my-datatable' : 'my-datatable'" :selection-mode="selectionMode">
     <template #header>
-      <div class="flex flex-no-wrap items-center justify-between gap-2">
-        <div :class="title !== '' ? 'flex justify-between items-center gap-12' : 'flex justify-start items-center'">
-          <IconField>
+      <div class="flex flex-col sm:flex-row sm:flex-no-wrap items-center justify-between gap-2">
+        <div :class="title !== '' ? 'flex justify-center sm:justify-between items-center gap-12' + ' w-full sm:w-auto' : 'flex justify-start items-center'">
+          <IconField class="w-full">
             <InputIcon>
               <i class="pi pi-search" />
             </InputIcon>
-            <InputText v-model="filters['global'].value" placeholder="Search in all fields" />
+            <InputText v-model="filters['global'].value" placeholder="Search in all fields" class="w-full"/>
           </IconField>
           <slot />
         </div>
-        <div class="flex gap-4 flex-no-wrap">
+        <div class="sm:flex grid grid-cols-2 w-full mt-2 sm:mt-0 sm:flex-row gap-2 sm:gap-4  sm:w-auto">
 
 
           <Button v-for="action in computedPrimaryActions" :key="action.label"
             :severity="action.severity ? action.severity : 'primary'"
-            :class="[action.extraClasses, `rounded-md`].join(' ')" :icon="action.icon ? action.icon : ''"
+            :class="[action.extraClasses, `rounded-md !text-xs sm:!text`].join(' ')" :icon="action.icon ? action.icon : ''"
             :label="action?.label" @click="action.action(exportCSV)" :disabled="action.disable" />
 
-          <Button v-if="computedSecondaryActions.length > 0" type="button" label="More" @click="toggle" class="min-w-48"
+          <Button v-if="computedSecondaryActions.length > 0" type="button" label="More" @click="toggle" class="col-span-2 w-full sm:min-w-48"
             icon="pi pi-angle-down" icon-pos="right" />
           <Popover ref="op">
             <div class="flex gap-4">

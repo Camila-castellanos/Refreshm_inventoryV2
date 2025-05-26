@@ -2,7 +2,7 @@
   <div>
     <Toast />
     <section class="w-full px-2 py-1 mx-auto mt-4">
-      <Tabs v-model:value="currentTab">
+      <Tabs v-model:value="currentTab" scrollable>
         <TabList>
           <!-- Tabs fijas -->
           <Tab v-for="tab in staticTabs" :key="'static-' + tab.order" :value="tab.order" @click="redirectToTab(tab)">
