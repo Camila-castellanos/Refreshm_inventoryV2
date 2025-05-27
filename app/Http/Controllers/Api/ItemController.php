@@ -22,7 +22,7 @@ class ItemController extends Controller
         $request->query->set('fields.items', $request->get('fields'));
     }
     //Define allowed and default fields, and allowed filters 
-    $allowedFields = ['id', 'type', 'supplier', 'manufacturer', 'model', 'colour', 'battery', 'grade', 'issues', 'cost', 'imei', 'selling_price', 'customer', 'discount', 'tax', 'subtotal', 'profit', 'created_at'];
+    $allowedFields = ['id', 'type', 'supplier', 'manufacturer', 'model', 'colour', 'battery', 'grade', 'issues', 'cost', 'imei', 'selling_price', 'customer', 'discount', 'tax', 'subtotal', 'profit', 'hold', 'sold', 'created_at'];
     $defaultFields = ['id', 'type', 'model', 'colour', 'battery', 'grade', 'cost', 'imei', 'selling_price'];
     $allowedFilters = [
             AllowedFilter::exact('type'),
@@ -46,7 +46,16 @@ class ItemController extends Controller
                 } else {
                     $query->whereNull('sold');
                 }
-            }),
+            })
+            ,
+            AllowedFilter::callback('hold', function ($query, $value) {
+                $v = strtolower((string) $value);
+                if ($v === '1' || $v === 'true') {
+                    $query->whereNotNull('hold');
+                } else {
+                    $query->whereNull('hold');
+                }
+            })
         ];
     // add to QueryBuilder the allowed fields
     $builder = QueryBuilder::for(Item::class)

@@ -42,9 +42,10 @@ class DocsController extends Controller
             'filter[selling_price]'  => 'Exact match on selling price',
             'filter[customer]'       => 'Partial match on customer',
             'filter[sold]'           => 'Filter by sold status: 1|true = sold, 0|false = unsold',
+            'filter[hold]'           => 'Filter by hold status: 1|true = on hold, 0|false = not on hold',
 
             // Field selection & pagination
-            'fields'   => 'Comma-separated list of fields to include. Allowed fields: id, type, supplier, manufacturer, model, colour, battery, grade, issues, cost, imei, selling_price, customer, discount, tax, subtotal, profit, created_at',
+            'fields'   => 'Comma-separated list of fields to include. Allowed fields: id, type, supplier, manufacturer, model, colour, battery, grade, issues, cost, imei, selling_price, customer, discount, tax, subtotal, profit, sold, hold, created_at',
             'per_page' => 'Number of items per page (pagination), default 15',
         ],
                     ],
