@@ -3,7 +3,7 @@
     <Toast />
     <section class="w-full px-2 py-1 mx-auto mt-4">
       <Tabs v-model:value="currentTab" scrollable>
-        <TabList>
+        <TabList class="bg-white">
           <!-- Tabs fijas -->
           <Tab v-for="tab in staticTabs" :key="'static-' + tab.order" :value="tab.order" @click="redirectToTab(tab)">
             <span>{{ tab.name }}</span>
@@ -69,7 +69,7 @@ import InputText from "primevue/inputtext";
 import Tab from "primevue/tab";
 import TabList from "primevue/tablist";
 import Tabs from "primevue/tabs";
-import { defineProps, onMounted, reactive, ref, Ref, watch } from "vue";
+import { defineProps, onMounted, reactive, ref, Ref, watch,nextTick } from "vue";
 
 const props = defineProps({
   customTabs: {
@@ -96,7 +96,7 @@ const shakeDropZone = ref(false);
 let draggedTab: ITab | null = null;
 let draggedIndex: number | null = null;
 
-onMounted(() => {
+onMounted(async () => {
   props.customTabs
     ?.sort((a, b) => a.order - b.order)
     .forEach((tab) => {
@@ -121,6 +121,8 @@ onMounted(() => {
       currentTab.value = customIndex !== -1 ? staticTabs.value.length + customIndex : 0;
       break;
   }
+  await nextTick();
+  scrollToCurrentTab()
 });
 
 const addTabDialog = ref(false);
@@ -146,6 +148,14 @@ watch(currentTab, (value) => {
     lastTab.value = value;
   }
 });
+
+// search the current active tab and scroll to it
+function scrollToCurrentTab() {
+    const tab = document.querySelector<HTMLElement>('[data-p-active="true"]')
+    if (tab){
+      tab.scrollIntoView({ behavior: 'smooth', inline: 'center' });
+    }
+}
 
 function redirectToTab(tab: ITab) {
   let endpoint: string;
