@@ -14,6 +14,7 @@ Route::get('/csrf-token', function () {
     return response()->json(['csrf_token' => csrf_token()]);
 })->name('csrf-token')->middleware('web');
 
+Route::get('health', [\App\Http\Controllers\Api\HealthController::class, 'index']);
 Route::apiResource('items', ItemController::class);
 // Route::middleware('auth:sanctum')->group(function () {
 // });
