@@ -3,6 +3,8 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\ItemController;
+use App\Http\Middleware\ApiAuth;
+use App\Http\Controllers\Api\DocsController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -15,6 +17,14 @@ Route::get('/csrf-token', function () {
 })->name('csrf-token')->middleware('web');
 
 Route::get('health', [\App\Http\Controllers\Api\HealthController::class, 'index']);
-Route::apiResource('items', ItemController::class);
-// Route::middleware('auth:sanctum')->group(function () {
-// });
+Route::get('/', [DocsController::class, 'index']);
+Route::get('login', function (Request $request) {
+    return response()->json([
+        'error'   => 'Method not allowed',
+        'message' => 'This endpoint only accepts POST requests for authentication.'
+    ], 405);
+});
+Route::post('login', [\App\Http\Controllers\Api\AuthController::class, 'login']);
+Route::middleware(ApiAuth::class)->group(function () {
+    Route::apiResource('items', ItemController::class);
+});
