@@ -11,7 +11,7 @@
             </TabList>
           </Tabs>
         </div>
-        <DataTable title="Payments" :items="tableData" :headers="headers" :actions="tableActions"></DataTable>
+        <DataTable title="Invoices" :items="tableData" :headers="headers" :actions="tableActions"></DataTable>
       </AccountingTabs>
     </section>
   </div>
