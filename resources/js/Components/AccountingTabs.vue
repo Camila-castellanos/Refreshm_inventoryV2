@@ -3,7 +3,7 @@
     <section class="w-full px-2 py-1 mx-auto mt-4">
       <Tabs v-model:value="currentTab">
         <TabList>
-          <Tab value="/payments" @click="redirectToTab('/payments')">Payments</Tab>
+          <Tab value="/payments" @click="redirectToTab('/payments')">Invoices</Tab>
           <Tab value="/expenses" @click="redirectToTab('/expenses')">Expenses</Tab>
           <Tab value="/bills" @click="redirectToTab('/bills')">Bills</Tab>
           <Tab value="/taxes" @click="redirectToTab('/taxes')">Taxes</Tab>
