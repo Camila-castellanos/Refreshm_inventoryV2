@@ -2,6 +2,8 @@
   <Toast></Toast>
   <section class="flex flex-col w-full px-4 relative">
     <section>
+      <div class="flex flex-row justify-between" id="spreadsheet-header">
+        <div id="spreadsheet-buttons">
       <Button :loading="isLoading" :disabled="isLoading" v-if="!props.initialData?.length" @click="createDevices">Save
         devices</Button>
       <Button :loading="isLoading" :disabled="isLoading" v-else @click="editDevices">Update devices</Button>
@@ -16,17 +18,63 @@
         >
           Print Unsaved Items Labels
         </Button>
+  </div>
+         <!-- Global data section for all items-->
+        <div id="spreadsheet-global-data" class="flex flex-row gap-4">
+            <!-- Vendors Dropdown -->
+          <Select
+            v-model="selectedVendor"
+            :options="vendorOptions"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Select Vendor"
+            :disabled="isLoading"
+            class="w-60"
+          />
+    
+          <!-- Date Picker -->
+          <DatePicker
+            v-model="selectedDate"
+            dateFormat="yy-mm-dd"
+            placeholder="Select Date"
+            show-icon
+            :disabled="isLoading"
+            class="w-50"
+          />
+
+           <!-- Tax Dropdown -->
+           <Select
+            v-model="selectedTax"
+            :options="taxOptions"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Select Tax"
+            :disabled="isLoading"
+            class="w-60"
+          >
+          <template #footer>
+        <div class="p-3">
+            <Button label="Add New Tax" fluid severity="secondary" text size="small" icon="pi pi-plus" @click="showTaxDialog = true" />
+        </div>
+          </template>
+        </Select>
+    </div>
+ </div>
     </section>
 
     <div class="spreadsheet-wrapper mt-8 w-full" ref="wrapper">
       <RevoGrid ref="revogrid" :columns="columns" :source="tableData" :columnTypes="columnTypes" :canFocus="!isLoading"
         :range="true" class="h-[80vh] w-full" :resize="true" theme="default" @beforeedit="handleBeforeEdit"
         @beforeRowAdd="onInsertRow" @universal-cell-contextmenu="showContextMenu" @beforeRowDelete="onDeleteRow"
-        :clipboard="{ copyable: true, pasteable: true }" />
+        :clipboard="{ copyable: true, pasteable: true }" 
+        row-key="location"/>
 
       <ContextMenu ref="menuRef" :model="menuItems" />
     </div>
   </section>
+  <CreateTax
+    v-model:visible="showTaxDialog"
+    @created="handleTaxCreated"/>
 </template>
 
 <script lang="ts" setup>
@@ -39,11 +87,12 @@ import NumberTypePlugin from "@revolist/revogrid-column-numeral";
 import SelectTypePlugin from "@revolist/revogrid-column-select";
 import RevoGrid, { BeforeSaveDataDetails, RevoGridCustomEvent, VGridVueTemplate, type ColumnRegular } from "@revolist/vue3-datagrid";
 import axios from "axios";
-import { Button, ContextMenu, useDialog, useToast } from "primevue";
+import { Button, ContextMenu, useDialog, useToast, Select, DatePicker } from "primevue";
 import { useConfirm } from "primevue/useconfirm";
 import { nextTick, onMounted, ref, onBeforeUnmount, watch } from "vue";
 import UniversalCell from "./UniversalCell.vue";
 import { format } from "date-fns";
+import CreateTax from "@/Pages/Accounting/Modals/CreateTax.vue";
 
 type VendorOption = { label: string; value: string };
 type ContextMenu = { visible: boolean; x: number; y: number; row: number | null };
@@ -60,6 +109,11 @@ const vendorsList = ref<any[]>([]);
 const vendorOptions = ref<VendorOption[]>([]);
 const tableData = ref<ItemWithLocation[]>([]);
 const isLoading = ref(false);
+const selectedVendor = ref<string | null>(null);
+const selectedDate   = (null);
+const taxOptions = ref([]);
+const selectedTax = ref<string | null>(null);
+const showTaxDialog = ref(false);
 
 const menuItems = [
   { label: "Insert Row Above", command: () => insertRow("above") },
@@ -79,19 +133,20 @@ const columns = ref<ColumnRegular[]>([
     size: 50,
     readonly: true,
     cellTemplate: VGridVueTemplate(UniversalCell),
-    pin: "colPinStart",
   },
-  { prop: "date", name: "Date", columnType: "date", size: 200, cellTemplate: VGridVueTemplate(UniversalCell) },
-  {
-    prop: "vendor",
-    name: "Vendor",
-    size: 200,
-    columnType: "select",
-    source: [...vendorOptions.value],
-    labelKey: "label",
-    valueKey: "value",
-    cellTemplate: VGridVueTemplate(UniversalCell),
-  },
+  
+  
+  // { prop: "date", name: "Date", columnType: "date", size: 200, cellTemplate: VGridVueTemplate(UniversalCell) },
+  // {
+  //   prop: "vendor",
+  //   name: "Vendor",
+  //   size: 200,
+  //   columnType: "select",
+  //   source: [...vendorOptions.value],
+  //   labelKey: "label",
+  //   valueKey: "value",
+  //   cellTemplate: VGridVueTemplate(UniversalCell),
+  // },
   { prop: "manufacturer", name: "Manufacturer", size: 200, cellTemplate: VGridVueTemplate(UniversalCell) },
   { prop: "model", name: "Model", size: 150, cellTemplate: VGridVueTemplate(UniversalCell) },
   { prop: "colour", name: "Colour", size: 150, cellTemplate: VGridVueTemplate(UniversalCell) },
@@ -115,7 +170,7 @@ onMounted(async () => {
   storagesList.value = storages.data;
   vendorsList.value = vendors.data;
   vendorOptions.value = vendors.data.map((v: Vendor) => ({ label: v.vendor, value: v.vendor }));
-
+  taxOptions.value = await getUserTaxes();
   columns.value = columns.value.map((col) => {
     if (col.prop === "vendor") {
       return {
@@ -157,6 +212,27 @@ onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKeyDown, {capture: true});
 });
 
+async function getUserTaxes() {
+    try {
+      let taxes;
+      const { data } = await axios.get(route('tax.list'));
+      taxes = data.map((tax: any) => ({
+        label: `${tax.name || 'N/A'} - (${tax.percentage + '%' || 'N/A'})`,
+        value: tax.id,
+      }));
+      console.log("Taxes loaded:", taxes);
+      return taxes;
+    } catch (err) {
+      console.error('Failed to load taxes:', err);
+      toast.add({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'Could not fetch tax list',
+        life: 3000,
+      });
+    }
+  }
+
 function showContextMenu(e: CustomEvent<{ event: MouseEvent; rowIndex: number; prop: string }>) {
   e.preventDefault();
   if (props.initialData?.length) return;
@@ -166,7 +242,6 @@ function showContextMenu(e: CustomEvent<{ event: MouseEvent; rowIndex: number; p
 
 function insertRow(position: "above" | "below" | "bulk") {
   const rowIndex = contextRow.value ?? 0;
-  console.log(rowIndex);
   if (position === "above") {
     tableData.value = [...tableData.value.slice(0, rowIndex), {} as any, ...tableData.value.slice(rowIndex)];
     renderPositions(1);
@@ -222,6 +297,7 @@ function renderPositions(numOfRows: number): void {
           }
         }
       });
+      console.log("new table state", tableData.value);
 
       const occupiedPositions = [...dbPositions, ...inTablePositions];
       const availablePositions: number[] = [];
@@ -460,5 +536,14 @@ async function openLabelsFromTable() {
   } catch (err) {
     console.error(err);
   }
+}
+
+// function to add the newly created tax to the taxOptions
+function handleTaxCreated(tax: { id: number; name: string; percentage: number }) {
+  taxOptions.value.push({
+    label: `${tax.name} - ${tax.percentage}%`,
+    value: tax.id
+  });
+  selectedTax.value = tax.id;
 }
 </script>
