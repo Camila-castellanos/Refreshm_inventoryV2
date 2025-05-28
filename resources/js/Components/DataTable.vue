@@ -3,7 +3,8 @@
   <DataTable v-model:filters="filters" :value="items" v-model:selection="selectedItems" dataKey="id" stripedRows
     ref="dt" paginator resizableColumns column-resize-mode="fit" :rows="20" :rowsPerPageOptions="[5, 10, 20, 50]"
     :globalFilterFields="headers.filter((header) => header.name !== 'actions').map((header) => header.name)"
-    :class="inventory ? 'text-xs my-datatable' : 'my-datatable'" :selection-mode="selectionMode">
+    :class="inventory ? 'text-xs my-datatable' : 'my-datatable'" :selection-mode="selectionMode":sortField="sortField"
+      :sortOrder="sortOrder">
     <template #header>
       <div class="flex flex-col sm:flex-row sm:flex-no-wrap items-center justify-between gap-2">
         <div :class="title !== '' ? 'flex flex-col gap-3 sm:flex-row justify-center sm:justify-between items-center sm:gap-12' + ' w-full sm:w-auto' : 'flex justify-start items-center'">
@@ -123,6 +124,8 @@ const props = defineProps<{
   actions?: ITableActions[];
   selectionMode?: "single" | "multiple";
   inventory?: boolean;
+  sortField?: string;
+  sortOrder?: number;
 }>();
 
 const selectionMode = ref(props?.selectionMode ?? "multiple");
