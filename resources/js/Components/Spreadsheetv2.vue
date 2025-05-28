@@ -110,7 +110,7 @@ const vendorOptions = ref<VendorOption[]>([]);
 const tableData = ref<ItemWithLocation[]>([]);
 const isLoading = ref(false);
 const selectedVendor = ref<string | null>(null);
-const selectedDate   = (null);
+const selectedDate = ref<Date | null>(null);
 const taxOptions = ref([]);
 const selectedTax = ref<string | null>(null);
 const showTaxDialog = ref(false);
@@ -155,8 +155,9 @@ const columns = ref<ColumnRegular[]>([
   { prop: "issues", name: "Issues", size: 150, cellTemplate: VGridVueTemplate(UniversalCell) },
   { prop: "imei", name: "IMEI", size: 150, cellTemplate: VGridVueTemplate(UniversalCell) },
   { prop: "location", name: "Location", size: 100, readonly: true, cellTemplate: VGridVueTemplate(UniversalCell) },
-  { prop: "cost", name: "Cost", columnType: "number", size: 120, cellTemplate: VGridVueTemplate(UniversalCell) },
   { prop: "selling_price", name: "Selling Price", columnType: "number", size: 120, cellTemplate: VGridVueTemplate(UniversalCell) },
+  { prop: "cost", name: "Subtotal", columnType: "number", size: 120, cellTemplate: VGridVueTemplate(UniversalCell) },
+  { prop: "total", name: "Total", columnType: "number", size: 120, cellTemplate: VGridVueTemplate(UniversalCell) },
 ]);
 
 const columnTypes = ref<any>({
@@ -201,6 +202,10 @@ onMounted(async () => {
       };
     })
     : [{}] as ItemWithLocation[];
+
+  if ((props.initialData?.length ?? 0) > 0 && tableData.value[0].tax != null) {
+    selectedTax.value = tableData.value[0].tax;
+  }  
 
   await nextTick();
   if (!props.initialData?.length) renderPositions(1);
@@ -282,7 +287,6 @@ function onDeleteRow(e: CustomEvent<{ count: number }>): void {
 function renderPositions(numOfRows: number): void {
   const newRowsToAssign = tableData.value.filter(row => !row.location);
   let rowsAssigned = 0;
-  console.log("new rows to assign", newRowsToAssign);
   for (const row of newRowsToAssign) {
     if (row.location) continue; // Skip if already assigned in a previous iteration
 
@@ -297,7 +301,6 @@ function renderPositions(numOfRows: number): void {
           }
         }
       });
-      console.log("new table state", tableData.value);
 
       const occupiedPositions = [...dbPositions, ...inTablePositions];
       const availablePositions: number[] = [];
@@ -360,7 +363,7 @@ function editDevices(): void {
 function mapSpreadsheetData(data: ItemWithLocation[]): any[] {
   return data.map((row) => {
     const storageId = storagesList.value.find((s) => s.name === row.location?.split("-")[0].trim())?.id;
-    const vendorId = vendorsList.value.find((v) => v.vendor === row.vendor)?.id;
+    const vendorId = vendorsList.value.find((v) => v.vendor === selectedVendor.value)?.id;
     let cost = row.cost;
     let selling_price = row.selling_price;
 
@@ -370,7 +373,11 @@ function mapSpreadsheetData(data: ItemWithLocation[]): any[] {
     if (selling_price?.toString().startsWith("$")) {
       selling_price = Number(selling_price.toString().slice(1));
     }
-    return { ...row, storage_id: storageId, vendor_id: vendorId, date: format(row.date, "yyyy-MM-dd"), cost, selling_price };
+    const date = selectedDate.value
+     ? format(selectedDate.value, "yyyy-MM-dd")
+     : format(new Date(), "yyyy-MM-dd");
+
+    return { ...row, storage_id: storageId, vendor_id: vendorId, date: date, cost, selling_price,  tax: selectedTax.value };
   });
 }
 
@@ -546,4 +553,35 @@ function handleTaxCreated(tax: { id: number; name: string; percentage: number })
   });
   selectedTax.value = tax.id;
 }
+// function to calculate row total
+function calculateTotal(cost: number|null, taxPerc: number|null): number|null {
+  if (cost == null || taxPerc == null) return null;
+  return parseFloat((cost * (1 + taxPerc / 100)).toFixed(2));
+}
+
+// function to put new totals in the table
+function updateTotals() {
+  skipSnapshot = true; // evitar snapshot en este cambio
+  tableData.value.forEach(row => {
+    row.total = calculateTotal(
+      // row.cost puede ser string si usas formato "$123", convier̃telo a número:
+      typeof row.cost === 'string'
+        ? Number(row.cost.replace(/[^0-9.-]+/g, ''))
+        : row.cost,
+      selectedTax.value ? Number(selectedTax.value) : null
+    );
+  });
+}
+
+// recalculate totals when tax changes or costs change
+watch(selectedTax, () => {
+  updateTotals();
+});
+
+watch(
+  () => tableData.value.map(r => r.cost),
+  () => {
+    updateTotals();
+  }
+);
 </script>

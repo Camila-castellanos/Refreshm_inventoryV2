@@ -38,6 +38,7 @@ class ItemForm extends FormRequest
             "items.*.date" => "sometimes",
             "items.*.selling_price" => "sometimes",
             "items.*.storage_id" => "required",
+            "items.*.tax" => "sometimes",
         ];
     }
 }
