@@ -12,7 +12,7 @@
           </Tabs>
         </div>
         <DataTable title="Bills" :items="tableData" :headers="billHeaders" :actions="actions" @update:selected="handleSelection"
-        sortField="date" :sortOrder="-1"></DataTable>
+        sortField="date" sortOrder="-1"></DataTable>
       </AccountingTabs>
     </section>
   </div>
@@ -56,6 +56,7 @@ watch(
 
 onMounted(() => {
   currentTab.value = `/bills${props.data_status !== "all" ? `?status=${props.data_status}` : ""}`;
+  console.log("bills mounted", props.items);
   tableData.value = props?.items?.map((item) => ({
     ...item,
     actions: getItemActions(item),

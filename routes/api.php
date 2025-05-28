@@ -25,6 +25,10 @@ Route::get('login', function (Request $request) {
     ], 405);
 });
 Route::post('login', [\App\Http\Controllers\Api\AuthController::class, 'login']);
-Route::middleware(ApiAuth::class)->group(function () {
-    Route::apiResource('items', ItemController::class);
-});
+// final api implementation with authentication middleware
+// Route::middleware(ApiAuth::class)->group(function () {
+//     Route::apiResource('items', ItemController::class);
+// });
+
+// temporary implementation without authentication middleware
+Route::apiResource('items', ItemController::class); 
