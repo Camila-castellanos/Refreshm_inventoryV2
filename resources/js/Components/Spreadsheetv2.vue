@@ -224,6 +224,7 @@ async function getUserTaxes() {
       taxes = data.map((tax: any) => ({
         label: `${tax.name || 'N/A'} - (${tax.percentage + '%' || 'N/A'})`,
         value: tax.id,
+        percentage: tax.percentage
       }));
       console.log("Taxes loaded:", taxes);
       return taxes;
@@ -549,7 +550,8 @@ async function openLabelsFromTable() {
 function handleTaxCreated(tax: { id: number; name: string; percentage: number }) {
   taxOptions.value.push({
     label: `${tax.name} - ${tax.percentage}%`,
-    value: tax.id
+    value: tax.id,
+    percentage: tax.percentage
   });
   selectedTax.value = tax.id;
 }
@@ -557,6 +559,10 @@ function handleTaxCreated(tax: { id: number; name: string; percentage: number })
 function calculateTotal(cost: number|null, taxPerc: number|null): number|null {
   if (cost == null || taxPerc == null) return null;
   return parseFloat((cost * (1 + taxPerc / 100)).toFixed(2));
+}
+function getTaxPercentageById(id: number | string): number | null {
+  const option = taxOptions.value.find(opt => opt.value === id)
+  return option?.percentage ?? null
 }
 
 // function to put new totals in the table
@@ -568,7 +574,7 @@ function updateTotals() {
       typeof row.cost === 'string'
         ? Number(row.cost.replace(/[^0-9.-]+/g, ''))
         : row.cost,
-      selectedTax.value ? Number(selectedTax.value) : null
+      selectedTax.value ? getTaxPercentageById(selectedTax.value) : null
     );
   });
 }
