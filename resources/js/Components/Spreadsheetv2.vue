@@ -30,6 +30,9 @@
             placeholder="Select Vendor"
             :disabled="isLoading"
             class="w-60"
+            filter                      
+            filterBy="label"            
+            filterPlaceholder="Search Vendor..."
           />
     
           <!-- Date Picker -->
