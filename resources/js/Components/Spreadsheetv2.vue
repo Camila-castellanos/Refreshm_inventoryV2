@@ -100,7 +100,7 @@ import CreateTax from "@/Pages/Accounting/Modals/CreateTax.vue";
 type VendorOption = { label: string; value: string };
 type ContextMenu = { visible: boolean; x: number; y: number; row: number | null };
 
-type ItemWithLocation = Item & { location: string };
+type ItemWithLocation = Item & { location: string } & { subtotal: number|string; selling_price?: number|string; total?: number|string };
 
 const props = defineProps<{ initialData?: Item[] }>();
 
@@ -112,11 +112,12 @@ const vendorsList = ref<any[]>([]);
 const vendorOptions = ref<VendorOption[]>([]);
 const tableData = ref<ItemWithLocation[]>([]);
 const isLoading = ref(false);
-const selectedVendor = ref<string | null>(null);
+const selectedVendor = ref<string | number | null>(null);
 const selectedDate = ref<Date | null>(null);
-const taxOptions = ref([]);
+const taxOptions = ref<{ label: string; value: number; percentage: number }[]>([]);
 const selectedTax = ref<string | null>(null);
 const showTaxDialog = ref(false);
+let isMounted = ref(false)
 
 const menuItems = [
   { label: "Insert Row Above", command: () => insertRow("above") },
@@ -158,8 +159,8 @@ const columns = ref<ColumnRegular[]>([
   { prop: "issues", name: "Issues", size: 150, cellTemplate: VGridVueTemplate(UniversalCell) },
   { prop: "imei", name: "IMEI", size: 150, cellTemplate: VGridVueTemplate(UniversalCell) },
   { prop: "location", name: "Location", size: 100, readonly: true, cellTemplate: VGridVueTemplate(UniversalCell) },
-  { prop: "cost", name: "Subtotal", columnType: "number", size: 120, cellTemplate: VGridVueTemplate(UniversalCell) },
-  { prop: "total", name: "Total", columnType: "number", size: 120, cellTemplate: VGridVueTemplate(UniversalCell) },
+  { prop: "subtotal", name: "Subtotal", columnType: "number", size: 120, cellTemplate: VGridVueTemplate(UniversalCell) },
+  { prop: "cost", name: "Total", columnType: "number", size: 120, cellTemplate: VGridVueTemplate(UniversalCell) },
   { prop: "selling_price", name: "Selling Price", columnType: "number", size: 120, cellTemplate: VGridVueTemplate(UniversalCell) },
 ]);
 
@@ -196,7 +197,6 @@ onMounted(async () => {
   tableData.value = props.initialData?.length
     ? props.initialData.map((item) => {
       const storage = storages.data.find((s: Storage) => s.id === item.storage_id);
-      console.log(item)
       return {
         ...item,
         location: `${storage?.name} - ${item.position}/${storage?.limit}`,
@@ -206,12 +206,22 @@ onMounted(async () => {
     })
     : [{}] as ItemWithLocation[];
 
+    if(props.initialData?.length) {
+      // selectedVendor
+      selectedVendor.value = vendors.data.find((v: Vendor) => v.id === props.initialData[0].vendor_id)?.vendor || "";
+      selectedDate.value = props.initialData[0].date ? new Date(props.initialData[0].date) : null;
+    }
+
   if ((props.initialData?.length ?? 0) > 0 && tableData.value[0].tax != null) {
     selectedTax.value = tableData.value[0].tax;
   }  
 
+
+
   await nextTick();
   if (!props.initialData?.length) renderPositions(1);
+  // finish mounting
+  isMounted.value = true;
 });
 
 onBeforeUnmount(() => {
@@ -345,10 +355,39 @@ function createDevices(): void {
     icon: "pi pi-exclamation-triangle",
     rejectProps: { label: "Cancel", severity: "secondary", outlined: true },
     acceptProps: { label: "Save" },
-    accept: () => submitSpreadsheet(mapSpreadsheetData(tableData.value)),
+    accept: () => verifySpreadsheetRequired(() => submitSpreadsheet(mapSpreadsheetData(tableData.value))),
   });
 }
-
+  function verifySpreadsheetRequired(callback: () => void): void {
+    if (!selectedVendor.value) {
+      toast.add({
+        severity: 'error',
+        summary: 'Validation Error',
+        detail: 'A Vendor must be selected',
+        life: 3000,
+      });
+      return;
+    }
+    if (!selectedDate.value) {
+      toast.add({
+        severity: 'error',
+        summary: 'Validation Error',
+        detail: 'A Date must be selected',
+        life: 3000,
+      });
+      return;
+    }
+    if (!selectedTax.value) {
+      toast.add({
+        severity: 'error',
+        summary: 'Validation Error',
+        detail: 'A Tax must be selected',
+        life: 3000,
+      });
+      return;
+    }
+    callback();
+  }
 function editDevices(): void {
   isLoading.value = true;
   const formattedData = mapSpreadsheetData(tableData.value);
@@ -370,7 +409,10 @@ function mapSpreadsheetData(data: ItemWithLocation[]): any[] {
     const vendorId = vendorsList.value.find((v) => v.vendor === selectedVendor.value)?.id;
     let cost = row.cost;
     let selling_price = row.selling_price;
-
+    let subtotal = row.subtotal;
+    if (subtotal?.toString().startsWith("$")) {
+      subtotal = Number(subtotal.toString().slice(1));
+    }
     if (cost?.toString().startsWith("$")) {
       cost = Number(cost.toString().slice(1));
     }
@@ -380,8 +422,13 @@ function mapSpreadsheetData(data: ItemWithLocation[]): any[] {
     const date = selectedDate.value
      ? format(selectedDate.value, "yyyy-MM-dd")
      : format(new Date(), "yyyy-MM-dd");
+    
+    // ensure subtotal is a number
+    if (typeof subtotal === 'string') {
+      subtotal = parseFloat(subtotal.replace(/[^0-9.-]+/g, ''))
+    }
 
-    return { ...row, storage_id: storageId, vendor_id: vendorId, date: date, cost, selling_price,  tax: selectedTax.value };
+    return { ...row, storage_id: storageId, vendor_id: vendorId, date: date, cost, selling_price,  tax: selectedTax.value, subtotal: subtotal};
   });
 }
 
@@ -429,7 +476,7 @@ const pasteOrder = [
   "battery",
   "grade",
   "issues",
-  "cost",
+  "subtotal",
   "imei",
 ];
 
@@ -572,11 +619,13 @@ function getTaxPercentageById(id: number | string): number | null {
 function updateTotals() {
   skipSnapshot = true; // evitar snapshot en este cambio
   tableData.value.forEach(row => {
-    row.total = calculateTotal(
+   // si no hay subtotal, no hacemos nada
+   if (!row.subtotal) return;
+    row.cost = calculateTotal(
       // row.cost puede ser string si usas formato "$123", convier̃telo a número:
-      typeof row.cost === 'string'
-        ? Number(row.cost.replace(/[^0-9.-]+/g, ''))
-        : row.cost,
+      typeof row.subtotal === 'string'
+        ? Number(row.subtotal.replace(/[^0-9.-]+/g, ''))
+        : row.subtotal,
       selectedTax.value ? getTaxPercentageById(selectedTax.value) : null
     );
   });
@@ -588,8 +637,9 @@ watch(selectedTax, () => {
 });
 
 watch(
-  () => tableData.value.map(r => r.cost),
+  () => tableData.value.map(r => r.subtotal),
   () => {
+    if (!isMounted.value) return; // evita recalcular antes de montar
     updateTotals();
   }
 );
