@@ -12,7 +12,7 @@
           </Tabs>
         </div>
         <DataTable title="Bills" :items="tableData" :headers="billHeaders" :actions="actions" @update:selected="handleSelection"
-        sortField="date" sortOrder="-1"></DataTable>
+        ></DataTable>
       </AccountingTabs>
     </section>
   </div>
