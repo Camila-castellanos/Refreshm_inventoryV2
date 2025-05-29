@@ -36,7 +36,7 @@ class BillController extends Controller
       }
     }
 
-    $bills = $bills->get();
+    $bills = $bills->orderByDesc('date')->get();
     foreach ($bills as $bill) {
       $payments = PaymentsBills::where('bill_id', $bill->id)->get()->map(function ($payment) {
         $formattedDate = date('F j, Y', strtotime($payment->payment_date));

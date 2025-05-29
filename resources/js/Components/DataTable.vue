@@ -207,7 +207,7 @@ function getColumnStyle(header: string) {
     case "imei":
       return { width: "130px", padding: "5px" };
     case "vendor":
-      return { width: "110px", padding: "5px" };
+      return { width: "120px", padding: "5px" };
     case "customer":
       return { width: "130px", padding: "5px" };
     default:
