@@ -3,7 +3,7 @@
   <section class="flex flex-col w-full px-4 relative">
     <section>
       <div class="flex flex-row justify-between" id="spreadsheet-header">
-        <div id="spreadsheet-buttons">
+        <div id="spreadsheet-buttons" class="flex flex-row items-center">
       <Button :loading="isLoading" :disabled="isLoading" v-if="!props.initialData?.length" @click="createDevices">Save
         devices</Button>
       <Button :loading="isLoading" :disabled="isLoading" v-else @click="editDevices">Update devices</Button>
@@ -18,6 +18,19 @@
         >
           Print Unsaved Items Labels
         </Button>
+        <div class="flex space-x-2 px-2">
+    <label for="save-as-bill" class="font-medium">Save as Bill</label>
+    <ToggleSwitch
+      id="save-as-bill"
+      v-model="saveAsBill"
+      :disabled="isLoading"
+       @change="val => { if (val) showBillModal = true }"
+    >
+    <template #handle="{ checked }">
+        <i :class="['!text-xs pi', { 'pi-check': checked, 'pi-times': !checked }]" />
+    </template>
+    </ToggleSwitch>
+  </div>
   </div>
          <!-- Global data section for all items-->
         <div id="spreadsheet-global-data" class="flex flex-row gap-4">
@@ -78,6 +91,11 @@
   <CreateTax
     v-model:visible="showTaxDialog"
     @created="handleTaxCreated"/>
+  <SaveAsBillModal
+    v-model:visible="showBillModal"
+    @save="updateBillTitle"
+    @cancel="saveAsBill = false"
+  />
 </template>
 
 <script lang="ts" setup>
@@ -90,12 +108,13 @@ import NumberTypePlugin from "@revolist/revogrid-column-numeral";
 import SelectTypePlugin from "@revolist/revogrid-column-select";
 import RevoGrid, { BeforeSaveDataDetails, RevoGridCustomEvent, VGridVueTemplate, type ColumnRegular } from "@revolist/vue3-datagrid";
 import axios from "axios";
-import { Button, ContextMenu, useDialog, useToast, Select, DatePicker } from "primevue";
+import { Button, ContextMenu, useDialog, useToast, Select, DatePicker, ToggleSwitch } from "primevue";
 import { useConfirm } from "primevue/useconfirm";
 import { nextTick, onMounted, ref, onBeforeUnmount, watch } from "vue";
 import UniversalCell from "./UniversalCell.vue";
 import { format } from "date-fns";
 import CreateTax from "@/Pages/Accounting/Modals/CreateTax.vue";
+import SaveAsBillModal from "./SaveAsBillModal.vue";
 
 type VendorOption = { label: string; value: string };
 type ContextMenu = { visible: boolean; x: number; y: number; row: number | null };
@@ -117,7 +136,10 @@ const selectedDate = ref<Date | null>(null);
 const taxOptions = ref<{ label: string; value: number; percentage: number }[]>([]);
 const selectedTax = ref<string | null>(null);
 const showTaxDialog = ref(false);
-let isMounted = ref(false)
+const isMounted = ref(false)
+const saveAsBill = ref(false);
+const showBillModal = ref(false);
+const BillTittle = ref("");
 
 const menuItems = [
   { label: "Insert Row Above", command: () => insertRow("above") },
@@ -138,19 +160,6 @@ const columns = ref<ColumnRegular[]>([
     readonly: true,
     cellTemplate: VGridVueTemplate(UniversalCell),
   },
-  
-  
-  // { prop: "date", name: "Date", columnType: "date", size: 200, cellTemplate: VGridVueTemplate(UniversalCell) },
-  // {
-  //   prop: "vendor",
-  //   name: "Vendor",
-  //   size: 200,
-  //   columnType: "select",
-  //   source: [...vendorOptions.value],
-  //   labelKey: "label",
-  //   valueKey: "value",
-  //   cellTemplate: VGridVueTemplate(UniversalCell),
-  // },
   { prop: "manufacturer", name: "Manufacturer", size: 200, cellTemplate: VGridVueTemplate(UniversalCell) },
   { prop: "model", name: "Model", size: 150, cellTemplate: VGridVueTemplate(UniversalCell) },
   { prop: "colour", name: "Colour", size: 150, cellTemplate: VGridVueTemplate(UniversalCell) },
@@ -433,9 +442,22 @@ function mapSpreadsheetData(data: ItemWithLocation[]): any[] {
 }
 
 async function submitSpreadsheet(body: any[]): Promise<void> {
+  const endpoint = saveAsBill.value ? "items.storeWithBill" : "items.store";
+  const payload = saveAsBill.value
+    ? {
+        items: body,
+        bill: {
+          date: selectedDate.value ? format(selectedDate.value, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd"),
+          vendor_id: findVendorId(selectedVendor.value),
+          tax_id: selectedTax.value,
+          title: BillTittle.value || "New Bill",
+        },
+      }
+    : { items: body };
+    console.log("Submitting data to endpoint:", endpoint, "with payload:", payload);
   try {
     isLoading.value = true;
-    await axios.post("/inventory/items", { items: body }, { responseType: "blob" });
+    await axios.post(route(endpoint), payload, { responseType: "blob" });
     isLoading.value = false;
     toast.add({ severity: "success", summary: "Success", detail: "Devices created successfully", life: 3000 });
     router.visit("/inventory/items", { only: ["items", "tabs"] });
@@ -643,4 +665,16 @@ watch(
     updateTotals();
   }
 );
+
+// function to update the bill title from the modal
+function updateBillTitle(title: string) {
+  BillTittle.value = title;
+  showBillModal.value = false;
+}
+
+// function to find vendor id
+function findVendorId(vendorName: string): number | null {
+  const vendor = vendorsList.value.find((v: Vendor) => v.vendor === vendorName);
+  return vendor ? vendor.id : null;
+}
 </script>
