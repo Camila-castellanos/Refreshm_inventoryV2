@@ -37,6 +37,9 @@ use Maatwebsite\Excel\Facades\Excel;
 use Response;
 use Illuminate\Support\Collection;
 use Illuminate\Http\JsonResponse;
+use App\Http\Requests\ItemsWithBillForm;
+use App\Models\Tax;
+use App\Models\Bill;
 
 class ItemController extends Controller
 {
@@ -366,6 +369,74 @@ class ItemController extends Controller
             $created[] = Item::create($item);
         }
         return response()->json($created, 201);
+    }
+
+    public function storeWithBill(ItemsWithBillForm $request)
+    {
+        // validate and extract items data and bill data
+        ['bill' => $billData, 'items' => $itemsData] = $request->validated();
+        
+         // sum subtotals of items
+        $sumSubtotals = collect($itemsData)->sum(fn($i) => $i['subtotal'] ?? 0);
+
+        // sum of totals of items
+        $sumTotals = collect($itemsData)->sum(function($i) use ($billData) {
+        if (isset($i['cost'])) {
+            return $i['cost'];
+        }
+        // if cost is not set, calculate it based on tax + subtotal
+        $taxPerc = $billData['tax_id']
+            ? Tax::find($billData['tax_id'])->percentage
+            : 0;
+        return ($i['subtotal'] ?? 0) * (1 + $taxPerc / 100);
+    });
+     $newBill = [
+            'user_id' => Auth::id(),
+            'vendor_id' => $billData['vendor_id'],
+            'date' => $billData['date'],
+            'tax_id' => $billData['tax_id'] ?? null,
+            'subtotal' => $sumSubtotals,
+            'total' => $sumTotals,
+            'invoice' => $billData['title'],
+            'amount_paid' => 0,
+            'balance_remaining' => $sumTotals,
+            'status' => 0, // 0 for unpaid
+            'vendor' => Vendor::find($billData['vendor_id'])->vendor ?? null,
+            'tax' => Tax::find($billData['tax_id'])->percentage ?? 0,
+        ];
+        // start transaction
+        DB::beginTransaction();
+        try {
+
+        $user = $request->user(); 
+        $company = $user->company;
+        $shops = $company?->shops;
+
+        $firstShop = $shops[0] ?? null;
+
+        $shopId = $firstShop ? $firstShop->id : null;
+
+        $itemsCreated = [];
+        foreach ($itemsData as $item) {
+            $item['user_id'] = Auth::user()->id;
+            $item['shop_id'] = $shopId;
+            $itemsCreated[] = Item::create($item);
+        }
+        $createdBill = Bill::create($newBill);
+
+        DB::commit();
+
+        return response()->json([
+            'bill'  => $createdBill,
+            'items' => $itemsCreated,
+        ], 201);
+    } catch (\Throwable $e) {
+        DB::rollBack();
+        return response()->json([
+                'error'   => 'Error al crear Bill + Items',
+                'message' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     /**
