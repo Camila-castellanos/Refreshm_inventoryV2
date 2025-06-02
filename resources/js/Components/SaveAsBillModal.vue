@@ -70,6 +70,10 @@ function save() {
   close();
 }
 
+function close() {
+  dialogVisible.value = false;
+}
+
 // reset al cerrar
 watch(() => props.visible, v => { if (!v) title.value = '' });
 </script>
