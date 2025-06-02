@@ -22,6 +22,7 @@ use App\Http\Controllers\TaxController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\InventoryPublicController;
 use App\Http\Controllers\InvitationController;
+use App\Http\Controllers\DraftController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -217,5 +218,9 @@ Route::middleware([
     Route::resource("customfields", CustomFieldsController::class);
     Route::post("customfields/{id}/active", [CustomFieldsController::class, "updateActive"])->name("customFields.updateActive");
 
-    
+    Route::get("drafts", [DraftController::class, "index"])->name("drafts.index");
+    Route::get('drafts/simple', [DraftController::class, 'simpleList'])->name("drafts.simpleList");
+    Route::get('drafts/{draft}',  [DraftController::class,'show'])->name("drafts.show");
+    Route::post('drafts',   [DraftController::class,'store'])->name("drafts.store");
+    Route::delete('drafts/{draft}', [DraftController::class,'destroy'])->name("drafts.destroy");
 });

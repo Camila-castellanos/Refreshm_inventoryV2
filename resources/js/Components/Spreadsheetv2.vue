@@ -4,9 +4,18 @@
     <section>
       <div class="flex flex-row justify-between" id="spreadsheet-header">
         <div id="spreadsheet-buttons" class="flex flex-row items-center">
-      <Button :loading="isLoading" :disabled="isLoading" v-if="!props.initialData?.length" @click="createDevices">Save
+      <Button :loading="isLoading" :disabled="isLoading" v-if="!props.initialData?.length" @click="showOptions = true">Save
         devices</Button>
       <Button :loading="isLoading" :disabled="isLoading" v-else @click="editDevices">Update devices</Button>
+       <Button
+          icon="pi pi-folder-open"
+          severity="secondary"
+          class="!h-fit"
+          :disabled="isLoading"
+          @click="showLoadDraft = true"
+          aria-label="Load Draft"
+          label="Load Draft"
+          />
       <Button
           icon="pi pi-print"
           class="ml-2 !w-fit !h-fit !px-2"
@@ -34,6 +43,16 @@
   </div>
          <!-- Global data section for all items-->
         <div id="spreadsheet-global-data" class="flex flex-row gap-4">
+          <!-- Draft modal button -->
+          <Button
+          icon="pi pi-folder-open"
+          severity="secondary"
+          class="!h-fit"
+          :disabled="isLoading"
+          @click="showLoadDraft = true"
+          aria-label="Load Draft"
+          label="Load Draft"
+          />
             <!-- Vendors Dropdown -->
           <Select
             v-model="selectedVendor"
@@ -96,6 +115,22 @@
     @save="updateBillTitle"
     @cancel="saveAsBill = false"
   />
+  <SaveDevicesOptions
+    v-model:visible="showOptions"
+    @toInventory="createDevices"
+    @asDraft="saveAsDraft"
+    @cancel="showOptions = false"
+  />
+  <DraftNameModal
+    v-model:visible="showDraftName"
+    @save="updateDraftName"
+    @cancel="showDraftName = false"
+  />
+  <LoadDraftModal
+    v-model:visible="showLoadDraft"
+    @load="handleLoadDraft"
+    @update:visible="showLoadDraft = $event"
+  />
 </template>
 
 <script lang="ts" setup>
@@ -115,6 +150,9 @@ import UniversalCell from "./UniversalCell.vue";
 import { format } from "date-fns";
 import CreateTax from "@/Pages/Accounting/Modals/CreateTax.vue";
 import SaveAsBillModal from "./SaveAsBillModal.vue";
+import SaveDevicesOptions from "./SaveDevicesOptions.vue";
+import DraftNameModal from "./DraftNameModal.vue";
+import LoadDraftModal from "./LoadDraftModal.vue";
 
 type VendorOption = { label: string; value: string };
 type ContextMenu = { visible: boolean; x: number; y: number; row: number | null };
@@ -139,7 +177,11 @@ const showTaxDialog = ref(false);
 const isMounted = ref(false)
 const saveAsBill = ref(false);
 const showBillModal = ref(false);
-const BillTittle = ref("");
+const BillTitle = ref("");
+const showOptions = ref(false);
+const showDraftName = ref(false)
+const currentLoadedDraftId = ref<number | null>(null);
+const showLoadDraft = ref(false);
 
 const menuItems = [
   { label: "Insert Row Above", command: () => insertRow("above") },
@@ -357,6 +399,33 @@ function handleBeforeEdit(e: RevoGridCustomEvent<BeforeSaveDataDetails>): void {
   }
 }
 
+async function saveAsDraft() {
+  if (!BillTitle.value) {
+    showDraftName.value = true;
+    return;
+  }
+  try {
+    const payload = {
+      id: currentLoadedDraftId.value,
+      type: 'spreadsheet',
+      payload: {
+        vendor: selectedVendor.value,
+        date: format(selectedDate.value, "yyyy-MM-dd"),
+        tax: selectedTax.value,
+        title: BillTitle.value,
+        items: mapSpreadsheetData(tableData.value)
+      }
+    };
+    const {data} = await axios.post(route('drafts.store'), payload);
+    currentLoadedDraftId.value = data.id;
+    toast.add({ severity:'success', summary:'Draft saved' });
+    showOptions.value = false;
+  } catch(e) {
+    toast.add({ severity:'error', summary:'Error saving draft' });
+    console.error("Error saving draft:", e);
+  }
+}
+
 function createDevices(): void {
   confirm.require({
     message: `Are you sure you want to add these devices?`,
@@ -450,7 +519,7 @@ async function submitSpreadsheet(body: any[]): Promise<void> {
           date: selectedDate.value ? format(selectedDate.value, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd"),
           vendor_id: findVendorId(selectedVendor.value),
           tax_id: selectedTax.value,
-          title: BillTittle.value || "New Bill",
+          title: BillTitle.value || "New Bill",
         },
       }
     : { items: body };
@@ -668,13 +737,29 @@ watch(
 
 // function to update the bill title from the modal
 function updateBillTitle(title: string) {
-  BillTittle.value = title;
+  BillTitle.value = title;
   showBillModal.value = false;
 }
-
+// function to update the draft name from the modal
+function updateDraftName(title: string) {
+  BillTitle.value = title;
+  showDraftName.value = false;
+  saveAsDraft(); // call save as draft function
+}
 // function to find vendor id
 function findVendorId(vendorName: string): number | null {
   const vendor = vendorsList.value.find((v: Vendor) => v.vendor === vendorName);
   return vendor ? vendor.id : null;
+}
+
+// function to handle drafts loaded from the modal
+function handleLoadDraft(draft: any) {
+  currentLoadedDraftId.value = draft.id;
+  // Desempaqueta el payload
+  selectedVendor.value = draft.payload.vendor;
+  selectedDate.value   = new Date(draft.payload.date);
+  selectedTax.value    = draft.payload.tax;
+  BillTitle.value      = draft.payload.title;
+  tableData.value      = draft.payload.items;
 }
 </script>

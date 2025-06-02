@@ -132,4 +132,10 @@ class User extends Authenticatable
 {
     return $this->hasMany(Storage::class, 'user_id');
 }
+
+public function drafts()
+{
+    return $this->hasMany(Draft::class, 'user_id');
+}
+
 }
