@@ -543,21 +543,22 @@ public function getLabelsNewItems(Request $request): \Illuminate\Http\Response
     ]);
 
     // Reconstruye la colección de Items (con sus relaciones si quieres)
-    $records = collect($data['records'])->map(function($r){
-      return isset($r['id'])
-        ? Item::with('storage')->find($r['id'])
-        : (object)$r;
+    $items = collect($data['records'])->map(function($r) {
+        // load existing items with storage & vendor, or wrap new items as object
+        $item = isset($r['id'])
+            ? Item::with(['storage','vendor'])->find($r['id'])
+            : (object)$r;
+        // resolve vendor name by vendor_id
+        $vendorId = $item->vendor_id ?? $r['vendor_id'] ?? null;
+        $item->vendor = $vendorId
+            ? optional(Vendor::find($vendorId))
+            : null;
+        return $item;
     })->filter();
 
-    // Convierte todo a array para DomPDF
-    $array = $records->map(function($item){
-      return $item instanceof Item
-        ? $item->toArray()
-        : (array)$item;
-    })->all();
-
+    Log::info("Generating labels for new items", ['records' => $items]);
     // PASA un array asociativo:
-    $pdf = Pdf::loadView('labels', ['records' => $array]);
+    $pdf = Pdf::loadView('labels', ['records' => $items]);
 
     return $pdf->stream('labels.pdf');
 }
