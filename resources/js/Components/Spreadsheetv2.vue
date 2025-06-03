@@ -271,6 +271,12 @@ onMounted(async () => {
 
   await nextTick();
   if (!props.initialData?.length) renderPositions(1);
+  // load draft from local storage if exists
+  loadDraftFromLocalStorage();
+  // save draft to local storage every 60 seconds
+  draftSaveInterval = setInterval(saveDraftToLocalStorage, 60000);
+  // save draft before unload
+  window.addEventListener('beforeunload', saveDraftToLocalStorage);
   // finish mounting
   isMounted.value = true;
 });
@@ -279,6 +285,9 @@ onBeforeUnmount(() => {
   window.removeEventListener('resize', adjustColumnSizes);
   window.removeEventListener('paste', handleGlobalPaste);
   window.removeEventListener('keydown', onKeyDown, {capture: true});
+  window.removeEventListener('beforeunload', saveDraftToLocalStorage);
+  // clear the draft save interval
+  clearInterval(draftSaveInterval);
 });
 
 async function getUserTaxes() {
@@ -419,7 +428,9 @@ async function saveAsDraft() {
     const {data} = await axios.post(route('drafts.store'), payload);
     currentLoadedDraftId.value = data.id;
     toast.add({ severity:'success', summary:'Draft saved' });
+    clearLocalDraft();
     showOptions.value = false;
+    router.visit("/inventory/items", { only: ["items", "tabs"] });
   } catch(e) {
     toast.add({ severity:'error', summary:'Error saving draft' });
     console.error("Error saving draft:", e);
@@ -529,6 +540,7 @@ async function submitSpreadsheet(body: any[]): Promise<void> {
     await axios.post(route(endpoint), payload, { responseType: "blob" });
     isLoading.value = false;
     toast.add({ severity: "success", summary: "Success", detail: "Devices created successfully", life: 3000 });
+    clearLocalDraft();
     router.visit("/inventory/items", { only: ["items", "tabs"] });
   } catch (err) {
     toast.add({ severity: "error", summary: "Error", detail: "Something went wrong", life: 3000 });
@@ -761,5 +773,35 @@ function handleLoadDraft(draft: any) {
   selectedTax.value    = draft.payload.tax;
   BillTitle.value      = draft.payload.title;
   tableData.value      = draft.payload.items;
+}
+
+// local draft management
+const STORAGE_KEY = 'draft_auto_save';
+// function to load draft from local storage
+function loadDraftFromLocalStorage() {
+  const draft = localStorage.getItem(STORAGE_KEY);
+  if (draft) {
+    handleLoadDraft(JSON.parse(draft));
+  }
+}
+
+let draftSaveInterval: ReturnType<typeof setInterval>;
+// function to save draft to local storage every 60 seconds
+function saveDraftToLocalStorage() {
+  const draft = {
+    id: currentLoadedDraftId.value,
+    payload: {
+      vendor: selectedVendor.value,
+      date: selectedDate.value,
+      tax: selectedTax.value,
+      title: BillTitle.value,
+      items: tableData.value
+    }
+  };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(draft));
+}
+// cleanup function to remove the draft from local storage
+function clearLocalDraft() {
+  localStorage.removeItem(STORAGE_KEY);
 }
 </script>
