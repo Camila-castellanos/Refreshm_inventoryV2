@@ -61,7 +61,7 @@
 
 // define the logo width depending on the number of fields
   $logoWidth = match(true) {
-    $count == 12 && strlen($item['issues'] ?? '') > 17 => '35%',
+    $count == 12 && strlen($item->issues ?? '') > 17 => '35%',
     $count == 12 => '50%',
     $count == 11 => '60%',
     $count == 10 => '80%',
@@ -93,7 +93,7 @@
         $value = match($key) {
       'storage' => (!empty($item->storage->name) && !empty($item->position))
                     ? trim($item->storage->name.' - '.$item->position)
-                    : 'N/A',
+                    : ((!empty($item->location)) ? $item->location : 'N/A'),
 
     'battery' => isset($item->battery)
         ? (str_ends_with(trim((string)$item->battery), '%')
@@ -120,10 +120,10 @@
         ? trim((string)$item->issues)
         : 'N/A',
 
-      default   => trim((string)($item[$key] ?? '')),
+      default   => trim((string)($item->{$key} ?? '')),
     };
 
-    $item[$key]    = $value;
+    $item->{$key} = $value;
   }
    
 @endphp
@@ -212,7 +212,7 @@
             <div>
               <strong>{{ $label }}:</strong>
               <span>
-                    {{ $item[$key] ?? '' }}    
+                    {{ $item->{$key} ?? '' }}    
               </span>
             </div>
             @endforeach

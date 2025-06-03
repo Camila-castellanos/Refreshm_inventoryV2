@@ -19,7 +19,7 @@
       <Button
           icon="pi pi-print"
           class="ml-2 !w-fit !h-fit !px-2"
-          @click="openLabelsFromTable"
+          @click="openLabelsFromTable(mapSpreadsheetData(tableData))"
           :disabled="
             tableData.length < 1 ||
             (tableData.length === 1 && isEmptyRow(tableData[0]))
@@ -189,6 +189,7 @@ const menuItems = [
   { label: "Insert 50 Rows Below", command: () => insertRow("bulk") },
   { separator: true },
   { label: "Delete Row", icon: "pi pi-trash", class: "text-red-600", command: () => deleteRow() },
+  {label: "Print Label", icon: "pi pi-print", command: () => openLabelsFromTable(mapSpreadsheetData([tableData.value[contextRow.value ?? 0]]))},
 ];
 
 const contextRow = ref<number | null>(null);
@@ -682,16 +683,17 @@ watch(
 )
 
 // function to create labels from the actual items in the table that are not saved yet
-async function openLabelsFromTable() {
-  if (!tableData.value.length) return;
+async function openLabelsFromTable(items) {
+  if (!items.length) return;
+  console.log("Creating labels for items:", items);
   try {
     const res = await axios.post(
       route('items.newlabels'),
-    {records: tableData.value},
+      { records: items },
       { responseType: 'blob' }
     );
     const blob = new Blob([res.data], { type: 'application/pdf' });
-    const url  = URL.createObjectURL(blob);
+    const url = URL.createObjectURL(blob);
     window.open(url, '_blank');
     URL.revokeObjectURL(url);
   } catch (err) {
