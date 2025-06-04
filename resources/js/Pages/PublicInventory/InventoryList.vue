@@ -445,6 +445,7 @@ const onSubmit = async () => {
     selectedItems.value.forEach(item => delete item.selected); // Clear selected state after successful submission
     selectedItems.value = []; // Clear selected items array
   } catch (error) {
+    console.error('terrible error submitting request:', error);
     let errorMessage = 'An unexpected error occurred.';
     if (error.response) {
       if (error.response.data && error.response.data.errors) {
