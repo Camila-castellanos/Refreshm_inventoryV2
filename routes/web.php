@@ -164,6 +164,7 @@ Route::middleware([
     Route::get("accounting/payments/{id}/view", [PaymentController::class, "view"])->name("payments.view");
     Route::post("accounting/payments/{id}/invoice/paid", [PaymentController::class, "paid"])->name("reports.payments.invoice.paid");
     Route::post("payments/addNewItems", [PaymentController::class, "addNewItems"])->name("payments.addNewItems");
+    Route::get("accounting/payments/simple", [PaymentController::class, "getPaymentsSimpleList"])->name("payments.simpleList");
     Route::get("accounting/amount-paid-balancing-set", [PaymentController::class, "amountPaidBalancingSet"])->name("reports.amount.paid.balancing.set");
 
     Route::get("accounting/taxes", [TaxController::class, "show"])->name("reports.taxes.show");

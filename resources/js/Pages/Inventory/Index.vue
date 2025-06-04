@@ -11,6 +11,10 @@
       </ItemsTabs>
     </section>
   </div>
+  <AddItemsToSale
+    v-model:visible="showAddItemsToSale"
+    @add="addItemsToSale"
+  />
 </template>
 
 <script setup lang="ts">
@@ -27,11 +31,13 @@ import { headers } from "./IndexData";
 import CustomFields from "./Modals/CustomFields.vue";
 import ItemsSell from "./Modals/ItemsSell.vue";
 import MoveItem from "./Modals/MoveItem.vue";
+import AddItemsToSale from "./Modals/AddItemsToSale.vue";
 
 const confirm = useConfirm();
 const toast = useToast();
 const dialog = useDialog();
 const showCustomFields = ref(false);
+const showAddItemsToSale = ref(false);
 const props = defineProps({
   items: Array<Item>,
   customers: Array,
@@ -225,6 +231,14 @@ const tableActions = [
     action: () => openLabels(),
     disable: (selectedItems: Item[]) => selectedItems.length == 0,
   },
+  {
+    label: "Add To Existing Invoice",
+    icon: "pi pi-credit-card",
+    action: () => {
+      showAddItemsToSale.value = true;
+    },
+    disable: (selectedItems: Item[]) => selectedItems.length == 0,
+  }
 ];
 
 const onEdit = () => {
@@ -279,6 +293,39 @@ async function openLabels() {
   const url  = URL.createObjectURL(blob);
   window.open(url, '_blank');
   URL.revokeObjectURL(url);
+}
+
+async function addItemsToSale(saleId: number) {
+  try {
+    const payload = {
+      sale_id: saleId,
+      items: selectedItems.value.map(item => ({
+        id:             item.id,
+        storage_id:     item.storage_id,
+        position:       item.position,
+        selling_price:  item.selling_price,
+        customer:       item.customer,
+      }))
+    };
+    await axios.post(route('payments.addNewItems'), payload);
+
+    toast.add({
+      severity: 'success',
+      summary: 'Added',
+      detail: `Items assigned to sale #${saleId}`
+    });
+
+    showAddItemsToSale.value = false;
+    // refresh your table
+    router.reload({ only: ['items'] });
+
+  } catch (e: any) {
+    toast.add({
+      severity: 'error',
+      summary:  'Error',
+      detail:   e.response?.data || e.message
+    });
+  }
 }
 </script>
 
