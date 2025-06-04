@@ -506,20 +506,24 @@ class PaymentController extends Controller
     $items = $request->items;
 
     $sale = Sale::find($request->sale_id);
+    $sale_date = $request->sale_date ? $request->sale_date : ($sale->created_at ? $sale->created_at : Carbon::now()->format('Y-m-d'));
     $tax = intval($sale->tax) / 100;
-    $discount = $sale->discount;
-    $balance = $sale->balance_remaining;
+      $discount = $sale->discount;
+      $balance = $sale->balance_remaining;
     $finalTotal = $sale->total;
     $finaFlatTax = $sale->flatTax;
     $finalSubTotal = $sale->subtotal;
+    $customer = null;
+    if ($sale->customer) {
+      $customer = is_string($sale->customer) ? $sale->customer : Customer::find($sale->customer)->customer;
+    }
 
     foreach ($items as $item) {
-      Log::info("dale_date:", [$request->sale_date]);
       $itemData = Item::find($item['id']);
       Item::where('id', $item['id'])->update([
-        'sold' => $request->sale_date ?? Carbon::now(),
+        'sold' => $sale_date ?? Carbon::now(),
         'selling_price' => $item['selling_price'],
-        'customer' => $request->customer,
+        'customer' => $item['customer'] ?? $customer,
         'profit' => $item['selling_price'] - $itemData->cost,
         'sale_id' => $request->sale_id,
         'sold_position' => $item['position'],
@@ -566,4 +570,49 @@ class PaymentController extends Controller
     }
     return 'success';
   }
+
+  // method to get the simple list of payments
+ public function getPaymentsSimpleList(Request $request)
+{
+    $search = $request->query('q', '');
+    $limit  = (int) $request->query('limit', 25);
+
+    // Base query: solo ventas que tienen al menos un ítem vendido
+    $query = Sale::with('items')
+        ->whereHas('items', fn($q) => $q->whereNotNull('sold'));
+
+    // Si viene término de búsqueda, aplicamos filtro en date o en customer del primer ítem
+    if ($search !== '') {
+        $query->where(function($q2) use ($search) {
+            $q2->where('date', 'like', "%{$search}%")
+               ->orWhereHas('items', fn($q3) =>
+                   $q3->where('customer', 'like', "%{$search}%")
+               );
+        });
+    }
+
+    // Ejecutamos con orden y límite
+    $sales = $query
+        ->orderByDesc('date')
+        ->take($limit)
+        ->get();
+
+    // Mapeamos al formato simple
+    $list = $sales->map(function(Sale $sale) {
+        $firstItem = $sale->items->first();
+        $raw       = $firstItem->customer;
+        $customer  = is_numeric($raw) && ($cust = Customer::find($raw))
+                     ? $cust->customer
+                     : (string) $raw;
+
+        return [
+            'sale_id'  => $sale->id,
+            'date'     => $sale->date,
+            'customer' => $customer,
+            'total'    => $sale->total,
+        ];
+    });
+
+    return response()->json($list);
+}
 }
