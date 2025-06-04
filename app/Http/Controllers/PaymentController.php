@@ -574,12 +574,14 @@ class PaymentController extends Controller
   // method to get the simple list of payments
  public function getPaymentsSimpleList(Request $request)
 {
+    $userId = Auth::id();
     $search = $request->query('q', '');
     $limit  = (int) $request->query('limit', 25);
 
     // Base query: solo ventas que tienen al menos un ítem vendido
     $query = Sale::with('items')
-        ->whereHas('items', fn($q) => $q->whereNotNull('sold'));
+        ->whereHas('items', fn($q) => $q->whereNotNull('sold'))
+        ->where('user_id', $userId);
 
     // Si viene término de búsqueda, aplicamos filtro en date o en customer del primer ítem
     if ($search !== '') {
