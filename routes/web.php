@@ -211,7 +211,7 @@ Route::middleware([
 
     Route::post("store/contact", [ContactController::class, "store"])->name("contact.store");
 
-    Route::post("public/request", [ItemController::class, "request"])->name("items.request");
+    Route::post("publicInventory/request", [ItemController::class, "request"])->name("items.request");
 
 
     Route::post("invitation", [InvitationController::class, "accept"])->name("invitation");
