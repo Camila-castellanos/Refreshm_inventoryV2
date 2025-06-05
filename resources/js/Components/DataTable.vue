@@ -43,8 +43,8 @@
       </div>
     </template>
     <template v-for="(header, index) in headers" :key="header.name">
-      <Column v-if="index === 0" selectionMode="multiple" field="select" headerStyle="width: 3rem; text-align: center;"
-        bodyStyle="width: 3rem; text-align: center;">
+      <Column v-if="index === 0" selectionMode="multiple" field="select" headerStyle=" text-align: center;"
+        bodyStyle=" text-align: center;">
       </Column>
       <Column :field="header.name" sortable :header="header.label" v-if="header.name !== 'actions'" :style="getColumnStyle(header.name)">
         <template #body="slotProps" v-if="header.name == 'status'">
@@ -219,10 +219,12 @@ function getColumnStyle(header: string) {
 
 <style>
 
-.my-datatable table {
+
+/* fixed layout test */
+/* .my-datatable table {
   table-layout: fixed;
   width: 100%;
-}
+} */
 
 .my-datatable td {
   white-space: normal  !important;    

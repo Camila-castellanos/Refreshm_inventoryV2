@@ -141,7 +141,7 @@ class DashboardController extends Controller
           }
         }
       }
-
+      Log::info("count of items: " . $items->count());
       foreach ($items as $item) {
         $sale = Sale::where('id', $item->sale_id)->first();
         // if ($sale && !in_array($sale->id, $sales_id)) array_push($sales_id, $sale->id);
@@ -154,6 +154,7 @@ class DashboardController extends Controller
         }
         // dump($item->id);
       }
+
 
 
 
