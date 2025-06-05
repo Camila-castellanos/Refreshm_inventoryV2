@@ -102,6 +102,7 @@ function transformCustomerData(data) {
     .map((customer) => ({
       ...customer,
       name: `${customer.first_name} ${customer.last_name}`,
+      margin: formatPercentage(customer.margin),
       actions: [
       {
           label: "Edit",
@@ -129,6 +130,7 @@ function parseItemsData() {
     return {
       ...customer,
       name: `${customer.first_name} ${customer.last_name}`,
+      margin: formatPercentage(customer.margin),
       actions: [
         {
           label: "Edit",
@@ -196,6 +198,13 @@ watchEffect(() => {
     parseItemsData();
   }
 });
+
+// Format percentage utility
+function formatPercentage(value) {
+  return Number.isInteger(value)
+    ? `${value}%`
+    : `${value.toFixed(2)}%`
+}
 
 defineOptions({ layout: AppLayout });
 </script>

@@ -32,7 +32,7 @@ export const headers = [
     {
         "label": "Margin",
         "name": "margin",
-        "type": "number"
+        "type": "string"
     },
     {
         "label": "Balance | Overdue",
