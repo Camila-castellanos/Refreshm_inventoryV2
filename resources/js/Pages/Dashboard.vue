@@ -70,7 +70,7 @@ import AppLayout from "@/Layouts/AppLayout.vue";
 import { Dashboard, User } from "@/Lib/types";
 import { FloatLabel, InputNumber, useToast, InputText } from "primevue";
 import axios from "axios";
-import { startOfMonth, startOfYear, subMonths, subYears } from "date-fns";
+import { startOfMonth, startOfYear, subMonths, subYears, format } from "date-fns";
 import StatCard from "@/Components/StatCard.vue";
 import GlobalSearchBar from "@/Components/GlobalSearchBar.vue";
 
@@ -170,7 +170,6 @@ function handleCalendarChange(value: any) {
 
 function handleQuickFilter() {
   const today = new Date();
-
   switch (quickFilter.value) {
     case "month":
       startDate.value = startOfMonth(today);
@@ -225,12 +224,13 @@ async function applyFilter() {
 }
 
 async function getDashboardData() {
-  const formData = new FormData();
-  formData.append("startDate", startDate.value?.toISOString().split("T")[0] || "");
-  formData.append("endDate", endDate.value?.toISOString().split("T")[0] || "");
-
-  const response = await axios.post(route("report.datewise"), formData, {
-    headers: { "Content-Type": "multipart/form-data" },
+  let payload = {
+    startDate: format(startDate.value, "yyyy-MM-dd"),
+    endDate: format(endDate.value, "yyyy-MM-dd"),
+  }
+  console.log("peticion a date wise with payload", payload);
+  const response = await axios.post(route("report.datewise"), payload, {
+    headers: { "Content-Type": "application/json" },
   });
 
   updateDashboardStats(response.data);
@@ -240,9 +240,11 @@ async function getDashboardDataByDate() {
   const formData = new FormData();
   formData.append("startDate", startDate.value?.toISOString().split("T")[0] || "");
 
+  console.log("payload", formData);
   const response = await axios.post(route("report.datewise.date"), formData, {
     headers: { "Content-Type": "multipart/form-data" },
   });
+  console.log("response", response.data);
 
   updateDashboardStats(response.data);
 }

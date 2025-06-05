@@ -8,6 +8,7 @@ use App\Models\Expense;
 use App\Models\CashOnHand;
 use App\Models\Bill;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
@@ -25,11 +26,14 @@ class DashboardController extends Controller
   public function __invoke()
   {
     $user = Auth::user();
-    $startOfMonth = date("Y-m-01");
+    $startOfMonth = Carbon::now()
+      ->startOfMonth()
+      ->startOfDay()
+      ->toDateTimeString();
 
     // $endOfMonth = date("Y-m-d");
     $today = \Carbon\Carbon::now(); //Current Date and Time
-    $endOfMonth = \Carbon\Carbon::parse($today)->endOfMonth()->toDateString();
+    $endOfMonth = \Carbon\Carbon::parse($today)->endOfMonth()->endOfDay()->toDateTimeString();
 
 
     Log::info("start of month: " . $startOfMonth);
@@ -240,7 +244,7 @@ class DashboardController extends Controller
   public function repostDatewiseByDate(Request $request)
   {
     $user = Auth::user();
-    $startOfMonth = $request->startDate;
+    $startOfMonth = Carbon::parse($request->startDate)->startOfDay()->toDateTimeString();
 
     // if(Auth::user()->role == 'USER' || 'ADMIN'){
     if (Auth::user()->role == 'USER') {
@@ -392,8 +396,12 @@ class DashboardController extends Controller
   public function reportDatewise(Request $request)
   {
     $user = Auth::user();
-    $startOfMonth = $request->startDate;
-    $endOfMonth = $request->endDate;
+    $startOfMonth = Carbon::parse($request->startDate)->startOfDay()->toDateTimeString();
+    $endOfMonth = Carbon::parse($request->endDate)->endOfDay()->toDateTimeString();
+
+
+    Log::info("Start Date datewise: " . $startOfMonth);
+    Log::info("End Date datewise: " . $endOfMonth);
 
     // if(Auth::user()->role == 'USER' || 'ADMIN'){
     if (Auth::user()->role == 'USER') {
@@ -406,7 +414,7 @@ class DashboardController extends Controller
         ["sold", ">=", $startOfMonth],
         ["sold", "<=", $endOfMonth],
       ])
-        // ->whereHas('sale', function($query){
+      // ->whereHas('sale', function($query){
         //     $query->where('balance_remaining', 0);
         // })
         ->get();
@@ -462,6 +470,7 @@ class DashboardController extends Controller
         //     $query->where('balance_remaining', 0);
         // })
         ->get();
+        Log::info("Items datewise: " . $items->count());
       $profit = 0;
       $soldvalue = 0;
       // $sales_id = [];
@@ -480,6 +489,9 @@ class DashboardController extends Controller
         }
         // dump($item->id);
       }
+
+      Log::info("Profit datewise: " . $profit);
+      Log::info("Sold Value datewise: " . $soldvalue);
 
       // foreach($sales_id as $id){
       //     $sale = Sale::where('id', $id)->first();
