@@ -11,6 +11,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 
 class DashboardController extends Controller
@@ -31,7 +32,9 @@ class DashboardController extends Controller
     $endOfMonth = \Carbon\Carbon::parse($today)->endOfMonth()->toDateString();
 
 
-
+    Log::info("start of month: " . $startOfMonth);
+    Log::info("end of month: " . $endOfMonth);
+    Log::info("today: " . $today->toDateString());
     // if(Auth::user()->role == 'USER' || 'ADMIN'){
     if (Auth::user()->role == 'USER') {
       return redirect('/inventory/items');
@@ -87,9 +90,9 @@ class DashboardController extends Controller
       //     $soldvalue =  (float)$soldvalue - (float)$sale->balance_remaining;
       // }
 
-      $devicesInInventory = Item::where('user_id', Auth::user()->id)->whereNull("sold")->whereNull("hold")->count();
-      $tradesThisMonth = Item::where('user_id', Auth::user()->id)->whereBetween("date", [$startOfMonth, $endOfMonth])->count();
-      $soldThisMonth = Item::where('user_id', Auth::user()->id)->whereBetween("sold", [$startOfMonth, $endOfMonth])->count();
+      $devicesInInventory = Item::where('user_id', Auth::user()->id)->where('type', 'device')->whereNull("sold")->whereNull("hold")->count();
+      $tradesThisMonth = Item::where('user_id', Auth::user()->id)->where('type', 'device')->whereBetween("date", [$startOfMonth, $endOfMonth])->count();
+      $soldThisMonth = Item::where('user_id', Auth::user()->id)->where('type', 'device')->whereBetween("sold", [$startOfMonth, $endOfMonth])->count();
       $costSoldThisMonth = round(Item::where('user_id', Auth::user()->id)->whereBetween("sold", [$startOfMonth, $endOfMonth])->sum("cost"));
       $inventoryValue = round(Item::where('user_id', Auth::user()->id)->whereNull("sold")->sum("cost"));
       $saleValue = round(Item::where('user_id', Auth::user()->id)->whereNull("sold")->sum("selling_price"));
@@ -163,9 +166,9 @@ class DashboardController extends Controller
       // $profit = number_format($profit, 2);
       // $soldvalue = number_format($soldvalue, 2);
 
-      $devicesInInventory = Item::where('user_id', Auth::user()->id)->whereNull("sold")->whereNull("hold")->count();
-      $tradesThisMonth = Item::whereBetween("date", [$startOfMonth, $endOfMonth])->count();
-      $soldThisMonth = Item::whereBetween("sold", [$startOfMonth, $endOfMonth])->count();
+      $devicesInInventory = Item::where('user_id', Auth::user()->id)->where('type', 'device')->whereNull("sold")->whereNull("hold")->count();
+      $tradesThisMonth = Item::whereBetween("date", [$startOfMonth, $endOfMonth])->where('type', 'device')->count();
+      $soldThisMonth = Item::whereBetween("sold", [$startOfMonth, $endOfMonth])->where('type', 'device')->count();
       $costSoldThisMonth = round(Item::whereBetween("sold", [$startOfMonth, $endOfMonth])->sum("cost"));
       $inventoryValue = round(Item::whereNull("sold")->sum("cost"));
       $saleValue = round(Item::whereNull("sold")->sum("selling_price"));
@@ -264,6 +267,7 @@ class DashboardController extends Controller
       }
 
       $devicesInInventory = Item::where('user_id', Auth::user()->id)
+      ->where('type', 'device')
         ->where('date', '<=', $startOfMonth)
         ->where(function ($query) use ($startOfMonth) {
           $query->whereNull('sold')->orWhere('sold', '>=', $startOfMonth);
@@ -271,8 +275,8 @@ class DashboardController extends Controller
         ->where(function ($query) use ($startOfMonth) {
           $query->whereNull('hold')->orWhere('hold', '>=', $startOfMonth);
         })->count();
-      $tradesThisMonth = Item::where('user_id', Auth::user()->id)->where("date", $startOfMonth)->count();
-      $soldThisMonth = Item::where('user_id', Auth::user()->id)->where("sold", $startOfMonth)->count();
+      $tradesThisMonth = Item::where('user_id', Auth::user()->id)->where('type', 'device')->where("date", $startOfMonth)->count();
+      $soldThisMonth = Item::where('user_id', Auth::user()->id)->where('type', 'device')->where("sold", $startOfMonth)->count();
       $costSoldThisMonth = round(Item::where('user_id', Auth::user()->id)->where("sold", $startOfMonth)->sum("cost"));
       $inventoryValue = round(Item::where('user_id', Auth::user()->id)->where('date', '<=', $startOfMonth)
         ->where(function ($query) use ($startOfMonth) {
@@ -321,6 +325,7 @@ class DashboardController extends Controller
       }
 
       $devicesInInventory = Item::where('user_id', Auth::user()->id)
+      ->where('type', 'device')
         ->where('date', '<=', $startOfMonth)
         ->where(function ($query) use ($startOfMonth) {
           $query->whereNull('sold')->orWhere('sold', '>', $startOfMonth);
@@ -329,7 +334,7 @@ class DashboardController extends Controller
           $query->whereNull('hold')->orWhere('hold', '>', $startOfMonth);
         })->count();
       $tradesThisMonth = Item::where('user_id', Auth::user()->id)->where("date", $startOfMonth)->count();
-      $soldThisMonth = Item::where('user_id', Auth::user()->id)->where("sold", $startOfMonth)->count();
+      $soldThisMonth = Item::where('user_id', Auth::user()->id)->where('type', 'device')->where("sold", $startOfMonth)->count();
       $costSoldThisMonth = round(Item::where('user_id', Auth::user()->id)->where("sold", $startOfMonth)->sum("cost"));
       $inventoryValue = round(Item::where('user_id', Auth::user()->id)->where('date', '<=', $startOfMonth)
         ->where(function ($query) use ($startOfMonth) {
@@ -429,9 +434,9 @@ class DashboardController extends Controller
       //     $soldvalue =  (float)$soldvalue - (float)$sale->balance_remaining;
       // }
 
-      $devicesInInventory = Item::where('user_id', Auth::user()->id)->whereNull("sold")->whereNull("hold")->count();
-      $tradesThisMonth = Item::where('user_id', Auth::user()->id)->whereBetween("date", [$startOfMonth, $endOfMonth])->count();
-      $soldThisMonth = Item::where('user_id', Auth::user()->id)->whereBetween("sold", [$startOfMonth, $endOfMonth])->count();
+      $devicesInInventory = Item::where('user_id', Auth::user()->id)->whereNull("sold")->where('type', 'device')->whereNull("hold")->count();
+      $tradesThisMonth = Item::where('user_id', Auth::user()->id)->where('type', 'device')->whereBetween("date", [$startOfMonth, $endOfMonth])->count();
+      $soldThisMonth = Item::where('user_id', Auth::user()->id)->where('type', 'device')->whereBetween("sold", [$startOfMonth, $endOfMonth])->count();
       $costSoldThisMonth = round(Item::where('user_id', Auth::user()->id)->whereBetween("sold", [$startOfMonth, $endOfMonth])->sum("cost"));
       $inventoryValue = round(Item::where('user_id', Auth::user()->id)->whereNull("sold")->sum("cost"));
       $saleValue = round(Item::where('user_id', Auth::user()->id)->whereNull("sold")->sum("selling_price"));
@@ -481,9 +486,9 @@ class DashboardController extends Controller
       //     $soldvalue =  (float)$soldvalue - (float)$sale->balance_remaining;
       // }
 
-      $devicesInInventory = Item::where('user_id', Auth::user()->id)->whereNull("sold")->whereNull("hold")->count();
-      $tradesThisMonth = Item::whereBetween("date", [$startOfMonth, $endOfMonth])->count();
-      $soldThisMonth = Item::whereBetween("sold", [$startOfMonth, $endOfMonth])->count();
+      $devicesInInventory = Item::where('user_id', Auth::user()->id)->whereNull("sold")->where('type', 'device')->whereNull("hold")->count();
+      $tradesThisMonth = Item::whereBetween("date", [$startOfMonth, $endOfMonth])->where('type', 'device')->count();
+      $soldThisMonth = Item::whereBetween("sold", [$startOfMonth, $endOfMonth])->where('type', 'device')->count();
       $costSoldThisMonth = round(Item::whereBetween("sold", [$startOfMonth, $endOfMonth])->sum("cost"));
       $inventoryValue = round(Item::whereNull("sold")->sum("cost"));
       $saleValue = round(Item::whereNull("sold")->sum("selling_price"));
