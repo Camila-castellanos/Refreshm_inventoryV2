@@ -37,7 +37,7 @@ export const headers = [
     {
         "label": "Balance | Overdue",
         "name": "balance",
-        "type": "string"
+        "type": "number"
     },
     {
         "label": "Credit",
