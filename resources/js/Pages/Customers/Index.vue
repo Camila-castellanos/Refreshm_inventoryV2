@@ -35,7 +35,7 @@ import AppLayout from "@/Layouts/AppLayout.vue";
 import { router } from "@inertiajs/vue3";
 import axios from "axios";
 import { ConfirmDialog, useConfirm, useDialog, DatePicker } from "primevue";
-import { defineProps, onMounted, ref, watchEffect } from "vue";
+import { defineProps, onMounted, ref, watchEffect, watch } from "vue";
 import { headers } from "./IndexData";
 import CreateEdit from "./CreateEdit.vue";
 import { format } from "date-fns";
@@ -124,8 +124,6 @@ function parseItemsData() {
   if (!props.customers) {
     return;
   }
-
-  console.log(props.customers);
   tableData.value = props.customers.map((customer) => {
     return {
       ...customer,
@@ -189,15 +187,14 @@ function confirmDelete(customer) {
   });
 }
 
+
+
 onMounted(() => {
+  console.log("customers in props", props.customers);
   parseItemsData();
+  console.log("customers in tableData", tableData.value);
 });
 
-watchEffect(() => {
-  if (props.customers) {
-    parseItemsData();
-  }
-});
 
 // Format percentage utility
 function formatPercentage(value) {
