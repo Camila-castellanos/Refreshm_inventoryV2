@@ -62,36 +62,32 @@ class DashboardController extends Controller
       // $sales_id = [];
       $saleIdArray = [];
       $salesTotal = [];
-      $accountsReceivable = 0;
+      
+      // calculate account receivable and payable
+      $salesWithPendingBalance = Sale::where('user_id', Auth::id())
+      ->where('balance_remaining', '>', 0)
+      ->get();
+      $billsWithPendingBalance = Bill::where('user_id', Auth::id())
+      ->where('status', 0)
+      ->get();
+      $accountsReceivable = $salesWithPendingBalance->sum('balance_remaining');
+      $accountsPayable = $billsWithPendingBalance->sum('balance_remaining');
 
-      foreach ($alt_items as $item) {
-        if ($item->sale_id != null) {
-          $sale = Sale::where('id', $item->sale_id)->first();
-          if ($sale && !in_array($sale->id, $salesTotal)) {
-            $accountsReceivable += (float) $sale->balance_remaining;
-            array_push($salesTotal, $sale->id);
-          }
-        }
-      }
+      // taxed sales, non-taxed sales, total sales and profit calculations
+       $non_taxed_sales_total = $items
+        ->filter(fn($item) => !$item->sale || intval($item->sale->tax) === 0)
+        ->sum(fn($item) => (float)$item->selling_price);
 
-      foreach ($items as $item) {
-        $sale = Sale::where('id', $item->sale_id)->first();
-        // if ($sale && !in_array($sale->id, $sales_id)) array_push($sales_id, $sale->id);
-        $tax = intval(@$sale->tax) / 100;
-        $total = (float) $item->selling_price + (float) ($item->selling_price * $tax);
-        $profit += (float) $total - (float) $item->cost;
-        $soldvalue += (float) $total;
-        if ($sale && !in_array($sale->id, $saleIdArray)) {
-          array_push($saleIdArray, $sale->id);
-        }
-        // dump($item->id);
-      }
+      $taxed_sales_total = $items
+        ->filter(fn($item) => $item->sale && intval($item->sale->tax) > 0)
+        ->sum(fn($item) => (float)$item->selling_price * (1 + intval($item->sale->tax) / 100));
 
-      // foreach($sales_id as $id){
-      //     $sale = Sale::where('id', $id)->first();
-      //     $profit =  (float)$profit - (float)$sale->balance_remaining;
-      //     $soldvalue =  (float)$soldvalue - (float)$sale->balance_remaining;
-      // }
+      $soldvalue = $items
+        ->sum(fn($item) => (float)$item->selling_price * (1 + intval($item->sale->tax ?? 0) / 100));
+
+      $profit = $items
+        ->sum(fn($item) => ((float)$item->selling_price * (1 + intval($item->sale->tax ?? 0) / 100)) - (float)$item->cost);
+
 
       $devicesInInventory = Item::where('user_id', Auth::user()->id)->where('type', 'device')->whereNull("sold")->whereNull("hold")->count();
       $tradesThisMonth = Item::where('user_id', Auth::user()->id)->where('type', 'device')->whereBetween("date", [$startOfMonth, $endOfMonth])->count();
@@ -99,20 +95,18 @@ class DashboardController extends Controller
       $costSoldThisMonth = round(Item::where('user_id', Auth::user()->id)->whereBetween("sold", [$startOfMonth, $endOfMonth])->sum("cost"));
       $inventoryValue = round(Item::where('user_id', Auth::user()->id)->whereNull("sold")->sum("cost"));
       $saleValue = round(Item::where('user_id', Auth::user()->id)->whereNull("sold")->sum("selling_price"));
-      // $soldValueThisMonth = round(Item::where('user_id', Auth::user()->id)->whereBetween("sold", [$startOfMonth, $endOfMonth])->sum("selling_price"));
       $soldValueThisMonth = round($soldvalue);
       $cashOnHand = CashOnHand::select('balance')->where('user_id', Auth::user()->id)->value("balance");
-      // $profitThisMonth = round(Item::where('user_id', Auth::user()->id)->whereBetween("sold", [$startOfMonth, $endOfMonth])->sum("profit"));
       $profitThisMonth = round($profit);
       $accountsReceivable = round($accountsReceivable);
       $accountsReceivableThisMonth = round($accountsReceivable);
-      $accountsPayableThisMonth = round(Bill::where('user_id', @$user->id)->where('status', 0)->sum('balance_remaining'));
+      $accountsPayableThisMonth = round($accountsPayable);
       $expensesThisMonth = round(Expense::where('user_id', Auth::user()->id)->whereBetween("date", [$startOfMonth, $endOfMonth])->sum('total'));
       $sale_ids = Item::where('user_id', Auth::user()->id)->whereBetween("sold", [$startOfMonth, $endOfMonth])->distinct()->pluck('sale_id');
       $salesTaxCollected = round(Sale::whereNotNull('tax_id')->where('user_id', Auth::user()->id)->whereBetween("date", [$startOfMonth, $endOfMonth])->sum('flatTax'));
       $salesTaxPaid = round(Bill::where('user_id', Auth::user()->id)->where('status', 1)->whereBetween("date", [$startOfMonth, $endOfMonth])->sum('flat_tax'));
-      $taxedSales = round(Sale::whereIn('id', $sale_ids)->where('user_id', Auth::user()->id)->whereNotNull('tax_id')->sum('total'));
-      $nonTaxedSales = round(Sale::whereIn('id', $sale_ids)->where('tax', 0)->sum('total'));
+      $taxedSales = round($taxed_sales_total);
+      $nonTaxedSales = round($non_taxed_sales_total);
     } else {
 
       $items = Item::where([
@@ -132,43 +126,40 @@ class DashboardController extends Controller
       // $sales_id = [];
       $saleIdArray = [];
       $salesTotal = [];
-      $accountsReceivable = 0;
-      $accountsPayable = 0;
-
       foreach ($alt_items as $item) {
         if ($item->sale_id != null) {
           $sale = Sale::where('id', $item->sale_id)->first();
           if ($sale && !in_array($sale->id, $salesTotal)) {
-            $accountsReceivable += (float) $sale->balance_remaining;
             array_push($salesTotal, $sale->id);
           }
         }
       }
-      Log::info("count of items: " . $items->count());
-      foreach ($items as $item) {
-        $sale = Sale::where('id', $item->sale_id)->first();
-        // if ($sale && !in_array($sale->id, $sales_id)) array_push($sales_id, $sale->id);
-        $tax = intval(@$sale->tax) / 100;
-        $total = (float) $item->selling_price + (float) ($item->selling_price * $tax);
-        $profit += (float) $total - (float) $item->cost;
-        $soldvalue += (float) $total;
-        if ($sale && !in_array($sale->id, $saleIdArray)) {
-          array_push($saleIdArray, $sale->id);
-        }
-        // dump($item->id);
-      }
 
+       // calculate account receivable and payable
+      $salesWithPendingBalance = Sale::where('user_id', Auth::id())
+      ->where('balance_remaining', '>', 0)
+      ->get();
+      $billsWithPendingBalance = Bill::where('user_id', Auth::id())
+      ->where('status', 0)
+      ->get();
+      $accountsReceivable = $salesWithPendingBalance->sum('balance_remaining');
+      $accountsPayable = $billsWithPendingBalance->sum('balance_remaining');
 
+      // taxed sales, non-taxed sales, total sales and profit calculations
+      $non_taxed_sales_total = $items
+        ->filter(fn($item) => !$item->sale || intval($item->sale->tax) === 0)
+        ->sum(fn($item) => (float)$item->selling_price);
 
+      $taxed_sales_total = $items
+        ->filter(fn($item) => $item->sale && intval($item->sale->tax) > 0)
+        ->sum(fn($item) => (float)$item->selling_price * (1 + intval($item->sale->tax) / 100));
 
+      $soldvalue = $items
+        ->sum(fn($item) => (float)$item->selling_price * (1 + intval($item->sale->tax ?? 0) / 100));
 
-      // foreach($sales_id as $id){
-      //     $sale = Sale::where('id', $id)->first();
-      //     $profit =  (float)$profit - (float)$sale->balance_remaining;
-      //     $soldvalue =  (float)$soldvalue - (float)$sale->balance_remaining;
-      // }
-      // $profit = number_format($profit, 2);
-      // $soldvalue = number_format($soldvalue, 2);
+      $profit = $items
+        ->sum(fn($item) => ((float)$item->selling_price * (1 + intval($item->sale->tax ?? 0) / 100)) - (float)$item->cost);
+
 
       $devicesInInventory = Item::where('user_id', Auth::user()->id)->where('type', 'device')->whereNull("sold")->whereNull("hold")->count();
       $tradesThisMonth = Item::whereBetween("date", [$startOfMonth, $endOfMonth])->where('type', 'device')->count();
@@ -177,21 +168,16 @@ class DashboardController extends Controller
       $inventoryValue = round(Item::whereNull("sold")->sum("cost"));
       $saleValue = round(Item::whereNull("sold")->sum("selling_price"));
       $cashOnHand = CashOnHand::select('balance')->where('user_id', Auth::user()->id)->value("balance");
-      // $soldValueThisMonth = round(Item::whereBetween("sold", [$startOfMonth, $endOfMonth])->sum("selling_price"));
       $soldValueThisMonth = round($soldvalue);
-      // dump($startOfMonth);
-      // dump($endOfMonth);
-      // dd(Sale::whereBetween("created_at", [$startOfMonth, $endOfMonth])->get());
-      // $profitThisMonth = round(Item::whereBetween("sold", [$startOfMonth, $endOfMonth])->sum("profit"));
       $profitThisMonth = round($profit);
       $accountsReceivableThisMonth = round($accountsReceivable);
-      $accountsPayableThisMonth = round(Bill::where('user_id', @$user->id)->where('status', 0)->sum('balance_remaining'));
+      $accountsPayableThisMonth = round($accountsPayable);
       $expensesThisMonth = round(Expense::where('user_id', @$user->id)->whereBetween("date", [$startOfMonth, $endOfMonth])->sum('total'));
       $sale_ids = Item::where('user_id', @$user->id)->whereBetween("sold", [$startOfMonth, $endOfMonth])->distinct()->pluck('sale_id');
       $salesTaxCollected = round(Sale::whereNotNull('tax_id')->where('user_id', Auth::user()->id)->whereBetween("date", [$startOfMonth, $endOfMonth])->sum('flatTax'));
       $salesTaxPaid = round(Bill::where('user_id', @$user->id)->where('status', 1)->whereBetween("date", [$startOfMonth, $endOfMonth])->sum('flat_tax'));
-      $taxedSales = round(Sale::whereIn('id', $sale_ids)->where('user_id', Auth::user()->id)->whereNotNull('tax_id')->sum('total'));
-      $nonTaxedSales = round(Sale::whereIn('id', $sale_ids)->where('tax', 0)->sum('total'));
+      $taxedSales = round($taxed_sales_total);
+      $nonTaxedSales = round($non_taxed_sales_total);
     }
 
 
@@ -256,19 +242,31 @@ class DashboardController extends Controller
       ])->get();
       $profit = 0;
       $soldvalue = 0;
-      $saleIdArray = [];
-      $accountsReceivable = 0;
-      foreach ($items as $item) {
-        $sale = Sale::where('id', $item->sale_id)->first();
-        $tax = intval(@$sale->tax) / 100;
-        $total = (float) $item->selling_price + (float) ($item->selling_price * $tax);
-        $profit += (float) $total - (float) $item->cost;
-        $soldvalue += (float) $total;
-        if ($sale && !in_array($sale->id, $saleIdArray)) {
-          $accountsReceivable += (float) $sale->balance_remaining;
-          array_push($saleIdArray, $sale->id);
-        }
-      }
+
+      // calculate account receivable and payable
+      $salesWithPendingBalance = Sale::where('user_id', Auth::id())
+      ->where('balance_remaining', '>', 0)
+      ->get();
+      $billsWithPendingBalance = Bill::where('user_id', Auth::id())
+      ->where('status', 0)
+      ->get();
+      $accountsReceivable = $salesWithPendingBalance->sum('balance_remaining');
+      $accountsPayable = $billsWithPendingBalance->sum('balance_remaining');
+
+      // taxed sales, non-taxed sales, total sales and profit calculations
+      $non_taxed_sales_total = $items
+        ->filter(fn($item) => !$item->sale || intval($item->sale->tax) === 0)
+        ->sum(fn($item) => (float)$item->selling_price);
+
+      $taxed_sales_total = $items
+        ->filter(fn($item) => $item->sale && intval($item->sale->tax) > 0)
+        ->sum(fn($item) => (float)$item->selling_price * (1 + intval($item->sale->tax) / 100));
+
+      $soldvalue = $items
+        ->sum(fn($item) => (float)$item->selling_price * (1 + intval($item->sale->tax ?? 0) / 100));
+
+      $profit = $items
+        ->sum(fn($item) => ((float)$item->selling_price * (1 + intval($item->sale->tax ?? 0) / 100)) - (float)$item->cost);
 
       $devicesInInventory = Item::where('user_id', Auth::user()->id)
       ->where('type', 'device')
@@ -301,32 +299,44 @@ class DashboardController extends Controller
       // $profitThisMonth = round(Item::where('user_id', Auth::user()->id)->whereBetween("sold", [$startOfMonth, $endOfMonth])->sum("profit"));
       $profitThisMonth = round($profit);
       $accountsReceivableThisMonth = round($accountsReceivable);
-      $accountsPayableThisMonth = round(Bill::where('user_id', @$user->id)->where('status', 0)->sum('balance_remaining'));
+      $accountsPayableThisMonth = round($accountsPayable);
       $expensesThisMonth = round(Expense::where('user_id', @$user->id)->where("date", "<=", $startOfMonth)->sum('total'));
       $sale_ids = Item::where('user_id', @$user->id)->where("date", "<=", $startOfMonth)->distinct()->pluck('sale_id');
       $salesTaxCollected = round(Sale::whereNotNull('tax_id')->where('user_id', Auth::user()->id)->whereBetween("date", [$startOfMonth, Carbon::parse($startOfMonth)->endOfMonth()->toDateString()])->sum('flatTax'));
       $salesTaxPaid = round(Bill::where('user_id', Auth::user()->id)->where('status', 1)->where("date", "<=", $startOfMonth)->sum('flat_tax'));
-      $taxedSales = round(Sale::whereIn('id', $sale_ids)->where('user_id', Auth::user()->id)->whereNotNull('tax_id')->sum('total'));
-      $nonTaxedSales = round(Sale::whereIn('id', $sale_ids)->where('tax', 0)->sum('total'));
+      $taxedSales = round($taxed_sales_total);
+      $nonTaxedSales = round($non_taxed_sales_total);
     } else {
       $items = Item::where('user_id', Auth::user()->id)->where([
         ["sold", "<=", $startOfMonth],
       ])->get();
       $profit = 0;
       $soldvalue = 0;
-      $saleIdArray = [];
-      $accountsReceivable = 0;
-      foreach ($items as $item) {
-        $sale = Sale::where('id', $item->sale_id)->first();
-        $tax = intval(@$sale->tax) / 100;
-        $total = (float) $item->selling_price + (float) ($item->selling_price * $tax);
-        $profit += (float) $total - (float) $item->cost;
-        $soldvalue += (float) $total;
-        if ($sale && !in_array($sale->id, $saleIdArray)) {
-          $accountsReceivable += (float) $sale->balance_remaining;
-          array_push($saleIdArray, $sale->id);
-        }
-      }
+      
+      // calculate account receivable and payable
+      $salesWithPendingBalance = Sale::where('user_id', Auth::id())
+      ->where('balance_remaining', '>', 0)
+      ->get();
+      $billsWithPendingBalance = Bill::where('user_id', Auth::id())
+      ->where('status', 0)
+      ->get();
+      $accountsReceivable = $salesWithPendingBalance->sum('balance_remaining');
+      $accountsPayable = $billsWithPendingBalance->sum('balance_remaining');
+
+      // taxed sales, non-taxed sales, total sales and profit calculations
+      $non_taxed_sales_total = $items
+        ->filter(fn($item) => !$item->sale || intval($item->sale->tax) === 0)
+        ->sum(fn($item) => (float)$item->selling_price);
+
+      $taxed_sales_total = $items
+        ->filter(fn($item) => $item->sale && intval($item->sale->tax) > 0)
+        ->sum(fn($item) => (float)$item->selling_price * (1 + intval($item->sale->tax) / 100));
+
+      $soldvalue = $items
+        ->sum(fn($item) => (float)$item->selling_price * (1 + intval($item->sale->tax ?? 0) / 100));
+
+      $profit = $items
+        ->sum(fn($item) => ((float)$item->selling_price * (1 + intval($item->sale->tax ?? 0) / 100)) - (float)$item->cost);
 
       $devicesInInventory = Item::where('user_id', Auth::user()->id)
       ->where('type', 'device')
@@ -359,13 +369,13 @@ class DashboardController extends Controller
       // $profitThisMonth = round(Item::where('user_id', Auth::user()->id)->whereBetween("sold", [$startOfMonth, $endOfMonth])->sum("profit"));
       $profitThisMonth = round($profit);
       $accountsReceivableThisMonth = round($accountsReceivable);
-      $accountsPayableThisMonth = round(Bill::where('user_id', @$user->id)->where('status', 0)->sum('balance_remaining'));
+      $accountsPayableThisMonth = round($accountsPayable);
       $expensesThisMonth = round(Expense::where('user_id', @$user->id)->where("date", "<=", $startOfMonth)->sum('total'));
       $sale_ids = Item::where('user_id', @$user->id)->where("date", "<=", $startOfMonth)->distinct()->pluck('sale_id');
       $salesTaxCollected = round(Sale::whereNotNull('tax_id')->where('user_id', Auth::user()->id)->whereBetween("date", [$startOfMonth, Carbon::parse($startOfMonth)->endOfMonth()->toDateString()])->sum('flatTax'));
       $salesTaxPaid = round(Bill::where('user_id', Auth::user()->id)->where('status', 1)->where("date", "<=", $startOfMonth)->sum('flat_tax'));
-      $taxedSales = round(Sale::whereIn('id', $sale_ids)->where('user_id', Auth::user()->id)->whereNotNull('tax_id')->sum('total'));
-      $nonTaxedSales = round(Sale::whereIn('id', $sale_ids)->where('tax', 0)->sum('total'));
+      $taxedSales = round($taxed_sales_total);
+      $nonTaxedSales = round($non_taxed_sales_total);
     }
 
 
@@ -398,10 +408,6 @@ class DashboardController extends Controller
     $startOfMonth = Carbon::parse($request->startDate)->startOfDay()->toDateTimeString();
     $endOfMonth = Carbon::parse($request->endDate)->endOfDay()->toDateTimeString();
 
-
-    Log::info("Start Date datewise: " . $startOfMonth);
-    Log::info("End Date datewise: " . $endOfMonth);
-
     // if(Auth::user()->role == 'USER' || 'ADMIN'){
     if (Auth::user()->role == 'USER') {
       return redirect('/inventory/items');
@@ -419,22 +425,31 @@ class DashboardController extends Controller
         ->get();
       $profit = 0;
       $soldvalue = 0;
-      // $sales_id = [];
-      $saleIdArray = [];
-      $accountsReceivable = 0;
-      foreach ($items as $item) {
-        $sale = Sale::where('id', $item->sale_id)->first();
-        // if ($sale && !in_array($sale->id, $sales_id)) array_push($sales_id, $sale->id);
-        $tax = intval(@$sale->tax) / 100;
-        $total = (float) $item->selling_price + (float) ($item->selling_price * $tax);
-        $profit += (float) $total - (float) $item->cost;
-        $soldvalue += (float) $total;
-        if ($sale && !in_array($sale->id, $saleIdArray)) {
-          $accountsReceivable += (float) $sale->balance_remaining;
-          array_push($saleIdArray, $sale->id);
-        }
-        // dump($item->id);
-      }
+     
+      // calculate account receivable and payable
+      $salesWithPendingBalance = Sale::where('user_id', Auth::id())
+      ->where('balance_remaining', '>', 0)
+      ->get();
+      $billsWithPendingBalance = Bill::where('user_id', Auth::id())
+      ->where('status', 0)
+      ->get();
+      $accountsReceivable = $salesWithPendingBalance->sum('balance_remaining');
+      $accountsPayable = $billsWithPendingBalance->sum('balance_remaining');
+
+      // taxed sales, non-taxed sales, total sales and profit calculations
+      $non_taxed_sales_total = $items
+        ->filter(fn($item) => !$item->sale || intval($item->sale->tax) === 0)
+        ->sum(fn($item) => (float)$item->selling_price);
+
+      $taxed_sales_total = $items
+        ->filter(fn($item) => $item->sale && intval($item->sale->tax) > 0)
+        ->sum(fn($item) => (float)$item->selling_price * (1 + intval($item->sale->tax) / 100));
+
+      $soldvalue = $items
+        ->sum(fn($item) => (float)$item->selling_price * (1 + intval($item->sale->tax ?? 0) / 100));
+
+      $profit = $items
+        ->sum(fn($item) => ((float)$item->selling_price * (1 + intval($item->sale->tax ?? 0) / 100)) - (float)$item->cost);
 
       // foreach($sales_id as $id){
       //     $sale = Sale::where('id', $id)->first();
@@ -453,13 +468,13 @@ class DashboardController extends Controller
       // $profitThisMonth = round(Item::where('user_id', Auth::user()->id)->whereBetween("sold", [$startOfMonth, $endOfMonth])->sum("profit"));
       $profitThisMonth = round($profit);
       $accountsReceivableThisMonth = round($accountsReceivable);
-      $accountsPayableThisMonth = round(Bill::where('user_id', @$user->id)->where('status', 0)->sum('balance_remaining'));
+      $accountsPayableThisMonth = round($accountsPayable);
       $expensesThisMonth = round(Expense::where('user_id', @$user->id)->whereBetween("date", [$startOfMonth, $endOfMonth])->sum('total'));
       $sale_ids = Item::where('user_id', @$user->id)->whereBetween("sold", [$startOfMonth, $endOfMonth])->distinct()->pluck('sale_id');
       $salesTaxCollected = round(Sale::whereNotNull('tax_id')->where('user_id', Auth::user()->id)->whereBetween("date", [$startOfMonth, $endOfMonth])->sum('flatTax'));
       $salesTaxPaid = round(Bill::where('user_id', Auth::user()->id)->where('status', 1)->whereBetween("date", [$startOfMonth, $endOfMonth])->sum('flat_tax'));
-      $taxedSales = round(Sale::whereIn('id', $sale_ids)->where('user_id', Auth::user()->id)->whereNotNull('tax_id')->sum('total'));
-      $nonTaxedSales = round(Sale::whereIn('id', $sale_ids)->where('tax', 0)->sum('total'));
+      $taxedSales = round($taxed_sales_total);
+      $nonTaxedSales = round($non_taxed_sales_total);
     } else {
       $items = Item::where([
         ["sold", ">=", $startOfMonth],
@@ -472,25 +487,31 @@ class DashboardController extends Controller
         Log::info("Items datewise: " . $items->count());
       $profit = 0;
       $soldvalue = 0;
-      // $sales_id = [];
-      $saleIdArray = [];
-      $accountsReceivable = 0;
-      foreach ($items as $item) {
-        $sale = Sale::where('id', $item->sale_id)->first();
-        // if ($sale && !in_array($sale->id, $sales_id)) array_push($sales_id, $sale->id);
-        $tax = intval(@$sale->tax) / 100;
-        $total = (float) $item->selling_price + (float) ($item->selling_price * $tax);
-        $profit += (float) $total - (float) $item->cost;
-        $soldvalue += (float) $total;
-        if ($sale && !in_array($sale->id, $saleIdArray)) {
-          $accountsReceivable += (float) $sale->balance_remaining;
-          array_push($saleIdArray, $sale->id);
-        }
-        // dump($item->id);
-      }
+      
+      // calculate account receivable and payable
+      $salesWithPendingBalance = Sale::where('user_id', Auth::id())
+      ->where('balance_remaining', '>', 0)
+      ->get();
+      $billsWithPendingBalance = Bill::where('user_id', Auth::id())
+      ->where('status', 0)
+      ->get();
+      $accountsReceivable = $salesWithPendingBalance->sum('balance_remaining');
+      $accountsPayable = $billsWithPendingBalance->sum('balance_remaining');
 
-      Log::info("Profit datewise: " . $profit);
-      Log::info("Sold Value datewise: " . $soldvalue);
+      // taxed sales, non-taxed sales, total sales and profit calculations
+      $non_taxed_sales_total = $items
+        ->filter(fn($item) => !$item->sale || intval($item->sale->tax) === 0)
+        ->sum(fn($item) => (float)$item->selling_price);
+
+      $taxed_sales_total = $items
+        ->filter(fn($item) => $item->sale && intval($item->sale->tax) > 0)
+        ->sum(fn($item) => (float)$item->selling_price * (1 + intval($item->sale->tax) / 100));
+
+      $soldvalue = $items
+        ->sum(fn($item) => (float)$item->selling_price * (1 + intval($item->sale->tax ?? 0) / 100));
+
+      $profit = $items
+        ->sum(fn($item) => ((float)$item->selling_price * (1 + intval($item->sale->tax ?? 0) / 100)) - (float)$item->cost);
 
       // foreach($sales_id as $id){
       //     $sale = Sale::where('id', $id)->first();
@@ -512,13 +533,13 @@ class DashboardController extends Controller
       // $profitThisMonth = round(Item::whereBetween("sold", [$startOfMonth, $endOfMonth])->sum("profit"));
       $profitThisMonth = round($profit);
       $accountsReceivableThisMonth = round($accountsReceivable);
-      $accountsPayableThisMonth = round(Bill::where('user_id', @$user->id)->where('status', 0)->sum('balance_remaining'));
+      $accountsPayableThisMonth = round($accountsPayable);
       $expensesThisMonth = round(Expense::where('user_id', @$user->id)->whereBetween("date", [$startOfMonth, $endOfMonth])->sum('total'));
       $sale_ids = Item::where('user_id', @$user->id)->whereBetween("sold", [$startOfMonth, $endOfMonth])->distinct()->pluck('sale_id');
       $salesTaxCollected = round(Sale::whereNotNull('tax_id')->where('user_id', Auth::user()->id)->whereBetween("date", [$startOfMonth, $endOfMonth])->sum('flatTax'));
       $salesTaxPaid = round(Bill::where('user_id', Auth::user()->id)->where('status', 1)->whereBetween("date", [$startOfMonth, $endOfMonth])->sum('flat_tax'));
-      $taxedSales = round(Sale::whereIn('id', $sale_ids)->where('user_id', Auth::user()->id)->whereNotNull('tax_id')->sum('total'));
-      $nonTaxedSales = round(Sale::whereIn('id', $sale_ids)->where('tax', 0)->sum('total'));
+      $taxedSales = round($taxed_sales_total);
+      $nonTaxedSales = round($non_taxed_sales_total);
     }
 
 

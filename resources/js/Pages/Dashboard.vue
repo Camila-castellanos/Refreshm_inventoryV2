@@ -278,6 +278,7 @@ function updateDashboardStats(data: Dashboard) {
 }
 
 onMounted(() => {
+console.log("Dashboard mounted with props:", props);
   updateDashboardStats(props);
 });
 
