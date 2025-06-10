@@ -309,6 +309,7 @@ export interface Dashboard {
   tradesThisMonth: number;
   soldThisMonth: number;
   costSoldThisMonth: number;
+  costOfTaxedGoodsSold: number;
   inventoryValue: number;
   saleValue: number;
   soldValueThisMonth: number;
