@@ -254,7 +254,8 @@ function updateDashboardStats(data: Dashboard) {
     { label: "Devices in Inventory", value: data.devicesInInventory },
     { label: "Devices Added", value: data.tradesThisMonth },
     { label: "Devices Sold", value: data.soldThisMonth },
-    { label: "Cost of Goods Sold", value: data.costSoldThisMonth },
+    { label: "Cost of Goods Sold", value: data.costSoldThisMonth, currency: true },
+    { label: "Cost of Goods Sold (Taxed)", value: data.costOfTaxedGoodsSold, currency: true },
     { label: "Inventory Value ($)", value: data.inventoryValue, currency: true },
     { label: "Est. Sale Value of Inventory ($)", value: data.saleValue, currency: true },
   ];
