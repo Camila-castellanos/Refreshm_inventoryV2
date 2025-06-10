@@ -86,7 +86,7 @@ export const billHeaders = [
     type: "number",
   },
   {
-    label: "Balance Remaining",
+    label: "Balance",
     name: "balance_remaining",
     type: "number",
   },
