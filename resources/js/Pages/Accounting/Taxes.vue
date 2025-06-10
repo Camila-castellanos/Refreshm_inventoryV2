@@ -8,7 +8,19 @@
           :items="tableData"
           :headers="taxHeaders"
           :actions="actions"
-          @update:selected="handleSelection"></DataTable>
+          @update:selected="handleSelection">
+                <DatePicker
+                v-model="dateRange"
+                :max-date="new Date()"
+                selectionMode="range"
+                dateFormat="dd/mm/yy"
+                class="w-full"
+                showIcon
+                fluid
+                iconDisplay="input"
+                @update:model-value="handleDateUpdate"
+                placeholder="Date range for report"></DatePicker>
+        </DataTable>
       </AccountingTabs>
     </section>
   </div>
@@ -25,6 +37,7 @@ import { onMounted, ref, Ref, watch } from "vue";
 import { taxHeaders } from "./data";
 import AddTaxes from "./Modals/AddTaxes.vue";
 import axios from "axios";
+import DatePicker from "primevue/datepicker";
 
 const props = defineProps({
   items: Array<Tax>,
@@ -33,8 +46,9 @@ const props = defineProps({
 const dialog = useDialog();
 const confirm = useConfirm();
 
-const tableData: Ref<Tax[]> = ref([]);
+const tableData = ref<any[]>([]);
 const selectedTaxes: Ref<Tax[]> = ref([]);
+const dateRange = ref<Date | Date[] | (Date | null)[] | null | undefined>(null);
 
 const handleSelection = (selected: Tax[]) => {
   selectedTaxes.value = selected;
@@ -46,6 +60,7 @@ onMounted(() => {
     return {
       ...item,
       percentage: item.percentage + " %",
+      collected: "$ " + item.collected,
       paid: "$ " + item.paid,
       total_sales: "$ " + item.total_sales,
       total_purchases: "$ " + item.total_purchases,
@@ -118,6 +133,38 @@ function removeTaxes() {
     },
     reject: () => {},
   });
+}
+
+function handleDateUpdate(value: Date | Date[] | (Date | null)[] | null | undefined): void {
+  if (Array.isArray(value) && value.length == 2 && value[0] && value[1]) {
+    fetchDateWiseData(value as Date[]);
+    return;
+  }
+  dateRange.value = value;
+}
+
+function fetchDateWiseData(dateRange: Date[]) {
+  const [startDate, endDate] = dateRange;
+  console.log("fetchin taxes with payload", {
+    start: startDate,
+    end: endDate,
+  });
+  axios
+    .post(route("taxes.datewise"), {start: startDate, end: endDate })
+    .then((response) => {
+      tableData.value = response.data.map((item: Tax) => ({
+        ...item,
+        percentage: item.percentage + " %",
+        collected: "$ " + item.collected,
+        paid: "$ " + item.paid,
+        total_sales: "$ " + item.total_sales,
+        total_purchases: "$ " + item.total_purchases,
+      }));
+      console.log("Date-wise data fetched successfully:", tableData.value);
+    })
+    .catch((error) => {
+      console.error("Error fetching date-wise data:", error);
+    });
 }
 
 defineOptions({ layout: AppLayout });

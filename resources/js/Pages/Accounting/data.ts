@@ -116,7 +116,7 @@ export const taxHeaders = [
   {
     label: "Collected",
     name: "collected",
-    type: "number",
+    type: "string",
   },
   {
     label: "Paid",

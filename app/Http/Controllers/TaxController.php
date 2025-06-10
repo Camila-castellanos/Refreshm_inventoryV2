@@ -188,11 +188,17 @@ class TaxController extends Controller
   public function datewise(Request $request)
   {
     try {
-      $start = $request->start;
-      $end = $request->end;
+      $start = Carbon::parse($request->start)
+                       ->startOfDay()
+                       ->toDateTimeString();
+      $end = Carbon::parse($request->end)
+                     ->endOfDay()
+                     ->toDateTimeString();
       $user = Auth::user();
       $taxes = Tax::where('user_id', $user->id)->get();
       $response = [];
+      
+      Log::info("Start date: $start, End date: $end");
 
       foreach ($taxes as $tax) {
         $paid = Bill::where('tax_id', $tax->id)->whereBetween('date', [$start, $end])->where('user_id', $user->id)->sum('flat_tax');
@@ -202,8 +208,8 @@ class TaxController extends Controller
         $i["id"] = $tax->id;
         $i["name"] = $tax->name;
         $i["percentage"] = (float)$tax->percentage;
-        $i["collected"] = (float)$collected;
-        $i["paid"] = (float)$paid;
+        $i["collected"] = round((float)$collected, 2);
+        $i["paid"] = round((float)$paid, 2);
         $i["total_sales"] = round((float)$total_sales, 2);
         $i["total_purchases"] = round((float)$total_purchases, 2);
         $response[] = $i;
