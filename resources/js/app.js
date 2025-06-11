@@ -81,6 +81,13 @@ const Noir = definePreset(Aura, {
       },
     },
   },
+  components: {
+    button: {
+      defineProps: {
+        severity: 'secondary'
+      }
+    }
+  }
 });
 
 createInertiaApp({
