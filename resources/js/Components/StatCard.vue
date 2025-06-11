@@ -41,6 +41,22 @@ function cancel() {
   editValue.value = props.value;
   isEditing.value = false;
 }
+
+function formatCurrency(value) {
+  const num = Number(value)
+  if (isNaN(num) || num <= 0) return '$ 0.00'
+  return new Intl.NumberFormat('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(num).replace(/^/, '$ ')
+}
+
+const displayValue = computed(() => {
+  return props.currency
+    ? formatCurrency(props.value)
+    : props.value;
+});
+
 </script>
 
 <template>
@@ -59,7 +75,7 @@ function cancel() {
             </div>
           </div>
           <p v-else class="text-surface-900 dark:text-surface-0 font-semibold text-xl">
-            {{ currency }}{{ value }}
+            {{ displayValue }}
             <Button v-if="editable" icon="pi pi-pencil" size="small" class="ml-2" @click="isEditing = true"
               variant="text" />
           </p>
