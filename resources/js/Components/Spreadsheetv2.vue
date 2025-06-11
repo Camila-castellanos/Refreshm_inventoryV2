@@ -4,9 +4,8 @@
     <section>
       <div class="flex flex-row justify-between" id="spreadsheet-header">
         <div id="spreadsheet-buttons" class="flex flex-row items-center">
-      <Button :loading="isLoading" :disabled="isLoading" v-if="!props.initialData?.length" @click="showOptions = true">Save
-        devices</Button>
-      <Button :loading="isLoading" :disabled="isLoading" v-else @click="editDevices">Update devices</Button>
+      <Button icon="pi pi-save" :loading="isLoading"  :disabled="isLoading" v-if="!props.initialData?.length" @click="showOptions = true" label="Save devices" />
+      <Button :loading="isLoading"  :disabled="isLoading" v-else @click="editDevices" icon="pi pi-save" label="Update devices" />
       <Button
           icon="pi pi-print"
           class="ml-2 !w-fit !h-fit !px-2"
@@ -15,9 +14,8 @@
             tableData.length < 1 ||
             (tableData.length === 1 && isEmptyRow(tableData[0]))
           "
-        >
-          Print Unsaved Items Labels
-        </Button>
+          label="Print Labels"
+        />
         <div class="flex space-x-2 px-2">
     <label for="save-as-bill" class="font-medium">Save as Bill</label>
     <ToggleSwitch
@@ -37,7 +35,6 @@
           <!-- Draft modal button -->
           <Button
           icon="pi pi-folder-open"
-          severity="secondary"
           class="!h-fit"
           :disabled="isLoading"
           @click="showLoadDraft = true"
