@@ -7,15 +7,6 @@
       <Button :loading="isLoading" :disabled="isLoading" v-if="!props.initialData?.length" @click="showOptions = true">Save
         devices</Button>
       <Button :loading="isLoading" :disabled="isLoading" v-else @click="editDevices">Update devices</Button>
-       <Button
-          icon="pi pi-folder-open"
-          severity="secondary"
-          class="!h-fit"
-          :disabled="isLoading"
-          @click="showLoadDraft = true"
-          aria-label="Load Draft"
-          label="Load Draft"
-          />
       <Button
           icon="pi pi-print"
           class="ml-2 !w-fit !h-fit !px-2"
