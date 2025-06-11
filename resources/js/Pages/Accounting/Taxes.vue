@@ -82,7 +82,7 @@ const actions: ITableActions[] = [
     },
   },
   {
-    label: "",
+    label: "Edit Tax",
     icon: "pi pi-pencil",
     action: () => {
       dialog.open(AddTaxes, {
@@ -95,10 +95,11 @@ const actions: ITableActions[] = [
     },
   },
   {
-    label: "",
+    label: "Delete Taxes",
     icon: "pi pi-trash",
     severity: "danger",
     action: removeTaxes,
+    disable: (selectedItems: Tax[]) => selectedItems.length === 0,
   },
 ];
 

@@ -47,14 +47,6 @@ const toast = useToast();
 
 
 const tableActions = [
-  {
-    label: "Export CSV",
-    important: true,
-    icon: "pi pi-file-export",
-    action: (callback) => {
-      callback()
-    },
-  },
 ]
 onMounted(() => {
   currentTab.value = `/payments${props.data_status !== "all" ? `?status=${props.data_status}` : ""}`;

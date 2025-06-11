@@ -22,7 +22,7 @@
           <Button v-for="action in computedPrimaryActions" :key="action.label"
             :severity="action.severity ? action.severity : 'primary'"
             :class="[action.extraClasses, `rounded-md !text-xs sm:!text-base`].join(' ')" :icon="action.icon ? action.icon : ''"
-            :label="action?.label" @click="action.action(exportCSV)" :disabled="action.disable" />
+            :label="action?.label" @click="action.action()" :disabled="action.disable" />
 
           <Button v-if="computedSecondaryActions.length > 0" type="button" label="More" @click="toggle" class="col-span-2 w-full sm:w-auto sm:min-w-48"
             icon="pi pi-angle-down" icon-pos="right" />
@@ -33,8 +33,6 @@
                   :severity="action.severity ? action.severity : 'primary'"
                   :class="[action.extraClasses, `rounded-md`].join(' ')" :icon="action.icon ? action.icon : ''"
                   :label="action?.label" @click="action.action" :disabled="action.disable" />
-
-                <Button icon="pi pi-file-export" label="Export CSV" severity="primary" @click="exportCSV" class="" />
               </div>
             </div>
           </Popover>
@@ -160,30 +158,53 @@ watch(selectedItems, (newSelection) => {
   emit("update:selected", newSelection);
 });
 
-const computedPrimaryActions = computed(() => {
-  if (!props.actions || props.actions.length === 0) {
-    return [];
-  }
+// Helper that returns all actions (props + exportAction)
+function getAllActions(): ITableActions[] {
+  const base = props.actions ?? []
+  const exportAction: ITableActions = {
+  icon: 'pi pi-file-export',
+  label: 'Export CSV',
+  severity: 'primary',
+  action: exportCSV,
+  extraClasses: '',
+  // opcionalmente: important: false
+}
+  return [...base, exportAction]
+}
 
-  return props.actions
-    .filter(action => action.important === true)
-    .map((action) => ({
-      ...action,
-      disable: action.disable ? action.disable(selectedItems.value) : false,
-    }));
-});
+// helper that returns the primary actions (those that are important or the first 5)
+function getPrimaryList(all: ITableActions[]) {
+  // explicit important actions first
+  const important = all.filter(a => a.important === true)
+  const primary = [...important]
+
+  // then add the next actions until we reach 5
+  if (primary.length < 5) {
+    const needed = 5 - primary.length
+    primary.push(...all.filter(a => !a.important).slice(0, needed))
+  }
+  return primary
+}
+
+// computed properties for primary and secondary actions
+const computedPrimaryActions = computed(() => {
+  const all = getAllActions()
+  const primary = getPrimaryList(all)
+  return primary.map(a => ({
+    ...a,
+    disable: a.disable ? a.disable(selectedItems.value) : false,
+  }))
+})
 
 const computedSecondaryActions = computed(() => {
-  if (!props.actions || props.actions.length === 0) {
-    return [];
-  }
-
-  return props.actions
-    .filter(action => !action.important)
-    .map((action) => ({
-      ...action,
-      disable: action.disable ? action.disable(selectedItems.value) : false,
-    }));
+  const all = getAllActions()
+  const primary = getPrimaryList(all)
+  return all
+    .filter(a => !primary.includes(a))
+    .map(a => ({
+      ...a,
+      disable: a.disable ? a.disable(selectedItems.value) : false,
+    }))
 });
 
 
