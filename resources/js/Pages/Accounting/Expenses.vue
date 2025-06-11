@@ -108,14 +108,6 @@ const actions: ITableActions[] = [
       });
     },
   },
- {
-    label: "Export CSV",
-    important: true,
-    icon: "pi pi-file-export",
-    action: (callback) => {
-      callback();   
-    },
-  },
 ];
 
 defineOptions({ layout: AppLayout });

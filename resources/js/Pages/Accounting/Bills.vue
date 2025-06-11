@@ -73,7 +73,7 @@ const actions: ITableActions[] = [
     },
   },
   {
-    label: "",
+    label: "Edit bill",
     icon: "pi pi-pencil",
     disable: (selectedItems) => selectedItems.length === 0,
     action: () => {
@@ -81,7 +81,7 @@ const actions: ITableActions[] = [
     },
   },
   {
-    label: "",
+    label: "Delete bills",
     icon: "pi pi-trash",
     severity: "danger",
     disable: (selectedItems) => selectedItems.length === 0,
