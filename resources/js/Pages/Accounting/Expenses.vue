@@ -40,7 +40,7 @@ const handleSelection = (selected: Expense[]) => {
 onMounted(() => {
   tableData.value = props!.items.map(({ total, ...rest }) => ({
     ...rest,
-    total: `$ ${total}`,
+    total: total,
   }));
 });
 
@@ -48,7 +48,7 @@ watchEffect(() => {
   if (props.items) {
     tableData.value = props.items.map(({ total, ...rest }) => ({
       ...rest,
-      total: `$ ${total}`,
+      total: total,
     }));
   }
 });

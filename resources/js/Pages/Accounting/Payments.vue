@@ -237,13 +237,9 @@ const tableData = computed(() => {
   if (!props.items) {
     return [];
   }
-  console.log(props.items);
   return props.items.map((item) => {
     return {
       ...item,
-      amount_paid: "$ " + item.amount_paid,
-      total: "$ " + item.total,
-      balance_remaining: "$ " + item.balance_remaining,
       actions: getItemActions(item),
     };
   });

@@ -17,17 +17,17 @@ export const headers = [
   {
     label: "Total",
     name: "total",
-    type: "string",
+    type: "number",
   },
   {
     label: "Amount Paid",
     name: "amount_paid",
-    type: "string",
+    type: "number",
   },
   {
     label: "Balance Remaining",
     name: "balance_remaining",
-    type: "string",
+    type: "number",
   },
   {
     label: "Actions",
@@ -55,7 +55,7 @@ export const expensesHeaders = [
   {
     label: "Total",
     name: "total",
-    type: "string",
+    type: "number",
   },
 ];
 
@@ -116,22 +116,22 @@ export const taxHeaders = [
   {
     label: "Collected",
     name: "collected",
-    type: "string",
+    type: "number",
   },
   {
     label: "Paid",
     name: "paid",
-    type: "string",
+    type: "number",
   },
   {
     label: "Total sales",
     name: "total_sales",
-    type: "string",
+    type: "number",
   },
   {
     label: "Total purchases",
     name: "total_purchases",
-    type: "string",
+    type: "number",
   },
 ];
 

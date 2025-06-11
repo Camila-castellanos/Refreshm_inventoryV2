@@ -1,9 +1,9 @@
 <template>
-  <div class="w-full">
+  <div class="w-full" :class="{ 'my-datatable': hasOverflow }" ref="tableWrapper">
   <DataTable v-model:filters="filters" :value="items" v-model:selection="selectedItems" dataKey="id" stripedRows
     ref="dt" paginator resizableColumns column-resize-mode="fit" :rows="20" :rowsPerPageOptions="[5, 10, 20, 50]"
     :globalFilterFields="headers.filter((header) => header.name !== 'actions').map((header) => header.name)"
-    :class="inventory ? 'text-xs my-datatable' : 'my-datatable'" :selection-mode="selectionMode":sortField="sortField"
+    :class="inventory ? 'text-xs' : ''" :selection-mode="selectionMode":sortField="sortField"
       :sortOrder="sortOrder">
     <template #header>
       <div class="flex flex-col sm:flex-row sm:flex-no-wrap items-center justify-between gap-2">
@@ -52,8 +52,7 @@
             :severity="slotProps.data[header.name] == 'Paid' ? 'success' : 'danger'"></Tag>
         </template>
         <template #body="slotProps" v-if="header.type === 'number'">
-          $ {{ slotProps.data[header.name] && slotProps.data[header.name] > 0 ?
-            Number(slotProps.data[header.name]).toFixed(2) : 0 }}
+          {{ formatCurrency(slotProps.data[header.name]) }}
         </template>
       </Column>
     </template>
@@ -133,6 +132,8 @@ const selectionMode = ref(props?.selectionMode ?? "multiple");
 const dt = ref();
 const selectedItems = ref<any[]>([]);
 const menuRefs: Ref<any[]> = ref([]);
+const tableWrapper = ref<HTMLElement|null>(null)
+const hasOverflow    = ref(false)
 
 const exportCSV = () => {
   if (selectedItems.value.length === 0) {
@@ -200,6 +201,20 @@ function getMenuItems(data: any) {
   }));
 }
 
+onMounted(() => {
+  nextTick(() => {
+    checkOverflow();
+    console.log("hasOverflow", hasOverflow.value)
+    window.addEventListener('resize', checkOverflow)
+  });
+  onBeforeUnmount(() => {
+    window.removeEventListener('resize', checkOverflow)
+  });
+});
+
+
+//utilities
+
 // adjust column widths to screen size section
 
 function getColumnStyle(header: string) {
@@ -214,6 +229,23 @@ function getColumnStyle(header: string) {
       return {};
   }
 }
+function formatCurrency(value: number | string | undefined): string {
+  const num = Number(value)
+  if (isNaN(num) || num <= 0) return '$ 0.00'
+  return new Intl.NumberFormat('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(num).replace(/^/, '$ ')
+}
+
+function checkOverflow() {
+  const tbl = tableWrapper.value?.querySelector('table')
+  if (tbl instanceof HTMLTableElement) {
+    const tableWidth = tbl.getBoundingClientRect().width
+    const wrapperWidth = tableWrapper.value?.clientWidth ?? 0
+    hasOverflow.value = tableWidth > wrapperWidth
+  }
+}
 
 </script>
 
@@ -221,10 +253,10 @@ function getColumnStyle(header: string) {
 
 
 /* fixed layout test */
-/* .my-datatable table {
+.my-datatable table {
   table-layout: fixed;
   width: 100%;
-} */
+} 
 
 .my-datatable td {
   white-space: normal  !important;    

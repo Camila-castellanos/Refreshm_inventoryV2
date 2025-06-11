@@ -60,10 +60,10 @@ onMounted(() => {
     return {
       ...item,
       percentage: item.percentage + " %",
-      collected: "$ " + item.collected,
-      paid: "$ " + item.paid,
-      total_sales: "$ " + item.total_sales,
-      total_purchases: "$ " + item.total_purchases,
+      collected: item.collected,
+      paid: item.paid,
+      total_sales: item.total_sales,
+      total_purchases: item.total_purchases,
     };
   });
 });
@@ -109,10 +109,10 @@ watch(
       return {
         ...item,
         percentage: item.percentage + " %",
-        collected: "$ " + item.collected,
-        paid: "$ " + item.paid,
-        total_sales: "$ " + item.total_sales,
-        total_purchases: "$ " + item.total_purchases,
+        collected: item.collected,
+        paid:  item.paid,
+        total_sales:item.total_sales,
+        total_purchases: item.total_purchases,
       };
     });
   }
@@ -145,22 +145,17 @@ function handleDateUpdate(value: Date | Date[] | (Date | null)[] | null | undefi
 
 function fetchDateWiseData(dateRange: Date[]) {
   const [startDate, endDate] = dateRange;
-  console.log("fetchin taxes with payload", {
-    start: startDate,
-    end: endDate,
-  });
   axios
     .post(route("taxes.datewise"), {start: startDate, end: endDate })
     .then((response) => {
       tableData.value = response.data.map((item: Tax) => ({
         ...item,
         percentage: item.percentage + " %",
-        collected: "$ " + item.collected,
-        paid: "$ " + item.paid,
-        total_sales: "$ " + item.total_sales,
-        total_purchases: "$ " + item.total_purchases,
+        collected: item.collected,
+        paid:  item.paid,
+        total_sales: item.total_sales,
+        total_purchases: item.total_purchases,
       }));
-      console.log("Date-wise data fetched successfully:", tableData.value);
     })
     .catch((error) => {
       console.error("Error fetching date-wise data:", error);
