@@ -769,6 +769,10 @@ function handleLoadDraft(draft: any) {
 const STORAGE_KEY = 'draft_auto_save';
 // function to load draft from local storage
 function loadDraftFromLocalStorage() {
+  if (route().current('items.edit')) {
+    // si estamos en la edición de un item, no cargamos el draft
+    return;
+  }
   const draft = localStorage.getItem(STORAGE_KEY);
   if (draft) {
     handleLoadDraft(JSON.parse(draft));
