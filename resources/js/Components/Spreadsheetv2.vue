@@ -256,6 +256,7 @@ onMounted(async () => {
     // save draft before unload
     window.addEventListener('beforeunload', saveDraftToLocalStorage);
     
+   
     if (route().current('items.edit')){
       isMounted.value = true;
       return;
@@ -792,6 +793,13 @@ function loadDraftFromLocalStorage() {
 let draftSaveInterval: ReturnType<typeof setInterval>;
 // function to save draft to local storage every 60 seconds
 function saveDraftToLocalStorage() {
+  if (route().current('items.edit')) {
+    // si estamos en la edición de un item, no guardamos el draft
+    return;
+  }
+  if (!selectedDate.value) {
+      selectedDate.value = new Date();
+    }
   const draft = {
     id: currentLoadedDraftId.value,
     payload: {
