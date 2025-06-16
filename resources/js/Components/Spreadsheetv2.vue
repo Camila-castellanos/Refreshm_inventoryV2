@@ -237,6 +237,7 @@ onMounted(async () => {
   tableData.value = props.initialData?.length
     ? props.initialData.map((item) => {
       const storage = storages.data.find((s: Storage) => s.id === item.storage_id);
+      console.log("item", item);
       return {
         ...item,
         location: `${storage?.name} - ${item.position}/${storage?.limit}`,
@@ -730,8 +731,9 @@ function updateTotals() {
       typeof row.subtotal === 'string'
         ? Number(row.subtotal.replace(/[^0-9.-]+/g, ''))
         : row.subtotal,
-      selectedTax.value ? getTaxPercentageById(selectedTax.value) : null
+      selectedTax.value ? getTaxPercentageById(selectedTax.value) : getTaxPercentageById(row.tax) || null
     );
+    console.log("Updated row tax:", row.tax);
   });
 }
 
