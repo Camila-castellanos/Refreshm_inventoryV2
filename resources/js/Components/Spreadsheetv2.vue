@@ -241,33 +241,36 @@ onMounted(async () => {
         ...item,
         location: `${storage?.name} - ${item.position}/${storage?.limit}`,
         vendor: vendors.data.find((v: Vendor) => v.id === item.vendor_id)?.vendor || "",
+        vendor_id: item.vendor_id || null,
         date: format(item.date, "yyyy-MM-dd"),
       };
     })
     : [{}] as ItemWithLocation[];
 
+    await nextTick();
+    if (!props.initialData?.length) renderPositions(1);
+    // load draft from local storage if exists
+    loadDraftFromLocalStorage();
+    // save draft to local storage every 60 seconds
+    draftSaveInterval = setInterval(saveDraftToLocalStorage, 60000);
+    // save draft before unload
+    window.addEventListener('beforeunload', saveDraftToLocalStorage);
+    
+    if (route().current('items.edit')){
+      isMounted.value = true;
+      return;
+    }
     if(props.initialData?.length) {
       // selectedVendor
       selectedVendor.value = vendors.data.find((v: Vendor) => v.id === props.initialData[0].vendor_id)?.vendor || "";
       selectedDate.value = props.initialData[0].date ? new Date(props.initialData[0].date) : null;
     }
 
-  if ((props.initialData?.length ?? 0) > 0 && tableData.value[0].tax != null) {
+    if ((props.initialData?.length ?? 0) > 0 && tableData.value[0].tax != null) {
     selectedTax.value = tableData.value[0].tax;
-  }  
-
-
-
-  await nextTick();
-  if (!props.initialData?.length) renderPositions(1);
-  // load draft from local storage if exists
-  loadDraftFromLocalStorage();
-  // save draft to local storage every 60 seconds
-  draftSaveInterval = setInterval(saveDraftToLocalStorage, 60000);
-  // save draft before unload
-  window.addEventListener('beforeunload', saveDraftToLocalStorage);
-  // finish mounting
-  isMounted.value = true;
+    }  
+    // finish mounting
+    isMounted.value = true;
 });
 
 onBeforeUnmount(() => {
@@ -484,7 +487,9 @@ function editDevices(): void {
 function mapSpreadsheetData(data: ItemWithLocation[]): any[] {
   return data.map((row) => {
     const storageId = storagesList.value.find((s) => s.name === row.location?.split("-")[0].trim())?.id;
-    const vendorId = vendorsList.value.find((v) => v.vendor === selectedVendor.value)?.id;
+    const vendorId = selectedVendor.value != null
+      ? vendorsList.value.find(v => v.vendor === selectedVendor.value)?.id
+      : row.vendor_id;
     let cost = row.cost;
     let selling_price = row.selling_price;
     let subtotal = row.subtotal;
@@ -498,15 +503,20 @@ function mapSpreadsheetData(data: ItemWithLocation[]): any[] {
       selling_price = Number(selling_price.toString().slice(1));
     }
     const date = selectedDate.value
-     ? format(selectedDate.value, "yyyy-MM-dd")
-     : format(new Date(), "yyyy-MM-dd");
+      ? format(selectedDate.value, "yyyy-MM-dd")
+      : row.date
+        ? row.date
+        : format(new Date(), "yyyy-MM-dd");
+
+     const tax =
+      selectedTax.value != null ? selectedTax.value : row.tax;  
     
     // ensure subtotal is a number
     if (typeof subtotal === 'string') {
       subtotal = parseFloat(subtotal.replace(/[^0-9.-]+/g, ''))
     }
 
-    return { ...row, storage_id: storageId, vendor_id: vendorId, date: date, cost, selling_price,  tax: selectedTax.value, subtotal: subtotal};
+    return { ...row, storage_id: storageId, vendor_id: vendorId, date: date, cost, selling_price,  tax: tax, subtotal: subtotal};
   });
 }
 
