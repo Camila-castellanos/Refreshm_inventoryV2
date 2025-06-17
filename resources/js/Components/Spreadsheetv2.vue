@@ -32,6 +32,14 @@
   </div>
          <!-- Global data section for all items-->
         <div id="spreadsheet-global-data" class="flex flex-row gap-4">
+          <!-- temp clean button -->
+          <Button
+         icon="pi pi-clock"
+         class="!h-fit"
+         @click="handleCleanLocalSave"
+         aria-label="Clean Local Save"
+         label="Clean Local Save"
+         />
           <!-- Draft modal button -->
           <Button
           icon="pi pi-folder-open"
@@ -170,6 +178,7 @@ const showOptions = ref(false);
 const showDraftName = ref(false)
 const currentLoadedDraftId = ref<number | null>(null);
 const showLoadDraft = ref(false);
+const dontSaveDraft = ref(false);
 
 const menuItems = [
   { label: "Insert Row Above", command: () => insertRow("above") },
@@ -795,7 +804,7 @@ function loadDraftFromLocalStorage() {
 let draftSaveInterval: ReturnType<typeof setInterval>;
 // function to save draft to local storage every 60 seconds
 function saveDraftToLocalStorage() {
-  if (route().current('items.edit')) {
+  if (route().current('items.edit') || dontSaveDraft.value) {
     // si estamos en la edición de un item, no guardamos el draft
     return;
   }
@@ -817,5 +826,12 @@ function saveDraftToLocalStorage() {
 // cleanup function to remove the draft from local storage
 function clearLocalDraft() {
   localStorage.removeItem(STORAGE_KEY);
+}
+
+// handler to clear draft flag and reload page
+function handleCleanLocalSave() {
+  clearLocalDraft();
+  dontSaveDraft.value = true;
+  window.location.reload();
 }
 </script>
