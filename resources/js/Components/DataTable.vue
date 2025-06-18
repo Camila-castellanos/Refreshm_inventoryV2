@@ -226,7 +226,7 @@ onMounted(() => {
   nextTick(() => {
     checkOverflow();
     console.log("hasOverflow", hasOverflow.value)
-    window.addEventListener('resize', checkOverflow)
+    // window.addEventListener('resize', checkOverflow)
   });
   onBeforeUnmount(() => {
     window.removeEventListener('resize', checkOverflow)
