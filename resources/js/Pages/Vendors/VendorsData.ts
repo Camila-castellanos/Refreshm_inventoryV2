@@ -29,7 +29,7 @@ export const VendorHeaders = [
     {
         "label": "Margin",
         "name": "margin",
-        "type": "number"
+        "type": "string"
     },
     {
         "label": "Balance Payable",
