@@ -35,7 +35,7 @@
         "jspreadsheet-ce": "^4.15.0",
         "primeflex": "^3.3.1",
         "primeicons": "^7.0.0",
-        "primevue": "^4.2.5",
+        "primevue": "^4.3.5",
         "quill": "^2.0.3",
         "vue-router": "^4.5.0",
         "xlsx": "^0.18.5"
