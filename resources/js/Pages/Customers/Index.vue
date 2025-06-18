@@ -39,7 +39,7 @@ import { defineProps, onMounted, ref, watchEffect, watch } from "vue";
 import { headers } from "./IndexData";
 import CreateEdit from "./CreateEdit.vue";
 import { format } from "date-fns";
-
+import { formatPercentage } from "@/Utils/FormatUtils";
 const props = defineProps({
   customers: Array,
 });
@@ -190,18 +190,8 @@ function confirmDelete(customer) {
 
 
 onMounted(() => {
-  console.log("customers in props", props.customers);
   parseItemsData();
-  console.log("customers in tableData", tableData.value);
 });
-
-
-// Format percentage utility
-function formatPercentage(value) {
-  return Number.isInteger(value)
-    ? `${value}%`
-    : `${value.toFixed(2)}%`
-}
 
 defineOptions({ layout: AppLayout });
 </script>

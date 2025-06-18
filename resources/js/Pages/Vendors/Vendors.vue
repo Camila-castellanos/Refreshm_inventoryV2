@@ -45,6 +45,7 @@ import { VendorHeaders } from "./VendorsData";
 import CreateEdit from "./CreateEdit.vue";
 import { useDialog, DatePicker } from "primevue";
 import { format } from "date-fns";
+import { formatPercentage } from "@/Utils/FormatUtils";
 
 const dialog = useDialog();
 
@@ -77,6 +78,7 @@ const parseItemsData = () => {
   vendorTableData.value =
     props.vendors?.map((vendor) => ({
       ...vendor,
+      margin: formatPercentage(vendor.margin),
       actions: [
         {
           label: "Edit",
@@ -95,7 +97,9 @@ const parseItemsData = () => {
 
 
 onMounted(() => {
+  console.log("vendors in props: ", props.vendors);
   parseItemsData();
+  console.log("vendorTableData after parse: ", vendorTableData.value);
 });
 
 watchEffect(() => {
