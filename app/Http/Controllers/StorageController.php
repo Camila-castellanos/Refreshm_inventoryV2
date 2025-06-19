@@ -16,7 +16,7 @@ class StorageController extends Controller
      */
     public function index(Request $request)
     {
-        $storages = Storage::with('items')->get();
+        $storages = Storage::with(['items', 'draftItems'])->get();
         return response()->json($storages);
     }
 
