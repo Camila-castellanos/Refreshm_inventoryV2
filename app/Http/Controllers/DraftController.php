@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Draft;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Http\Request;
 
 class DraftController extends Controller
@@ -12,9 +13,11 @@ class DraftController extends Controller
      */
     public function index(Request $req)
     {
-        return response()->json(
-          $req->user()->drafts()->latest()->get()
-        );
+        $drafts = $req->user()->drafts()
+                         ->latest()
+                         ->with('items')
+                         ->get();
+        return response()->json($drafts);
     }
 
     /**
@@ -23,8 +26,8 @@ class DraftController extends Controller
     public function simpleList(Request $req)
     {
         return Draft::where('user_id', $req->user()->id)
-                ->orderByDesc('created_at')
-                ->get(['id','payload->title as title','created_at']);
+                     ->orderByDesc('created_at')
+                     ->get(['id','title','created_at']);
     }
 
     /**
@@ -40,28 +43,38 @@ class DraftController extends Controller
      */
     public function store(Request $req)
     {
+        // Preserve full items array including all extra fields
+        $allItems = $req->input('items', []);
         $data = $req->validate([
-          'id'      => 'sometimes|nullable|integer',
-          'type'    => 'required|string',
-          'payload' => 'required|array'
+          'id'                 => 'sometimes|nullable|integer',
+          'date'               => 'required|date',
+          'title'              => 'required|string|max:255',
+          'vendor'             => 'nullable|string|max:255',
+          'items'              => 'required|array',
+          'items.*.storage_id'         => 'required|integer|exists:storages,id',
+          'items.*.storage_position'   => 'required|integer',
+          // add other item fields validation as needed
         ]);
 
         $userId = $req->user()->id;
 
-    $draft = Draft::updateOrCreate(
-        // search criteria
-        [
-            'id'      => $data['id'] ?? null,
-            'user_id' => $userId
-        ],
-        // values to create or update
-        [
-            'type'    => $data['type'],
-            'payload' => $data['payload']
-        ]
-    );
+        $draft = Draft::updateOrCreate(
+            ['id' => $data['id'] ?? null, 'user_id' => $userId],
+            [
+              'date'      => $data['date'],
+              'vendor' =>    $data['vendor'] ?? null,
+              'title'     => $data['title'],
+            ]
+        );
+        // sync draft items
+        $draft->items()->delete();
+        Log::info('Data de la request: ', [$data]);
+        foreach ($allItems as $item) {
+            $item['tax_id'] = $item['tax'] ?? null;
+            $draft->items()->create($item);
+        }
 
-        return response()->json($draft, 201);
+        return response()->json($draft->load('items'), 201);
     }
 
     /**
@@ -69,7 +82,7 @@ class DraftController extends Controller
      */
     public function show(Draft $draft)
     {
-        return response()->json($draft);
+        return response()->json($draft->load('items'));
     }
 
     /**
@@ -86,20 +99,38 @@ class DraftController extends Controller
     public function update(Request $request, Draft $draft)
     {
         $data = $request->validate([
-            'type'    => 'sometimes|required|string',
-            'payload' => 'sometimes|required|array'
+          'vendor_id'          => 'sometimes|required|integer|exists:vendors,id',
+          'date'               => 'sometimes|required|date',
+          'tax_id'             => 'sometimes|nullable|integer|exists:taxes,id',
+          'title'              => 'sometimes|required|string|max:255',
+          'vendor'             => 'nullable|string|max:255',
+          'items'              => 'sometimes|required|array',
+          'items.*.storage_id'         => 'required_with:items|integer|exists:storages,id',
+          'items.*.storage_position'   => 'required_with:items|integer',
         ]);
+        // preserve full items for update
+        $allItems = $request->input('items', []);
 
-        if (isset($data['type'])) {
-            $draft->type = $data['type'];
+        if (isset($data['vendor'])) {
+            $draft->vendor_id = $data['vendor'];
         }
-        if (isset($data['payload'])) {
-            $draft->payload = $data['payload'];
+        if (isset($data['date'])) {
+            $draft->date = $data['date'];
         }
-
+        if (isset($data['title'])) {
+            $draft->title = $data['title'];
+        }
+         
         $draft->save();
+        // sync items if provided
+        if (isset($data['items'])) {
+            $draft->items()->delete();
+            foreach ($allItems as $item) {
+                $draft->items()->create($item);
+            }
+        }
 
-        return response()->json($draft);
+        return response()->json($draft->load('items'));
     }
 
     /**

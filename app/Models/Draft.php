@@ -6,14 +6,20 @@ use Illuminate\Database\Eloquent\Model;
 
 class Draft extends Model
 {
-     protected $fillable = ['user_id','type','payload'];
+     protected $fillable = ['user_id','title', 'vendor', 'date', 'items'];
 
       protected $casts = [
-      'payload' => 'array'
+        'date' => 'date',
+        'items' => 'array',
     ];
 
     public function user()
     {
       return $this->belongsTo(User::class);
+    }
+
+    public function items()
+    {
+        return $this->hasMany(DraftItem::class);
     }
 }

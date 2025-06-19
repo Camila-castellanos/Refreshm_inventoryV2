@@ -256,7 +256,7 @@ onMounted(async () => {
       };
     })
     : [{}] as ItemWithLocation[];
-
+    console.log("Initial table data:", tableData.value);
     await nextTick();
     if (!props.initialData?.length) renderPositions(1);
     // load draft from local storage if exists
@@ -366,9 +366,13 @@ function renderPositions(numOfRows: number): void {
   let rowsAssigned = 0;
   for (const row of newRowsToAssign) {
     if (row.location) continue; // Skip if already assigned in a previous iteration
-
+    console.log("storageList", storagesList.value);
     for (const storage of storagesList.value) {
       const dbPositions = storage.items.map((item: Item) => item.position);
+      // include positions reserved by drafts
+      const draftPositions = storage.draft_items?.map((d: any) => d.storage_position) || [];
+      console.log("Draft positions:", draftPositions);
+      console.log("DB positions:", dbPositions);
       const inTablePositions: number[] = [];
       tableData.value.forEach((r) => {
         if (r.location?.startsWith(storage.name) && r !== row) { // Exclude the current row being assigned
@@ -379,7 +383,7 @@ function renderPositions(numOfRows: number): void {
         }
       });
 
-      const occupiedPositions = [...dbPositions, ...inTablePositions];
+      const occupiedPositions = [...dbPositions, ...draftPositions, ...inTablePositions];
       const availablePositions: number[] = [];
       for (let i = 1; i <= storage.limit; i++) {
         if (!occupiedPositions.includes(i)) {
@@ -417,17 +421,23 @@ async function saveAsDraft() {
     return;
   }
   try {
+  
+    const formattedDate = format(selectedDate.value, "yyyy-MM-dd");
     const payload = {
       id: currentLoadedDraftId.value,
-      type: 'spreadsheet',
-      payload: {
-        vendor: selectedVendor.value,
-        date: format(selectedDate.value, "yyyy-MM-dd"),
-        tax: selectedTax.value,
-        title: BillTitle.value,
-        items: mapSpreadsheetData(tableData.value)
-      }
+      date: formattedDate,
+      vendor: selectedVendor.value,
+      title: BillTitle.value,
+      items: mapSpreadsheetData(tableData.value).map(item => {
+        const [_, rest] = item.location?.split(' - ') || [];
+        const pos = rest?.split(' / ')[0] || null;
+        return {
+          ...item,
+          storage_position: pos ? parseInt(pos, 10) : null
+        };
+      })
     };
+    console.log("Saving draft with payload:", payload);
     const {data} = await axios.post(route('drafts.store'), payload);
     currentLoadedDraftId.value = data.id;
     toast.add({ severity:'success', summary:'Draft saved' });
@@ -544,12 +554,22 @@ async function submitSpreadsheet(body: any[]): Promise<void> {
         },
       }
     : { items: body };
-    console.log("Submitting data to endpoint:", endpoint, "with payload:", payload);
+  console.log("Submitting data to endpoint:", endpoint, "with payload:", payload);
   try {
     isLoading.value = true;
     await axios.post(route(endpoint), payload, { responseType: "blob" });
     isLoading.value = false;
     toast.add({ severity: "success", summary: "Success", detail: "Devices created successfully", life: 3000 });
+    // Delete current draft from database
+    if (currentLoadedDraftId.value) {
+      try {
+        await axios.delete(route('drafts.destroy', currentLoadedDraftId.value));
+      } catch (err) {
+        console.warn('Failed to delete draft from server:', err);
+      }
+      currentLoadedDraftId.value = null;
+    }
+    // Clear local storage and navigate
     clearLocalDraft();
     router.visit("/inventory/items", { only: ["items", "tabs"] });
   } catch (err) {
@@ -779,12 +799,26 @@ function findVendorId(vendorName: string): number | null {
 // function to handle drafts loaded from the modal
 function handleLoadDraft(draft: any) {
   currentLoadedDraftId.value = draft.id;
-  // Desempaqueta el payload
-  selectedVendor.value = draft.payload.vendor;
-  selectedDate.value   = new Date(draft.payload.date);
-  selectedTax.value    = draft.payload.tax;
-  BillTitle.value      = draft.payload.title;
-  tableData.value      = draft.payload.items;
+  // Carga campos del draft
+  console.log("Loading draft:", draft);
+  selectedVendor.value = draft.vendor ? draft.vendor : vendorsList.value.find(v => v.id === draft.items[0]?.vendor_id)?.vendor || null;
+  selectedDate.value   = draft.date ? new Date(draft.date) : new Date();
+  selectedTax.value    = draft.items[0]?.tax_id ?? null;
+  BillTitle.value      = draft.title;
+  // Mapear items y construir 'location'
+  tableData.value = draft.items.map((item: any) => {
+    const storage = storagesList.value.find(s => s.id === item.storage_id);
+    return {
+      ...item,
+      location: storage ? `${storage.name} - ${item.storage_position} / ${storage.limit}` : '',
+      vendor: selectedVendor.value as string,
+      date: draft.date,
+      tax: draft.tax_id,
+      subtotal: item.subtotal,
+      cost: item.cost,
+      selling_price: item.selling_price,
+    };
+  });
 }
 
 // local draft management

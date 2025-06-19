@@ -16,6 +16,10 @@ class Storage extends Model
         return $this->hasMany(Item::class);
     }
 
+    public function draftItems() {
+        return $this->hasMany(DraftItem::class);
+    }
+
     protected static function boot() {
         parent::boot();
 
