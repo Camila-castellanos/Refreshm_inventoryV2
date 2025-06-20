@@ -1,5 +1,7 @@
 <!-- filepath: resources/js/Components/LoadDraftModal.vue -->
 <template>
+    <!-- PrimeVue confirmation dialog -->
+    <ConfirmDialog />
     <Dialog
         v-model:visible="dialogVisible"
         header="Load Draft"
@@ -46,6 +48,13 @@
                     @click="onCancel"
                 />
                 <Button
+                    label="Delete"
+                    icon="pi pi-trash"
+                    class="p-button-text text-red-600 hover:text-red-800"
+                    :disabled="!selectedId || loading"
+                    @click="onDelete"
+                />
+                <Button
                     label="Load"
                     :disabled="!selectedId || loading"
                     class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700"
@@ -64,6 +73,11 @@ import axios from 'axios';
 import Dialog from 'primevue/dialog';
 import Dropdown from 'primevue/dropdown';
 import Button from 'primevue/button';
+import ConfirmDialog from 'primevue/confirmdialog';
+import { useConfirm } from 'primevue/useconfirm';
+
+// declare global Ziggy route helper
+declare const route: any;
 
 const props = defineProps<{ visible: boolean }>();
 const emit  = defineEmits(['update:visible','load']);
@@ -105,6 +119,31 @@ async function onLoad() {
   const draft = await axios.get(route('drafts.show', { id: selectedId.value })).then(r=>r.data);
   emit('load', draft);
   dialogVisible.value = false;
+}
+
+const confirm = useConfirm();
+
+async function onDelete() {
+  if (!selectedId.value) return;
+  confirm.require({
+    message: 'Are you sure you want to delete this draft?',
+    header: 'Confirm Delete',
+    icon: 'pi pi-exclamation-triangle',
+    accept: async () => {
+      // close the confirm dialog immediately
+      confirm.close();
+      loading.value = true;
+      try {
+        await axios.delete(route('drafts.destroy', { id: selectedId.value }));
+        drafts.value = drafts.value.filter(d => d.id !== selectedId.value);
+        selectedId.value = null;
+      } catch (e) {
+        console.error('Failed to delete draft', e);
+      } finally {
+        loading.value = false;
+      }
+    }
+  });
 }
 
 function onCancel() {
