@@ -541,20 +541,11 @@ public function getLabelsNewItems(Request $request): \Illuminate\Http\Response
       'records'       => 'required|array',
       // etc.
     ]);
-
-    // Reconstruye la colección de Items (con sus relaciones si quieres)
+    Log::info("Generating labels for new items", ['data' => $data]);
+    // Usa directamente los datos de draft items, sin buscar en DB
     $items = collect($data['records'])->map(function($r) {
-        // load existing items with storage & vendor, or wrap new items as object
-        $item = isset($r['id'])
-            ? Item::with(['storage','vendor'])->find($r['id'])
-            : (object)$r;
-        // resolve vendor name by vendor_id
-        $vendorId = $item->vendor_id ?? $r['vendor_id'] ?? null;
-        $item->vendor = $vendorId
-            ? optional(Vendor::find($vendorId))
-            : null;
-        return $item;
-    })->filter();
+        return (object)$r;
+    });
 
     Log::info("Generating labels for new items", ['records' => $items]);
     // PASA un array asociativo:

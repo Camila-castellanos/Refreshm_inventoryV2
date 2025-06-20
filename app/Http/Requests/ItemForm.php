@@ -37,7 +37,8 @@ class ItemForm extends FormRequest
             "items.*.imei" => "sometimes",
             "items.*.date" => "sometimes",
             "items.*.selling_price" => "sometimes",
-            "items.*.storage_id" => "required",
+            "items.*.storage_id" => "required|integer|exists:storages,id",
+            "items.*.position"   => "sometimes|integer",
             "items.*.tax" => "sometimes",
             "items.*.subtotal" => "sometimes",
         ];

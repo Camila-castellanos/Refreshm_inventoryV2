@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\DB;
+use App\Models\DraftItem;
 
 
 class Item extends Model
@@ -13,7 +14,7 @@ class Item extends Model
     use HasFactory;
 
     protected $fillable = [
-        "date", "sale_id", "supplier", "manufacturer", "storage_id",
+        "date", "sale_id", "supplier", "manufacturer", "storage_id", "position",
         "model", "colour", "battery", "grade",
         "issues", "cost", "imei", "selling_price",
         "customer", "sold", "hold", "discount", "tax",
@@ -71,8 +72,11 @@ class Item extends Model
     
         static::updating(function ($item) {
             $originalStorageId = $item->getOriginal('storage_id');
-        
-            if (is_null($originalStorageId) && !is_null($item->storage_id)) {
+            // auto-assign only if newly assigned to storage and no explicit position
+            if (is_null($originalStorageId)
+                && !is_null($item->storage_id)
+                && is_null($item->position)
+            ) {
                 $item->position = self::getNextAvailablePosition($item->storage_id);
             }
             // if the item is being sold and the sale_id is set, set the sold date
@@ -82,7 +86,8 @@ class Item extends Model
         }
         });
         static::creating(function ($item) {
-            if ($item->storage_id) {
+            // auto-assign only if storage set and no position provided
+            if ($item->storage_id && is_null($item->position)) {
                 DB::transaction(function () use ($item) {
                     $item->position = self::getNextAvailablePosition($item->storage_id);
                 });
@@ -100,27 +105,22 @@ class Item extends Model
     public static function getNextAvailablePosition($storageId)
 {
     
-    $occupiedPositions = Item::where('storage_id', $storageId)
-        ->orderBy('position', 'asc')
+    // gather occupied positions from saved items and draft items
+    $itemPositions = self::where('storage_id', $storageId)
         ->whereNotNull('position')
         ->pluck('position')
         ->toArray();
-
- 
+    $draftPositions = DraftItem::where('storage_id', $storageId)
+        ->whereNotNull('position')
+        ->pluck('position')
+        ->toArray();
+    $occupied = array_unique(array_merge($itemPositions, $draftPositions));
+    // find first available starting from 1
     $position = 1;
-    while (in_array($position, $occupiedPositions)) {
+    while (in_array($position, $occupied)) {
         $position++;
     }
-
-    return $position; 
-
-
-        foreach ($occupiedPositions as $occupied) {
-        if ($position < $occupied) {
-            return $position; // Retorna la posición disponible más cercana a 0.
-        }
-        $position++;
-    }
+    return $position;
 }
 
 public function getSoldAttributeFallback($value)
