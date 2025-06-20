@@ -187,6 +187,7 @@ const menuItems = [
   { separator: true },
   { label: "Delete Row", icon: "pi pi-trash", class: "text-red-600", command: () => deleteRow() },
   {label: "Print Label", icon: "pi pi-print", command: () => openLabelsFromTable(mapSpreadsheetData([tableData.value[contextRow.value ?? 0]]))},
+   {label: "Print Label test", icon: "pi pi-print", command: () => console.log(tableData.value[contextRow.value ?? 0]) },
 ];
 
 const contextRow = ref<number | null>(null);
@@ -532,12 +533,29 @@ function mapSpreadsheetData(data: ItemWithLocation[]): any[] {
      const tax =
       selectedTax.value != null ? selectedTax.value : row.tax;  
     
+    // parse position from location string (format "StorageName - X/Y")
+    const locParts = row.location?.split(' - ');
+    const positionParsed = locParts && locParts[1]
+      ? parseInt(locParts[1].split('/')[0].trim(), 10)
+      : row.position;
+
     // ensure subtotal is a number
     if (typeof subtotal === 'string') {
       subtotal = parseFloat(subtotal.replace(/[^0-9.-]+/g, ''))
     }
 
-    return { ...row, storage_id: storageId, vendor_id: vendorId, date: date, cost, selling_price,  tax: tax, subtotal: subtotal};
+    // include parsed position in payload
+    return {
+      ...row,
+      storage_id: storageId,
+      position: positionParsed,
+      vendor_id: vendorId,
+      date: date,
+      cost,
+      selling_price,
+      tax,
+      subtotal
+    };
   });
 }
 

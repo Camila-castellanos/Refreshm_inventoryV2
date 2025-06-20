@@ -25,6 +25,7 @@ class ItemsWithBillForm extends FormRequest
             // items data
             'items'                => 'required|array|min:1',
             'items.*.storage_id'   => 'required|exists:storages,id',
+            'items.*.position'     => 'sometimes|integer',
             'items.*.manufacturer' => 'sometimes|string',
             'items.*.model'        => 'sometimes|string',
             'items.*.colour'       => 'sometimes|string',
