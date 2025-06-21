@@ -187,7 +187,6 @@ const menuItems = [
   { separator: true },
   { label: "Delete Row", icon: "pi pi-trash", class: "text-red-600", command: () => deleteRow() },
   {label: "Print Label", icon: "pi pi-print", command: () => openLabelsFromTable(mapSpreadsheetData([tableData.value[contextRow.value ?? 0]]))},
-   {label: "Print Label test", icon: "pi pi-print", command: () => console.log(tableData.value[contextRow.value ?? 0]) },
 ];
 
 const contextRow = ref<number | null>(null);
@@ -847,9 +846,14 @@ function loadDraftFromLocalStorage() {
     // si estamos en la edición de un item, no cargamos el draft
     return;
   }
-  const draft = localStorage.getItem(STORAGE_KEY);
-  if (draft) {
-    handleLoadDraft(JSON.parse(draft));
+  const stored = localStorage.getItem(STORAGE_KEY);
+  if (stored) {
+    try {
+      const draft = JSON.parse(stored);
+      handleLoadDraft(draft);
+    } catch (e) {
+      console.error('Failed to parse local draft', e);
+    }
   }
 }
 
@@ -861,17 +865,23 @@ function saveDraftToLocalStorage() {
     return;
   }
   if (!selectedDate.value) {
-      selectedDate.value = new Date();
-    }
+    selectedDate.value = new Date();
+  }
+  const items = mapSpreadsheetData(tableData.value).map(item => {
+        const [_, rest] = item.location?.split(' - ') || [];
+        const pos = rest?.split(' / ')[0] || null;
+        return {
+          ...item,
+          storage_position: pos ? parseInt(pos, 10) : null
+        };
+      });
   const draft = {
     id: currentLoadedDraftId.value,
-    payload: {
-      vendor: selectedVendor.value,
-      date: selectedDate.value,
-      tax: selectedTax.value,
-      title: BillTitle.value,
-      items: tableData.value
-    }
+    vendor: selectedVendor.value,
+    date: selectedDate.value.toISOString().split('T')[0],
+    title: BillTitle.value,
+    tax_id: selectedTax.value,
+    items: items
   };
   localStorage.setItem(STORAGE_KEY, JSON.stringify(draft));
 }
