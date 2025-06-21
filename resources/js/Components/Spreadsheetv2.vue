@@ -1,5 +1,7 @@
 <template>
   <Toast></Toast>
+  <!-- PrimeVue confirmation dialog -->
+  <ConfirmDialog />
   <section class="flex flex-col w-full px-4 relative">
     <section>
       <div class="flex flex-row justify-between" id="spreadsheet-header">
