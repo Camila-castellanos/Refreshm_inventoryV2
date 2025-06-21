@@ -1,7 +1,4 @@
-<!-- filepath: resources/js/Components/LoadDraftModal.vue -->
 <template>
-    <!-- PrimeVue confirmation dialog -->
-    <ConfirmDialog />
     <Dialog
         v-model:visible="dialogVisible"
         header="Load Draft"
