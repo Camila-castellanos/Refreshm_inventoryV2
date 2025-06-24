@@ -25,10 +25,30 @@ class TaxController extends Controller
       $response = [];
 
       foreach ($taxes as $tax) {
-        $paid = Bill::where('tax_id', $tax->id)->where('user_id', $user->id)->sum('flat_tax');
-        $collected = Sale::where('tax_id', $tax->id)->where('user_id', $user->id)->sum('flatTax');
-        $total_sales = round(Sale::where('tax_id', $tax->id)->where('user_id', $user->id)->sum('total'));
-        $total_purchases = Bill::where('tax_id', $tax->id)->where('user_id', $user->id)->sum('total');
+        // include bills either tagged by tax_id or carrying the same percentage explicitly
+        $paid = Bill::where('user_id', $user->id)
+            ->where(function($q) use ($tax) {
+                $q->where('tax_id', $tax->id)
+                  ->orWhere('tax', $tax->percentage);
+            })->sum('flat_tax');
+        // include sales either tagged by tax_id or carrying the same percentage explicitly
+        $collected = Sale::where('user_id', $user->id)
+            ->where(function($q) use ($tax) {
+                $q->where('tax_id', $tax->id)
+                  ->orWhere('tax', $tax->percentage);
+            })->sum('flatTax');
+        $total_sales = round(
+            Sale::where('user_id', $user->id)
+                ->where(function($q) use ($tax) {
+                    $q->where('tax_id', $tax->id)
+                      ->orWhere('tax', $tax->percentage);
+                })->sum('total')
+        );
+        $total_purchases = Bill::where('user_id', $user->id)
+            ->where(function($q) use ($tax) {
+                $q->where('tax_id', $tax->id)
+                  ->orWhere('tax', $tax->percentage);
+            })->sum('total');
         $i["id"] = $tax->id;
         $i["name"] = $tax->name;
         $i["percentage"] = (float)$tax->percentage;
@@ -201,10 +221,32 @@ class TaxController extends Controller
       Log::info("Start date: $start, End date: $end");
 
       foreach ($taxes as $tax) {
-        $paid = Bill::where('tax_id', $tax->id)->whereBetween('date', [$start, $end])->where('user_id', $user->id)->sum('flat_tax');
-        $collected = Sale::where('tax_id', $tax->id)->whereBetween('date', [$start, $end])->where('user_id', $user->id)->sum('flatTax');
-        $total_sales = Sale::where('tax_id', $tax->id)->whereBetween('date', [$start, $end])->where('user_id', $user->id)->sum('total');
-        $total_purchases = Bill::where('tax_id', $tax->id)->whereBetween('date', [$start, $end])->where('user_id', $user->id)->sum('total');
+        $paid = Bill::where('user_id', $user->id)
+            ->whereBetween('date', [$start, $end])
+            ->where(function($q) use ($tax) {
+                $q->where('tax_id', $tax->id)
+                  ->orWhere('tax', $tax->percentage);
+            })->sum('flat_tax');
+
+        // include sales either by tax_id or explicit tax percentage within date range
+        $collected = Sale::where('user_id', $user->id)
+            ->whereBetween('date', [$start, $end])
+            ->where(function($q) use ($tax) {
+                $q->where('tax_id', $tax->id)
+                  ->orWhere('tax', $tax->percentage);
+            })->sum('flatTax');
+        $total_sales = Sale::where('user_id', $user->id)
+            ->whereBetween('date', [$start, $end])
+            ->where(function($q) use ($tax) {
+                $q->where('tax_id', $tax->id)
+                  ->orWhere('tax', $tax->percentage);
+            })->sum('total');
+        $total_purchases = Bill::where('user_id', $user->id)
+            ->whereBetween('date', [$start, $end])
+            ->where(function($q) use ($tax) {
+                $q->where('tax_id', $tax->id)
+                  ->orWhere('tax', $tax->percentage);
+            })->sum('total');
         $i["id"] = $tax->id;
         $i["name"] = $tax->name;
         $i["percentage"] = (float)$tax->percentage;
