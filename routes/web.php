@@ -184,6 +184,9 @@ Route::middleware([
     Route::put("stores/{store}/cut", [StoreController::class, "updateStorePercent"])->name("stores.updateStorePercent");
 
     Route::get("user/locations", [LocationController::class, "userLocations"])->name("locations.list");
+    // Fetch and update user timezone
+    Route::get("user/timezone", [UserController::class, "getTimezone"])->name('user.timezone.fetch');
+    Route::put("user/timezone", [UserController::class, "updateTimezone"])->name('user.timezone.update');
     Route::get('user/printable-tag-fields',[UserController::class, 'getPrintableTagFields'])->name('user.printableTagFields');
     Route::put('user/printable-tag-fields',[UserController::class, 'updatePrintableTagFields'])->name('user.updatePrintableTagFields');
     Route::resource("stores.locations", LocationController::class)->shallow();

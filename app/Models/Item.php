@@ -7,7 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\DB;
 use App\Models\DraftItem;
-
+use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class Item extends Model
 {
@@ -23,6 +24,12 @@ class Item extends Model
         'type'
     ];
     
+    // Cast date and sold attributes as full datetime
+    protected $casts = [
+    'date' => 'datetime',
+        'sold' => 'datetime',
+    ];
+
     public function shop(): BelongsTo
     {
         return $this->belongsTo(Shop::class, 'shop_id');
@@ -133,5 +140,17 @@ public function getSoldAttributeFallback($value)
     return $this->sale ? $this->sale->created_at : null;
 }
 
-    
+/**
+ * Serialize dates to ISO8601 in user's timezone.
+ */
+protected function serializeDate(\DateTimeInterface $date): string
+{
+    $userTimezone = config('app.user_timezone', config('app.timezone'));
+    Log::info("Serializing date: {$date->format('Y-m-d H:i:s')} to timezone: {$userTimezone}");
+    $date = Carbon::instance($date)
+        ->setTimezone($userTimezone)
+        ->format('Y-m-d H:i:s');
+    Log::info("Serialized date: {$date}");    
+    return $date;
+}
 }

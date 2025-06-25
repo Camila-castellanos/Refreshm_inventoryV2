@@ -77,6 +77,35 @@ class UserController extends Controller
     }
     return response()->json($user, 201);
   }
+  
+  /**
+   * Update authenticated user's timezone.
+   *
+   * @param  \Illuminate\Http\Request  $request
+   * @return \Illuminate\Http\Response
+   */
+  public function updateTimezone(Request $request)
+  {
+      $request->validate([
+          'timezone' => 'required|timezone',
+      ]);
+      // Persist new timezone for authenticated user
+      User::where('id', Auth::id())->update([
+          'timezone' => $request->timezone,
+      ]);
+      return back();
+  }
+  
+  /**
+   * Fetch authenticated user's timezone.
+   *
+   * @return \Illuminate\Http\Response
+   */
+  public function getTimezone()
+  {
+      $tz = Auth::user()->timezone;
+      return response()->json(['timezone' => $tz], 200);
+  }
 
   /**
    * Display the specified resource.

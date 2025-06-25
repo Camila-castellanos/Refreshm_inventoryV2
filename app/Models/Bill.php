@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Carbon\Carbon;
 
 class Bill extends Model
 {
@@ -27,4 +28,15 @@ class Bill extends Model
   protected $casts = [
     'date' => 'datetime:Y-m-d H:i:s',
   ];
+
+  /**
+   * Serialize dates to 'Y-m-d H:i:s' in user's timezone.
+   */
+  protected function serializeDate(\DateTimeInterface $date): string
+  {
+    $userTimezone = config('app.user_timezone', config('app.timezone'));
+    return Carbon::instance($date)
+      ->setTimezone($userTimezone)
+      ->format('Y-m-d H:i:s');
+  }
 }

@@ -8,6 +8,7 @@ import UpdatePasswordForm from '@/Pages/Profile/Partials/UpdatePasswordForm.vue'
 import UpdateProfileInformationForm from '@/Pages/Profile/Partials/UpdateProfileInformationForm.vue';
 import Storage from './Partials/Storage.vue';
 import PrintableLabelActiveFields from './Partials/PrintableLabelActiveFields.vue';
+import UpdateTimezoneForm from './Partials/UpdateTimezoneForm.vue';
 defineProps({
     confirmsTwoFactorAuthentication: Boolean,
     sessions: Array,
@@ -38,6 +39,10 @@ defineProps({
 
                 <div>
                     <PrintableLabelActiveFields />
+                    <SectionBorder />
+                </div>
+                <div>
+                    <UpdateTimezoneForm :timezone="$page.props.auth.user.timezone" />
                     <SectionBorder />
                 </div>
 
