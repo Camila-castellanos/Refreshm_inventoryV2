@@ -40,11 +40,12 @@ class SaleController extends Controller
         $form = $request->validated();
         $form["user_id"] = Auth::user()->id;
         $form["balance_remaining"] = $request->balance_remaining;
-        $form["date"] = $request->payment_date;
-
+        // Convertir payment_date (Y-m-d) a datetime con hora actual y asignar al form
+        $paymentDateTime = Carbon::createFromFormat('Y-m-d', $request->payment_date)
+            ->setTimeFromTimeString(Carbon::now()->toTimeString());
+        $form["date"] = $paymentDateTime->format('Y-m-d H:i:s');
+        // Crear la venta con datetime completo
         $sale = Sale::create($form);
-
-        log::info($form);
 
         foreach ($form["items"] as $sale_item) {
             $sale_item["sale_id"] = $sale->id;
@@ -63,12 +64,11 @@ class SaleController extends Controller
                     'balance_remaining' => $form["balance_remaining"],
                     'payment_method' => $form["payment_method"],
                     'payment_account' => $form["payment_account"],
-                    'payment_date' => $request->payment_date,
+                    'payment_date' => $paymentDateTime->format('Y-m-d H:i:s'),
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
             }
-            Log::info($sale_item);
             $item->update($sale_item);
 
             if ($item) {
@@ -119,7 +119,7 @@ class SaleController extends Controller
                     'balance_remaining' => $form["balance_remaining"],
                     'payment_method' => $form["payment_method"],
                     'payment_account' => $form["payment_account"],
-                    'payment_date' => $request->payment_date,
+                    'payment_date' => $paymentDateTime->format('Y-m-d H:i:s'),
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);

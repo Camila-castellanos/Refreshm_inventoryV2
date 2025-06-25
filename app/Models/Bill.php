@@ -23,4 +23,8 @@ class Bill extends Model
     "invoice",
     "tax_id"
   ];
+  // Cast 'date' attribute as full datetime
+  protected $casts = [
+    'date' => 'datetime:Y-m-d H:i:s',
+  ];
 }

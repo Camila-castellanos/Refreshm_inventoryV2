@@ -7,7 +7,7 @@ export const headers = [
   {
     label: "Date",
     name: "date",
-    type: "string",
+    type: "date",
   },
   {
     label: "Customer",
@@ -68,7 +68,7 @@ export const billHeaders = [
   {
     label: "Date",
     name: "date",
-    type: "string",
+    type: "date",
   },
   {
     label: "Vendor",

@@ -363,9 +363,16 @@ class ItemController extends Controller
         $shopId = $firstShop ? $firstShop->id : null;
 
         $created = [];
+        Log::info("Creating items", ['items' => $items["items"]]);
         foreach ($items["items"] as $item) {
             $item['user_id'] = Auth::user()->id;
             $item['shop_id'] = $shopId;
+            // Si la fecha viene solo en Y-m-d, anexar hora actual
+            if (!empty($item['date'])) {
+                $item['date'] = Carbon::createFromFormat('Y-m-d', $item['date'])
+                    ->setTimeFromTimeString(Carbon::now()->toTimeString())
+                    ->format('Y-m-d H:i:s');
+            }
             $created[] = Item::create($item);
         }
         return response()->json($created, 201);
@@ -390,10 +397,13 @@ class ItemController extends Controller
             : 0;
         return ($i['subtotal'] ?? 0) * (1 + $taxPerc / 100);
     });
-     $newBill = [
+        // Convertir fecha (Y-m-d) a datetime agregando la hora actual
+        $billDateTime = Carbon::createFromFormat('Y-m-d', $billData['date'])
+            ->setTimeFromTimeString(Carbon::now()->toTimeString());
+        $newBill = [
             'user_id' => Auth::id(),
             'vendor_id' => $billData['vendor_id'],
-            'date' => $billData['date'],
+            'date' => $billDateTime->format('Y-m-d H:i:s'),
             'tax_id' => $billData['tax_id'] ?? null,
             'subtotal' => $sumSubtotals,
             'total' => $sumTotals,

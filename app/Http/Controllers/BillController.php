@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Response;
 use Inertia\Inertia;
 use Maatwebsite\Excel\Excel;
+use Carbon\Carbon;
 
 class BillController extends Controller
 {
@@ -81,6 +82,10 @@ class BillController extends Controller
     $amount = 0;
     $created = [];
     foreach ($items["items"] as $item) {
+      // Convertir campo 'date' de Y-m-d a datetime con hora actual
+        $item['date'] = Carbon::createFromFormat('Y-m-d', $item['date'] ?? Carbon::now()->format('Y-m-d'))
+          ->setTimeFromTimeString(Carbon::now()->toTimeString())
+          ->format('Y-m-d H:i:s');
       $item['user_id'] = Auth::user()->id;
       $item['amount_paid'] = 0;
       $item['balance_remaining'] = $item['total'];
