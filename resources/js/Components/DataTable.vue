@@ -52,6 +52,10 @@
         <template #body="slotProps" v-if="header.type === 'number'">
           {{ formatCurrency(slotProps.data[header.name]) }}
         </template>
+        <!-- Formatear campo de tipo date para mostrar solo la fecha -->
+        <template #body="slotProps" v-if="header.type === 'date'">
+          {{ formatDate(slotProps.data[header.name]) }}
+        </template>
       </Column>
     </template>
     <Column header="Actions" name="actions" v-if="headers.filter((header) => header.name === 'actions').length > 0">
@@ -257,6 +261,12 @@ function formatCurrency(value: number | string | undefined): string {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   }).format(num).replace(/^/, '$ ')
+}
+
+// Función auxiliar para formatear fechas y eliminar hora
+function formatDate(value: string | null | undefined): string {
+  if (!value) return ''
+  return value.split(' ')[0]
 }
 
 function checkOverflow() {

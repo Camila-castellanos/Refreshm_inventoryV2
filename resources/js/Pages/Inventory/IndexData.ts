@@ -5,7 +5,7 @@ export const headers: Ref<CustomField[]> = ref([
   {
     label: "Date",
     name: "date",
-    type: "string",
+    type: "date",
   },
   {
     label: "Vendor",
@@ -73,7 +73,7 @@ export const soldHeaders: Ref<CustomField[]> = ref([
   {
     label: "Purchase Date",
     name: "date",
-    type: "string",
+    type: "date",
   },
   {
     label: "Vendor",
@@ -156,7 +156,7 @@ export const onHoldHeaders: Ref<CustomField[]> = ref([
   {
     label: "Date",
     name: "date",
-    type: "string",
+    type: "date",
   },
   {
     label: "Vendor",

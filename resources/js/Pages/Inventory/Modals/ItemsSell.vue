@@ -290,7 +290,6 @@ async function submitForm(e: Event, isConfirmed: boolean) {
     return;
   }
 
-  console.log(form)
   const salePayload = {
     subtotal: subtotal.value,
     tax: form?.tax?.percentage ?? 0,
