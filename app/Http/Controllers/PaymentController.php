@@ -513,10 +513,13 @@ class PaymentController extends Controller
     $finalTotal = $sale->total;
     $finaFlatTax = $sale->flatTax;
     $finalSubTotal = $sale->subtotal;
-    $customer = null;
-    if ($sale->customer) {
-      $customer = is_string($sale->customer) ? $sale->customer : Customer::find($sale->customer)->customer;
+    
+    $customer = $request->customer;
+    if (is_numeric($customer)) {
+      $customerModel = Customer::find($customer);
+      $customer = $customerModel ? $customerModel->customer : $customer;
     }
+    
 
     foreach ($items as $item) {
       $itemData = Item::find($item['id']);
