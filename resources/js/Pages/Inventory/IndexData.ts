@@ -5,7 +5,7 @@ export const headers: Ref<CustomField[]> = ref([
   {
     label: "Date",
     name: "date",
-    type: "date",
+    type: "string",
   },
   {
     label: "Vendor",

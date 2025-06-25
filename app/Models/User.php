@@ -36,6 +36,7 @@ class User extends Authenticatable
         'sold_headers',
         'company_id',
         'printable_tag_fields',
+        'timezone',
     ];
 
     /**
