@@ -146,11 +146,9 @@ public function getSoldAttributeFallback($value)
 protected function serializeDate(\DateTimeInterface $date): string
 {
     $userTimezone = config('app.user_timezone', config('app.timezone'));
-    Log::info("Serializing date: {$date->format('Y-m-d H:i:s')} to timezone: {$userTimezone}");
     $date = Carbon::instance($date)
         ->setTimezone($userTimezone)
-        ->format('Y-m-d H:i:s');
-    Log::info("Serialized date: {$date}");    
+        ->format('Y-m-d H:i:s');    
     return $date;
 }
 }

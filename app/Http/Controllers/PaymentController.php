@@ -137,6 +137,9 @@ class PaymentController extends Controller
         }
       }
 
+      $totalBalance = collect($response)->sum('balance_remaining');
+      Log::info("Total balance_remaining: {$totalBalance}");
+
       usort($response, function ($a, $b) {
         return $b['date'] <=> $a['date'];
       });

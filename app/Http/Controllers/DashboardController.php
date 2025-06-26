@@ -22,6 +22,35 @@ class DashboardController extends Controller
    * @param  \Illuminate\Http\Request  $request
    * @return \Illuminate\Http\Response
    */
+
+  /**
+   * Suma el balance_remaining de todas las ventas con ítems vendidos,
+   * asegurando que no haya valores negativos.
+   */
+  private function sumSalesBalanceRemaining(
+      int     $userId,
+      ?string $startSold = null,
+      ?string $endSold   = null
+  ): float {
+      $itemQuery = Item::query()
+          ->whereNotNull('sold')
+          ->where('user_id', $userId)
+          ->whereNotNull('sale_id');
+
+      if ($startSold && $endSold) {
+          $itemQuery->whereBetween('sold', [$startSold, $endSold]);
+      }
+
+      $saleIds = $itemQuery
+          ->pluck('sale_id')
+          ->unique();
+
+      return $saleIds->reduce(function ($carry, $saleId) {
+          $sale = Sale::find($saleId);
+          return $carry + max(0, $sale->balance_remaining);
+      }, 0);
+  }
+
   public function __invoke()
   {
     $user = Auth::user();
@@ -34,10 +63,6 @@ class DashboardController extends Controller
     $today = \Carbon\Carbon::now(); //Current Date and Time
     $endOfMonth = \Carbon\Carbon::parse($today)->endOfMonth()->endOfDay()->toDateTimeString();
 
-
-    Log::info("start of month: " . $startOfMonth);
-    Log::info("end of month: " . $endOfMonth);
-    Log::info("today: " . $today->toDateString());
     // if(Auth::user()->role == 'USER' || 'ADMIN'){
     if (Auth::user()->role == 'USER') {
       return redirect('/inventory/items');
@@ -63,16 +88,12 @@ class DashboardController extends Controller
       $saleIdArray = [];
       $salesTotal = [];
       
-      // calculate account receivable and payable
-      $salesWithPendingBalance = Sale::where('user_id', Auth::id())
-      ->where('balance_remaining', '>', 0)
-      ->get();
-      $billsWithPendingBalance = Bill::where('user_id', Auth::id())
-      ->where('status', 0)
-      ->get();
-      $accountsReceivable = $salesWithPendingBalance->sum('balance_remaining');
-      $accountsPayable = $billsWithPendingBalance->sum('balance_remaining');
-
+       // Use helper for receivable / old database issues
+      $accountsReceivable = $this->sumSalesBalanceRemaining(Auth::user()->id);
+      // calculate account payable
+      $billsWithPendingBalance = Bill::where('user_id', Auth::id())->where('status', 0)->get();
+      $accountsPayable    = $billsWithPendingBalance->sum('balance_remaining');
+      
       // taxed sales, non-taxed sales, total sales and profit calculations
        $non_taxed_sales_total = $items
         ->filter(fn($item) => !$item->sale || intval($item->sale->tax) === 0)
@@ -109,6 +130,7 @@ class DashboardController extends Controller
       $salesTaxPaid = round(Bill::where('user_id', Auth::user()->id)->where('status', 1)->whereBetween("date", [$startOfMonth, $endOfMonth])->sum('flat_tax'));
       $taxedSales = round($taxed_sales_total);
       $nonTaxedSales = round($non_taxed_sales_total);
+
     } else {
 
       $items = Item::where([
@@ -137,16 +159,11 @@ class DashboardController extends Controller
         }
       }
 
-       // calculate account receivable and payable
-      $salesWithPendingBalance = Sale::where('user_id', Auth::id())
-      ->where('balance_remaining', '>', 0)
-      ->get();
-      $billsWithPendingBalance = Bill::where('user_id', Auth::id())
-      ->where('status', 0)
-      ->get();
-      $accountsReceivable = $salesWithPendingBalance->sum('balance_remaining');
-      $accountsPayable = $billsWithPendingBalance->sum('balance_remaining');
-
+      // Use helper for receivable / old database issues
+      $accountsReceivable = $this->sumSalesBalanceRemaining(Auth::user()->id);
+      // calculate account payable
+      $billsWithPendingBalance = Bill::where('user_id', Auth::id())->where('status', 0)->get();
+      $accountsPayable    = $billsWithPendingBalance->sum('balance_remaining');
       // taxed sales, non-taxed sales, total sales and profit calculations
       $non_taxed_sales_total = $items
         ->filter(fn($item) => !$item->sale || intval($item->sale->tax) === 0)
@@ -445,8 +462,12 @@ class DashboardController extends Controller
       $billsWithPendingBalance = Bill::where('user_id', Auth::id())
       ->where('status', 0)
       ->get();
-      $accountsReceivable = $salesWithPendingBalance->sum('balance_remaining');
-      $accountsPayable = $billsWithPendingBalance->sum('balance_remaining');
+      
+      // Use helper for receivable / old database issues
+      $accountsReceivable = $this->sumSalesBalanceRemaining(Auth::user()->id);
+      // calculate account payable
+      $billsWithPendingBalance = Bill::where('user_id', Auth::id())->where('status', 0)->get();
+      $accountsPayable    = $billsWithPendingBalance->sum('balance_remaining');
 
       // taxed sales, non-taxed sales, total sales and profit calculations
       $non_taxed_sales_total = $items
@@ -497,15 +518,11 @@ class DashboardController extends Controller
       $profit = 0;
       $soldvalue = 0;
       
-      // calculate account receivable and payable
-      $salesWithPendingBalance = Sale::where('user_id', Auth::id())
-      ->where('balance_remaining', '>', 0)
-      ->get();
-      $billsWithPendingBalance = Bill::where('user_id', Auth::id())
-      ->where('status', 0)
-      ->get();
-      $accountsReceivable = $salesWithPendingBalance->sum('balance_remaining');
-      $accountsPayable = $billsWithPendingBalance->sum('balance_remaining');
+      // Use helper for receivable / old database issues
+      $accountsReceivable = $this->sumSalesBalanceRemaining(Auth::user()->id);
+      // calculate account payable
+      $billsWithPendingBalance = Bill::where('user_id', Auth::id())->where('status', 0)->get();
+      $accountsPayable    = $billsWithPendingBalance->sum('balance_remaining');
 
       // taxed sales, non-taxed sales, total sales and profit calculations
       $non_taxed_sales_total = $items
