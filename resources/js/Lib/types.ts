@@ -324,4 +324,5 @@ export interface Dashboard {
   salesTaxPaid: number;
   taxedSales: number;
   nonTaxedSales: number;
+  totalPurchases: number;
 }

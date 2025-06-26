@@ -23,34 +23,6 @@ class DashboardController extends Controller
    * @return \Illuminate\Http\Response
    */
 
-  /**
-   * Suma el balance_remaining de todas las ventas con ítems vendidos,
-   * asegurando que no haya valores negativos.
-   */
-  private function sumSalesBalanceRemaining(
-      int     $userId,
-      ?string $startSold = null,
-      ?string $endSold   = null
-  ): float {
-      $itemQuery = Item::query()
-          ->whereNotNull('sold')
-          ->where('user_id', $userId)
-          ->whereNotNull('sale_id');
-
-      if ($startSold && $endSold) {
-          $itemQuery->whereBetween('sold', [$startSold, $endSold]);
-      }
-
-      $saleIds = $itemQuery
-          ->pluck('sale_id')
-          ->unique();
-
-      return $saleIds->reduce(function ($carry, $saleId) {
-          $sale = Sale::find($saleId);
-          return $carry + max(0, $sale->balance_remaining);
-      }, 0);
-  }
-
   public function __invoke()
   {
     $user = Auth::user();
@@ -108,6 +80,9 @@ class DashboardController extends Controller
 
       $profit = $items
         ->sum(fn($item) => ((float)$item->selling_price * (1 + intval($item->sale->tax ?? 0) / 100)) - (float)$item->cost);
+
+      // calculate total purchases
+      $totalPurchases = Bill::where('user_id', Auth::user()->id)->sum('total');
 
       // calculate cost of goods sold
       $costOfGoodsSold = round($items->sum('cost'));
@@ -183,6 +158,9 @@ class DashboardController extends Controller
       $costOfGoodsSold = round($items->sum('cost'));
       $costOfTaxedGoodsSold = round($items->filter(fn($item) => $item->sale && intval($item->sale->tax) > 0)->sum('cost'));
 
+      // calculate total purchases
+      $totalPurchases = Bill::where('user_id', Auth::user()->id)->sum('total');
+
       $devicesInInventory = Item::where('user_id', Auth::user()->id)->where('type', 'device')->whereNull("sold")->whereNull("hold")->count();
       $tradesThisMonth = Item::whereBetween("date", [$startOfMonth, $endOfMonth])->where('type', 'device')->count();
       $soldThisMonth = Item::whereBetween("sold", [$startOfMonth, $endOfMonth])->where('type', 'device')->count();
@@ -222,6 +200,7 @@ class DashboardController extends Controller
       'salesTaxPaid' => $salesTaxPaid,
       'taxedSales' => $taxedSales,
       'nonTaxedSales' => $nonTaxedSales,
+      'totalPurchases' => $totalPurchases
     ];
 
     return Inertia::render("Dashboard", $context);
@@ -293,6 +272,9 @@ class DashboardController extends Controller
         // calculate cost of goods sold
       $costOfGoodsSold = round($items->sum('cost'));
       $costOfTaxedGoodsSold = round($items->filter(fn($item) => $item->sale && intval($item->sale->tax) > 0)->sum('cost'));
+
+      // calculate total purchases
+      $totalPurchases = Bill::where('user_id', Auth::user()->id)->where('date', '<=', $startOfMonth)->sum('total');
 
       $devicesInInventory = Item::where('user_id', Auth::user()->id)
       ->where('type', 'device')
@@ -367,6 +349,9 @@ class DashboardController extends Controller
       $costOfGoodsSold = round($items->sum('cost'));
       $costOfTaxedGoodsSold = round($items->filter(fn($item) => $item->sale && intval($item->sale->tax) > 0)->sum('cost'));
 
+       // calculate total purchases
+      $totalPurchases = Bill::where('user_id', Auth::user()->id)->where('date', '<=', $startOfMonth)->sum('total');
+
       $devicesInInventory = Item::where('user_id', Auth::user()->id)
       ->where('type', 'device')
         ->where('date', '<=', $startOfMonth)
@@ -425,6 +410,7 @@ class DashboardController extends Controller
       'salesTaxPaid' => $salesTaxPaid,
       'taxedSales' => $taxedSales,
       'nonTaxedSales' => $nonTaxedSales,
+      'totalPurchases' => $totalPurchases,
     ];
 
 
@@ -454,14 +440,6 @@ class DashboardController extends Controller
         ->get();
       $profit = 0;
       $soldvalue = 0;
-     
-      // calculate account receivable and payable
-      $salesWithPendingBalance = Sale::where('user_id', Auth::id())
-      ->where('balance_remaining', '>', 0)
-      ->get();
-      $billsWithPendingBalance = Bill::where('user_id', Auth::id())
-      ->where('status', 0)
-      ->get();
       
       // Use helper for receivable / old database issues
       $accountsReceivable = $this->sumSalesBalanceRemaining(Auth::user()->id);
@@ -487,6 +465,9 @@ class DashboardController extends Controller
       // calculate cost of goods sold
       $costOfGoodsSold = round($items->sum('cost'));
       $costOfTaxedGoodsSold = round($items->filter(fn($item) => $item->sale && intval($item->sale->tax) > 0)->sum('cost'));
+
+       // calculate total purchases
+      $totalPurchases = Bill::where('user_id', Auth::user()->id)->whereBetween("date", [$startOfMonth, $endOfMonth])->sum('total');
 
       $devicesInInventory = Item::where('user_id', Auth::user()->id)->whereNull("sold")->where('type', 'device')->whereNull("hold")->count();
       $tradesThisMonth = Item::where('user_id', Auth::user()->id)->where('type', 'device')->whereBetween("date", [$startOfMonth, $endOfMonth])->count();
@@ -543,6 +524,9 @@ class DashboardController extends Controller
       $costOfGoodsSold = round($items->sum('cost'));
       $costOfTaxedGoodsSold = round($items->filter(fn($item) => $item->sale && intval($item->sale->tax) > 0)->sum('cost'));
 
+       // calculate total purchases
+      $totalPurchases = Bill::where('user_id', Auth::user()->id)->whereBetween("date", [$startOfMonth, $endOfMonth])->sum('total');
+
       $devicesInInventory = Item::where('user_id', Auth::user()->id)->whereNull("sold")->where('type', 'device')->whereNull("hold")->count();
       $tradesThisMonth = Item::whereBetween("date", [$startOfMonth, $endOfMonth])->where('type', 'device')->count();
       $soldThisMonth = Item::whereBetween("sold", [$startOfMonth, $endOfMonth])->where('type', 'device')->count();
@@ -586,9 +570,41 @@ class DashboardController extends Controller
       'salesTaxPaid' => $salesTaxPaid,
       'taxedSales' => $taxedSales,
       'nonTaxedSales' => $nonTaxedSales,
+      'totalPurchases' => $totalPurchases
     ];
 
 
     return response()->json($context, 200);
   }
+
+    /**
+     * Sums the balance_remaining of all sales with sold items,
+     * ensuring there are no duplicate sales or sales with no items.
+     * this because of old database issues
+     */
+  private function sumSalesBalanceRemaining(
+      int     $userId,
+      ?string $startSold = null,
+      ?string $endSold   = null
+  ): float {
+      $itemQuery = Item::query()
+          ->whereNotNull('sold')
+          ->where('user_id', $userId)
+          ->whereNotNull('sale_id');
+
+      if ($startSold && $endSold) {
+          $itemQuery->whereBetween('sold', [$startSold, $endSold]);
+      }
+
+      $saleIds = $itemQuery
+          ->pluck('sale_id')
+          ->unique();
+
+      return $saleIds->reduce(function ($carry, $saleId) {
+          $sale = Sale::find($saleId);
+          return $carry + max(0, $sale->balance_remaining);
+      }, 0);
+  }
 }
+
+

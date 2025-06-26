@@ -268,6 +268,7 @@ function updateDashboardStats(data: Dashboard) {
   ];
 
   accountingStats.value = [
+    { label: "Total Purchases ($)", value: data.totalPurchases, currency: true },
     { label: "Accounts Receivable ($)", value: data.accountsReceivableThisMonth, currency: true },
     { label: "Accounts Payable ($)", value: data.accountsPayableThisMonth, currency: true },
     { label: "Cash on Hand ($)", value: data?.cashOnHand ? parseFloat(props.cashOnHand).toFixed(2) : 0, currency: true, editable: true },
