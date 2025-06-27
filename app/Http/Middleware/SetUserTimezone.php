@@ -15,13 +15,15 @@ class SetUserTimezone
      */
     public function handle($request, Closure $next)
     {
+        // Inicializar la variable para que siempre exista
+        $timezone = null;
+
         if (Auth::check() && Auth::user()->timezone) {
             $timezone = Auth::user()->timezone;
         }
 
         if ($timezone) {
             // Hacemos que la zona horaria esté disponible globalmente para esta petición
-            // usando el sistema de configuración de Laravel.
             config(['app.user_timezone' => $timezone]);
         }
 
