@@ -148,7 +148,7 @@ protected function serializeDate(\DateTimeInterface $date): string
     $userTimezone = config('app.user_timezone', config('app.timezone'));
     $date = Carbon::instance($date)
         ->setTimezone($userTimezone)
-        ->format('Y-m-d H:i:s');    
+        ->format('Y-m-d H:i');    
     return $date;
 }
 }
