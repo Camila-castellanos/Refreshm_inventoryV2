@@ -41,7 +41,7 @@ class Sale extends Model
         $userTimezone = config('app.user_timezone', config('app.timezone'));
         return Carbon::instance($date)
             ->setTimezone($userTimezone)
-            ->format('Y-m-d H:i:s');
+            ->format('Y-m-d H:i');
     }
 
     public function items()
