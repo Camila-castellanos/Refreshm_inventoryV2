@@ -247,4 +247,43 @@ class UserController extends Controller
             'fields'  => $user->printable_tag_fields,
         ], 200);
     }
+
+    /**
+     * Get printable invoice fields for the authenticated user.
+     */
+    public function getPrintableInvoiceFields()
+    {
+        try {
+            $user = Auth::user();
+            $fields = is_array($user->printable_invoice_fields)
+                ? $user->printable_invoice_fields
+                : json_decode($user->printable_invoice_fields, true) ?? [];
+
+            return response()->json($fields, 200);
+        } catch (Exception $e) {
+            return response()->json([
+                'error' => 'Could not retrieve printable invoice fields',
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Update printable invoice fields for the authenticated user.
+     */
+    public function updatePrintableInvoiceFields(Request $request)
+    {
+        $data = $request->validate([
+            'fields' => 'required|array',
+        ]);
+
+        $user = Auth::user();
+        $user->printable_invoice_fields = $data['fields'];
+        $user->save();
+
+        return response()->json([
+            'success' => true,
+            'fields' => $user->printable_invoice_fields,
+        ], 200);
+    }
 }

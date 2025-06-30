@@ -189,6 +189,9 @@ Route::middleware([
     Route::put("user/timezone", [UserController::class, "updateTimezone"])->name('user.timezone.update');
     Route::get('user/printable-tag-fields',[UserController::class, 'getPrintableTagFields'])->name('user.printableTagFields');
     Route::put('user/printable-tag-fields',[UserController::class, 'updatePrintableTagFields'])->name('user.updatePrintableTagFields');
+    // Printable invoice fields
+    Route::get('user/printable-invoice-fields',[UserController::class, 'getPrintableInvoiceFields'])->name('user.printableInvoiceFields');
+    Route::put('user/printable-invoice-fields',[UserController::class, 'updatePrintableInvoiceFields'])->name('user.updatePrintableInvoiceFields');
     Route::resource("stores.locations", LocationController::class)->shallow();
     Route::get("locations/{location}/users", [LocationController::class, "listUsers"])->name("locations.usersList");
     Route::post("locations/{location}/users", [LocationController::class, "users"])->name("locations.users");

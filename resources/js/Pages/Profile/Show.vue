@@ -8,6 +8,7 @@ import UpdatePasswordForm from '@/Pages/Profile/Partials/UpdatePasswordForm.vue'
 import UpdateProfileInformationForm from '@/Pages/Profile/Partials/UpdateProfileInformationForm.vue';
 import Storage from './Partials/Storage.vue';
 import PrintableLabelActiveFields from './Partials/PrintableLabelActiveFields.vue';
+import PrintableInvoiceActiveFields from './Partials/PrintableInvoiceActiveFields.vue';
 import UpdateTimezoneForm from './Partials/UpdateTimezoneForm.vue';
 defineProps({
     confirmsTwoFactorAuthentication: Boolean,
@@ -39,6 +40,10 @@ defineProps({
 
                 <div>
                     <PrintableLabelActiveFields />
+                    <SectionBorder />
+                </div>
+                <div>
+                    <PrintableInvoiceActiveFields />
                     <SectionBorder />
                 </div>
                 <div>
