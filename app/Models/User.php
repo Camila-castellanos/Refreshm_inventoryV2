@@ -36,6 +36,7 @@ class User extends Authenticatable
         'sold_headers',
         'company_id',
         'printable_tag_fields',
+        'printable_invoice_fields',
         'timezone',
     ];
 
@@ -59,10 +60,28 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
         'printable_tag_fields' => 'array',
+        'printable_invoice_fields' => 'array',
     ];
 
      protected $attributes = [
         'printable_tag_fields' => '["manufacturer","model","storage","colour","battery","imei"]',
+        'printable_invoice_fields' => "['logo',
+            'header',
+            'billing_address',
+            'invoice_number',
+            'invoice_due',
+            'payment_due',
+            'amount_due',
+            'items',
+            'table_device',
+            'table_issues',
+            'table_imei',
+            'table_price',
+            'subtotal',
+            'tax',
+            'total',
+            'credit',
+            'footer',]"
     ];
 
     protected static function booted()

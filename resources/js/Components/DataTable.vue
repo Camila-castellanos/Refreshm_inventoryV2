@@ -41,8 +41,8 @@
       </div>
     </template>
     <template v-for="(header, index) in headers" :key="header.name">
-      <Column v-if="index === 0" selectionMode="multiple" field="select" headerStyle=" text-align: center;"
-        bodyStyle=" text-align: center;">
+      <Column v-if="index === 0" selectionMode="multiple" field="select" headerStyle="text-align: left;"
+        bodyStyle=" text-align: left;" style="width: 3rem;">
       </Column>
       <Column :field="header.name" sortable :header="header.label" v-if="header.name !== 'actions'" :style="getColumnStyle(header.name)">
         <template #body="slotProps" v-if="header.name == 'status'">
