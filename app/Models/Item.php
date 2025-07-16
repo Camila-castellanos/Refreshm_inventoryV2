@@ -118,8 +118,8 @@ class Item extends Model
         ->pluck('position')
         ->toArray();
     $draftPositions = DraftItem::where('storage_id', $storageId)
-        ->whereNotNull('position')
-        ->pluck('position')
+        ->whereNotNull('storage_position')
+        ->pluck('storage_position')
         ->toArray();
     $occupied = array_unique(array_merge($itemPositions, $draftPositions));
     // find first available starting from 1
