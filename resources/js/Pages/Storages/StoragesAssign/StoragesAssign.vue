@@ -9,13 +9,13 @@
         v-for="storage in storages"
         :key="storage.id"
         class="cursor-pointer"
-        :label="`${storage.name} - (${storage.items.length + (selectedStorage === storage.id ? props.items.length : 0)} / ${
+        :label="`${storage.name} - (${getTotalItemsInStorage(storage) + (selectedStorage === storage.id ? props.items.length : 0)} / ${
           storage.limit
         })`"
         :class="{
           'bg-gray-300 text-gray-600 cursor-not-allowed opacity-50': exceedsLimit(storage),
-          'bg-blue-500 text-white hover:bg-blue-600': selectedStorage === storage.id && !exceedsLimit(storage),
-          'bg-gray-100 text-black': selectedStorage !== storage.id && !exceedsLimit(storage),
+          'bg-blue-600 text-white hover:bg-blue-500 ring-2 ring-blue-300 shadow-lg transform scale-105': selectedStorage === storage.id && !exceedsLimit(storage),
+          'bg-gray-50 text-gray-800 hover:bg-gray-100 border border-gray-200': selectedStorage !== storage.id && !exceedsLimit(storage),
         }"
         @click="toggleSelection(storage)"
         :disabled="exceedsLimit(storage)" />
@@ -37,12 +37,14 @@
 import { ref, defineExpose, defineEmits } from "vue";
 import Chip from "primevue/chip";
 import Dialog from "primevue/dialog";
+import { useToast } from "primevue";
 import { fetchStorages } from "../StoragesIndexData";
 import axios from "axios";
 import {router} from "@inertiajs/vue3"
 import { Item } from "@/Lib/types";
 
 const visible = ref(false);
+const toast = useToast();
 
 const props = defineProps<{
   items: any[]; // Assuming items are an array of item IDs
@@ -52,6 +54,7 @@ type Storage = {
   id: number;
   name: string;
   items: Item[];
+  draft_items?: Item[]; // Agregando draft_items como opcional
   limit: number;
 };
 
@@ -76,7 +79,7 @@ async function fetch() {
   try {
     const response = await fetchStorages();
     storages.value = response.data;
-    console.log(props.items)
+    console.log(storages.value);
   } catch (error) {
     console.error("Error fetching storages:", error);
   }
@@ -84,7 +87,15 @@ async function fetch() {
 
 // Function to check if adding items exceeds storage limit
 function exceedsLimit(storage: any): boolean {
-  return storage.items.length + props.items.length > storage.limit;
+  const currentItems = getTotalItemsInStorage(storage);
+  return currentItems + props.items.length > storage.limit;
+}
+
+// Helper function to get total items in storage (items + draft_items)
+function getTotalItemsInStorage(storage: Storage): number {
+  const itemsCount = storage.items?.length || 0;
+  const draftItemsCount = storage.draft_items?.length || 0;
+  return itemsCount + draftItemsCount;
 }
 
 // Toggle storage selection
@@ -105,23 +116,39 @@ function getSelectedStorage() {
 
 // Assign items to the selected storage
 const emit = defineEmits(["refreshTable"]);
-function assignLocation() {
+async function assignLocation() {
   if (!selectedStorage.value) return;
 
-  // const selected = storages.value.find((s) => s.id === selectedStorage.value);
-  // if (selected) {
-  //   selected.items = [...selected.items.map(item => item.id), ...props.items.map(item => item.id)]; // Simulate adding items
-  // }
-  const selected_items = [...props.items.map(item => item.id)] || [];
+  try {
+    const selected_items = props.items.map(item => item.id);
 
-  const payload = {
-    storage_id: selectedStorage.value,
-    items: selected_items,
-  };
+    const payload = {
+      storage_id: selectedStorage.value,
+      items: selected_items,
+    };
 
-  axios.post(route("items.assign"), payload).then((res) => router.reload());
-  emit("refreshTable");
-  closeDialog(); // Close dialog after assignment
+    await axios.post((window as any).route("items.assign"), payload);
+    
+    toast.add({ 
+      severity: 'success', 
+      summary: 'Success', 
+      detail: 'Items assigned successfully to storage', 
+      life: 3000 
+    });
+    
+    router.reload();
+    emit("refreshTable");
+    closeDialog();
+  } catch (error) {
+    console.error("Error assigning items to storage:", error);
+    
+    toast.add({ 
+      severity: 'error', 
+      summary: 'Error', 
+      detail: 'Could not assign items to storage. Please try again.', 
+      life: 3000 
+    });
+  }
 }
 
 // Expose functions to be controlled from the parent
