@@ -95,8 +95,12 @@ onMounted(async () => {
 
   if (dialogRef.value?.data?.expenses) {
     expenses.value = dialogRef.value.data.expenses.map((expense: any) => {
-      console.log('expense: ', expense, taxes.value);
-      return { ...expense, tax: taxes.value.find((tax: Tax) => tax.id === expense.tax_id), subtotal: CalcSubtotal(expense) };
+      return {
+        ...expense,
+        date: parseLocalDate(expense.date),
+        tax: taxes.value.find((tax: Tax) => tax.id === expense.tax_id),
+        subtotal: CalcSubtotal(expense)
+      };
     });
     isEditing.value = true;
   } else if (expenses.value.length === 0) {
@@ -216,5 +220,13 @@ const CalcSubtotal = (expense: any) => {
   }
   return 0;
 };
+
+function parseLocalDate(date: string | Date): Date {
+  if (typeof date === "string") {
+    const [year, month, day] = date.split("-");
+    return new Date(Number(year), Number(month) - 1, Number(day));
+  }
+  return date;
+}
 
 </script>
