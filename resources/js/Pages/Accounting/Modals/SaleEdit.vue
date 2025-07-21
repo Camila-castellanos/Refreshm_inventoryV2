@@ -20,19 +20,25 @@
 
       <div class="col-span-2">
         <label class="block mb-2 font-bold"> Customer </label>
-        <Select v-model="form.customer" :options="customers" optionLabel="customer" placeholder="Select" class="w-full">
-          <template #option="slotProps">
-            <div class="flex items-center">
-              <div>{{ `${slotProps.option.customer}` }}</div>
-            </div>
-          </template>
-
-          <template #footer>
-            <div class="p-3">
-              <Button label="Add New Customer" fluid severity="secondary" text size="small" icon="pi pi-plus" @click="addCustomer" />
-            </div>
-          </template>
-        </Select>
+          <Select
+            v-model="form.customer"
+            :options="customers"
+            optionLabel="customer"
+            placeholder="Select"
+            class="w-full"
+            filter
+          >
+            <template #option="slotProps">
+              <div class="flex items-center">
+                <div>{{ `${slotProps.option.customer}` }}</div>
+              </div>
+            </template>
+            <template #footer>
+              <div class="p-3">
+                <Button label="Add New Customer" fluid severity="secondary" text size="small" icon="pi pi-plus" @click="addCustomer" />
+              </div>
+            </template>
+          </Select>
       </div>
 
       <div class="col-span-3">
@@ -188,7 +194,7 @@ import { DynamicDialogCloseOptions, DynamicDialogInstance } from "primevue/dynam
 import AddTaxes from "./AddTaxes.vue";
 import CreateEdit from "@/Pages/Customers/CreateEdit.vue";
 import { format } from "date-fns";
-import { ITEM_TYPE_OPTIONS, ItemType, getItemTypeLabel } from '@/Enums/itemType';
+import { ITEM_TYPE_OPTIONS, ItemType, getItemTypeLabel } from '@/Enums/ItemType';
 import Dropdown from 'primevue/dropdown';
 
 const toast = useToast();
@@ -384,7 +390,7 @@ const onEdit = async () => {
     flatTax: flatTax.toFixed(2),
     total: totalAmount.toFixed(2),
     paid: payment.value.status === "paid" ? 1 : 0,
-    amount_paid: parseFloat(amount_paid.value).toFixed(2),
+    amount_paid: parseFloat(String(amount_paid.value)).toFixed(2),
     balance_remaining: balance_remaining.value,
     credit: parseFloat(final_credit.value).toFixed(2),
     removed_credit: form.value.removed_credit || 0,
@@ -423,7 +429,7 @@ const refundItem = async (item: Item) => {
   });
 };
 
-function round(num) {
+function round(num: number): number {
   return Math.round((num + Number.EPSILON) * 100) / 100;
 }
 
@@ -466,18 +472,10 @@ const addCredit = () => {
   }
 };
 
-const newRowTemplate = {
-  id: null,
-  type: ItemType.FEE,
-  model: "",
-  issues: "",
-  imei: "",
-  selling_price: 0,
-  position: "",
-  storage_id: null,
-  cost: 0,
-  profit: 0,
-  isNew: true
+const newRowTemplate: Item = {
+  ...{} as Item,
+  issues: '',
+  isNew: true,
 };
 
 function addNewRow() {

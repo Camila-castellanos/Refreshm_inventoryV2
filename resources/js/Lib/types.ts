@@ -61,6 +61,7 @@ export interface Item {
     id: number;
     vendor: string;
   };
+  isNew?: boolean;
 }
 
 export interface Tab {
