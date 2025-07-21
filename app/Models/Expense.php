@@ -15,6 +15,7 @@ class Expense extends Model
     "amount",
     "tax",
     "tax_id",
+    'subtotal',
     "total",
     "user_id",
   ];

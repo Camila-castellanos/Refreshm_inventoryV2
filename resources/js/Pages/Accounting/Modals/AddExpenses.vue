@@ -19,7 +19,14 @@
         </div>
         <div class="col-span-2">
           <label class="block text-sm font-medium">Amount:</label>
-          <InputNumber v-model="expense.subtotal" class="w-full" mode="currency" currency="USD" locale="en-US" @change="calcTotal"/>
+          <InputNumber
+            :model-value="expense.subtotal"
+            @update:model-value="val => { expense.subtotal = val; calcTotal(); }"
+            class="w-full"
+            mode="currency"
+            currency="USD"
+            locale="en-US"
+          />
         </div>
         <div class="col-span-2">
           <label class="block text-sm font-medium">Tax (%):</label>
@@ -69,7 +76,7 @@ import Dropdown from "primevue/dropdown";
 import InputNumber from "primevue/inputnumber";
 import InputText from "primevue/inputtext";
 import { useToast } from "primevue/usetoast";
-import { inject, onMounted, Ref, ref, watch, watchEffect } from "vue";
+import { inject, onMounted, Ref, ref, watch, watchEffect, computed } from "vue";
 import AddTaxes from "./AddTaxes.vue";
 
 const dialogRef: any = inject("dialogRef");
@@ -88,8 +95,8 @@ onMounted(async () => {
 
   if (dialogRef.value?.data?.expenses) {
     expenses.value = dialogRef.value.data.expenses.map((expense: any) => {
-      console.log(expense, taxes.value);
-      return { ...expense, tax: taxes.value.find((tax: Tax) => tax.id === expense.tax_id) };
+      console.log('expense: ', expense, taxes.value);
+      return { ...expense, tax: taxes.value.find((tax: Tax) => tax.id === expense.tax_id), subtotal: CalcSubtotal(expense) };
     });
     isEditing.value = true;
   } else if (expenses.value.length === 0) {
@@ -166,6 +173,7 @@ const submitForm = async () => {
 };
 
 function calcTotal() {
+  console.log("Calculating total for expenses:", expenses.value);
   expenses.value.forEach((expense: any) => {
     const tax = expense.tax ? Number(expense.tax.percentage) / 100 : 0;
     expense.total = expense.subtotal + expense.subtotal * tax;
@@ -196,4 +204,17 @@ const addTax = () => {
 const downloadDemo = () => {
   window.location.href = route("expenses.excel.demo.download");
 };
+
+const CalcSubtotal = (expense: any) => {
+  if (expense.subtotal !== undefined && expense.subtotal !== null && expense.subtotal !== 0) {
+    return expense.subtotal;
+  }   
+  
+  if (expense.total && expense.tax) {
+    const taxPct = Number(expense.tax) / 100;
+    return expense.total / (1 + taxPct);
+  }
+  return 0;
+};
+
 </script>
