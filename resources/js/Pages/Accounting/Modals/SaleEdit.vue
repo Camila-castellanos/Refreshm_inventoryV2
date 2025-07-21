@@ -267,6 +267,7 @@ onMounted(async () => {
     form.value.tax = taxes.value.find((tax) => tax.id === payment.value.tax_id);
     form.value.customer = customers.value.find((customer) => customer.customer === payment.value.customer);
     form.value.credit = payment.value.customer_credit;
+    form.value.memo_notes = payment.value.notes || "";
     if (itemsResponse.data.length > 0) {
       form.value.date = new Date(itemsResponse.data[0].sold || new Date());
     }
@@ -401,6 +402,12 @@ const onEdit = async () => {
     console.log("Sale data to update:", sale);
     const response = await axios.post(route("sales.update"), sale);
     if (response.status >= 200 && response.status < 400) {
+      toast.add({
+        severity: "success",
+        summary: "Sale Updated",
+        detail: "The sale has been updated successfully.",
+        life: 3000,
+      });
       dialogRef.value.close();
     }
   } catch (error: any) {
