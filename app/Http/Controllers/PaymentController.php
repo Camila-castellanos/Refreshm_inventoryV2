@@ -517,11 +517,16 @@ class PaymentController extends Controller
     $finaFlatTax = $sale->flatTax;
     $finalSubTotal = $sale->subtotal;
     $customer = $request->customer ?? null;
-
+    // If no customer is provided, try to find one from the other items in the sale
     if (!$customer) {
-        // seek the first item in the sale to get the customer
-        $firstItem = Item::where('sale_id', $sale->id)->first();
-        $customer = $firstItem ? $firstItem->customer : null;
+        $fallbackCustomer = null;
+        foreach ($sale->items as $item) {
+            if (!empty($item->customer)) {
+                $fallbackCustomer = $item->customer;
+                break;
+            }
+        }
+        $customer = $fallbackCustomer;
     }
     if (is_numeric($customer)) {
       $customerModel = Customer::find($customer);
