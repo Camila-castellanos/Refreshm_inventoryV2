@@ -516,14 +516,8 @@ class PaymentController extends Controller
     $finalTotal = $sale->total;
     $finaFlatTax = $sale->flatTax;
     $finalSubTotal = $sale->subtotal;
-    Log::info("Adding new items to sale", [
-      'sale_id' => $request->sale_id,
-      'sale_date' => $sale_date,
-      'items' => $items,
-      'tax' => $tax,
-      'discount' => $discount,
-    ]);
     $customer = $request->customer ?? null;
+
     if (!$customer) {
         // seek the first item in the sale to get the customer
         $firstItem = Item::where('sale_id', $sale->id)->first();
@@ -534,7 +528,6 @@ class PaymentController extends Controller
       $customer = $customerModel ? $customerModel->customer : $customer;
     }
     
-    Log::info("Final customer for sale: ", [$customer]);
     foreach ($items as $item) {
       $itemData = Item::find($item['id']);
       Item::where('id', $item['id'])->update([
