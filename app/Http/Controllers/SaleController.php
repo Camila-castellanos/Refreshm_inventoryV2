@@ -169,8 +169,8 @@ class SaleController extends Controller
                     Item::insert([
                         'date' => $request->date,
                         'model' => $item['model'],
-                        'issues' => $item['issues'],
-                        'imei' => $item['imei'],
+                        'issues' => $item['issues'] ?? '',
+                        'imei' => $item['imei'] ?? '',
                         'selling_price' => $item['selling_price'],
                         'sold' => $request->date,
                         'customer' => $request->customer,
@@ -467,11 +467,26 @@ class SaleController extends Controller
         $response = [];
         foreach ($sales as $sale) {
             $tax = intval($sale->tax) / 100;
+
+            // Fallback customer in case no customer is set for the sale    
+            $fallbackCustomer = null;
+            foreach ($sale->items as $item) {
+                if (!empty($item->customer)) {
+                    $fallbackCustomer = $item->customer;
+                    break;
+                }
+            }
+
             foreach ($sale->items as $item) {
 
                 $battery = $item->battery;
                 if (is_numeric($item->battery)) {
                     $battery = "$battery %";
+                }
+
+                // If the item does not have a customer, use the fallbackCustomer
+                if (empty($item->customer) && $fallbackCustomer) {
+                $item->customer = $fallbackCustomer;
                 }
 
                 if (is_numeric($item->customer)) {

@@ -128,7 +128,10 @@ async function editCashOnHand() {
     const response = await axios.post(route("update.cash"), { balance: datacashOnHand.value });
     if (response.status >= 200 && response.status < 300) {
       toast.add({ severity: "success", summary: "Success", detail: "Cash on Hand updated!", life: 3000 });
-      location.reload();
+      const stat = accountingStats.value.find(s => s.label === "Cash on Hand ($)");
+      if (stat) {
+        stat.value = parseFloat(datacashOnHand.value).toFixed(2);
+      }
     }
   } catch (error) {
     toast.add({ severity: "error", summary: "Error", detail: "Failed to update Cash on Hand", life: 3000 });
@@ -209,17 +212,24 @@ function handleQuickFilter() {
 async function applyFilter() {
   try {
     isLoading.value = true;
+    let responses;
     if (selectedFilter.value === "Current") {
-      await getDashboardData();
+      responses = await Promise.all([
+        getDashboardData(),
+      ]);
     } else {
-      await getDashboardDataByDate();
+      responses = await Promise.all([
+        getDashboardDataByDate(),
+      ]);
     }
+    updateDashboardStats(responses[0]);
     toast.add({ severity: "success", summary: "Success", detail: "Dashboard data updated!", life: 3000 });
   } catch (error) {
     toast.add({ severity: "error", summary: "Error", detail: "Failed to load dashboard data.", life: 3000 });
     console.error("applyFilter() error", error);
   } finally {
     isLoading.value = false;
+    console.log("applyFilter() completed");
   }
 }
 
@@ -228,25 +238,19 @@ async function getDashboardData() {
     startDate: format(startDate.value, "yyyy-MM-dd"),
     endDate: format(endDate.value, "yyyy-MM-dd"),
   }
-  console.log("peticion a date wise with payload", payload);
   const response = await axios.post(route("report.datewise"), payload, {
     headers: { "Content-Type": "application/json" },
   });
-
-  updateDashboardStats(response.data);
+  return response.data;
 }
 
 async function getDashboardDataByDate() {
   const formData = new FormData();
   formData.append("startDate", startDate.value?.toISOString().split("T")[0] || "");
-
-  console.log("payload", formData);
   const response = await axios.post(route("report.datewise.date"), formData, {
     headers: { "Content-Type": "multipart/form-data" },
   });
-  console.log("response", response.data);
-
-  updateDashboardStats(response.data);
+  return response.data;
 }
 
 function updateDashboardStats(data: Dashboard) {

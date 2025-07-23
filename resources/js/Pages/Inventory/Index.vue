@@ -7,7 +7,7 @@
     <section class="w-[95%] mx-auto mt-4">
       <ItemsTabs :custom-tabs="tabs">
         <DataTable title="Active Inventory" @update:selected="handleSelection" :actions="tableActions"
-          :items="tableData" inventory :headers="allHeaders"></DataTable>
+          :items="tableData" inventory :headers="allHeaders" v-model:selection="selectedItems"></DataTable>
       </ItemsTabs>
     </section>
   </div>
@@ -32,6 +32,7 @@ import CustomFields from "./Modals/CustomFields.vue";
 import ItemsSell from "./Modals/ItemsSell.vue";
 import MoveItem from "./Modals/MoveItem.vue";
 import AddItemsToSale from "./Modals/AddItemsToSale.vue";
+import { nextTick } from 'vue';
 
 const confirm = useConfirm();
 const toast = useToast();
@@ -307,6 +308,7 @@ async function addItemsToSale(saleId: number) {
         customer:       item.customer,
       }))
     };
+    console.log('Adding items to sale:', payload);
     await axios.post(route('payments.addNewItems'), payload);
 
     toast.add({
@@ -314,8 +316,11 @@ async function addItemsToSale(saleId: number) {
       summary: 'Added',
       detail: `Items assigned to sale #${saleId}`
     });
-
+    selectedItems.value.splice(0); // Clear selected items after adding to sale
+    
     showAddItemsToSale.value = false;
+
+     await nextTick();
     // refresh your table
     router.reload({ only: ['items'] });
 

@@ -130,6 +130,7 @@ function onCancel() {
 
 function onAdd() {
   if (selectedSale.value != null) {
+    console.log('Selected Sale ID:', selectedSale.value);
     emit('add', selectedSale.value);
     dialogVisible.value = false;
   }

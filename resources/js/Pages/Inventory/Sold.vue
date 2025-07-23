@@ -154,6 +154,7 @@ async function onDateRangeSubmit() {
   if (start && end) {
     try {
       const response = await axios.post(route("sales.generate_report", { start, end }));
+      console.log("data del back after date range: ", response.data)
       tableData.value = response.data
         .map((item: any) => {
           const customValues = JSON.parse(item.custom_values || "[]");

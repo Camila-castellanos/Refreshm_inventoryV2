@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 
 class DashboardController extends Controller
@@ -25,185 +26,39 @@ class DashboardController extends Controller
 
   public function __invoke()
   {
+
+  try {
+    // Check if the user is authenticated
     $user = Auth::user();
-    $startOfMonth = Carbon::now()
-      ->startOfMonth()
-      ->startOfDay()
-      ->toDateTimeString();
-
-    // $endOfMonth = date("Y-m-d");
-    $today = \Carbon\Carbon::now(); //Current Date and Time
-    $endOfMonth = \Carbon\Carbon::parse($today)->endOfMonth()->endOfDay()->toDateTimeString();
-
-    // if(Auth::user()->role == 'USER' || 'ADMIN'){
-    if (Auth::user()->role == 'USER') {
+    // if the user is a normal user, redirect to inventory items  
+    if ($user->role === 'USER') {
       return redirect('/inventory/items');
     }
+    // save user id and role for later use
+    $userId = $user->id;
+    $isAdmin = $user->role === 'ADMIN' || $user->role === 'OWNER';  
 
+    // initialize the start and end dates
+    $startOfMonth = Carbon::now()->startOfMonth()->startOfDay()->toDateTimeString();
+    $endOfMonth = Carbon::now()->endOfMonth()->endOfDay()->toDateTimeString();
 
-    if (Auth::user()->role == 'ADMIN') {
+    // optimized calculations directly on sql
+    $salesMetrics = $this->calculateSalesMetrics($userId, $isAdmin, $startOfMonth, $endOfMonth);
+    $inventoryMetrics = $this->calculateInventoryMetrics($userId, $isAdmin);
+    $deviceMetrics = $this->calculateDeviceMetrics($userId, $isAdmin, $startOfMonth, $endOfMonth);
+    $financialMetrics = $this->calculateFinancialMetrics($userId, $startOfMonth, $endOfMonth, true, $isAdmin);
 
-      $items = Item::where('user_id', Auth::user()->id)->where([
-        ["sold", ">=", $startOfMonth],
-        ["sold", "<=", $endOfMonth],
-      ])
-        // ->whereHas('sale', function($query){
-        //     $query->where('balance_remaining', 0);
-        // })
-        ->get();
-
-      $alt_items = Item::where('user_id', Auth::user()->id)->get();
-
-      $profit = 0;
-      $soldvalue = 0;
-      // $sales_id = [];
-      $saleIdArray = [];
-      $salesTotal = [];
-      
-       // Use helper for receivable / old database issues
-      $accountsReceivable = $this->sumSalesBalanceRemaining(Auth::user()->id);
-      // calculate account payable
-      $billsWithPendingBalance = Bill::where('user_id', Auth::id())->where('status', 0)->get();
-      $accountsPayable    = $billsWithPendingBalance->sum('balance_remaining');
-      
-      // taxed sales, non-taxed sales, total sales and profit calculations
-       $non_taxed_sales_total = $items
-        ->filter(fn($item) => !$item->sale || intval($item->sale->tax) === 0)
-        ->sum(fn($item) => (float)$item->selling_price);
-
-      $taxed_sales_total = $items
-        ->filter(fn($item) => $item->sale && intval($item->sale->tax) > 0)
-        ->sum(fn($item) => (float)$item->selling_price * (1 + intval($item->sale->tax) / 100));
-
-      $soldvalue = $items
-        ->sum(fn($item) => (float)$item->selling_price * (1 + intval($item->sale->tax ?? 0) / 100));
-
-      $profit = $items
-        ->sum(fn($item) => ((float)$item->selling_price * (1 + intval($item->sale->tax ?? 0) / 100)) - (float)$item->cost);
-
-      // calculate total purchases
-      $totalPurchases = Bill::where('user_id', Auth::user()->id)->sum('total');
-
-      // calculate cost of goods sold
-      $costOfGoodsSold = round($items->sum('cost'));
-      $costOfTaxedGoodsSold = round($items->filter(fn($item) => $item->sale && intval($item->sale->tax) > 0)->sum('cost'));
-
-      $devicesInInventory = Item::where('user_id', Auth::user()->id)->where('type', 'device')->whereNull("sold")->whereNull("hold")->count();
-      $tradesThisMonth = Item::where('user_id', Auth::user()->id)->where('type', 'device')->whereBetween("date", [$startOfMonth, $endOfMonth])->count();
-      $soldThisMonth = Item::where('user_id', Auth::user()->id)->where('type', 'device')->whereBetween("sold", [$startOfMonth, $endOfMonth])->count();
-      $inventoryValue = round(Item::where('user_id', Auth::user()->id)->whereNull("sold")->sum("cost"));
-      $saleValue = round(Item::where('user_id', Auth::user()->id)->whereNull("sold")->sum("selling_price"));
-      $soldValueThisMonth = round($soldvalue);
-      $cashOnHand = CashOnHand::select('balance')->where('user_id', Auth::user()->id)->value("balance");
-      $profitThisMonth = round($profit);
-      $accountsReceivable = round($accountsReceivable);
-      $accountsReceivableThisMonth = round($accountsReceivable);
-      $accountsPayableThisMonth = round($accountsPayable);
-      $expensesThisMonth = round(Expense::where('user_id', Auth::user()->id)->whereBetween("date", [$startOfMonth, $endOfMonth])->sum('total'));
-      $sale_ids = Item::where('user_id', Auth::user()->id)->whereBetween("sold", [$startOfMonth, $endOfMonth])->distinct()->pluck('sale_id');
-      $salesTaxCollected = round(Sale::whereNotNull('tax_id')->where('user_id', Auth::user()->id)->whereBetween("date", [$startOfMonth, $endOfMonth])->sum('flatTax'));
-      $salesTaxPaid = round(Bill::where('user_id', Auth::user()->id)->where('status', 1)->whereBetween("date", [$startOfMonth, $endOfMonth])->sum('flat_tax'));
-      $taxedSales = round($taxed_sales_total);
-      $nonTaxedSales = round($non_taxed_sales_total);
-
-    } else {
-
-      $items = Item::where([
-        ["sold", ">=", $startOfMonth],
-        ["sold", "<=", $endOfMonth],
-      ])
-        // ->whereHas('sale', function($query){
-        //     $query->where('balance_remaining', 0);
-        // })
-        ->get();
-
-      $alt_items = Item::where('user_id', Auth::user()->id)->get();
-
-      $profit = 0;
-      $soldvalue = 0;
-      // $sales_id = [];
-      // $sales_id = [];
-      $saleIdArray = [];
-      $salesTotal = [];
-      foreach ($alt_items as $item) {
-        if ($item->sale_id != null) {
-          $sale = Sale::where('id', $item->sale_id)->first();
-          if ($sale && !in_array($sale->id, $salesTotal)) {
-            array_push($salesTotal, $sale->id);
-          }
-        }
-      }
-
-      // Use helper for receivable / old database issues
-      $accountsReceivable = $this->sumSalesBalanceRemaining(Auth::user()->id);
-      // calculate account payable
-      $billsWithPendingBalance = Bill::where('user_id', Auth::id())->where('status', 0)->get();
-      $accountsPayable    = $billsWithPendingBalance->sum('balance_remaining');
-      // taxed sales, non-taxed sales, total sales and profit calculations
-      $non_taxed_sales_total = $items
-        ->filter(fn($item) => !$item->sale || intval($item->sale->tax) === 0)
-        ->sum(fn($item) => (float)$item->selling_price);
-
-      $taxed_sales_total = $items
-        ->filter(fn($item) => $item->sale && intval($item->sale->tax) > 0)
-        ->sum(fn($item) => (float)$item->selling_price * (1 + intval($item->sale->tax) / 100));
-
-      $soldvalue = $items
-        ->sum(fn($item) => (float)$item->selling_price * (1 + intval($item->sale->tax ?? 0) / 100));
-
-      $profit = $items
-        ->sum(fn($item) => ((float)$item->selling_price * (1 + intval($item->sale->tax ?? 0) / 100)) - (float)$item->cost);
-
-      // calculate cost of goods sold
-      $costOfGoodsSold = round($items->sum('cost'));
-      $costOfTaxedGoodsSold = round($items->filter(fn($item) => $item->sale && intval($item->sale->tax) > 0)->sum('cost'));
-
-      // calculate total purchases
-      $totalPurchases = Bill::where('user_id', Auth::user()->id)->sum('total');
-
-      $devicesInInventory = Item::where('user_id', Auth::user()->id)->where('type', 'device')->whereNull("sold")->whereNull("hold")->count();
-      $tradesThisMonth = Item::whereBetween("date", [$startOfMonth, $endOfMonth])->where('type', 'device')->count();
-      $soldThisMonth = Item::whereBetween("sold", [$startOfMonth, $endOfMonth])->where('type', 'device')->count();
-      $inventoryValue = round(Item::whereNull("sold")->sum("cost"));
-      $saleValue = round(Item::whereNull("sold")->sum("selling_price"));
-      $cashOnHand = CashOnHand::select('balance')->where('user_id', Auth::user()->id)->value("balance");
-      $soldValueThisMonth = round($soldvalue);
-      $profitThisMonth = round($profit);
-      $accountsReceivableThisMonth = round($accountsReceivable);
-      $accountsPayableThisMonth = round($accountsPayable);
-      $expensesThisMonth = round(Expense::where('user_id', @$user->id)->whereBetween("date", [$startOfMonth, $endOfMonth])->sum('total'));
-      $sale_ids = Item::where('user_id', @$user->id)->whereBetween("sold", [$startOfMonth, $endOfMonth])->distinct()->pluck('sale_id');
-      $salesTaxCollected = round(Sale::whereNotNull('tax_id')->where('user_id', Auth::user()->id)->whereBetween("date", [$startOfMonth, $endOfMonth])->sum('flatTax'));
-      $salesTaxPaid = round(Bill::where('user_id', @$user->id)->where('status', 1)->whereBetween("date", [$startOfMonth, $endOfMonth])->sum('flat_tax'));
-      $taxedSales = round($taxed_sales_total);
-      $nonTaxedSales = round($non_taxed_sales_total);
-    }
-
-
-    $context = [
-      "devicesInInventory" => $devicesInInventory,
-      "tradesThisMonth" => $tradesThisMonth,
-      "soldThisMonth" => $soldThisMonth,
-      "costSoldThisMonth" => $costOfGoodsSold,
-      "costOfTaxedGoodsSold" => $costOfTaxedGoodsSold,
-      "inventoryValue" => $inventoryValue,
-      "saleValue" => $saleValue,
-      "soldValueThisMonth" => $soldValueThisMonth,
-      "profitThisMonth" => $profitThisMonth,
-      'startDate' => $startOfMonth,
-      'endDate' => $endOfMonth,
-      'cashOnHand' => $cashOnHand,
-      'expensesThisMonth' => $expensesThisMonth,
-      'accountsReceivableThisMonth' => $accountsReceivableThisMonth,
-      'accountsPayableThisMonth' => $accountsPayableThisMonth,
-      'salesTaxCollected' => $salesTaxCollected,
-      'salesTaxPaid' => $salesTaxPaid,
-      'taxedSales' => $taxedSales,
-      'nonTaxedSales' => $nonTaxedSales,
-      'totalPurchases' => $totalPurchases
-    ];
+    // Contexto final
+    $context = array_merge($salesMetrics, $inventoryMetrics, $deviceMetrics, $financialMetrics, [
+        'startDate' => $startOfMonth,
+        'endDate' => $endOfMonth,
+    ]);
 
     return Inertia::render("Dashboard", $context);
+  } catch (\Exception $e) {
+    Log::error('Dashboard error: ' . $e->getMessage());
+    return response()->json(['error' => 'An error occurred while loading the dashboard.'], 500);
+  }
   }
 
   public function updateCashOnHand(Request $request)
@@ -229,350 +84,83 @@ class DashboardController extends Controller
 
   public function repostDatewiseByDate(Request $request)
   {
+    // Check if the user is authenticated
     $user = Auth::user();
-    $startOfMonth = Carbon::parse($request->startDate)->startOfDay()->toDateTimeString();
-
-    // if(Auth::user()->role == 'USER' || 'ADMIN'){
-    if (Auth::user()->role == 'USER') {
+    // if the user is a normal user, redirect to inventory items  
+    if ($user->role === 'USER') {
       return redirect('/inventory/items');
     }
+    // save user id and role for later use
+    $userId = $user->id;
+    $isAdmin = $user->role === 'ADMIN' || $user->role === 'OWNER';  
 
-    if (Auth::user()->role == 'ADMIN') {
-      $items = Item::where('user_id', Auth::user()->id)->where([
-        ["sold", "<=", $startOfMonth],
-      ])->get();
-      $profit = 0;
-      $soldvalue = 0;
-
-      // calculate account receivable and payable
-      $salesWithPendingBalance = Sale::where('user_id', Auth::id())
-      ->where('balance_remaining', '>', 0)
-      ->get();
-      $billsWithPendingBalance = Bill::where('user_id', Auth::id())
-      ->where('status', 0)
-      ->get();
-      $accountsReceivable = $salesWithPendingBalance->sum('balance_remaining');
-      $accountsPayable = $billsWithPendingBalance->sum('balance_remaining');
-
-      // taxed sales, non-taxed sales, total sales and profit calculations
-      $non_taxed_sales_total = $items
-        ->filter(fn($item) => !$item->sale || intval($item->sale->tax) === 0)
-        ->sum(fn($item) => (float)$item->selling_price);
-
-      $taxed_sales_total = $items
-        ->filter(fn($item) => $item->sale && intval($item->sale->tax) > 0)
-        ->sum(fn($item) => (float)$item->selling_price * (1 + intval($item->sale->tax) / 100));
-
-      $soldvalue = $items
-        ->sum(fn($item) => (float)$item->selling_price * (1 + intval($item->sale->tax ?? 0) / 100));
-
-      $profit = $items
-        ->sum(fn($item) => ((float)$item->selling_price * (1 + intval($item->sale->tax ?? 0) / 100)) - (float)$item->cost);
-      
-        // calculate cost of goods sold
-      $costOfGoodsSold = round($items->sum('cost'));
-      $costOfTaxedGoodsSold = round($items->filter(fn($item) => $item->sale && intval($item->sale->tax) > 0)->sum('cost'));
-
-      // calculate total purchases
-      $totalPurchases = Bill::where('user_id', Auth::user()->id)->where('date', '<=', $startOfMonth)->sum('total');
-
-      $devicesInInventory = Item::where('user_id', Auth::user()->id)
-      ->where('type', 'device')
-        ->where('date', '<=', $startOfMonth)
-        ->where(function ($query) use ($startOfMonth) {
-          $query->whereNull('sold')->orWhere('sold', '>=', $startOfMonth);
-        })
-        ->where(function ($query) use ($startOfMonth) {
-          $query->whereNull('hold')->orWhere('hold', '>=', $startOfMonth);
-        })->count();
-      $tradesThisMonth = Item::where('user_id', Auth::user()->id)->where('type', 'device')->where("date", $startOfMonth)->count();
-      $soldThisMonth = Item::where('user_id', Auth::user()->id)->where('type', 'device')->where("sold", $startOfMonth)->count();
-      $inventoryValue = round(Item::where('user_id', Auth::user()->id)->where('date', '<=', $startOfMonth)
-        ->where(function ($query) use ($startOfMonth) {
-          $query->whereNull('sold')->orWhere('sold', '>=', $startOfMonth);
-        })
-        ->where(function ($query) use ($startOfMonth) {
-          $query->whereNull('hold')->orWhere('hold', '>=', $startOfMonth);
-        })->sum("cost"));
-      $saleValue = round(Item::where('user_id', Auth::user()->id)->where('date', '<=', $startOfMonth)
-        ->where(function ($query) use ($startOfMonth) {
-          $query->whereNull('sold')->orWhere('sold', '>=', $startOfMonth);
-        })
-        ->where(function ($query) use ($startOfMonth) {
-          $query->whereNull('hold')->orWhere('hold', '>=', $startOfMonth);
-        })->sum("selling_price"));
-      // $soldValueThisMonth = round(Item::where('user_id', Auth::user()->id)->whereBetween("sold", [$startOfMonth, $endOfMonth])->sum("selling_price"));
-      $soldValueThisMonth = round($soldvalue);
-      // $profitThisMonth = round(Item::where('user_id', Auth::user()->id)->whereBetween("sold", [$startOfMonth, $endOfMonth])->sum("profit"));
-      $profitThisMonth = round($profit);
-      $accountsReceivableThisMonth = round($accountsReceivable);
-      $accountsPayableThisMonth = round($accountsPayable);
-      $expensesThisMonth = round(Expense::where('user_id', @$user->id)->where("date", "<=", $startOfMonth)->sum('total'));
-      $sale_ids = Item::where('user_id', @$user->id)->where("date", "<=", $startOfMonth)->distinct()->pluck('sale_id');
-      $salesTaxCollected = round(Sale::whereNotNull('tax_id')->where('user_id', Auth::user()->id)->whereBetween("date", [$startOfMonth, Carbon::parse($startOfMonth)->endOfMonth()->toDateString()])->sum('flatTax'));
-      $salesTaxPaid = round(Bill::where('user_id', Auth::user()->id)->where('status', 1)->where("date", "<=", $startOfMonth)->sum('flat_tax'));
-      $taxedSales = round($taxed_sales_total);
-      $nonTaxedSales = round($non_taxed_sales_total);
+    // initialize the start and end dates
+    $startOfMonth = Carbon::parse($request->startDate)->startOfDay()->toDateTimeString();
+    if ($request->has('endDate') && $request->endDate) {
+      $endOfMonth = Carbon::parse($request->endDate)->endOfDay()->toDateTimeString();
     } else {
-      $items = Item::where('user_id', Auth::user()->id)->where([
-        ["sold", "<=", $startOfMonth],
-      ])->get();
-      $profit = 0;
-      $soldvalue = 0;
-      
-      // calculate account receivable and payable
-      $salesWithPendingBalance = Sale::where('user_id', Auth::id())
-      ->where('balance_remaining', '>', 0)
-      ->get();
-      $billsWithPendingBalance = Bill::where('user_id', Auth::id())
-      ->where('status', 0)
-      ->get();
-      $accountsReceivable = $salesWithPendingBalance->sum('balance_remaining');
-      $accountsPayable = $billsWithPendingBalance->sum('balance_remaining');
-
-      // taxed sales, non-taxed sales, total sales and profit calculations
-      $non_taxed_sales_total = $items
-        ->filter(fn($item) => !$item->sale || intval($item->sale->tax) === 0)
-        ->sum(fn($item) => (float)$item->selling_price);
-
-      $taxed_sales_total = $items
-        ->filter(fn($item) => $item->sale && intval($item->sale->tax) > 0)
-        ->sum(fn($item) => (float)$item->selling_price * (1 + intval($item->sale->tax) / 100));
-
-      $soldvalue = $items
-        ->sum(fn($item) => (float)$item->selling_price * (1 + intval($item->sale->tax ?? 0) / 100));
-
-      $profit = $items
-        ->sum(fn($item) => ((float)$item->selling_price * (1 + intval($item->sale->tax ?? 0) / 100)) - (float)$item->cost);
-
-        // calculate cost of goods sold
-      $costOfGoodsSold = round($items->sum('cost'));
-      $costOfTaxedGoodsSold = round($items->filter(fn($item) => $item->sale && intval($item->sale->tax) > 0)->sum('cost'));
-
-       // calculate total purchases
-      $totalPurchases = Bill::where('user_id', Auth::user()->id)->where('date', '<=', $startOfMonth)->sum('total');
-
-      $devicesInInventory = Item::where('user_id', Auth::user()->id)
-      ->where('type', 'device')
-        ->where('date', '<=', $startOfMonth)
-        ->where(function ($query) use ($startOfMonth) {
-          $query->whereNull('sold')->orWhere('sold', '>', $startOfMonth);
-        })
-        ->where(function ($query) use ($startOfMonth) {
-          $query->whereNull('hold')->orWhere('hold', '>', $startOfMonth);
-        })->count();
-      $tradesThisMonth = Item::where('user_id', Auth::user()->id)->where("date", $startOfMonth)->count();
-      $soldThisMonth = Item::where('user_id', Auth::user()->id)->where('type', 'device')->where("sold", $startOfMonth)->count();
-      $inventoryValue = round(Item::where('user_id', Auth::user()->id)->where('date', '<=', $startOfMonth)
-        ->where(function ($query) use ($startOfMonth) {
-          $query->whereNull('sold')->orWhere('sold', '>', $startOfMonth);
-        })
-        ->where(function ($query) use ($startOfMonth) {
-          $query->whereNull('hold')->orWhere('hold', '>', $startOfMonth);
-        })->sum("cost"));
-      $saleValue = round(Item::where('user_id', Auth::user()->id)->where('date', '<=', $startOfMonth)
-        ->where(function ($query) use ($startOfMonth) {
-          $query->whereNull('sold')->orWhere('sold', '>=', $startOfMonth);
-        })
-        ->where(function ($query) use ($startOfMonth) {
-          $query->whereNull('hold')->orWhere('hold', '>=', $startOfMonth);
-        })->sum("selling_price"));
-      // $soldValueThisMonth = round(Item::where('user_id', Auth::user()->id)->whereBetween("sold", [$startOfMonth, $endOfMonth])->sum("selling_price"));
-      $soldValueThisMonth = round($soldvalue);
-      // $profitThisMonth = round(Item::where('user_id', Auth::user()->id)->whereBetween("sold", [$startOfMonth, $endOfMonth])->sum("profit"));
-      $profitThisMonth = round($profit);
-      $accountsReceivableThisMonth = round($accountsReceivable);
-      $accountsPayableThisMonth = round($accountsPayable);
-      $expensesThisMonth = round(Expense::where('user_id', @$user->id)->where("date", "<=", $startOfMonth)->sum('total'));
-      $sale_ids = Item::where('user_id', @$user->id)->where("date", "<=", $startOfMonth)->distinct()->pluck('sale_id');
-      $salesTaxCollected = round(Sale::whereNotNull('tax_id')->where('user_id', Auth::user()->id)->whereBetween("date", [$startOfMonth, Carbon::parse($startOfMonth)->endOfMonth()->toDateString()])->sum('flatTax'));
-      $salesTaxPaid = round(Bill::where('user_id', Auth::user()->id)->where('status', 1)->where("date", "<=", $startOfMonth)->sum('flat_tax'));
-      $taxedSales = round($taxed_sales_total);
-      $nonTaxedSales = round($non_taxed_sales_total);
+      $endOfMonth = Carbon::parse($request->startDate)->endOfMonth()->endOfDay()->toDateTimeString();
     }
 
+    // optimized calculations directly on sql
+    $salesMetrics = $this->calculateSalesMetrics($userId, $isAdmin, $startOfMonth, $endOfMonth);
+    $inventoryMetrics = $this->calculateInventoryMetrics($userId, $isAdmin);
+    $deviceMetrics = $this->calculateDeviceMetrics($userId, $isAdmin, $startOfMonth, $endOfMonth);
+    $financialMetrics = $this->calculateFinancialMetrics($userId, $startOfMonth, $endOfMonth, false, $isAdmin);
 
-    $context = [
-      "devicesInInventory" => $devicesInInventory,
-      "tradesThisMonth" => $tradesThisMonth,
-      "soldThisMonth" => $soldThisMonth,
-      "costSoldThisMonth" => $costOfGoodsSold,
-      "costOfTaxedGoodsSold" => $costOfTaxedGoodsSold,
-      "inventoryValue" => $inventoryValue,
-      "saleValue" => $saleValue,
-      "soldValueThisMonth" => $soldValueThisMonth,
-      "profitThisMonth" => $profitThisMonth,
-      'startDate' => $startOfMonth,
-      'expensesThisMonth' => $expensesThisMonth,
-      'accountsReceivableThisMonth' => $accountsReceivableThisMonth,
-      'accountsPayableThisMonth' => $accountsPayableThisMonth,
-      'salesTaxCollected' => $salesTaxCollected,
-      'salesTaxPaid' => $salesTaxPaid,
-      'taxedSales' => $taxedSales,
-      'nonTaxedSales' => $nonTaxedSales,
-      'totalPurchases' => $totalPurchases,
-    ];
-
+    $context = array_merge(
+        $salesMetrics,
+        $inventoryMetrics,
+        $deviceMetrics,
+        $financialMetrics,
+        [
+            'startDate' => $startOfMonth,
+            'endDate' => $endOfMonth,
+        ]
+    );
 
     return response()->json($context, 200);
   }
 
   public function reportDatewise(Request $request)
   {
+    // Check if the user is authenticated
     $user = Auth::user();
+    // if the user is a normal user, redirect to inventory items  
+    if ($user->role === 'USER') {
+      return redirect('/inventory/items');
+    }
+    // save user id and role for later use
+    $userId = $user->id;
+    $isAdmin = $user->role === 'ADMIN' || $user->role === 'OWNER';  
+
+    // initialize the start and end dates
     $startOfMonth = Carbon::parse($request->startDate)->startOfDay()->toDateTimeString();
     $endOfMonth = Carbon::parse($request->endDate)->endOfDay()->toDateTimeString();
 
-    // if(Auth::user()->role == 'USER' || 'ADMIN'){
-    if (Auth::user()->role == 'USER') {
-      return redirect('/inventory/items');
-    }
 
-    if (Auth::user()->role == 'ADMIN') {
+    Log::info('Generating report for user: ' . $userId, [
+        'startOfMonth' => $startOfMonth,
+        'endOfMonth' => $endOfMonth,
+        'isAdmin' => $isAdmin,
+        'userrole' => $user->role,
+    ]);
+    // optimized calculations directly on sql
+    $salesMetrics = $this->calculateSalesMetrics($userId, $isAdmin, $startOfMonth, $endOfMonth);
+    $inventoryMetrics = $this->calculateInventoryMetrics($userId, $isAdmin);
+    $deviceMetrics = $this->calculateDeviceMetrics($userId, $isAdmin, $startOfMonth, $endOfMonth);
+    $financialMetrics = $this->calculateFinancialMetrics($userId, $startOfMonth, $endOfMonth, false, $isAdmin);
 
-      $items = Item::where('user_id', Auth::user()->id)->where([
-        ["sold", ">=", $startOfMonth],
-        ["sold", "<=", $endOfMonth],
-      ])
-      // ->whereHas('sale', function($query){
-        //     $query->where('balance_remaining', 0);
-        // })
-        ->get();
-      $profit = 0;
-      $soldvalue = 0;
-      
-      // Use helper for receivable / old database issues
-      $accountsReceivable = $this->sumSalesBalanceRemaining(Auth::user()->id);
-      // calculate account payable
-      $billsWithPendingBalance = Bill::where('user_id', Auth::id())->where('status', 0)->get();
-      $accountsPayable    = $billsWithPendingBalance->sum('balance_remaining');
-
-      // taxed sales, non-taxed sales, total sales and profit calculations
-      $non_taxed_sales_total = $items
-        ->filter(fn($item) => !$item->sale || intval($item->sale->tax) === 0)
-        ->sum(fn($item) => (float)$item->selling_price);
-
-      $taxed_sales_total = $items
-        ->filter(fn($item) => $item->sale && intval($item->sale->tax) > 0)
-        ->sum(fn($item) => (float)$item->selling_price * (1 + intval($item->sale->tax) / 100));
-
-      $soldvalue = $items
-        ->sum(fn($item) => (float)$item->selling_price * (1 + intval($item->sale->tax ?? 0) / 100));
-
-      $profit = $items
-        ->sum(fn($item) => ((float)$item->selling_price * (1 + intval($item->sale->tax ?? 0) / 100)) - (float)$item->cost);
-
-      // calculate cost of goods sold
-      $costOfGoodsSold = round($items->sum('cost'));
-      $costOfTaxedGoodsSold = round($items->filter(fn($item) => $item->sale && intval($item->sale->tax) > 0)->sum('cost'));
-
-       // calculate total purchases
-      $totalPurchases = Bill::where('user_id', Auth::user()->id)->whereBetween("date", [$startOfMonth, $endOfMonth])->sum('total');
-
-      $devicesInInventory = Item::where('user_id', Auth::user()->id)->whereNull("sold")->where('type', 'device')->whereNull("hold")->count();
-      $tradesThisMonth = Item::where('user_id', Auth::user()->id)->where('type', 'device')->whereBetween("date", [$startOfMonth, $endOfMonth])->count();
-      $soldThisMonth = Item::where('user_id', Auth::user()->id)->where('type', 'device')->whereBetween("sold", [$startOfMonth, $endOfMonth])->count();
-      $inventoryValue = round(Item::where('user_id', Auth::user()->id)->whereNull("sold")->sum("cost"));
-      $saleValue = round(Item::where('user_id', Auth::user()->id)->whereNull("sold")->sum("selling_price"));
-      // $soldValueThisMonth = round(Item::where('user_id', Auth::user()->id)->whereBetween("sold", [$startOfMonth, $endOfMonth])->sum("selling_price"));
-      $soldValueThisMonth = round($soldvalue);
-      // $profitThisMonth = round(Item::where('user_id', Auth::user()->id)->whereBetween("sold", [$startOfMonth, $endOfMonth])->sum("profit"));
-      $profitThisMonth = round($profit);
-      $accountsReceivableThisMonth = round($accountsReceivable);
-      $accountsPayableThisMonth = round($accountsPayable);
-      $expensesThisMonth = round(Expense::where('user_id', @$user->id)->whereBetween("date", [$startOfMonth, $endOfMonth])->sum('total'));
-      $sale_ids = Item::where('user_id', @$user->id)->whereBetween("sold", [$startOfMonth, $endOfMonth])->distinct()->pluck('sale_id');
-      $salesTaxCollected = round(Sale::whereNotNull('tax_id')->where('user_id', Auth::user()->id)->whereBetween("date", [$startOfMonth, $endOfMonth])->sum('flatTax'));
-      $salesTaxPaid = round(Bill::where('user_id', Auth::user()->id)->where('status', 1)->whereBetween("date", [$startOfMonth, $endOfMonth])->sum('flat_tax'));
-      $taxedSales = round($taxed_sales_total);
-      $nonTaxedSales = round($non_taxed_sales_total);
-    } else {
-      $items = Item::where([
-        ["sold", ">=", $startOfMonth],
-        ["sold", "<=", $endOfMonth],
-      ])
-        // ->whereHas('sale', function($query){
-        //     $query->where('balance_remaining', 0);
-        // })
-        ->get();
-        Log::info("Items datewise: " . $items->count());
-      $profit = 0;
-      $soldvalue = 0;
-      
-      // Use helper for receivable / old database issues
-      $accountsReceivable = $this->sumSalesBalanceRemaining(Auth::user()->id);
-      // calculate account payable
-      $billsWithPendingBalance = Bill::where('user_id', Auth::id())->where('status', 0)->get();
-      $accountsPayable    = $billsWithPendingBalance->sum('balance_remaining');
-
-      // taxed sales, non-taxed sales, total sales and profit calculations
-      $non_taxed_sales_total = $items
-        ->filter(fn($item) => !$item->sale || intval($item->sale->tax) === 0)
-        ->sum(fn($item) => (float)$item->selling_price);
-
-      $taxed_sales_total = $items
-        ->filter(fn($item) => $item->sale && intval($item->sale->tax) > 0)
-        ->sum(fn($item) => (float)$item->selling_price * (1 + intval($item->sale->tax) / 100));
-
-      $soldvalue = $items
-        ->sum(fn($item) => (float)$item->selling_price * (1 + intval($item->sale->tax ?? 0) / 100));
-
-      $profit = $items
-        ->sum(fn($item) => ((float)$item->selling_price * (1 + intval($item->sale->tax ?? 0) / 100)) - (float)$item->cost);
-
-    // calculate cost of goods sold
-      $costOfGoodsSold = round($items->sum('cost'));
-      $costOfTaxedGoodsSold = round($items->filter(fn($item) => $item->sale && intval($item->sale->tax) > 0)->sum('cost'));
-
-       // calculate total purchases
-      $totalPurchases = Bill::where('user_id', Auth::user()->id)->whereBetween("date", [$startOfMonth, $endOfMonth])->sum('total');
-
-      $devicesInInventory = Item::where('user_id', Auth::user()->id)->whereNull("sold")->where('type', 'device')->whereNull("hold")->count();
-      $tradesThisMonth = Item::whereBetween("date", [$startOfMonth, $endOfMonth])->where('type', 'device')->count();
-      $soldThisMonth = Item::whereBetween("sold", [$startOfMonth, $endOfMonth])->where('type', 'device')->count();
-      $inventoryValue = round(Item::whereNull("sold")->sum("cost"));
-      $saleValue = round(Item::whereNull("sold")->sum("selling_price"));
-      // $soldValueThisMonth = round(Item::whereBetween("sold", [$startOfMonth, $endOfMonth])->sum("selling_price"));
-      $soldValueThisMonth = round($soldvalue);
-      // dump($startOfMonth);
-      // dump($endOfMonth);
-      // dd(Sale::whereBetween("created_at", [$startOfMonth, $endOfMonth])->get());
-      // $profitThisMonth = round(Item::whereBetween("sold", [$startOfMonth, $endOfMonth])->sum("profit"));
-      $profitThisMonth = round($profit);
-      $accountsReceivableThisMonth = round($accountsReceivable);
-      $accountsPayableThisMonth = round($accountsPayable);
-      $expensesThisMonth = round(Expense::where('user_id', @$user->id)->whereBetween("date", [$startOfMonth, $endOfMonth])->sum('total'));
-      $sale_ids = Item::where('user_id', @$user->id)->whereBetween("sold", [$startOfMonth, $endOfMonth])->distinct()->pluck('sale_id');
-      $salesTaxCollected = round(Sale::whereNotNull('tax_id')->where('user_id', Auth::user()->id)->whereBetween("date", [$startOfMonth, $endOfMonth])->sum('flatTax'));
-      $salesTaxPaid = round(Bill::where('user_id', Auth::user()->id)->where('status', 1)->whereBetween("date", [$startOfMonth, $endOfMonth])->sum('flat_tax'));
-      $taxedSales = round($taxed_sales_total);
-      $nonTaxedSales = round($non_taxed_sales_total);
-    }
-
-
-    // dd($devicesInInventory);
-    $context = [
-      "devicesInInventory" => $devicesInInventory,
-      "tradesThisMonth" => $tradesThisMonth,
-      "soldThisMonth" => $soldThisMonth,
-      "costSoldThisMonth" => $costOfGoodsSold,
-      "costOfTaxedGoodsSold" => $costOfTaxedGoodsSold,
-      "inventoryValue" => $inventoryValue,
-      "saleValue" => $saleValue,
-      "soldValueThisMonth" => $soldValueThisMonth,
-      "profitThisMonth" => $profitThisMonth,
-      'startDate' => $startOfMonth,
-      'endDate' => $endOfMonth,
-      'expensesThisMonth' => $expensesThisMonth,
-      'accountsReceivableThisMonth' => $accountsReceivableThisMonth,
-      'accountsPayableThisMonth' => $accountsPayableThisMonth,
-      'salesTaxCollected' => $salesTaxCollected,
-      'salesTaxPaid' => $salesTaxPaid,
-      'taxedSales' => $taxedSales,
-      'nonTaxedSales' => $nonTaxedSales,
-      'totalPurchases' => $totalPurchases
-    ];
-
+    $context = array_merge(
+        $salesMetrics,
+        $inventoryMetrics,
+        $deviceMetrics,
+        $financialMetrics,
+        [
+            'startDate' => $startOfMonth,
+            'endDate' => $endOfMonth,
+        ]
+    );
 
     return response()->json($context, 200);
   }
@@ -583,13 +171,13 @@ class DashboardController extends Controller
      * this because of old database issues
      */
   private function sumSalesBalanceRemaining(
-      int     $userId,
-      ?string $startSold = null,
-      ?string $endSold   = null
+    int     $userId,
+    ?string $startSold = null,
+    ?string $endSold   = null,
+    bool $isAdmin = false
   ): float {
-      $itemQuery = Item::query()
+    $itemQuery = Item::when(!$isAdmin, fn($q) => $q->where('user_id', $userId))
           ->whereNotNull('sold')
-          ->where('user_id', $userId)
           ->whereNotNull('sale_id');
 
       if ($startSold && $endSold) {
@@ -605,6 +193,139 @@ class DashboardController extends Controller
           return $carry + max(0, $sale->balance_remaining);
       }, 0);
   }
+
+private function calculateSalesMetrics($userId, $isAdmin = false, $startOfMonth, $endOfMonth)
+{
+    // Una sola consulta para todas las métricas de ventas usando Eloquent + selectRaw
+    $salesData = Item::when(true, fn($q) => $q->where('items.user_id', $userId))
+        ->leftJoin('sales', 'items.sale_id', '=', 'sales.id')
+        ->whereBetween('items.sold', [$startOfMonth, $endOfMonth])
+        ->selectRaw('
+            COALESCE(SUM(
+                CASE 
+                    WHEN sales.tax IS NULL OR sales.tax = 0 
+                    THEN items.selling_price 
+                    ELSE 0 
+                END
+            ), 0) as non_taxed_sales,
+            COALESCE(SUM(
+                CASE 
+                    WHEN sales.tax > 0 
+                    THEN items.selling_price * (1 + sales.tax / 100) 
+                    ELSE 0 
+                END
+            ), 0) as taxed_sales,
+            COALESCE(SUM(items.selling_price * (1 + COALESCE(sales.tax, 0) / 100)), 0) as total_sold_value,
+            COALESCE(SUM((items.selling_price * (1 + COALESCE(sales.tax, 0) / 100)) - items.cost), 0) as total_profit,
+            COALESCE(SUM(items.cost), 0) as cost_of_goods_sold,
+            COALESCE(SUM(
+                CASE 
+                    WHEN sales.tax > 0 
+                    THEN items.cost 
+                    ELSE 0 
+                END
+            ), 0) as cost_of_taxed_goods_sold
+        ')
+        ->first();
+
+    return [
+        'soldValueThisMonth' => round($salesData->total_sold_value),
+        'profitThisMonth' => round($salesData->total_profit),
+        'costSoldThisMonth' => round($salesData->cost_of_goods_sold),
+        'costOfTaxedGoodsSold' => round($salesData->cost_of_taxed_goods_sold),
+        'taxedSales' => round($salesData->taxed_sales),
+        'nonTaxedSales' => round($salesData->non_taxed_sales),
+    ];
 }
 
+private function calculateInventoryMetrics($userId, $isAdmin = false)
+{
+    // Agregaciones simples para items en inventario
+    $inventoryData = Item::when(!$isAdmin, fn($q) => $q->where('user_id', $userId))
+        ->whereNull('sold')
+        ->selectRaw('
+            COALESCE(SUM(cost), 0) as inventory_value,
+            COALESCE(SUM(selling_price), 0) as sale_value
+        ')
+        ->first();
 
+    return [
+        'inventoryValue' => round($inventoryData->inventory_value),
+        'saleValue' => round($inventoryData->sale_value),
+    ];
+}
+
+private function calculateDeviceMetrics($userId, $isAdmin = false, $startOfMonth, $endOfMonth)
+{
+    // optimized aggregations for device items
+    $deviceData = Item::when(!$isAdmin, fn($q) => $q->where('user_id', $userId))
+        ->where('type', 'device')
+        ->selectRaw('
+            COUNT(CASE WHEN (sold IS NULL AND hold IS NULL) THEN 1 END) as devices_in_inventory,
+            COUNT(CASE WHEN date >= ? AND date <= ? THEN 1 END) as trades_this_month,
+            COUNT(CASE WHEN sold >= ? AND sold <= ? THEN 1 END) as sold_this_month
+        ', [$startOfMonth, $endOfMonth, $startOfMonth, $endOfMonth])
+        ->first();
+    return [
+        'devicesInInventory' => $deviceData->devices_in_inventory ?? 0,
+        'tradesThisMonth' => $deviceData->trades_this_month ?? 0,
+        'soldThisMonth' => $deviceData->sold_this_month ?? 0,
+    ];
+}
+
+private function calculateFinancialMetrics($userId, $startOfMonth, $endOfMonth, $allTime = false, $isAdmin = false)
+{
+    // Cuentas por cobrar (usando método helper existente)
+    $accountsReceivable = $this->sumSalesBalanceRemaining($userId, null, null, $isAdmin);
+
+    // Cuentas por pagar usando sum() directo
+    $accountsPayable = Bill::when(!$isAdmin, fn($q) => $q->where('user_id', $userId))
+        ->where('status', 0)
+        ->sum('balance_remaining');
+
+    // Efectivo en mano
+    $cashOnHand = CashOnHand::when(!$isAdmin, fn($q) => $q->where('user_id', $userId))
+        ->value('balance') ?? 0;
+
+    // Gastos del mes usando sum() con whereBetween
+    $expensesThisMonth = Expense::when(!$isAdmin, fn($q) => $q->where('user_id', $userId))
+        ->whereBetween('date', [$startOfMonth, $endOfMonth])
+        ->sum('total');
+
+    // Impuestos cobrados usando sum() condicional
+    $salesTaxCollected = Sale::when(!$isAdmin, fn($q) => $q->where('user_id', $userId))
+        ->whereNotNull('tax_id')
+        ->whereBetween('date', [$startOfMonth, $endOfMonth])
+        ->sum('flatTax');
+
+    Log::info('Calculating financial metrics for user: ' . $userId, [
+        'startOfMonth' => $startOfMonth,
+        'endOfMonth' => $endOfMonth,
+    ]);    
+    // Impuestos pagados
+    $salesTaxPaid = Bill::when(!$isAdmin, fn($q) => $q->where('user_id', $userId))
+        ->where('status', 1)
+        ->whereBetween('date', [$startOfMonth, $endOfMonth])
+        ->sum('flat_tax');
+
+    // Total de compras
+    if ($allTime) {
+    $totalPurchases = Bill::when(!$isAdmin, fn($q) => $q->where('user_id', $userId))->sum('total');
+    } else {
+    $totalPurchases = Bill::when(!$isAdmin, fn($q) => $q->where('user_id', $userId))
+            ->whereBetween('date', [$startOfMonth, $endOfMonth])
+            ->sum('total');
+    }
+
+    return [
+        'cashOnHand' => $cashOnHand,
+        'expensesThisMonth' => round($expensesThisMonth),
+        'accountsReceivableThisMonth' => round($accountsReceivable),
+        'accountsPayableThisMonth' => round($accountsPayable),
+        'salesTaxCollected' => round($salesTaxCollected),
+        'salesTaxPaid' => round($salesTaxPaid),
+        'totalPurchases' => $totalPurchases,
+    ];
+}
+
+}
