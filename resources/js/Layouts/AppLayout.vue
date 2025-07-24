@@ -8,7 +8,7 @@
     <Menubar :model="navItems" class="flex menuBar !items-end">
       <template #start>
         <div>
-          <img src="/images/swiftstock_logo.jpeg" draggable="false"
+          <img src="/images/swiftstock_logo.webp" draggable="false"
             class="h-28 pl-28 py-1 object-contain max-h-full max-w-full pointer-events-none" alt="" />
         </div>
       </template>
