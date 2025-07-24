@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 
 
 class DashboardController extends Controller
@@ -42,17 +43,19 @@ class DashboardController extends Controller
     $startOfMonth = Carbon::now()->startOfMonth()->startOfDay()->toDateTimeString();
     $endOfMonth = Carbon::now()->endOfMonth()->endOfDay()->toDateTimeString();
 
-    // optimized calculations directly on sql
-    $salesMetrics = $this->calculateSalesMetrics($userId, $isAdmin, $startOfMonth, $endOfMonth);
-    $inventoryMetrics = $this->calculateInventoryMetrics($userId, $isAdmin);
-    $deviceMetrics = $this->calculateDeviceMetrics($userId, $isAdmin, $startOfMonth, $endOfMonth);
-    $financialMetrics = $this->calculateFinancialMetrics($userId, $startOfMonth, $endOfMonth, true, $isAdmin);
+    // cache and calculate metrics
+    $context = Cache::remember("dashboard_metrics_{$userId}", now()->addMinutes(30), function() use ($userId, $isAdmin, $startOfMonth, $endOfMonth) {
+        
+        $salesMetrics = $this->calculateSalesMetrics($userId, $isAdmin, $startOfMonth, $endOfMonth);
+        $inventoryMetrics = $this->calculateInventoryMetrics($userId, $isAdmin);
+        $deviceMetrics = $this->calculateDeviceMetrics($userId, $isAdmin, $startOfMonth, $endOfMonth);
+        $financialMetrics = $this->calculateFinancialMetrics($userId, $startOfMonth, $endOfMonth);
 
-    // Contexto final
-    $context = array_merge($salesMetrics, $inventoryMetrics, $deviceMetrics, $financialMetrics, [
-        'startDate' => $startOfMonth,
-        'endDate' => $endOfMonth,
-    ]);
+        return array_merge($salesMetrics, $inventoryMetrics, $deviceMetrics, $financialMetrics, [
+            'startDate' => $startOfMonth,
+            'endDate' => $endOfMonth,
+        ]);
+    });
 
     return Inertia::render("Dashboard", $context);
   } catch (\Exception $e) {
@@ -102,22 +105,19 @@ class DashboardController extends Controller
       $endOfMonth = Carbon::parse($request->startDate)->endOfMonth()->endOfDay()->toDateTimeString();
     }
 
-    // optimized calculations directly on sql
-    $salesMetrics = $this->calculateSalesMetrics($userId, $isAdmin, $startOfMonth, $endOfMonth);
-    $inventoryMetrics = $this->calculateInventoryMetrics($userId, $isAdmin);
-    $deviceMetrics = $this->calculateDeviceMetrics($userId, $isAdmin, $startOfMonth, $endOfMonth);
-    $financialMetrics = $this->calculateFinancialMetrics($userId, $startOfMonth, $endOfMonth, false, $isAdmin);
+  
+    // cache and calculate metrics
+    $context = Cache::remember("dashboard_metrics_{$userId}", now()->addMinutes(30), function() use ($userId, $isAdmin, $startOfMonth, $endOfMonth) {
+        $salesMetrics = $this->calculateSalesMetrics($userId, $isAdmin, $startOfMonth, $endOfMonth);
+        $inventoryMetrics = $this->calculateInventoryMetrics($userId, $isAdmin);
+        $deviceMetrics = $this->calculateDeviceMetrics($userId, $isAdmin, $startOfMonth, $endOfMonth);
+        $financialMetrics = $this->calculateFinancialMetrics($userId, $startOfMonth, $endOfMonth);
 
-    $context = array_merge(
-        $salesMetrics,
-        $inventoryMetrics,
-        $deviceMetrics,
-        $financialMetrics,
-        [
+        return array_merge($salesMetrics, $inventoryMetrics, $deviceMetrics, $financialMetrics, [
             'startDate' => $startOfMonth,
             'endDate' => $endOfMonth,
-        ]
-    );
+        ]);
+    });
 
     return response()->json($context, 200);
   }
@@ -145,22 +145,21 @@ class DashboardController extends Controller
         'isAdmin' => $isAdmin,
         'userrole' => $user->role,
     ]);
-    // optimized calculations directly on sql
-    $salesMetrics = $this->calculateSalesMetrics($userId, $isAdmin, $startOfMonth, $endOfMonth);
-    $inventoryMetrics = $this->calculateInventoryMetrics($userId, $isAdmin);
-    $deviceMetrics = $this->calculateDeviceMetrics($userId, $isAdmin, $startOfMonth, $endOfMonth);
-    $financialMetrics = $this->calculateFinancialMetrics($userId, $startOfMonth, $endOfMonth, false, $isAdmin);
 
-    $context = array_merge(
-        $salesMetrics,
-        $inventoryMetrics,
-        $deviceMetrics,
-        $financialMetrics,
-        [
+    // cache and calculate metrics
+    $context = Cache::remember("dashboard_metrics_{$userId}", now()->addMinutes(30), function() use ($userId, $isAdmin, $startOfMonth, $endOfMonth) {
+        
+        // Todos tus cálculos van aquí
+        $salesMetrics = $this->calculateSalesMetrics($userId, $isAdmin, $startOfMonth, $endOfMonth);
+        $inventoryMetrics = $this->calculateInventoryMetrics($userId, $isAdmin);
+        $deviceMetrics = $this->calculateDeviceMetrics($userId, $isAdmin, $startOfMonth, $endOfMonth);
+        $financialMetrics = $this->calculateFinancialMetrics($userId, $startOfMonth, $endOfMonth);
+
+        return array_merge($salesMetrics, $inventoryMetrics, $deviceMetrics, $financialMetrics, [
             'startDate' => $startOfMonth,
             'endDate' => $endOfMonth,
-        ]
-    );
+        ]);
+    });
 
     return response()->json($context, 200);
   }
