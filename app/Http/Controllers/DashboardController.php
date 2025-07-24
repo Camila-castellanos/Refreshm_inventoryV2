@@ -216,12 +216,12 @@ private function calculateSalesMetrics($userId, $isAdmin = false, $startOfMonth,
                 END
             ), 0) as taxed_sales,
             COALESCE(SUM(items.selling_price * (1 + COALESCE(sales.tax, 0) / 100)), 0) as total_sold_value,
-            COALESCE(SUM((items.selling_price * (1 + COALESCE(sales.tax, 0) / 100)) - items.cost), 0) as total_profit,
-            COALESCE(SUM(items.cost), 0) as cost_of_goods_sold,
+            COALESCE(SUM((items.selling_price * (1 + COALESCE(sales.tax, 0) / 100)) - COALESCE(items.cost, 0)), 0) as total_profit,
+            COALESCE(SUM(COALESCE(items.cost, 0)), 0) as cost_of_goods_sold,
             COALESCE(SUM(
                 CASE 
                     WHEN sales.tax > 0 
-                    THEN items.cost 
+                    THEN COALESCE(items.cost, 0) 
                     ELSE 0 
                 END
             ), 0) as cost_of_taxed_goods_sold
