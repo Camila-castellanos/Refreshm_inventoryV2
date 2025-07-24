@@ -50,6 +50,7 @@ const tableActions = [
 ]
 onMounted(() => {
   currentTab.value = `/payments${props.data_status !== "all" ? `?status=${props.data_status}` : ""}`;
+  console.log("invoices:", props.items);
 });
 
 const filterPayments = () => {
