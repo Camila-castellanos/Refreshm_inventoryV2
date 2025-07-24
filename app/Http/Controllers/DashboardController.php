@@ -197,7 +197,7 @@ class DashboardController extends Controller
 private function calculateSalesMetrics($userId, $isAdmin = false, $startOfMonth, $endOfMonth)
 {
     // Una sola consulta para todas las métricas de ventas usando Eloquent + selectRaw
-    $salesData = Item::when(true, fn($q) => $q->where('items.user_id', $userId))
+    $salesData = Item::when(!$isAdmin, fn($q) => $q->where('items.user_id', $userId))
         ->leftJoin('sales', 'items.sale_id', '=', 'sales.id')
         ->whereBetween('items.sold', [$startOfMonth, $endOfMonth])
         ->selectRaw('
