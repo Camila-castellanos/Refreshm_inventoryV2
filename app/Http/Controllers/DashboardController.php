@@ -37,14 +37,16 @@ class DashboardController extends Controller
     }
     // save user id and role for later use
     $userId = $user->id;
-    $isAdmin = $user->role === 'ADMIN' || $user->role === 'OWNER';  
+    $isAdmin = $user->role === 'ADMIN';  
 
     // initialize the start and end dates
     $startOfMonth = Carbon::now()->startOfMonth()->startOfDay()->toDateTimeString();
     $endOfMonth = Carbon::now()->endOfMonth()->endOfDay()->toDateTimeString();
 
     // cache and calculate metrics
-    $context = Cache::remember("dashboard_metrics_{$userId}", now()->addMinutes(30), function() use ($userId, $isAdmin, $startOfMonth, $endOfMonth) {
+    $cacheKey = "dashboard_metrics_{$userId}_{$startOfMonth}_{$endOfMonth}";
+
+    $context = Cache::remember($cacheKey, now()->addMinutes(30), function() use ($userId, $isAdmin, $startOfMonth, $endOfMonth) {
         
         $salesMetrics = $this->calculateSalesMetrics($userId, $isAdmin, $startOfMonth, $endOfMonth);
         $inventoryMetrics = $this->calculateInventoryMetrics($userId, $isAdmin);
@@ -95,7 +97,7 @@ class DashboardController extends Controller
     }
     // save user id and role for later use
     $userId = $user->id;
-    $isAdmin = $user->role === 'ADMIN' || $user->role === 'OWNER';  
+    $isAdmin = $user->role === 'ADMIN';  
 
     // initialize the start and end dates
     $startOfMonth = Carbon::parse($request->startDate)->startOfDay()->toDateTimeString();
@@ -107,7 +109,9 @@ class DashboardController extends Controller
 
   
     // cache and calculate metrics
-    $context = Cache::remember("dashboard_metrics_{$userId}", now()->addMinutes(30), function() use ($userId, $isAdmin, $startOfMonth, $endOfMonth) {
+    $cacheKey = "dashboard_metrics_{$userId}_{$startOfMonth}_{$endOfMonth}";
+
+    $context = Cache::remember($cacheKey, now()->addMinutes(30), function() use ($userId, $isAdmin, $startOfMonth, $endOfMonth) {
         $salesMetrics = $this->calculateSalesMetrics($userId, $isAdmin, $startOfMonth, $endOfMonth);
         $inventoryMetrics = $this->calculateInventoryMetrics($userId, $isAdmin);
         $deviceMetrics = $this->calculateDeviceMetrics($userId, $isAdmin, $startOfMonth, $endOfMonth);
@@ -132,7 +136,7 @@ class DashboardController extends Controller
     }
     // save user id and role for later use
     $userId = $user->id;
-    $isAdmin = $user->role === 'ADMIN' || $user->role === 'OWNER';  
+    $isAdmin = $user->role === 'ADMIN';  
 
     // initialize the start and end dates
     $startOfMonth = Carbon::parse($request->startDate)->startOfDay()->toDateTimeString();
@@ -147,7 +151,9 @@ class DashboardController extends Controller
     ]);
 
     // cache and calculate metrics
-    $context = Cache::remember("dashboard_metrics_{$userId}", now()->addMinutes(30), function() use ($userId, $isAdmin, $startOfMonth, $endOfMonth) {
+    $cacheKey = "dashboard_metrics_{$userId}_{$startOfMonth}_{$endOfMonth}";
+
+    $context = Cache::remember($cacheKey, now()->addMinutes(30), function() use ($userId, $isAdmin, $startOfMonth, $endOfMonth) {
         
         // Todos tus cálculos van aquí
         $salesMetrics = $this->calculateSalesMetrics($userId, $isAdmin, $startOfMonth, $endOfMonth);
