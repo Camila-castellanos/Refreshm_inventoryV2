@@ -188,8 +188,16 @@ class SaleController extends Controller
             if ($request->credit != null || $request->credit > 0) {
                 $customer = Customer::where('customer', $request->customer)->first();
                 $credit = $customer->credit - $customerAdded;
-                Customer::where('id', $request->customer)->update([
+                Customer::where('id', $customer->id)->update([
                     'credit' => $credit + $request->removed_credit,
+                ]);
+                Log::info("credit update with the following data", [
+                    'request_credit' => $request->credit,
+                    'sale_credit' => $sale->credit,
+                    'customerAdded' => $customerAdded,
+                    'customer' => $customer,
+                    'removed_credit' => $request->removed_credit,
+                    'credit' => $credit,
                 ]);
             }
 
