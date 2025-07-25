@@ -143,9 +143,12 @@ function openSellItemsModal() {
     props: {
       modal: true,
     },
-    onClose: () => {
-      selectedItems.value.length = 0;
-      router.reload();
+    onClose: (result) => {
+      if (result?.sold) {
+        selectedItems.value.length = 0;
+        router.reload();
+      }
+      // Si solo se cerró el modal, no limpiar la selección
     },
   });
 }
