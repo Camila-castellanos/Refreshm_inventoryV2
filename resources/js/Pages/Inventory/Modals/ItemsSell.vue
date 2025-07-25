@@ -351,11 +351,12 @@ async function submitForm(e: Event, isConfirmed: boolean) {
     link.click();
     document.body.removeChild(link);
     toast.add({ severity: "success", summary: "Success", detail: "Sale submitted successfully!", life: 3000 });
-    dialogRef.value.close();
+    dialogRef.value.close({ sold: true });
 
   } catch (error) {
     console.error("Error submitting sale:", error);
     toast.add({ severity: "error", summary: "Error", detail: "An error occurred", life: 3000 });
+    dialogRef.value.close({ sold: false });
   }
 }
 </script>
