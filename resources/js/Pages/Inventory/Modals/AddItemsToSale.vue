@@ -78,11 +78,23 @@ const searchTerm   = ref('');
 const LIMIT        = 25; 
 let filterTimeout: ReturnType<typeof setTimeout>|null = null;
 
+import { format, parseISO } from 'date-fns';
+
 const options = computed(() =>
-  sales.value.map(s => ({
-    label: `${s.customer} (${s.date}) - $${s.total}`,
-    value: s.sale_id
-  }))
+  sales.value.map(s => {
+    let onlyDate = s.date;
+    // If the date is in ISO/UTC format, extract only yyyy-MM-dd
+    try {
+      onlyDate = format(parseISO(s.date), 'yyyy-MM-dd');
+    } catch (e) {
+      // If parsing fails, leave the date as is
+      console.error('Error parsing date:', e);
+    }
+    return {
+      label: `${s.customer} (${onlyDate}) - $${s.total}`,
+      value: s.sale_id
+    };
+  })
 );
 
 function onFilter(event: { filter: string }) {
