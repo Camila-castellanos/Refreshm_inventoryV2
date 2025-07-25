@@ -96,17 +96,17 @@ onMounted(async () => {
       isEditing.value = true;
       console.log(bills.value);
     } else {
-      bills.value = [{ date: null, vendor: "", subtotal: 0, tax: null, total: 0, invoice: "" }];
+      bills.value = [{ date: new Date(), vendor: "", subtotal: 0, tax: null, total: 0, invoice: "" }];
     }
   }
 });
 
 const addBill = () => {
-  bills.value.push({ date: null, vendor: "", subtotal: 0, tax: null, total: 0, invoice: "" });
+  bills.value.push({ date: new Date(), vendor: "", subtotal: 0, tax: null, total: 0, invoice: "" });
 };
 
 const resetForm = () => {
-  bills.value = [{ date: null, vendor: "", subtotal: 0, tax: null, total: 0, invoice: "" }];
+  bills.value = [{ date: new Date(), vendor: "", subtotal: 0, tax: null, total: 0, invoice: "" }];
 };
 
 const deleteBill = (index: number) => {
