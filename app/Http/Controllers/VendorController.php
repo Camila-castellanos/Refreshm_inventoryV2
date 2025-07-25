@@ -66,7 +66,7 @@ class VendorController extends Controller
 
             $total = array_sum($total);
             $profit = array_sum($profit);
-            if ($profit != 0) {
+            if ($profit != 0 && $total != 0) {
                 $margin = ($profit / $total) * 100;
             } else {
                 $margin = 0;
