@@ -38,11 +38,22 @@ class PaymentController extends Controller
     try {
         $user = Auth::user();
         $dataStatus = $request->query('status', 'all');
-        
-        // Validar status
-        if (!in_array($dataStatus, ['all', 'paid', 'unpaid'])) {
-            $dataStatus = 'all';
-        }
+        $startDate = $request->query('start_date');
+        $endDate = $request->query('end_date');
+
+    // validate valid status or fallback to 'all'
+    if (!in_array($dataStatus, ['all', 'paid', 'unpaid'])) {
+      $dataStatus = 'all';
+    }
+
+    // try to parse dates, fallback to last 2 months if invalid
+    try {
+      $startDate = Carbon::createFromFormat('Y-m-d', $startDate);
+      $endDate = Carbon::createFromFormat('Y-m-d', $endDate);
+    } catch (\Exception $e) {
+      $startDate = now()->subMonths(2);
+      $endDate = now();
+    }
 
         // Cache key único por usuario y status
         $cacheKey = "payments_list_{$user->id}_{$dataStatus}_" . now()->format('Y-m-d_H');
@@ -51,7 +62,7 @@ class PaymentController extends Controller
         // $response = Cache::remember($cacheKey, 300, function() use ($user, $dataStatus) {
         //         return $this->getPaymentsData($user->id, $dataStatus);
         // });      
-        $response = $this->getPaymentsData($user->id, $dataStatus);
+        $response = $this->getPaymentsData($user->id, $dataStatus, $startDate, $endDate);
         Log::info("data que viene del helper", [$response]);
         $email_templates = EmailTemplate::where('user_id', $user->id)->get();
         
@@ -553,10 +564,11 @@ class PaymentController extends Controller
 }
 
 // optimized helper to get payments data
-private function getPaymentsData($userId, $dataStatus)
+private function getPaymentsData($userId, $dataStatus,$startDate, $endDate)
 {
     // Consulta inicial por ventas (más eficiente)
     $salesQuery = Sale::where('user_id', $userId)
+        ->whereBetween('created_at', [$startDate->startOfDay(), $endDate->endOfDay()])
         ->when($dataStatus === 'paid', fn($q) => $q->where('paid', 1))
         ->when($dataStatus === 'unpaid', fn($q) => $q->where('paid', 0))
         ->orderByDesc('created_at');
