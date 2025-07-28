@@ -2,7 +2,7 @@
   <div>
     <section class="w-[90%] mx-auto mt-4">
       <AccountingTabs>
-        <div class="w-full flex justify-center bg-[var(--p-tabs-tablist-background)] pt-3">
+        <div class="w-full flex flex-col items-center bg-[var(--p-tabs-tablist-background)] pt-3">
           <Tabs v-model:value="currentTab" @update:value="filterPayments">
             <TabList class="w-full flex !justify-center items-center">
               <Tab value="/payments">All</Tab>
@@ -11,7 +11,19 @@
             </TabList>
           </Tabs>
         </div>
-        <DataTable title="Invoices" :items="tableData" :headers="headers" :actions="tableActions"></DataTable>
+        <DataTable title="Invoices" :items="tableData" :headers="headers" :actions="tableActions">
+          <DatePicker
+                v-model="dateRange"
+                selectionMode="range"
+                :showIcon="true"
+                dateFormat="yy-mm-dd"
+                fluid
+                iconDisplay="input"
+                placeholder="Select date range"
+                @update:model-value="handleDateUpdate"
+                class="min-w-[260px]"
+            />
+        </DataTable>
       </AccountingTabs>
     </section>
   </div>
@@ -33,6 +45,8 @@ import SendEmail from "./Modals/SendEmail.vue";
 import ConfirmDialog from 'primevue/confirmdialog';
 import { useConfirm } from "primevue/useconfirm";
 import { useToast } from "primevue/usetoast";
+import DatePicker from "primevue/datepicker";
+import { format } from "date-fns";
 
 const props = defineProps({
   items: Array<IPaymentResponse>,
@@ -41,6 +55,7 @@ const props = defineProps({
 });
 
 const currentTab = ref("/payments");
+const dateRange = ref<Date | Date[] | (Date | null)[] | null | undefined>(null);
 const dialog = useDialog();
 const confirm = useConfirm();
 const toast = useToast();
@@ -279,5 +294,27 @@ async function openInvoice(id: number|string, download = false) {
     toast.add({ severity: "error", summary: "Error", detail: "No se pudo descargar la factura.", life: 3000 });
   }
 }
+
+function handleDateUpdate(value: Date | Date[] | (Date | null)[] | null | undefined): void {
+  dateRange.value = value;
+  if (Array.isArray(value) && value.length === 2 && value[0] instanceof Date && value[1] instanceof Date) {
+    fetchDateWisePayments(value as Date[]);
+  }
+}
+
+function fetchDateWisePayments(dateRange: Date[]) {
+  const [start, end] = dateRange;
+  let queryParams: Record<string, string> = {};
+  if (props.data_status && props.data_status !== "all") {
+    queryParams['status'] = props.data_status;
+  }
+  queryParams['start_date'] = format(start, "yyyy-MM-dd");
+  queryParams['end_date'] = format(end, "yyyy-MM-dd");
+  router.reload({
+    only: ["items"],
+    data: queryParams
+  });
+}
+
 defineOptions({ layout: AppLayout });
 </script>
