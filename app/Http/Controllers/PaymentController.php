@@ -26,6 +26,7 @@ use App\Models\EmailTemplate;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
 
 class PaymentController extends Controller
 {
@@ -33,128 +34,46 @@ class PaymentController extends Controller
    * Show Data Listening of Invoices Data
    */
   public function show(Request $request)
-  {
+{
     try {
-      $user = Auth::user();
-      $salesPluck = Item::whereNotNull('sold')->where('user_id', $user->id)->whereNotNull('sale_id')->pluck('sale_id')->unique();
-
-      $dataStatus = 'all';
-      $dataStatus = ($request->query('status') == 'paid' || $request->query('status') == 'unpaid') ? $request->query('status') : 'all';
-
-      $response = [];
-
-      foreach ($salesPluck as $salePluck) {
-        $item = Item::where('sale_id', $salePluck)->whereNotNull('sold')->first();
-
-        $sale = Sale::where('id', $salePluck)->first();
-        if ($dataStatus == 'unpaid')
-          $sale = Sale::where('id', $salePluck)->where('paid', 0)->first();
-        if ($dataStatus == 'paid')
-          $sale = Sale::where('id', $salePluck)->where('paid', 1)->first();
-
-        if ($sale !== null) {
-          $payments = [];
-          $total = $sale->total;
-          $saleCredit = $sale->credit;
-          $payment = Payment::where('sale_id', $sale->id)->get()->map(function ($payment) {
-            $formattedDate = date('F j, Y', strtotime($payment->payment_date));
-            $paid = "$" . number_format($payment->amount_paid, 2);
-            return array_merge($payment->toArray(), ['date' => $formattedDate, 'paid' => $paid]);
-          });
-          $payment->credit = $saleCredit;
-          if ($payment->isNotEmpty()) {
-            foreach ($payment as $record) {
-              $payments[] = $record;
-            }
-          }
-
-          $credit = 0;
-          $customer_id = null;
-          $sold = new DateTime($item->sold);
-          $customer = $item->customer;
-          $customer_emails = null;
-
-          $customers = Customer::where('customer', $item->customer)
-            ->select('customer', 'billing_address', 'billing_address_country', 'billing_address_state', 'billing_address_city', 'billing_address_postal', 'email', 'phone', 'credit', 'id')
-            ->first();
-
-          if ($customers) {
-            $customer = $customers->customer;
-            $customer_emails = $customers->email;
-            $credit = $customers->credit;
-            $customer_id = $customers->id;
-          } else {
-            $customer = $item->customer;
-            $credit = 0;
-          }
-
-          $returned_items = [];
-          $credited_items = [];
-          $returns = ReturnItems::where("customer", $customer_id)->where("requested", 0)->get();
-          foreach ($returns as $return) {
-            $returned_items[] = Item::whereId($return->item)->first();
-          }
-
-          $credited = ReturnItems::where("customer", $customer_id)->where("requested", 1)->where('sale', $sale->id)->select('model', 'imei', 'id', 'credit')->get();
-          foreach ($credited as $creditedItem) {
-            $creditedItem->selling_price = $creditedItem->credit;
-            $credited_items[] = $creditedItem;
-          }
-
-            
-          if (is_numeric($customer)) {
-            $customerOb = Customer::whereId($customer)->select('customer', 'billing_address', 'billing_address_country', 'billing_address_state', 'billing_address_city', 'billing_address_postal', 'email', 'phone')->first();
-            if ($customerOb)
-              $customer = $customerOb->customer;
-            
-            else
-              $customer = $item->customer;
-          }
-
-          $i["id"] = $item->id;
-          $i["date"] = $sold->format("Y-m-d");
-          $i["customer"] = $customer;
-          $i["returned_items"] = $returned_items;
-          $i["credited_items"] = $credited_items;
-          $i["customer_id"] = $customer_id;
-          $i["customer_credit"] = $credit;
-          $i["customer_email"] = $customer_emails;
-          $i["credit"] = $sale->credit;
-          $i["total"] = $total;
-          $i["amount_paid"] = $sale->amount_paid < 0 ? 0 : $sale->amount_paid;
-          $i["balance_remaining"] = $sale->balance_remaining < 0 ? 0 : $sale->balance_remaining;
-          $i["status"] = $sale->paid == 1 ? "Paid" : 'Unpaid';
-          $i["payments"] = $payments;
-          $i["sale_id"] = $sale->id;
-          $i["payment_method"] = $sale->payment_method;
-          $i["payment_account"] = $sale->payment_account;
-          $i["tax"] = $sale->tax;
-          $i["tax_id"] = $sale->tax_id;
-          $i["discount"] = $sale->discount;
-          $i["notes"] = $sale->notes;
-          $i["sale_date"] = $sold->format("d/m/y");
-          $response[] = $i;
+        $user = Auth::user();
+        $dataStatus = $request->query('status', 'all');
+        
+        // Validar status
+        if (!in_array($dataStatus, ['all', 'paid', 'unpaid'])) {
+            $dataStatus = 'all';
         }
-      }
 
-      $totalBalance = collect($response)->sum('balance_remaining');
-      Log::info("Total balance_remaining: {$totalBalance}");
-
-      usort($response, function ($a, $b) {
-        return $b['date'] <=> $a['date'];
-      });
-
-      $email_templates = EmailTemplate::where('user_id', Auth::user()->id)->get();
-      $context = [
-        'items' => $response,
-        'data_status' => $dataStatus,
-        'email_templates' => $email_templates,
-      ];
-      return Inertia::render("Accounting/Payments", $context);
-    } catch (Exception $e) {
-      return response()->json($e->getMessage(), 400);
+        // Cache key único por usuario y status
+        $cacheKey = "payments_list_{$user->id}_{$dataStatus}_" . now()->format('Y-m-d_H');
+        
+        // Usar cache tags si está disponible (Redis/Memcached)
+        // $response = Cache::remember($cacheKey, 300, function() use ($user, $dataStatus) {
+        //         return $this->getPaymentsData($user->id, $dataStatus);
+        // });      
+        $response = $this->getPaymentsData($user->id, $dataStatus);
+        Log::info("data que viene del helper", [$response]);
+        $email_templates = EmailTemplate::where('user_id', $user->id)->get();
+        
+        $context = [
+            'items' => $response ?: [], // Asegurar que sea array
+            'data_status' => $dataStatus,
+            'email_templates' => $email_templates,
+        ];
+        
+        return Inertia::render("Accounting/Payments", $context);
+        
+    } catch (\Throwable $e) {
+        Log::error("Error fetching payments data: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
+        // No usar response()->json() con Inertia, mejor manejar el error en el frontend
+        return Inertia::render("Accounting/Payments", [
+            'items' => [],
+            'data_status' => 'all',
+            'email_templates' => collect(),
+            'error' => 'Error loading payments data'
+        ]);
     }
-  }
+}
 
   /**
    * Show Invoice For Download as PDF
@@ -631,5 +550,181 @@ class PaymentController extends Controller
     });
 
     return response()->json($list);
+}
+
+// optimized helper to get payments data
+private function getPaymentsData($userId, $dataStatus)
+{
+    // Consulta inicial por ventas (más eficiente)
+    $salesQuery = Sale::where('user_id', $userId)
+        ->when($dataStatus === 'paid', fn($q) => $q->where('paid', 1))
+        ->when($dataStatus === 'unpaid', fn($q) => $q->where('paid', 0))
+        ->orderByDesc('created_at');
+
+    $sales = $salesQuery->get();
+    
+    if ($sales->isEmpty()) {
+        return [];
+    }
+
+    // Obtener solo los IDs de ventas que tienen items vendidos
+    $saleIds = $sales->pluck('id')->toArray();
+    
+    // Verificar qué ventas tienen items vendidos (como en la lógica original)
+    $salesWithSoldItems = Item::whereIn('sale_id', $saleIds)
+        ->whereNotNull('sold')
+        ->pluck('sale_id')
+        ->unique()
+        ->toArray();
+
+    // Filtrar ventas para mantener solo las que tienen items vendidos
+    $validSales = $sales->filter(function($sale) use ($salesWithSoldItems) {
+        return in_array($sale->id, $salesWithSoldItems);
+    });
+
+    if ($validSales->isEmpty()) {
+        return [];
+    }
+
+    // Obtener los primeros items vendidos para cada venta válida
+    $firstItems = Item::whereIn('sale_id', $validSales->pluck('id')->toArray())
+        ->whereNotNull('sold')
+        ->select('id', 'sale_id', 'sold', 'customer')
+        ->get()
+        ->groupBy('sale_id');
+
+    // Obtener todos los customers necesarios de una vez
+    $customerNames = $firstItems->pluck('*')->flatten()->pluck('customer')->unique()->filter();
+    $customers = Customer::whereIn('customer', $customerNames)
+        ->select('customer', 'email', 'credit', 'id')
+        ->get()
+        ->keyBy('customer');
+
+    // Obtener payments en batch
+    $payments = Payment::whereIn('sale_id', $validSales->pluck('id')->toArray())
+        ->select('sale_id', 'amount_paid', 'payment_date', 'payment_method', 'payment_account')
+        ->get()
+        ->groupBy('sale_id');
+
+    $response = [];
+    
+    foreach ($validSales as $sale) {
+        $itemsForThisSale = $firstItems->get($sale->id);
+        if (!$itemsForThisSale || $itemsForThisSale->isEmpty()) continue;
+        
+        $firstItem = $itemsForThisSale->first();
+
+        // Procesar payments
+        $salePayments = collect($payments->get($sale->id, []))->map(function($payment) {
+            return array_merge($payment->toArray(), [
+                'date' => Carbon::parse($payment->payment_date)->format('F j, Y'),
+                'paid' => '$' . number_format($payment->amount_paid, 2)
+            ]);
+        })->toArray();
+
+        // Obtener customer info (como en la lógica original)
+        $customer = $firstItem->customer;
+        $customer_emails = null;
+        $credit = 0;
+        $customer_id = null;
+
+        $customerRecord = $customers->get($firstItem->customer);
+        if ($customerRecord) {
+            $customer = $customerRecord->customer;
+            $customer_emails = $customerRecord->email;
+            $credit = $customerRecord->credit;
+            $customer_id = $customerRecord->id;
+        }
+
+        // Manejar customer numérico (como en original)
+        if (is_numeric($customer)) {
+            $customerOb = Customer::whereId($customer)->select('customer')->first();
+            if ($customerOb) {
+                $customer = $customerOb->customer;
+            } else {
+                $customer = $firstItem->customer;
+            }
+        }
+
+        // Obtener returned items (como en original)
+        $returned_items = [];
+        if ($customer_id) {
+            $returns = ReturnItems::where("customer", $customer_id)
+                ->where("requested", 0)
+                ->pluck('item');
+            
+            if ($returns->isNotEmpty()) {
+                $returned_items = Item::whereIn('id', $returns)->get()->toArray();
+            }
+        }
+
+        // Obtener credited items (como en original)
+        $credited_items = [];
+        $credited = ReturnItems::where("customer", $customer_id)
+            ->where("requested", 1)
+            ->where('sale', $sale->id)
+            ->select('model', 'imei', 'id', 'credit')
+            ->get();
+        
+        foreach ($credited as $creditedItem) {
+            $creditedItem->selling_price = $creditedItem->credit;
+            $credited_items[] = $creditedItem;
+        }
+
+        // Formatear la respuesta (como en original)
+        $sold = Carbon::parse($firstItem->sold);
+        
+        $response[] = [
+            'id' => $firstItem->id,
+            'date' => $sold->format("Y-m-d"),
+            'customer' => $customer,
+            'returned_items' => $returned_items,
+            'credited_items' => $credited_items,
+            'customer_id' => $customer_id,
+            'customer_credit' => $credit,
+            'customer_email' => $customer_emails ? $customer_emails : null,
+            'credit' => $sale->credit,
+            'total' => $sale->total,
+            'amount_paid' => max(0, $sale->amount_paid),
+            'balance_remaining' => max(0, $sale->balance_remaining),
+            'status' => $sale->paid == 1 ? "Paid" : 'Unpaid',
+            'payments' => $salePayments,
+            'sale_id' => $sale->id,
+            'payment_method' => $sale->payment_method,
+            'payment_account' => $sale->payment_account,
+            'tax' => $sale->tax,
+            'tax_id' => $sale->tax_id,
+            'discount' => $sale->discount,
+            'notes' => $sale->notes,
+            'sale_date' => $sold->format("d/m/y"),
+        ];
+
+        // Liberar memoria
+        if (count($response) % 50 === 0) {
+            gc_collect_cycles();
+        }
+    }
+
+    // Ordenar por fecha (como en original)
+    usort($response, function ($a, $b) {
+        return $b['date'] <=> $a['date'];
+    });
+
+    return $response;
+}
+
+private function resolveCustomerNameFromObject($customer)
+{
+    if (!$customer) return null;
+    
+    if (!empty($customer->customer)) {
+        return $customer->customer;
+    }
+    
+    if (!empty($customer->first_name) || !empty($customer->last_name)) {
+        return trim($customer->first_name . ' ' . $customer->last_name);
+    }
+    
+    return 'Unknown Customer';
 }
 }
