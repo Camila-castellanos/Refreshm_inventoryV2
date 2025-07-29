@@ -11,7 +11,7 @@
             </TabList>
           </Tabs>
         </div>
-        <DataTable title="Invoices" :items="tableData" :headers="headers" :actions="tableActions">
+        <DataTable title="Invoices" :items="tableData" :headers="headers" :actions="tableActions" @search-back="handleSearchBack">
           <DatePicker
                 v-model="dateRange"
                 selectionMode="range"
@@ -52,6 +52,7 @@ const props = defineProps({
   items: Array<IPaymentResponse>,
   data_status: String,
   email_templates: Array<EmailTemplate>,
+  data_range: Object
 });
 
 const currentTab = ref("/payments");
@@ -59,13 +60,21 @@ const dateRange = ref<Date | Date[] | (Date | null)[] | null | undefined>(null);
 const dialog = useDialog();
 const confirm = useConfirm();
 const toast = useToast();
+const extraPayments = ref<IPaymentResponse[]>([]);
 
 
 const tableActions = [
 ]
 onMounted(() => {
+  if (props.data_range && props.data_range.start && props.data_range.end) {
+    dateRange.value = [
+      new Date(props.data_range.start),
+      new Date(props.data_range.end)
+    ];
+  }
   currentTab.value = `/payments${props.data_status !== "all" ? `?status=${props.data_status}` : ""}`;
-  console.log("invoices:", props.items);
+  console.log("invoices props:", props);
+
 });
 
 const filterPayments = () => {
@@ -242,15 +251,19 @@ const deleteAndReturn = (item: IPaymentResponse) => {
 };
 
 const tableData = computed(() => {
-  if (!props.items) {
-    return [];
-  }
-  return props.items.map((item) => {
-    return {
-      ...item,
-      actions: getItemActions(item),
-    };
-  });
+  const base = props.items ?? [];
+  const extras = extraPayments.value ?? [];
+  // Evita duplicados por sale_id si lo deseas:
+  const all = [...base, ...extras].reduce((acc, item) => {
+    if (!acc.some(i => i.sale_id === item.sale_id)) {
+      acc.push(item);
+    }
+    return acc;
+  }, [] as IPaymentResponse[]);
+  return all.map((item) => ({
+    ...item,
+    actions: getItemActions(item),
+  }));
 });
 
 // obtain the headers from the data file to has the same file name that server send
@@ -314,6 +327,23 @@ function fetchDateWisePayments(dateRange: Date[]) {
     only: ["items"],
     data: queryParams
   });
+}
+
+async function handleSearchBack(searchTerm: string) {
+  try {
+    // Puedes enviar el texto de búsqueda si lo necesitas, aquí como ejemplo:
+    // const search = ...; // obtén el valor actual del filtro global si lo necesitas
+    const { data } = await axios.get(route("payments.search"), {
+      params: { search: searchTerm }
+    });
+    console.log("Search results:", data);
+    // data debe ser un array de pagos nuevos
+    if (Array.isArray(data)) {
+      extraPayments.value.push(...data);
+    }
+  } catch (e) {
+    toast.add({ severity: "error", summary: "Error", detail: "We tried to search deeper but found no results.", life: 3000 });
+  }
 }
 
 defineOptions({ layout: AppLayout });

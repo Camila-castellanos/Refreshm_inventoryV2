@@ -70,6 +70,10 @@ class PaymentController extends Controller
             'items' => $response ?: [], // Asegurar que sea array
             'data_status' => $dataStatus,
             'email_templates' => $email_templates,
+            'data_range' =>  [
+                'start' => $startDate,
+                'end' => $endDate,
+            ],
         ];
         
         return Inertia::render("Accounting/Payments", $context);
@@ -81,7 +85,7 @@ class PaymentController extends Controller
             'items' => [],
             'data_status' => 'all',
             'email_templates' => collect(),
-            'error' => 'Error loading payments data'
+            'error' => 'Error loading payments data',
         ]);
     }
 }
@@ -516,6 +520,29 @@ class PaymentController extends Controller
     return 'success';
   }
 
+  // method to get payments with a search query that were not included in the main load
+public function searchPayments(Request $request){
+   try {
+        $user = Auth::user();
+        $dataStatus = $request->query('status', 'all');
+        $search = $request->query('search', '');
+
+        // Validar status
+        if (!in_array($dataStatus, ['all', 'paid', 'unpaid'])) {
+            $dataStatus = 'all';
+        }
+      
+        // Usar el helper con el parámetro de búsqueda
+        $response = $this->getPaymentsData($user->id, $dataStatus, $search);
+
+        return response()->json($response);
+
+    } catch (\Throwable $e) {
+        Log::error("Error searching missing payments: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
+        return response()->json(['error' => 'Error searching payments'], 500);
+    }
+}
+
   // method to get the simple list of payments
  public function getPaymentsSimpleList(Request $request)
 {
@@ -564,16 +591,32 @@ class PaymentController extends Controller
 }
 
 // optimized helper to get payments data
-private function getPaymentsData($userId, $dataStatus,$startDate, $endDate)
+private function getPaymentsData($userId, $dataStatus,$startDate=null, $endDate=null, $search = null)
 {
     // Consulta inicial por ventas (más eficiente)
     $salesQuery = Sale::where('user_id', $userId)
-        ->whereBetween('created_at', [$startDate->startOfDay(), $endDate->endOfDay()])
+        ->when($startDate && $endDate, function($q) use ($startDate, $endDate) {
+        $q->whereBetween('created_at', [$startDate->startOfDay(), $endDate->endOfDay()]);
+        })
         ->when($dataStatus === 'paid', fn($q) => $q->where('paid', 1))
         ->when($dataStatus === 'unpaid', fn($q) => $q->where('paid', 0))
         ->orderByDesc('created_at');
+    
+    // optional search filter
+    if ($search && $search !== '') {
+    $searchableFields = ['date', 'total', 'amount_paid', 'balance_remaining'];
+    $salesQuery->where(function($q2) use ($search, $searchableFields) {
+        foreach ($searchableFields as $field) {
+            $q2->orWhere($field, 'like', "%{$search}%");
+        }
+        $q2->orWhereHas('items', function($q3) use ($search) {
+            $q3->where('customer', 'like', "%{$search}%");
+        });
+    });
+  }
 
     $sales = $salesQuery->get();
+
     
     if ($sales->isEmpty()) {
         return [];
