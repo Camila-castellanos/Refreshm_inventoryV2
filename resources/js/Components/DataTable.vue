@@ -129,6 +129,11 @@ const props = defineProps<{
   sortOrder?: number;
 }>();
 
+const emit = defineEmits<{
+  (e: "update:selected", value: any[]): void
+  (e: "search-back"): void
+}>();
+
 const selectionMode = ref(props?.selectionMode ?? "multiple");
 
 const dt = ref();
@@ -155,8 +160,6 @@ const exportCSV = () => {
     });
   }
 };
-
-const emit = defineEmits(["update:selected"]);
 
 watch(selectedItems, (newSelection) => {
   emit("update:selected", newSelection);
@@ -277,6 +280,23 @@ function checkOverflow() {
     hasOverflow.value = tableWidth > wrapperWidth
   }
 }
+
+// watch for changes on the search filter, if there is not results with the actual data dispatch the fetch event to father
+// has debounce
+let debounceTimeout: ReturnType<typeof setTimeout> | null = null;
+watch(
+  () => filters.value.global.value,
+  () => {
+   if (debounceTimeout) clearTimeout(debounceTimeout);
+    debounceTimeout = setTimeout(() => {
+      nextTick(() => {
+        if (dt.value.processedData.length < 1) {
+         emit('search-back', filters.value.global.value)
+        }
+      });
+    }, 700); // 700ms
+  }
+);
 
 </script>
 
