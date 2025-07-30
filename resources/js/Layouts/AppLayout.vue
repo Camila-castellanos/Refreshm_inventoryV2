@@ -9,7 +9,9 @@
       <template #start>
         <div>
           <img src="/images/swiftstock_logo.webp" draggable="false"
-            class="h-28 pl-28 py-1 object-contain max-h-full max-w-full pointer-events-none" alt="" />
+            class="h-28 pl-28 py-1 object-contain max-h-full max-w-full pointer-events-none"
+            alt="Swiftstock Logo"
+           />
         </div>
       </template>
       <template >
