@@ -76,6 +76,12 @@ const onFormSubmit = async () => {
   formData.append("password_confirmation", confirmPassword.value);
   formData.append("email", email.value);
 
+  // Detect if the query param filter=all is present to set global_user param on formData
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get("filter") === "all") {
+    formData.append("global_user", "true");
+  }
+
   if (dialogRef.value?.data?.userEdit) {
     formData.append("_method", "PUT");
   }
@@ -90,7 +96,7 @@ const onFormSubmit = async () => {
     dialogRef.value.close();
   } catch (error: any) {
     console.error("Error saving user:", error);
-    toast.add({ severity: "error", summary: "Error", detail: errorMessage, life: 5000 });
+    toast.add({ severity: "error", summary: "Error", detail: "Something went wrong on the server, please try again later.", life: 5000 });
   }
 };
 </script>
