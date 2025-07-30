@@ -199,7 +199,6 @@ async function getTaxes() {
 async function parseCustomersData() {
   const customerData = await axios.get(route("customer.list"));
   customers.value = customerData.data.map((customer: any) => {
-    console.log(customer);
     return {
       ...customer,
     };
