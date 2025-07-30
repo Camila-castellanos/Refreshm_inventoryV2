@@ -55,15 +55,15 @@ class PaymentController extends Controller
       $endDate = now();
     }
 
-        // Cache key único por usuario y status
-        $cacheKey = "payments_list_{$user->id}_{$dataStatus}_" . now()->format('Y-m-d_H');
+        // Unique cache key per user and status (temporarily disabled)
+        // $cacheKey = "payments_list_{$user->id}_{$dataStatus}_" . now()->format('Y-m-d_H');
         
-        // Usar cache tags si está disponible (Redis/Memcached)
+        // Use cache tags if available (Redis/Memcached)
         // $response = Cache::remember($cacheKey, 300, function() use ($user, $dataStatus) {
         //         return $this->getPaymentsData($user->id, $dataStatus);
         // });      
         $response = $this->getPaymentsData($user->id, $dataStatus, $startDate, $endDate);
-        Log::info("data que viene del helper", [$response]);
+      
         $email_templates = EmailTemplate::where('user_id', $user->id)->get();
         
         $context = [
