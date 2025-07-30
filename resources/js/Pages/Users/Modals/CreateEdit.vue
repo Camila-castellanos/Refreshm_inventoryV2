@@ -89,10 +89,7 @@ const onFormSubmit = async () => {
     cleanForm();
     dialogRef.value.close();
   } catch (error: any) {
-    let errorMessage = "An unknown error occurred.";
-    if (error.response) {
-      errorMessage = Object.values(error.response.data.errors).join("\n");
-    }
+    console.error("Error saving user:", error);
     toast.add({ severity: "error", summary: "Error", detail: errorMessage, life: 5000 });
   }
 };

@@ -10,6 +10,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
 use Laravel\Jetstream\HasProfilePhoto;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class User extends Authenticatable
 {
@@ -65,24 +66,25 @@ class User extends Authenticatable
 
      protected $attributes = [
         'printable_tag_fields' => '["manufacturer","model","storage","colour","battery","imei"]',
-        'printable_invoice_fields' => "['logo',
-            'header',
-            'billing_address',
-            'invoice_number',
-            'invoice_due',
-            'payment_due',
-            'amount_due',
-            'items',
-            'table_device',
-            'table_issues',
-            'table_imei',
-            'table_price',
-            'subtotal',
-            'tax',
-            'total',
-            'credit',
-            'footer',]"
-    ];
+        "printable_invoice_fields" => '["logo",
+            "header",
+            "billing_address",
+            "invoice_number",
+            "invoice_due",
+            "payment_due",
+            "amount_due",
+            "items",
+            "table_device",
+            "table_issues",
+            "table_imei",
+            "table_price",
+            "subtotal",
+            "tax",
+            "total",
+            "credit",
+            "footer"]',
+            'role' => 'USER',
+        ];
 
     protected static function booted()
     {

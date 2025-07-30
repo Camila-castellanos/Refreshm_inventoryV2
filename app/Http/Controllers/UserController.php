@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
 use Exception;
+use Illuminate\Support\Facades\Log;
 
 class UserController extends Controller
 {
@@ -21,17 +22,25 @@ class UserController extends Controller
 {
     $users = [];
     $filter = $request->query('filter', 'own'); // obtain the filter from the query string, default to 'own'
-    
+    $authUser = Auth::user();
+    $storeId = $authUser->store_id;
+    $companyId = $authUser->company_id;
+
     switch (Auth::user()->role) {
         case "ADMIN":
-            $store = Auth::user()->store;
-            $users = @$store->users;
+            $users = User::where(function($q) use ($storeId, $companyId) {
+                    $q->where('store_id', $storeId)
+                      ->orWhere('company_id', $companyId);
+                })
+                ->get();
             break;
         case "OWNER":
             if ($filter === 'own') {
-                //  the owner wants to see only their own users
-                $store = Auth::user()->store;
-                $users = $store ? $store->users : collect([]);
+                $users = User::where(function($q) use ($storeId, $companyId) {
+                    $q->where('store_id', $storeId)
+                      ->orWhere('company_id', $companyId);
+                })
+                ->get();
             } else if ($filter === 'all') {
                 // The owner wants to see all users (default behavior)
                 $users = User::all();
@@ -57,6 +66,8 @@ class UserController extends Controller
     return Inertia::render('Users/CreateEdit');
   }
 
+
+
   /**
    * Store a newly created resource in storage.
    *
@@ -71,9 +82,17 @@ class UserController extends Controller
       "email" => $form["email"],
       "password" => Hash::make($form["password"]),
     ]);
-    if (Auth::user()->role == "ADMIN") {
+    // safeguard to avoid user association with store
+    $global_user = $request->global_user ?? false;
+    if($global_user){
+      return response()->json($user, 201);
+    }
+    // user association with store
+    if (Auth::user()->role == "ADMIN" || Auth::user()->role == "OWNER") {
       $user->store_id = @Auth::user()->store->id;
+      $user->company_id = @Auth::user()->company->id;
       $user->save();
+      return response()->json($user, 201);
     }
     return response()->json($user, 201);
   }
