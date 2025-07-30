@@ -73,7 +73,6 @@ function parseItemsData() {
     .items!.filter((item) => item.sold === null)
     .map((item: any) => {
       if (item.battery === null){
-        console.log("Battery is null");
         item.battery = "";
       }
       else if (!String(item.battery).endsWith("%") && !isNaN(Number(item.battery)) && item.battery !== "") {
@@ -100,7 +99,6 @@ function refreshTableData() {
   axios
     .get(route("items.getItems")) // Asegúrate de que esta ruta coincida con la definida en el backend
     .then((response) => {
-      console.log("Response data:", response.data);
       // Actualiza los datos de la tabla con los ítems obtenidos del backend
       tableData.value = response.data.map((item: any) => {
         if (item.storage) {
@@ -144,9 +142,12 @@ function openSellItemsModal() {
       modal: true,
     },
     onClose: (result) => {
-      if (result?.sold) {
+      if (result?.data?.sold) {
+        console.log("Items sold successfully");
         selectedItems.value.length = 0;
-        router.reload();
+        router.reload(
+          { only: ["items"] }
+        );
       }
       // Si solo se cerró el modal, no limpiar la selección
     },
