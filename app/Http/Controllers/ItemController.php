@@ -55,73 +55,41 @@ class ItemController extends Controller
         $tabs = Tab::where('user_id', $user->id)->orderBy('order', 'asc')->get();
         $customFields = CustomField::where('user_id', $user->id)->get();
 
-        if (Auth::user()->role == ('ADMIN')) {
-            $context = [
-                'items' => Item::where("user_id", $user->id)
-                ->with(['storage' => function ($query) {
-                    $query->select('id', 'name', 'limit') // other columns
-                    ->withCount('items'); // current count of items in storage
+        // Con el nuevo scope global, ya no necesitamos filtrar por user_id
+        $context = [
+            'items' => Item::with(['storage' => function ($query) {
+                $query->select('id', 'name', 'limit') // other columns
+                ->withCount('items'); // current count of items in storage
             }, 'vendor:id,vendor'])
             ->whereIn('type', ['device', 'accessory'])
-                    ->whereNull("sold")
-                    ->whereNull("hold")
-                    ->whereNotIn('id', TabItem::pluck('item_id'))
-                    ->get(),
-                'tabs' => $tabs,
-                'fields' => $customFields,
-            ];
-        } else if (Auth::user()->role == ('USER')) {
-            $context = [
-                'items' => Item::where("user_id", $user->id)
-                ->with(['storage' => function ($query) {
-                    $query->select('id', 'name', 'limit') // other columns
-                    ->withCount('items'); // current count of items in storage
-            }, 'vendor:id,vendor'])
-            ->whereIn('type', ['device', 'accessory'])
-                    ->whereNull("sold")
-                    ->whereNull("hold")
-                    ->whereNotIn('id', TabItem::pluck('item_id'))
-                    ->get(),
-                'tabs' => $tabs,
-                'fields' => $customFields,
-            ];
-        } else {
-            $context = [
-                'items' => Item::where("user_id", $user->id)
-                ->with(['storage' => function ($query) {
-                    $query->select('id', 'name', 'limit') // other columns
-                    ->withCount('items'); // current count of items in storage
-            }, 'vendor:id,vendor'])
-            ->whereIn('type', ['device', 'accessory'])
-                    ->whereNull("sold")
-                    ->whereNull("hold")
-                    ->whereNotIn('id', TabItem::pluck('item_id'))
-                    ->get(),
-                'tabs' => $tabs,
-                'fields' => $customFields,
-            ];
-        }
+            ->whereNull("sold")
+            ->whereNull("hold")
+            ->whereNotIn('id', TabItem::pluck('item_id'))
+            ->get(),
+            'tabs' => $tabs,
+            'fields' => $customFields,
+        ];
 
         $context['customers'] = Customer::all();
         return Inertia::render('Inventory/Index', $context);
     }
 
     public function getItems(): \Illuminate\Http\JsonResponse
-        {
-    $user = Auth::user();
+    {
+        $user = Auth::user();
 
-    $items = Item::where("user_id", $user->id)
-    ->with(['storage' => function ($query) {
-        $query->select('id', 'name', 'limit') // other columns
-        ->withCount('items'); // current count of items in storage
-}, 'vendor:id,vendor'])
-->whereIn('type', ['device', 'accessory'])
+        // Con el nuevo scope global, ya no necesitamos filtrar por user_id
+        $items = Item::with(['storage' => function ($query) {
+            $query->select('id', 'name', 'limit') // other columns
+            ->withCount('items'); // current count of items in storage
+        }, 'vendor:id,vendor'])
+        ->whereIn('type', ['device', 'accessory'])
         ->whereNull("sold")
         ->whereNull("hold")
         ->whereNotIn('id', TabItem::pluck('item_id'))
         ->get();
 
-    return response()->json($items);
+        return response()->json($items);
     }
 
 
@@ -329,6 +297,7 @@ class ItemController extends Controller
      */
     public function list(): \Illuminate\Http\JsonResponse
     {
+        // Con el nuevo scope global, ya no necesitamos filtrar por user_id
         return response()->json(Item::whereNull("sold")->whereNull("hold")->get());
     }
 
@@ -623,43 +592,15 @@ public function getLabelsNewItems(Request $request): \Illuminate\Http\Response
     public function viewHold(): \Inertia\Response
     {
         $user = Auth::user();
-        // if (Auth::user()->role == 'USER') {
-        //     $context = [
-        //         'items' => $user->store ? Item::where("supplier", $user->store->name)->whereNull("sold")->whereNotNull("hold")->get() : '',
-        //     ];
-        // } else {
-        //     $context = [
-        //         'items' => Item::whereNull("sold")->whereNotNull("hold")->get(),
-        //     ];
-        // }
-
         $tabs = Tab::where('user_id', $user->id)->orderBy('order', 'asc')->get();
         $customFields = CustomField::where('user_id', $user->id)->get();
 
-        if (Auth::user()->role == ('ADMIN')) {
-            $context = [
-                // 'items' => $user->store ? Item::where("user_id", $user->id)->get() : '',
-                'items' => Item::where("user_id", $user->id)->with(['storage:id,name,limit', 'vendor:id,vendor'])->whereNull("sold")->whereNotNull("hold")->get(),
-                'tabs' => $tabs,
-                'fields' => $customFields,
-            ];
-        } else if (Auth::user()->role == ('USER')) {
-            $usersId = User::where('store_id', @$user->store_id)->pluck('id')->toarray();
-            $context = [
-                // 'items' => Item::whereIn("user_id", @$usersId)->whereNull("sold")->whereNotNull("hold")->get(),
-                'items' => Item::where("user_id", $user->id)->with(['storage:id,name,limit', 'vendor:id,vendor'])->whereNull("sold")->whereNotNull("hold")->get(),
-                'tabs' => $tabs,
-                'fields' => $customFields,
-            ];
-        } else {
-            $context = [
-                'items' => Item::whereNull("sold")->with(['storage:id,name,limit', 'vendor:id,vendor'])->whereNotNull("hold")->get(),
-                'tabs' => $tabs,
-                'fields' => $customFields,
-            ];
-        }
-
-
+        // Con el nuevo scope global, ya no necesitamos filtrar por user_id
+        $context = [
+            'items' => Item::with(['storage:id,name,limit', 'vendor:id,vendor'])->whereNull("sold")->whereNotNull("hold")->get(),
+            'tabs' => $tabs,
+            'fields' => $customFields,
+        ];
 
         return Inertia::render('Inventory/Hold', $context);
     }
@@ -831,31 +772,14 @@ public function getLabelsNewItems(Request $request): \Illuminate\Http\Response
 
         $customFields = CustomField::where('user_id', $user->id)->get();
 
-        if (Auth::user()->role == ('ADMIN')) {
-            $context = [
-                // 'items' => $user->store ? Item::where("user_id", $user->id)->get() : '',
-                'items' => $items->where("user_id", $user->id)->get(),
-                'tabs' => $tabs,
-                'current_tab' => $id,
-                'fields' => $customFields,
-            ];
-        } else if (Auth::user()->role == ('USER')) {
-            $usersId = User::where('store_id', @$user->store_id)->pluck('id')->toarray();
-            $context = [
-                'items' => $items->whereIn("user_id", @$usersId)->get(),
-                'tabs' => $tabs,
-                'current_tab' => $id,
-                'fields' => $customFields,
-            ];
-        } else {
-            $context = [
-                // 'items' => $items->get(),
-                'items' => $items->where("user_id", $user->id)->get(),
-                'tabs' => $tabs,
-                'current_tab' => $id,
-                'fields' => $customFields,
-            ];
-        }
+        // Con el nuevo scope global, ya no necesitamos filtrar por user_id
+        $context = [
+            'items' => $items->get(),
+            'tabs' => $tabs,
+            'current_tab' => $id,
+            'fields' => $customFields,
+        ];
+        
         $checktab = Tab::where('id', $id)->first();
         // dd($context);
         if ($checktab->user_id == $user->id) {
@@ -1019,8 +943,8 @@ public function getLabelsNewItems(Request $request): \Illuminate\Http\Response
         $user = Auth::user();
         $limit = (int) $request->query('limit', 10);
 
+        // Con el nuevo scope global, ya no necesitamos filtrar por user_id
         $items = Item::with(['storage:id,name', 'vendor:id,vendor'])
-            ->where('user_id', $user->id)
             ->when($q, fn($query) => $query->where(function($q2) use ($q) {
                 $q2->where('model',  'like', "%{$q}%")
                    ->orWhere('imei',   'like', "%{$q}%")

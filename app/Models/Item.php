@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\DB;
 use App\Models\DraftItem;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
+use App\Models\Scopes\CompanyItemScope;
 
 class Item extends Model
 {
@@ -29,6 +30,11 @@ class Item extends Model
     'date' => 'datetime',
         'sold' => 'datetime',
     ];
+
+    protected static function booted()
+    {
+        static::addGlobalScope(new CompanyItemScope());
+    }
 
     public function shop(): BelongsTo
     {
