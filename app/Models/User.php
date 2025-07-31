@@ -88,13 +88,13 @@ class User extends Authenticatable
 
     protected static function booted()
     {
-        static::created(function ($user) {
-            // Crear el storage predeterminado para el usuario
-            $user->storages()->create([
-                'name' => 'Default Location',
-                'limit' => 50, // Ajusta el límite predeterminado según sea necesario
-            ]);
-        });
+        // static::created(function ($user) {
+        //     // Crear el storage predeterminado para el usuario
+        //     $user->storages()->create([
+        //         'name' => 'Default Location',
+        //         'limit' => 50, // Ajusta el límite predeterminado según sea necesario
+        //     ]);
+        // });
     }
 
     /**
