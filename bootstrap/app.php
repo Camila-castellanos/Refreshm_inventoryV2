@@ -18,6 +18,11 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
             \App\Http\Middleware\SetUserTimezone::class,
         ]);
+        
+        // // Registrar alias para el middleware de verificación de roles
+        $middleware->alias([
+            'role' => \App\Http\Middleware\CheckUserRole::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         $exceptions->respond(function (Response $response, $request) {

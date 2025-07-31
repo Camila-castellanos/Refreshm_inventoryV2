@@ -79,6 +79,7 @@ const onFormSubmit = async () => {
   // Detect if the query param filter=all is present to set global_user param on formData
   const urlParams = new URLSearchParams(window.location.search);
   if (urlParams.get("filter") === "all") {
+    console.log("global_user set!");
     formData.append("global_user", "true");
   }
 

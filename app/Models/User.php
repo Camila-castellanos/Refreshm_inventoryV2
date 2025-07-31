@@ -150,10 +150,7 @@ class User extends Authenticatable
         return $this->belongsTo(Location::class);
     }
 
-    public function storages()
-{
-    return $this->hasMany(Storage::class, 'user_id');
-}
+    
 
 public function drafts()
 {

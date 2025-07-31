@@ -38,7 +38,7 @@ class StorageController extends Controller
             Storage::create([
                 'name' => $storage['name'],
                 'limit' => $storage['limit'],
-                'user_id' => Auth::id(),
+                'company_id' => Auth::user()->company_id,
             ]);
         }
     
@@ -65,7 +65,7 @@ class StorageController extends Controller
         Storage::create([
             'name' => $storage['name'],
             'limit' => $storage['limit'],
-            'user_id' => Auth::id(),
+            'company_id' => Auth::user()->company_id,
         ]);
     }
 

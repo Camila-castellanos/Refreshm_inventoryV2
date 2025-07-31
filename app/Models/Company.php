@@ -70,4 +70,13 @@ class Company extends Model
         // Structure: hasManyThrough(FinalModel::class, IntermediateModel::class)
         return $this->hasManyThrough(Item::class, Shop::class);
     }
+
+    /**
+     * Define the relationship: A Company HAS MANY Storages.
+     * Eloquent assumes the foreign key on the 'storages' table is 'company_id'.
+     */
+    public function storages(): HasMany
+    {
+        return $this->hasMany(Storage::class, 'company_id');
+    }
 }
