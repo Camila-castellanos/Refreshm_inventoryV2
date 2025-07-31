@@ -97,7 +97,16 @@ const onFormSubmit = async () => {
     dialogRef.value.close();
   } catch (error: any) {
     console.error("Error saving user:", error);
-    toast.add({ severity: "error", summary: "Error", detail: "Something went wrong on the server, please try again later.", life: 5000 });
+    let errorMessage = "Something went wrong on the server, please try again later.";
+
+    // Detectar error de email duplicado
+    if (
+      error.response.data.message.includes("users_email_unique")
+    ) {
+      errorMessage = "The email address is already in use. Please use a different email.";
+    }
+
+    toast.add({ severity: "error", summary: "Error", detail: errorMessage, life: 5000 });
   }
 };
 </script>
