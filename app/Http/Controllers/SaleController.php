@@ -312,7 +312,6 @@ class SaleController extends Controller
             $query->where([
             ["sold", ">=", $start],
             ["sold", "<=", $end],
-            ["user_id", $user->id]
             ])
             ->orWhereHas('sale', function ($q) use ($start, $end, $user) {
             $q->whereBetween('created_at', [$start, $end])
@@ -334,28 +333,6 @@ class SaleController extends Controller
         })->toArray();
 
         $sales = Sale::whereIn("id", $sale_pks);
-        if (Auth::user()->role != "OWNER") {
-            $store = Auth::user()->store;
-            if (!$store) {
-                return Inertia::render('Error', ['message' => 'No Store Available']);
-            }
-
-            $ids = $store->users->pluck("id");
-
-            switch (Auth::user()->role) {
-                case "ADMIN":
-                    $store = Auth::user()->store;
-                    $ids = $store->users->pluck("id");
-                    $sales->whereIn("user_id", $ids->toArray());
-                    break;
-                case "USER":
-                    $sales->whereIn("user_id", [Auth::id()]);
-                    break;
-                default:
-                    abort(403, "Unauthorized.");
-                    break;
-            }
-        }
 
         $sales = $sales->get();
         $formatted_items = [];
@@ -425,7 +402,6 @@ class SaleController extends Controller
             $query->where([
             ["sold", ">=", $start],
             ["sold", "<=", date("Y-m-d", $end)],
-            ["user_id", $user->id]
             ])
             ->orWhereHas('sale', function ($q) use ($start, $end, $user) {
             $q->whereBetween('created_at', [$start, date("Y-m-d", $end)])
@@ -447,28 +423,6 @@ class SaleController extends Controller
         })->toArray();
 
         $sales = Sale::whereIn("id", $sale_pks);
-        if (Auth::user()->role != "OWNER") {
-            $store = Auth::user()->store;
-            if (!$store) {
-                return response()->json(['message' => 'No Store Available'], 500);
-            }
-
-            $ids = $store->users->pluck("id");
-
-            switch (Auth::user()->role) {
-                case "ADMIN":
-                    $store = Auth::user()->store;
-                    $ids = $store->users->pluck("id");
-                    $sales->whereIn("user_id", $ids->toArray());
-                    break;
-                case "USER":
-                    $sales->whereIn("user_id", [Auth::id()]);
-                    break;
-                default:
-                    abort(403, "Unauthorized.");
-                    break;
-            }
-        }
 
         $sales = $sales->get();
 
