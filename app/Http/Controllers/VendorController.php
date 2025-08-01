@@ -34,7 +34,7 @@ class VendorController extends Controller
      */
     public function index()
     {
-        $vendors = Vendor::whereUserId(Auth::id())->get();
+        $vendors = Vendor::all();
         foreach ($vendors as $vendor) {
             $items = Item::where("vendor_id", $vendor->id)
             ->whereBetween('sold', [now()->subYear()->startOfDay(), now()->endOfDay()])
@@ -145,7 +145,7 @@ class VendorController extends Controller
     public function vendorList(Request $request)
     {
         $vendor = $request->search;
-        $vendors = Vendor::whereUserId(Auth::id())->where(function ($query) use ($vendor) {
+        $vendors = Vendor::where(function ($query) use ($vendor) {
             $query->where('vendor', 'LIKE', '%' . $vendor . '%');
             $query->orWhere('first_name', 'LIKE', '%' . $vendor . '%');
             $query->orWhere('last_name', 'LIKE', '%' . $vendor . '%');
@@ -179,7 +179,7 @@ class VendorController extends Controller
      */
     public function datewise(Request $request)
     {
-        $vendors = Vendor::whereUserId(Auth::id())->get();
+        $vendors = Vendor::all();
         $startDate = $request->startDate;
         $endDate = $request->endDate;
 

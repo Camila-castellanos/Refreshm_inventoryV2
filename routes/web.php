@@ -173,7 +173,8 @@ Route::middleware([
     Route::get('drafts/{draft}',  [DraftController::class,'show'])->name("drafts.show");
     Route::post('drafts',   [DraftController::class,'store'])->name("drafts.store");
     Route::delete('drafts/{draft}', [DraftController::class,'destroy'])->name("drafts.destroy");
-
+    Route::get("accounting/taxes/list", [TaxController::class, "list"])->name("tax.list");
+    Route::post("accounting/taxes/store", [TaxController::class, "store"])->name("tax.store");
     Route::middleware(['role:ADMIN,OWNER'])->group(function () {
         Route::get("dashboard", DashboardController::class)->name("dashboard");
         Route::post("dashboard/update_cash", [DashboardController::class, 'updateCashOnHand'])->name("update.cash");
@@ -217,8 +218,6 @@ Route::middleware([
         Route::get("accounting/amount-paid-balancing-set", [PaymentController::class, "amountPaidBalancingSet"])->name("reports.amount.paid.balancing.set");
 
         Route::get("accounting/taxes", [TaxController::class, "show"])->name("reports.taxes.show");
-        Route::get("accounting/taxes/list", [TaxController::class, "list"])->name("tax.list");
-        Route::post("accounting/taxes/store", [TaxController::class, "store"])->name("tax.store");
         Route::post("accounting/taxes/update", [TaxController::class, "update"])->name("taxes.update");
         Route::post("accounting/taxes/remove", [TaxController::class, "remove"])->name("taxes.remove");
         Route::post("accounting/taxes/datewise", [TaxController::class, "datewise"])->name("taxes.datewise");
