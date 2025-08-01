@@ -299,6 +299,7 @@ async function getUserTaxes() {
     try {
       let taxes;
       const { data } = await axios.get(route('tax.list'));
+      console.log("Taxes data:", data);
       taxes = data.map((tax: any) => ({
         label: `${tax.name || 'N/A'} - (${tax.percentage + '%' || 'N/A'})`,
         value: tax.id,

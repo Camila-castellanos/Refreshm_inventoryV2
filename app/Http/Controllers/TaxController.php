@@ -72,7 +72,7 @@ class TaxController extends Controller
   public function list(Request $request)
   {
     $tax = $request->search;
-    $taxes = Tax::whereUserId(Auth::id())->where(function ($query) use ($tax) {
+    $taxes = Tax::where(function ($query) use ($tax) {
       $query->where('name', 'LIKE', '%' . $tax . '%');
       $query->orWhere('percentage', 'LIKE', '%' . $tax . '%');
     })->select('id', 'name', 'percentage')->get();
