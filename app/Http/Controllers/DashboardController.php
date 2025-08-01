@@ -31,10 +31,6 @@ class DashboardController extends Controller
   try {
     // Check if the user is authenticated
     $user = Auth::user();
-    // if the user is a normal user, redirect to inventory items  
-    if ($user->role === 'USER') {
-      return redirect('/inventory/items');
-    }
     // save user id and role for later use
     $userId = $user->id;
     $isAdmin = $user->role === 'ADMIN';  

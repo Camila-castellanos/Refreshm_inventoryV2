@@ -26,9 +26,12 @@ class CheckUserRole
 
         // Verificar si el usuario tiene uno de los roles permitidos
         if (!in_array($user->role, $roles)) {
-            // Redirigir a una página de error o a la página anterior
-            return redirect()->back()->with('error', 'Unauthorized access.');
+        // En lugar de redirect()->back(), redirigir a una ruta específica
+        if ($user->role === 'USER') {
+        return redirect('/inventory/items');
         }
+        return redirect('/')->with('error', 'Unauthorized access.');
+    }
 
         return $next($request);
     }
