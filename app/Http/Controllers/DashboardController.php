@@ -191,7 +191,10 @@ class DashboardController extends Controller
 
       return $saleIds->reduce(function ($carry, $saleId) {
           $sale = Sale::find($saleId);
-          return $carry + max(0, $sale->balance_remaining);
+          if ($sale) {
+            return $carry + max(0, $sale->balance_remaining ?? 0);
+        }
+        return $carry;
       }, 0);
   }
 
