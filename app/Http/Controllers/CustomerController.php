@@ -266,12 +266,11 @@ class CustomerController extends Controller
     public function customersList(Request $request)
     {
         $customer = $request->search;
-        $customers = Customer::whereUserId(Auth::id())->where(function ($query) use ($customer) {
+        $customers = Customer::where(function ($query) use ($customer) {
             $query->where('customer', 'LIKE', '%' . $customer . '%');
             $query->orWhere('first_name', 'LIKE', '%' . $customer . '%');
             $query->orWhere('last_name', 'LIKE', '%' . $customer . '%');
         })->select('id', 'customer', 'first_name', 'last_name', 'credit')->get();
-        Log::info($customers);
         foreach ($customers as $customer) {
         // Check if the arrays have values before accessing them
         $firstName = is_array($customer->first_name) && !empty($customer->first_name) ? $customer->first_name[0] : '';

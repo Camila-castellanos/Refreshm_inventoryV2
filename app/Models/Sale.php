@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\User;
 use Carbon\Carbon;
+use App\Models\Scopes\CompanyUsersSharedScope;
 
 class Sale extends Model
 {
@@ -27,6 +28,11 @@ class Sale extends Model
         "tax_id", 
         "date",
     ];
+
+    protected static function booted()
+    {
+        static::addGlobalScope(new CompanyUsersSharedScope);
+    }
 
     // Cast `date` attribute as full datetime
     protected $casts = [

@@ -175,6 +175,8 @@ Route::middleware([
     Route::delete('drafts/{draft}', [DraftController::class,'destroy'])->name("drafts.destroy");
     Route::get("accounting/taxes/list", [TaxController::class, "list"])->name("tax.list");
     Route::post("accounting/taxes/store", [TaxController::class, "store"])->name("tax.store");
+    Route::get("accounting/payments/simple", [PaymentController::class, "getPaymentsSimpleList"])->name("payments.simpleList");
+    Route::post("payments/addNewItems", [PaymentController::class, "addNewItems"])->name("payments.addNewItems");
     Route::middleware(['role:ADMIN,OWNER'])->group(function () {
         Route::get("dashboard", DashboardController::class)->name("dashboard");
         Route::post("dashboard/update_cash", [DashboardController::class, 'updateCashOnHand'])->name("update.cash");
@@ -212,8 +214,6 @@ Route::middleware([
         Route::post("accounting/payments/{id}/sendInvoice", [PaymentController::class, "sendInvoice"])->name("payments.send.invoice");
         Route::get("accounting/payments/{id}/view", [PaymentController::class, "view"])->name("payments.view");
         Route::post("accounting/payments/{id}/invoice/paid", [PaymentController::class, "paid"])->name("reports.payments.invoice.paid");
-        Route::post("payments/addNewItems", [PaymentController::class, "addNewItems"])->name("payments.addNewItems");
-        Route::get("accounting/payments/simple", [PaymentController::class, "getPaymentsSimpleList"])->name("payments.simpleList");
         Route::get("accounting/payments/search", [PaymentController::class, "searchPayments"])->name("payments.search");
         Route::get("accounting/amount-paid-balancing-set", [PaymentController::class, "amountPaidBalancingSet"])->name("reports.amount.paid.balancing.set");
 
