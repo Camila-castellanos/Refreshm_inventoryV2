@@ -583,9 +583,10 @@ async function submitSpreadsheet(body: any[]): Promise<void> {
     // Delete current draft from database
     if (currentLoadedDraftId.value) {
       try {
-        await axios.delete(route('drafts.destroy', currentLoadedDraftId.value));
+        await axios.post(route('drafts.purge', currentLoadedDraftId.value));
+        console.log("Draft purged successfully");
       } catch (err) {
-        console.warn('Failed to delete draft from server:', err);
+        console.warn('Failed to purge draft:', err);
       }
       currentLoadedDraftId.value = null;
     }
@@ -825,12 +826,21 @@ function handleLoadDraft(draft: any) {
   selectedDate.value   = draft.date ? new Date(draft.date) : new Date();
   selectedTax.value    = draft.items[0]?.tax_id ?? null;
   BillTitle.value      = draft.title;
+  
   // Mapear items y construir 'location'
   tableData.value = draft.items.map((item: any) => {
     const storage = storagesList.value.find(s => s.id === item.storage_id);
+    let location = '';
+    
+    // Si el item tiene storage_id y storage_position, construir la location
+    if (storage && item.storage_position) {
+      location = `${storage.name} - ${item.storage_position} / ${storage.limit}`;
+    }
+    // Si no tiene location, se dejará vacío para que renderPositions lo asigne
+    
     return {
       ...item,
-      location: storage ? `${storage.name} - ${item.storage_position} / ${storage.limit}` : '',
+      location: location,
       vendor: selectedVendor.value as string,
       date: draft.date,
       tax: draft.tax_id,
@@ -839,6 +849,13 @@ function handleLoadDraft(draft: any) {
       selling_price: item.selling_price,
     };
   });
+  
+  // Verificar si hay items sin location y asignarles posiciones automáticamente
+  const itemsWithoutLocation = tableData.value.filter(item => !item.location);
+  if (itemsWithoutLocation.length > 0) {
+    console.log(`Found ${itemsWithoutLocation.length} items without location, assigning positions...`);
+    renderPositions(itemsWithoutLocation.length);
+  }
 }
 
 // local draft management
