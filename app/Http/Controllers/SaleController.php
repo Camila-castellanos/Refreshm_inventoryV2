@@ -297,197 +297,135 @@ class SaleController extends Controller
     }
 
     /**
-     * Show report for Sale
+     * Show report for Sale - Unified version with optional date range
      */
-    public function showReport(): Response
+    public function showReport(Request $request): Response|JsonResponse
     { 
-        try{
-            $end = Carbon::now()->endOfDay();
-            $start = Carbon::now()->subDays(7)->startOfDay();
+        try {
+            // Si se pasan fechas por request, usarlas; sino usar últimos 7 días
+            $start = $request->start ? Carbon::parse($request->start)->startOfDay() : Carbon::now()->subDays(7)->startOfDay();
+            $end = $request->end ? Carbon::parse($request->end)->endOfDay() : Carbon::now()->endOfDay();
             $user = Auth::user();
-    
-            $tabs = Tab::where('user_id', $user->id)->orderBy('order', 'asc')->get();
-            $fields = CustomField::where('user_id', $user->id)->get();
-            $items = Item::where(function ($query) use ($start, $end, $user) {
-            $query->where([
-            ["sold", ">=", $start],
-            ["sold", "<=", $end],
-            ])
-            ->orWhereHas('sale', function ($q) use ($start, $end, $user) {
-            $q->whereBetween('created_at', [$start, $end])
-              ->where('user_id', $user->id);
-            });
-        })
-            ->whereNotNull("sale_id")
-            ->whereIn('type', ['device', 'accessory'])
-            // ->whereHas('sale', function($query){
-            //     $query->where('paid', 1);
-            // })
-            ->select("sale_id")
-            ->distinct()
-            ->with(['vendor:id,vendor'])
-            ->get();
 
-        $sale_pks = $items->map(function ($item) {
-            return $item->sale_id;
-        })->toArray();
+            
+            
+                $tabs = Tab::where('user_id', $user->id)->orderBy('order', 'asc')->get();
+                $fields = CustomField::where('user_id', $user->id)->get();
 
-        $sales = Sale::whereIn("id", $sale_pks);
+            $sales = Sale::select([
+                    'sales.id',
+                    'sales.tax',
+                    'sales.created_at'
+                ])
+                ->join('items', 'sales.id', '=', 'items.sale_id')
+                ->where('sales.user_id', $user->id)
+                ->where(function ($query) use ($start, $end) {
+                    $query->where(function ($q) use ($start, $end) {
+                        $q->whereBetween('items.sold', [$start, $end]);
+                    })->orWhere(function ($q) use ($start, $end) {
+                        $q->whereBetween('sales.created_at', [$start, $end]);
+                    });
+                })
+                ->whereNotNull('items.sale_id')
+                ->whereIn('items.type', ['device', 'accessory'])
+                ->distinct()
+                ->with([
+                    'items' => function ($query) {
+                        $query->select([
+                            'id', 'sale_id', 'customer', 'battery', 'cost', 
+                            'selling_price', 'sold', 'vendor_id', 'model',
+                            'manufacturer', 'colour', 'grade', 'issues', 'imei',
+                            'date', 'type', 'sold_position', 'sold_storage_name', 
+                            'sold_storage_id', 'custom_values'
+                        ]);
+                    },
+                    'items.vendor:id,vendor'
+                ])
+                ->get();
 
-        $sales = $sales->get();
-        $formatted_items = [];
-        foreach ($sales as $sale) {
-            $tax = intval($sale->tax) / 100;
-            foreach ($sale->items as $item) {
+            $customerIds = $sales->flatMap(function ($sale) {
+                    return $sale->items->pluck('customer');
+                })
+                ->filter(function ($customer) {
+                    return is_numeric($customer);
+                })
+                ->unique()
+                ->values();
 
-                $battery = $item->battery;
-                if (is_numeric($item->battery)) {
-                    $battery = "$battery %";
+            $customers = Customer::whereIn('id', $customerIds)
+                ->select('id', 'customer')
+                ->get()
+                ->keyBy('id');
+
+            $formatted_items = [];
+            
+            foreach ($sales as $sale) {
+                $tax = intval($sale->tax) / 100;
+                
+                foreach ($sale->items as $item) {
+                    $battery = is_numeric($item->battery) ? "{$item->battery} %" : $item->battery;
+                    
+                    if (is_numeric($item->customer) && isset($customers[$item->customer])) {
+                        $item->customer = $customers[$item->customer]->customer;
+                    }
+
+                    $cost = (float) $item->cost;
+                    $selling_price = (float) $item->selling_price;
+                    $total = $selling_price + ($selling_price * $tax);
+                    $profit = $total - $cost;
+
+                    // Procesar custom values para mantener compatibilidad
+                    $customValues = json_decode($item->custom_values ?: '[]', true);
+                    $customFields = [];
+                    foreach ($customValues as $field) {
+                        $customFields["{$field['slug']}_{$field['id']}"] = $field['value'];
+                    }
+
+                    $formatted_items[] = array_merge([
+                        'id' => $item->id,
+                        'sale_id' => $item->sale_id,
+                        'customer' => $item->customer,
+                        'model' => $item->model,
+                        'manufacturer' => $item->manufacturer,
+                        'colour' => $item->colour,
+                        'grade' => $item->grade,
+                        'issues' => $item->issues,
+                        'imei' => $item->imei,
+                        'battery' => $battery,
+                        'sold' => Carbon::parse($item->sold)->format('Y-m-d'),
+                        'date' => Carbon::parse($item->date)->format('Y-m-d'),
+                        'type' => $item->type,
+                        'cost' => '$ ' . number_format($cost, 2),
+                        'subtotal' => '$ ' . number_format($selling_price, 2),
+                        'total' => '$ ' . number_format($total, 2),
+                        'profit' => '$ ' . number_format($profit, 2),
+                        'vendor' => $item->vendor,
+                        'sold_position' => $item->sold_position,
+                        'sold_storage_name' => $item->sold_storage_name,
+                        'sold_storage_id' => $item->sold_storage_id,
+                        'supplier' => $item->vendor?->vendor ?? null,
+                    ], $customFields);
                 }
-
-                if (is_numeric($item->customer)) {
-                    $customers = Customer::whereId($item->customer)->select('customer', 'billing_address', 'billing_address_country', 'billing_address_state', 'billing_address_city', 'billing_address_postal', 'email', 'phone')->first();
-                    if ($customers)
-                        $item->customer = $customers->customer;
-                }
-
-                $cost = number_format(floatval($item->cost), 2);
-                $subtotal = number_format($item->selling_price, 2);
-                $total = $item->selling_price + $item->selling_price * $tax;
-                $profit = (float) $total - (float) $item->cost;
-
-                $sold = new DateTime($item->sold);
-
-                $total = number_format($total, 2);
-                $profit = number_format($profit, 2);
-                $item["sold"] = $sold->format("Y-m-d");
-                $item["cost"] = "$ $cost";
-                $item["subtotal"] = "$ $subtotal";
-                $item["total"] = "$ $total";
-                $item["profit"] = "$ $profit";
-                $item["battery"] = $battery;
-                $item["supplier"] = $item->vendor?->vendor ?? null;
-
-                $formatted_items[] = $item;
-    
             }
-        }
-            $context = [
+            Log::info("items: ", $formatted_items);
+            Log::info("items count: " . count($formatted_items));
+            // Si es vista inicial, devolver Inertia con todos los datos
+            return Inertia::render("Inventory/Sold", [
                 'tabs' => $tabs,
                 'fields' => $fields,
                 'items' => $formatted_items,
-            ];
-            return Inertia::render("Inventory/Sold", $context);
-        }
-        catch (Exception $e) {
-            Log::error($e);
+            ]);
+            
+        } catch (Exception $e) {
+            Log::error('Error in showReport: ' . $e->getMessage());
+            if ($request->wantsJson()) {
+                return response()->json(['error' => $e->getMessage()], 500);
+            }
             return Inertia::render('Error', ['message' => $e->getMessage()]);
         }
     }
 
-    /**
-     *  Returns JSON listing all Item sold between a given
-     *  date range ($start - $end).
-     *
-     *  @param Request $request
-     *  @return JsonResponse
-     */
-    public function generateReport(Request $request): JsonResponse
-    {
-        $start = $request->start;
-        $end = strtotime("1 day", strtotime($request->end));
-        $user = Auth::user();
-
-        $items = Item::where(function ($query) use ($start, $end, $user) {
-            $query->where([
-            ["sold", ">=", $start],
-            ["sold", "<=", date("Y-m-d", $end)],
-            ])
-            ->orWhereHas('sale', function ($q) use ($start, $end, $user) {
-            $q->whereBetween('created_at', [$start, date("Y-m-d", $end)])
-              ->where('user_id', $user->id);
-            });
-        })
-            ->whereNotNull("sale_id")
-            // ->whereHas('sale', function($query){
-            //     $query->where('paid', 1);
-            // })
-            ->whereIn('type', ['device', 'accessory'])
-            ->select("sale_id")
-            ->distinct()
-            ->with(['vendor:id,vendor'])
-            ->get();
-
-        $sale_pks = $items->map(function ($item) {
-            return $item->sale_id;
-        })->toArray();
-
-        $sales = Sale::whereIn("id", $sale_pks);
-
-        $sales = $sales->get();
-
-        $response = [];
-        foreach ($sales as $sale) {
-            $tax = intval($sale->tax) / 100;
-
-            // Fallback customer in case no customer is set for the sale    
-            $fallbackCustomer = null;
-            foreach ($sale->items as $item) {
-                if (!empty($item->customer)) {
-                    $fallbackCustomer = $item->customer;
-                    break;
-                }
-            }
-
-            foreach ($sale->items as $item) {
-
-                $battery = $item->battery;
-                if (is_numeric($item->battery)) {
-                    $battery = "$battery %";
-                }
-
-                // If the item does not have a customer, use the fallbackCustomer
-                if (empty($item->customer) && $fallbackCustomer) {
-                $item->customer = $fallbackCustomer;
-                }
-
-                if (is_numeric($item->customer)) {
-                    $customers = Customer::whereId($item->customer)->select('customer', 'billing_address', 'billing_address_country', 'billing_address_state', 'billing_address_city', 'billing_address_postal', 'email', 'phone')->first();
-                    if ($customers)
-                        $item->customer = $customers->customer;
-                }
-
-                $cost = number_format(floatval($item->cost), 2);
-                $subtotal = number_format($item->selling_price, 2);
-                $total = $item->selling_price + $item->selling_price * $tax;
-                $profit = (float) $total - (float) $item->cost;
-
-                $sold = new DateTime($item->sold);
-
-                $total = number_format($total, 2);
-                $profit = number_format($profit, 2);
-                $item["sold"] = $sold->format("Y-m-d");
-                $item["cost"] = "$ $cost";
-                $item["subtotal"] = "$ $subtotal";
-                $item["total"] = "$ $total";
-                $item["profit"] = "$ $profit";
-                $item["battery"] = $battery;
-                $item["supplier"] = $item->vendor?->vendor ?? null;
-
-                $response[] = $item;
-            }
-        }
-
-        return response()->json($response);
-    }
-
-    /**
-     *  Returns JSON listing all Item sold between a given
-     *  date range ($start - $end).
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
+    
     public function soldItems($id): JsonResponse
     {
 
@@ -498,30 +436,5 @@ class SaleController extends Controller
         });
 
         return response()->json($soldItems);
-    }
-
-    public function getSolditems(Request $request): JsonResponse
-    {
-        $start = Carbon::parse($request->start)->startOfDay();
-        $end = Carbon::parse($request->end)->endOfDay();
-        try{
-            $query = Item::whereNotNull('sold')
-                ->whereNotNull('sale_id')
-                ->with(['vendor:id,vendor', 'sale']);
-
-            if ($request->has('start') && $request->has('end')) {
-                $query->whereBetween('sold', [$start, $end]);
-            } else {
-                $query->where('sold', '>=', now()->subDays(7));
-            }
-
-            $soldItems = $query->get();
-
-            return response()->json($soldItems, 200);
-        }
-
-        catch (Exception $e) {
-            return response()->json(['message' => "{$e}"], 500);
-        }
     }
 }
