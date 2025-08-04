@@ -142,4 +142,28 @@ class DraftController extends Controller
 
         return response()->json(null, 204);
     }
+
+    /**
+     * Purge draft items of a draft (remove storage positions, location and storage_id) without deleting the draft
+     */
+    public function purgeDraft(Draft $draft)
+    {
+        try {
+            // Update all draft items to remove storage positions, location and storage_id
+            $draft->items()->update([
+                'storage_id' => null,
+                'storage_position' => null,
+                'location' => null,
+            ]);
+
+            return response()->json([
+                'message' => 'Draft items purged successfully',
+                'draft' => $draft->load('items')
+            ], 200);
+
+        } catch (\Exception $e) {
+            Log::error('Error purging draft items: ' . $e->getMessage());
+            return response()->json(['error' => 'Failed to purge draft items'], 500);
+        }
+    }
 }

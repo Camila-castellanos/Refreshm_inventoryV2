@@ -177,6 +177,7 @@ Route::middleware([
     Route::post("accounting/taxes/store", [TaxController::class, "store"])->name("tax.store");
     Route::get("accounting/payments/simple", [PaymentController::class, "getPaymentsSimpleList"])->name("payments.simpleList");
     Route::post("payments/addNewItems", [PaymentController::class, "addNewItems"])->name("payments.addNewItems");
+    Route::post("drafts/purge/{draft}", [DraftController::class, 'purgeDraft'])->name("drafts.purge");
     Route::middleware(['role:ADMIN,OWNER'])->group(function () {
         Route::get("dashboard", DashboardController::class)->name("dashboard");
         Route::post("dashboard/update_cash", [DashboardController::class, 'updateCashOnHand'])->name("update.cash");
