@@ -268,8 +268,13 @@ function formatCurrency(value: number | string | undefined): string {
 
 // Función auxiliar para formatear fechas y eliminar hora
 function formatDate(value: string | null | undefined): string {
-  if (!value) return ''
-  return value.split(' ')[0]
+  if (!value) return '';
+  // Si el valor es tipo ISO, separa por 'T' y toma la primera parte
+  if (value.includes('T')) {
+    return value.split('T')[0];
+  }
+  // Si el valor tiene espacio, separa por espacio y toma la primera parte
+  return value.split(' ')[0];
 }
 
 function checkOverflow() {

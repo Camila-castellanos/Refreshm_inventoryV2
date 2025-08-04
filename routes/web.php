@@ -106,7 +106,6 @@ Route::middleware([
 
         Route::get("report", [SaleController::class, "showReport"])->name("sales.report");
         Route::post("report", [SaleController::class, "generateReport"])->name("sales.generate_report");
-        Route::get("report/getSoldItems", [SaleController::class, "getSoldItems"])->name("sales.getSoldItems");
     });
 
     Route::resource('prospects', ProspectController::class);
