@@ -32,7 +32,7 @@ class CustomerController extends Controller
     {
         $customers = Customer::all();
         foreach ($customers as $customer) {
-            $items = Item::whereCustomer($customer->customer)->whereUserId(Auth::user()->id)->get();
+            $items = Item::whereCustomer($customer->customer)->get();
             $sale_pks = $items->map(function ($item) {
                 return $item->sale_id;
             })->toArray();

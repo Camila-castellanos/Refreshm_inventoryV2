@@ -17,8 +17,7 @@ class EmailsController extends Controller
    */
   public function index()
   {
-    $user_id = Auth::user()->id;
-    $emails = EmailTemplate::where('user_id', $user_id)->get();
+    $emails = EmailTemplate::all();
 
     return Inertia::render("Customers/EmailEditor", compact('emails'));
   }
