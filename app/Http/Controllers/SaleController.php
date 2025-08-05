@@ -318,7 +318,6 @@ class SaleController extends Controller
                     'sales.created_at'
                 ])
                 ->join('items', 'sales.id', '=', 'items.sale_id')
-                ->where('sales.user_id', $user->id)
                 ->where(function ($query) use ($start, $end) {
                     $query->where(function ($q) use ($start, $end) {
                         $q->whereBetween('items.sold', [$start, $end]);
