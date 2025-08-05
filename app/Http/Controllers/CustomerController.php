@@ -30,7 +30,7 @@ class CustomerController extends Controller
      */
     public function index()
     {
-        $customers = Customer::whereUserId(Auth::user()->id)->get();
+        $customers = Customer::all();
         foreach ($customers as $customer) {
             $items = Item::whereCustomer($customer->customer)->whereUserId(Auth::user()->id)->get();
             $sale_pks = $items->map(function ($item) {
@@ -126,6 +126,7 @@ class CustomerController extends Controller
         $customer = new Customer();
         $customer->customer = $form["customer_name"];
         $customer->user_id = Auth::id();
+        $customer->company_id = Auth::user()->company_id;
         $customer->first_name = $form["first_name"];
         $customer->last_name = $form["last_name"];
         $customer->email = $form["email"];
@@ -210,6 +211,7 @@ class CustomerController extends Controller
             $customer_data = array(
                 'customer' => $form["customer_name"],
                 'user_id' => Auth::id(),
+                'company_id' => Auth::user()->company_id,
                 'first_name' => $form["first_name"],
                 'last_name' => $form["last_name"],
                 'email' => $form["email"],
@@ -283,7 +285,7 @@ class CustomerController extends Controller
     public function datewise(Request $request)
     {
         try {
-            $customers = Customer::whereUserId(Auth::id())->get();
+            $customers = Customer::all();
             $startDate = $request->startDate;
             $endDate = $request->endDate;
 

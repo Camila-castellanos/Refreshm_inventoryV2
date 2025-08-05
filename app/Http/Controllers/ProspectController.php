@@ -18,8 +18,7 @@ class ProspectController extends Controller
    */
   public function index()
   {
-    $user_id = Auth::user()->id;
-    $prospects = Prospect::where('user_id', $user_id)->get()->toArray();
+    $prospects = Prospect::all();
 
     return Inertia::render("Customers/Prospects", compact('prospects'));
   }
@@ -52,6 +51,7 @@ class ProspectController extends Controller
       $contact->email = $prospect['email'];
       $contact->type = 2;
       $contact->user_id = Auth::id();
+      $contact->company_id = Auth::user()->company_id;
       $contact->prospect_id = $save->id;
       $contact->save();
       return response()->json($save, 200);

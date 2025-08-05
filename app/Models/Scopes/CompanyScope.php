@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Scope;
 use Illuminate\Support\Facades\Auth;
 
-class CompanyStorageScope implements Scope
+class CompanyScope implements Scope
 {
     /**
      * Apply the scope to a given Eloquent query builder.
@@ -16,7 +16,8 @@ class CompanyStorageScope implements Scope
     public function apply(Builder $builder, Model $model): void
     {
         if (Auth::check() && Auth::user()->company_id) {
-            $builder->where('company_id', Auth::user()->company_id);
+            $tableName = $model->getTable();
+            $builder->where("{$tableName}.company_id", Auth::user()->company_id);
         }
     }
 }
