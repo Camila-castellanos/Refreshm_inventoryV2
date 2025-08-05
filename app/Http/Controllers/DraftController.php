@@ -13,10 +13,7 @@ class DraftController extends Controller
      */
     public function index(Request $req)
     {
-        $drafts = $req->user()->drafts()
-                         ->latest()
-                         ->with('items')
-                         ->get();
+        $drafts = Draft::with('items')->get();
         return response()->json($drafts);
     }
 
@@ -25,8 +22,7 @@ class DraftController extends Controller
      */
     public function simpleList(Request $req)
     {
-        return Draft::where('user_id', $req->user()->id)
-                     ->orderByDesc('created_at')
+        return Draft::orderByDesc('created_at')
                      ->get(['id','title','created_at']);
     }
 
