@@ -25,7 +25,7 @@ class MailListController extends Controller
     $user_id = Auth::user()->id;
     $contacts = Contact::where('user_id', Auth::id())->get()->toArray();
     $email_templates = EmailTemplate::where('user_id', Auth::id())->get()->toArray();
-    $mailing_lists = MailList::where("user_id", $user_id)->get()->toArray();
+    $mailing_lists = MailList::all()->toArray();
 
     return Inertia::render("Customers/MailList", [
       "contacts" => $contacts,
