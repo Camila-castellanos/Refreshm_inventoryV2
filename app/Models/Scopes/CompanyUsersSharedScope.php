@@ -16,17 +16,16 @@ class CompanyUsersSharedScope implements Scope
      */
     public function apply(Builder $builder, Model $model): void
     {
-        if (Auth::check() && Auth::user()->company_id) {
-            $companyId = Auth::user()->company_id;
-            
-            // Obtener todos los user_ids de la compañía del usuario actual
-            $userIds = User::where('company_id', $companyId)->pluck('id');
-            
-            // Obtener el nombre de la tabla del modelo actual
-            $tableName = $model->getTable();
-            
-            // Aplicar el filtro usando el nombre de la tabla
-            $builder->whereIn("{$tableName}.user_id", $userIds);
+        if (Auth::check()) {
+            if (Auth::user()->company_id) {
+                $companyId = Auth::user()->company_id;
+                $userIds = User::where('company_id', $companyId)->pluck('id');
+                $tableName = $model->getTable();
+                $builder->whereIn("{$tableName}.user_id", $userIds);
+            } else {
+                // Si no tiene company_id, no devuelve ningún registro
+                $builder->whereRaw('1 = 0');
+            }
         }
     }
 }
