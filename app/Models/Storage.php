@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use App\Models\Scopes\CompanyStorageScope;
+use App\Models\Scopes\CompanyScope;
 
 class Storage extends Model
 {
@@ -34,7 +34,7 @@ class Storage extends Model
 
     protected static function booted()
     {
-        static::addGlobalScope(new CompanyStorageScope());
+        static::addGlobalScope(new CompanyScope());
     }
 
     /**
