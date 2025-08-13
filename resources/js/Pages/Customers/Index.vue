@@ -80,9 +80,9 @@ async function onDateRangeSubmit() {
   }
 
   // Format
-  const startDate = format(dates.value[0], "y-m-d");
-  const endDate = format(dates.value[1], "y-m-d");
-
+const startDate = format(dates.value[0], "yyyy-MM-dd");
+const endDate = format(dates.value[1], "yyyy-MM-dd");
+  console.log("payload siendo enviada", { startDate, endDate });
   try {
     // sent request
     const response = await axios.post(route("customer.datewise"), { startDate, endDate });

@@ -32,7 +32,10 @@ class CustomerController extends Controller
     {
         $customers = Customer::all();
         foreach ($customers as $customer) {
-            $items = Item::whereCustomer($customer->customer)->get();
+            $items = Item::where(function($query) use ($customer) {
+    $query->where('customer', $customer->customer)
+          ->orWhere('customer', $customer->id);
+})->get();
             $sale_pks = $items->map(function ($item) {
                 return $item->sale_id;
             })->toArray();
@@ -292,12 +295,14 @@ class CustomerController extends Controller
             $customers = Customer::all();
             $startDate = $request->startDate;
             $endDate = $request->endDate;
-
             $start = Carbon::createFromFormat('Y-m-d', $startDate)->startOfDay();
             $end = Carbon::createFromFormat('Y-m-d', $endDate)->endOfDay();
 
             foreach ($customers as $customer) {
-                $items = Item::whereCustomer($customer->customer)->get();
+                $items = Item::where(function($query) use ($customer) {
+    $query->where('customer', $customer->customer)
+          ->orWhere('customer', $customer->id);
+})->get();
                 $sale_pks = $items->map(function ($item) {
                     return $item->sale_id;
                 })->toArray();
@@ -306,10 +311,11 @@ class CustomerController extends Controller
                 $profit = [];
                 $balance = [];
                 $sales = Sale::whereIn("id", $sale_pks)
-                    ->whereBetween('created_at', [$start, $end])
+                    ->where(function($query) use ($start, $end) {
+                        $query->whereBetween('created_at', [$start, $end]);
+                    })
                     ->with('items') 
                     ->get();
-                    
                 foreach ($sales as $sale) {
                     $tax = intval($sale->tax) / 100;
                     $balance[] = $sale->balance_remaining;
@@ -321,6 +327,7 @@ class CustomerController extends Controller
                         }
                     }
                 }
+                Log::info("sales: ", [$sales]);
                 $total = array_sum($total);
                 $profit = array_sum($profit);
                 if ($profit != 0) {
