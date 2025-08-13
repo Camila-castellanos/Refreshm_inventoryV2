@@ -71,18 +71,22 @@ class CustomerController extends Controller
             $customer->credit = (float) $customer->credit;
 
             if (is_array($customer->first_name)) {
-    foreach ($customer->first_name as $key => $fname) {
-        $last = $customer->last_name[$key] ?? '';       // si no existe, cadena vacía
-        $full = trim("$fname $last");
-        if ($full !== '') {
-            $customer->name .= $full . ', ';
-        }
-    }
-}
+                $customer->name = '';
+                foreach ($customer->first_name as $key => $fname) {
+                    $last = $customer->last_name[$key] ?? '';
+                    $full = trim("$fname $last");
+                    if ($full !== '') {
+                        $customer->name .= $full . ', ';
+                    }
+                }
+                $customer->name = rtrim($customer->name, ', ');
+            }
 
             $customer->email = implode(", ", $customer->email);
             $customer->phone = implode(", ", $customer->phone);
         }
+
+        Log::info("customers", ['customers' => $customers]);
         
         return Inertia::render('Customers/Index', compact('customers'));
     }
@@ -293,7 +297,7 @@ class CustomerController extends Controller
             $end = Carbon::createFromFormat('Y-m-d', $endDate)->endOfDay();
 
             foreach ($customers as $customer) {
-                $items = Item::whereCustomer($customer->id)->whereUserId(Auth::id())->get();
+                $items = Item::whereCustomer($customer->customer)->get();
                 $sale_pks = $items->map(function ($item) {
                     return $item->sale_id;
                 })->toArray();
@@ -301,7 +305,11 @@ class CustomerController extends Controller
                 $total = [];
                 $profit = [];
                 $balance = [];
-                $sales = Sale::whereIn("id", $sale_pks)->whereDate('date', '>=', $start)->whereDate('date', '<=', $end)->get();
+                $sales = Sale::whereIn("id", $sale_pks)
+                    ->whereBetween('created_at', [$start, $end])
+                    ->with('items') 
+                    ->get();
+                    
                 foreach ($sales as $sale) {
                     $tax = intval($sale->tax) / 100;
                     $balance[] = $sale->balance_remaining;
@@ -328,19 +336,22 @@ class CustomerController extends Controller
                 $customer->balance = $balance < 0 ? 0 : $balance;
                 $customer->credit = (float) $customer->credit;
 
-                       if (is_array($customer->first_name)) {
-    foreach ($customer->first_name as $key => $fname) {
-        $last = $customer->last_name[$key] ?? '';       // si no existe, cadena vacía
-        $full = trim("$fname $last");
-        if ($full !== '') {
-            $customer->name .= $full . ', ';
-        }
-    }
-}
+                if (is_array($customer->first_name)) {
+                    $customer->name = '';
+                    foreach ($customer->first_name as $key => $fname) {
+                        $last = $customer->last_name[$key] ?? '';
+                        $full = trim("$fname $last");
+                        if ($full !== '') {
+                            $customer->name .= $full . ', ';
+                        }
+                    }
+                    $customer->name = rtrim($customer->name, ', ');
+                }
 
                 $customer->email = implode(", ", $customer->email);
                 $customer->phone = implode(", ", $customer->phone);
             }
+            
             return response()->json($customers, 200);
         } catch (Exception $e) {
             return response()->json($e->getMessage(), 500);
