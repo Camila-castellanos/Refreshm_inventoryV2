@@ -17,7 +17,7 @@
                 :max-date="new Date()"
                 selectionMode="range"
                 dateFormat="dd/mm/yy"
-                class="w-full"
+                class="w-56"
                 id="date"
                 placeholder="Date range for calculations"></DatePicker>
               <Button label="Update" class="mx-2" size="large" type="submit" />
@@ -138,6 +138,7 @@ async function onDateRangeSubmit(): Promise<void> {
 function transformVendorData(data: Vendor[]): any[] {
   return data.map((vendor: Vendor) => ({
     ...vendor,
+    margin: formatPercentage(vendor.margin),
     actions: [
       {
         label: "Edit",
