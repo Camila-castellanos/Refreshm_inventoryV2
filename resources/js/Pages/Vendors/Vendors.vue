@@ -119,7 +119,6 @@ async function onDateRangeSubmit(): Promise<void> {
   // Format
   const startDate: string = format(dates.value[0], "y-M-d");
   const endDate: string = format(dates.value[1], "y-M-d");
-
   try {
     // sent request
     const response = await axios.post(route("vendor.datewise"), { startDate, endDate });
