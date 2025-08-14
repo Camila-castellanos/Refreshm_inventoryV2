@@ -675,27 +675,34 @@ private function getPaymentsData($userId, $dataStatus,$startDate=null, $endDate=
             ]);
         })->toArray();
 
-        // Obtener customer info (como en la lógica original)
+        // Obtener customer info (lógica mejorada)
         $customer = $firstItem->customer;
         $customer_emails = null;
-        $credit = 0;
+        $customer_credit = 0;
         $customer_id = null;
 
-        $customerRecord = $customers->get($firstItem->customer);
-        if ($customerRecord) {
-            $customer = $customerRecord->customer;
-            $customer_emails = $customerRecord->email;
-            $credit = $customerRecord->credit;
-            $customer_id = $customerRecord->id;
-        }
-
-        // Manejar customer numérico (como en original)
+        // Si el customer es numérico, buscar directamente en la BD por ID
         if (is_numeric($customer)) {
-            $customerOb = Customer::whereId($customer)->select('customer')->first();
-            if ($customerOb) {
-                $customer = $customerOb->customer;
+            $customerRecord = Customer::whereId($customer)
+                ->select('customer', 'email', 'credit', 'id')
+                ->first();
+            
+            if ($customerRecord) {
+                $customer = $customerRecord->customer;
+                $customer_emails = $customerRecord->email;
+                $customer_credit = $customerRecord->credit;
+                $customer_id = $customerRecord->id;
             } else {
-                $customer = $firstItem->customer;
+                $customer = $firstItem->customer; // Mantener el ID si no se encuentra
+            }
+        } else {
+            // Si es texto, buscar en la colección de customers
+            $customerRecord = $customers->get($firstItem->customer);
+            if ($customerRecord) {
+                $customer = $customerRecord->customer;
+                $customer_emails = $customerRecord->email;
+                $customer_credit = $customerRecord->credit;
+                $customer_id = $customerRecord->id;
             }
         }
 
@@ -734,9 +741,9 @@ private function getPaymentsData($userId, $dataStatus,$startDate=null, $endDate=
             'returned_items' => $returned_items,
             'credited_items' => $credited_items,
             'customer_id' => $customer_id,
-            'customer_credit' => $credit,
+            'customer_credit' => (float) $customer_credit,
             'customer_email' => $customer_emails ? $customer_emails : null,
-            'credit' => $sale->credit,
+            'credit' => $sale->credit || 0,
             'total' => $sale->total,
             'amount_paid' => max(0, $sale->amount_paid),
             'balance_remaining' => max(0, $sale->balance_remaining),

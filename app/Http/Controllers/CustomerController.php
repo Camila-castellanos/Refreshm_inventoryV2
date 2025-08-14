@@ -327,7 +327,6 @@ class CustomerController extends Controller
                         }
                     }
                 }
-                Log::info("sales: ", [$sales]);
                 $total = array_sum($total);
                 $profit = array_sum($profit);
                 if ($profit != 0) {
@@ -436,6 +435,17 @@ class CustomerController extends Controller
             return response()->json($mail, 200);
         } catch (Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function getByName(Request $request, $name)
+    {
+        $customer = Customer::where('customer', $name)->first();
+
+        if ($customer) {
+            return response()->json($customer, 200);
+        } else {
+            return response()->json(['error' => 'Customer not found'], 404);
         }
     }
 }
