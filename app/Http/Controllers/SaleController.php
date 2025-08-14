@@ -47,6 +47,53 @@ class SaleController extends Controller
         // Crear la venta con datetime completo
         $sale = Sale::create($form);
 
+        // Manejar lógica de crédito
+        $creditAdded = (float) ($request->credit_added ?? 0);
+        $totalCredit = (float) ($request->credit ?? 0);
+        
+        // Si hay crédito agregado, actualizar el crédito del cliente
+        if ($creditAdded > 0) {
+            // Buscar el customer ID desde los items o newItems
+            $customerId = null;
+            
+            if (!empty($form["items"])) {
+                $customerId = $form["items"][0]['customer'] ?? null;
+            } elseif (!empty($request->newItems)) {
+                $customerId = $request->newItems[0]['customer'] ?? null;
+            }
+            
+            if ($customerId) {
+                $customer = Customer::find($customerId);
+                if ($customer) {
+                    // Restar el crédito agregado del cliente
+                    $newCustomerCredit = $customer->credit - $creditAdded;
+                    Customer::where('id', $customer->id)->update([
+                        'credit' => max(0, $newCustomerCredit), // Asegurar que no sea negativo
+                    ]);
+                    
+                    Log::info("Credit applied in store", [
+                        'sale_id' => $sale->id,
+                        'credit_added' => $creditAdded,
+                        'total_credit' => $totalCredit,
+                        'customer_id' => $customer->id,
+                        'old_customer_credit' => $customer->credit,
+                        'new_customer_credit' => $newCustomerCredit,
+                    ]);
+                } else {
+                    Log::warning("Customer not found for credit application", [
+                        'sale_id' => $sale->id,
+                        'customer_id' => $customerId,
+                        'credit_added' => $creditAdded,
+                    ]);
+                }
+            } else {
+                Log::warning("No customer ID found for credit application", [
+                    'sale_id' => $sale->id,
+                    'credit_added' => $creditAdded,
+                ]);
+            }
+        }
+
         foreach ($form["items"] as $sale_item) {
             $sale_item["sale_id"] = $sale->id;
             $sale_item["type"] = $sale_item["type"];
@@ -183,25 +230,63 @@ class SaleController extends Controller
                 }
             }
 
-            $finalCredit = $request->credit + $sale->credit;
-            $customerAdded = $request->credit - $sale->credit;
-            if ($request->credit != null || $request->credit > 0) {
+            // Manejar crédito con la nueva lógica
+            $creditAdded = (float) ($request->credit_added ?? 0);
+            $currentSaleCredit = (float) $sale->credit;
+            $finalCredit = $currentSaleCredit + $creditAdded;
+            
+            // Si hay crédito agregado, actualizar el crédito del cliente
+            if ($creditAdded > 0) {
                 $customer = Customer::where('customer', $request->customer)->first();
-                $credit = $customer->credit - $customerAdded;
-                Customer::where('id', $customer->id)->update([
-                    'credit' => $credit + $request->removed_credit,
-                ]);
-                Log::info("credit update with the following data", [
-                    'request_credit' => $request->credit,
-                    'sale_credit' => $sale->credit,
-                    'customerAdded' => $customerAdded,
-                    'customer' => $customer,
-                    'removed_credit' => $request->removed_credit,
-                    'credit' => $credit,
-                ]);
+                if ($customer) {
+                    // Restar el crédito agregado del cliente
+                    $newCustomerCredit = $customer->credit - $creditAdded;
+                    Customer::where('id', $customer->id)->update([
+                        'credit' => max(0, $newCustomerCredit), // Asegurar que no sea negativo
+                    ]);
+                    
+                    Log::info("Credit update with credit_added", [
+                        'credit_added' => $creditAdded,
+                        'current_sale_credit' => $currentSaleCredit,
+                        'final_credit' => $finalCredit,
+                        'customer_id' => $customer->id,
+                        'old_customer_credit' => $customer->credit,
+                        'new_customer_credit' => $newCustomerCredit,
+                    ]);
+                }
             }
 
-            $finalCredit = $request->credit - $request->removed_credit;
+            // Si viene un crédito total diferente (modo edit), calcular la diferencia
+            if ($request->has('credit') && $request->credit != $currentSaleCredit) {
+                $requestCredit = (float) $request->credit;
+                $creditDifference = $requestCredit - $currentSaleCredit;
+                
+                if ($creditDifference != 0) {
+                    $customer = Customer::where('customer', $request->customer)->first();
+                    if ($customer) {
+                        // Ajustar crédito del cliente basado en la diferencia
+                        $newCustomerCredit = $customer->credit - $creditDifference;
+                        Customer::where('id', $customer->id)->update([
+                            'credit' => max(0, $newCustomerCredit),
+                        ]);
+                        
+                        $finalCredit = $requestCredit;
+                        
+                        Log::info("Credit update with total credit change", [
+                            'request_credit' => $requestCredit,
+                            'current_sale_credit' => $currentSaleCredit,
+                            'credit_difference' => $creditDifference,
+                            'final_credit' => $finalCredit,
+                            'customer_id' => $customer->id,
+                            'old_customer_credit' => $customer->credit,
+                            'new_customer_credit' => $newCustomerCredit,
+                        ]);
+                    }
+                }
+            }
+
+            // Calcular removed_credit (por ahora 0, puedes implementar lógica adicional si es necesario)
+            $removedCredit = 0;
 
             $paid = 0;
             $balance = $request->balance_remaining;
@@ -232,8 +317,8 @@ class SaleController extends Controller
 
             return response()->json($request, 201);
         } catch (Exception $e) {
-            dd($e);
-            return Inertia::render('Error', ['message' => $e->getMessage()]);
+            Log::error('Error updating sale: ' . $e->getMessage());
+            return response()->json(['error' => $e->getMessage()], 500);
         }
     }
 

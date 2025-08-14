@@ -733,7 +733,6 @@ private function getPaymentsData($userId, $dataStatus,$startDate=null, $endDate=
 
         // Formatear la respuesta (como en original)
         $sold = Carbon::parse($firstItem->sold);
-        
         $response[] = [
             'id' => $firstItem->id,
             'date' => $sold->format("Y-m-d"),
@@ -743,7 +742,7 @@ private function getPaymentsData($userId, $dataStatus,$startDate=null, $endDate=
             'customer_id' => $customer_id,
             'customer_credit' => (float) $customer_credit,
             'customer_email' => $customer_emails ? $customer_emails : null,
-            'credit' => $sale->credit || 0,
+            'credit' => (float) $sale->credit ?? 0,
             'total' => $sale->total,
             'amount_paid' => max(0, $sale->amount_paid),
             'balance_remaining' => max(0, $sale->balance_remaining),

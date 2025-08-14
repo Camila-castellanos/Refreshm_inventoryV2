@@ -46,6 +46,9 @@ class SaleForm extends FormRequest
             "items.*.selling_price" => "required|numeric",
             "items.*.type" => "required|string",
             "tax_id" => "required",
+            // Campos de crédito
+            "credit" => "numeric|nullable",
+            "credit_added" => "numeric|nullable",
         ];
     }
 }

@@ -134,7 +134,6 @@
           <Button
             v-if="Number(balance_remaining) > 0 && form.customer_credit > 0"
             label="Add Credit"
-            class="p-button-sm p-button-success ml-2"
             @click="addCredit" />
           <Button
             v-if="selectedItems.length > 0"
@@ -187,29 +186,34 @@
   <Dialog 
     v-model:visible="creditDialogVisible" 
     modal 
-    :header="`Usable Credit: $${usableCredit.toFixed(2)}`" 
+    :header="creditDialogMode === 'add' ? `Usable Credit: $${usableCredit.toFixed(2)}` : 'Edit Credit'" 
     :style="{ width: '28rem' }"
     class="p-fluid"
   >
     <div class="flex flex-col gap-4 p-4">
       <div class="flex flex-col gap-3">
-        <label for="credit-amount" class="font-semibold text-center block">Credit Amount</label>
-          <InputNumber 
-            id="credit-amount"
-            v-model="creditInputValue" 
-            fluid
-            class="relative left-1"
-            mode="currency" 
-            currency="USD" 
-            locale="en-US"
-            :max="usableCredit"
-            :min="0"
-            showButtons
-            :step="0.01"
-          />
+        <label for="credit-amount" class="font-semibold text-center block">
+          {{ creditDialogMode === 'add' ? 'Credit Amount' : 'Current Credit Amount' }}
+        </label>
+        <InputNumber 
+          id="credit-amount"
+          v-model="creditInputValue" 
+          fluid
+          class="relative left-1"
+          mode="currency" 
+          currency="USD" 
+          locale="en-US"
+          :max="creditDialogMode === 'add' ? usableCredit : undefined"
+          :min="0"
+          showButtons
+          :step="0.01"
+        />
       </div>
-      <small class="text-surface-500 text-center block">
+      <small v-if="creditDialogMode === 'add'" class="text-surface-500 text-center block">
         Maximum credit available: ${{ usableCredit.toFixed(2) }}
+      </small>
+      <small v-else class="text-surface-500 text-center block">
+        Current credit: ${{ parseFloat(final_credit).toFixed(2) }}
       </small>
     </div>
     
@@ -224,7 +228,7 @@
         label="Confirm" 
         variant="outlined"
         severity="secondary"
-        :disabled="!creditInputValue || creditInputValue <= 0 || creditInputValue > usableCredit"
+        :disabled="creditDialogMode === 'add' ? (!creditInputValue || creditInputValue <= 0 || creditInputValue > usableCredit) : (!creditInputValue || creditInputValue < 0)"
         @click="confirmCreditApplication" 
       />
     </template>
@@ -446,13 +450,15 @@ const onEdit = async () => {
     paid: payment.value.status === "paid" ? 1 : 0,
     amount_paid: parseFloat(String(amount_paid.value)).toFixed(2),
     balance_remaining: balance_remaining.value,
+    // Enviar el crédito SIN IVA - el backend aplicará el IVA cuando sea necesario
     credit: parseFloat(final_credit.value).toFixed(2),
-    removed_credit: form.value.removed_credit || 0,
+    credit_added: creditAdded.value.toFixed(2),
     tax_id: form.value.tax?.id || null,
   };
 
   try {
     console.log("Sale data to update:", sale);
+    console.log("Credit added:", creditAdded.value);
     const response = await axios.post(route("sales.update"), sale);
     if (response.status >= 200 && response.status < 400) {
       toast.add({
@@ -504,6 +510,16 @@ const taxAmount = computed(() => {
 const total = computed(() => round(subtotal.value + taxAmount.value));
 
 const final_credit = computed(() => {
+  // Solo devolver el crédito sin IVA para evitar doble aplicación
+  const credit = parseFloat(form.value.credit?.toString() || '0')
+  const removed = parseFloat(form.value.removed_credit?.toString() || '0')
+  
+  // NO aplicar IVA aquí - se aplicará en el backend o cuando se muestre
+  return (credit - removed).toFixed(2)
+})
+
+// Si necesitas mostrar el crédito CON IVA en la UI, crea un computed separado:
+const final_credit_with_tax = computed(() => {
   const credit = parseFloat(form.value.credit?.toString() || '0')
   const removed = parseFloat(form.value.removed_credit?.toString() || '0')
   const taxPct = parseFloat(form.value.tax?.percentage?.toString() || '0')
@@ -517,10 +533,11 @@ const amount_paid = computed(() => {
 });
 
 const balance_remaining = computed(() => {
-  
   const totalValue = isNaN(total.value) ? 0 : total.value;
   const amountPaidValue = isNaN(amount_paid.value) ? 0 : amount_paid.value;
-  const finalCreditValue = isNaN(parseFloat(final_credit.value)) ? 0 : parseFloat(final_credit.value);
+  
+  // Usar el crédito CON IVA para el cálculo del balance
+  const finalCreditValue = isNaN(parseFloat(final_credit_with_tax.value)) ? 0 : parseFloat(final_credit_with_tax.value);
   
   let balance = totalValue - amountPaidValue;
   balance -= finalCreditValue;
@@ -531,56 +548,71 @@ const balance_remaining = computed(() => {
   return finalResult;
 });
 
-const editCredit = () => {
-  toast.add({ severity: "info", summary: "Edit Credit", detail: "Credit editing not implemented yet.", life: 3000 });
-};
-
-const addCredit = () => {
-  if (Number(balance_remaining.value) > 0 && form.value.customer_credit > 0) {
-    // Primer diálogo: Confirmación inicial
-    confirm.require({
-      message: 'Would You Like to Use Credit?',
-      header: 'Confirmation',
-      icon: 'pi pi-question-circle',
-      accept: () => {
-        // Mostrar diálogo de input de crédito
-        showCreditInputDialog();
-      },
-      acceptLabel: 'Yes',
-      rejectLabel: 'No'
-    });
-  }
-};
-
-// Variable reactiva para el diálogo de crédito
 const creditDialogVisible = ref(false);
 const creditInputValue = ref(0);
+const creditDialogMode = ref<'add' | 'edit'>('add');
+// Nueva variable para trackear solo el crédito agregado
+const creditAdded = ref(0);
+
 const usableCredit = computed(() => {
   const customerCreditNum = parseFloat(form.value.customer_credit.toString());
   const balanceNum = parseFloat(balance_remaining.value.toString());
   return customerCreditNum >= balanceNum ? balanceNum : customerCreditNum;
 });
 
-const showCreditInputDialog = () => {
-  creditInputValue.value = 0;
+const addCredit = () => {
+  if (Number(balance_remaining.value) > 0 && form.value.customer_credit > 0) {
+    creditDialogMode.value = 'add';
+    creditInputValue.value = 0;
+    creditDialogVisible.value = true;
+  }
+};
+
+const editCredit = () => {
+  creditDialogMode.value = 'edit';
+  creditInputValue.value = parseFloat(form.value.credit?.toString() || '0');
   creditDialogVisible.value = true;
 };
 
 const confirmCreditApplication = () => {
-  if (creditInputValue.value > 0) {
-    const sum = parseFloat(creditInputValue.value.toString()) + parseFloat(form.value.credit?.toString() || '0');
-    form.value.credit = sum;
-    form.value.customer_credit = parseFloat(form.value.customer_credit.toString()) - parseFloat(creditInputValue.value.toString());
+  if (creditDialogMode.value === 'add') {
+    if (creditInputValue.value > 0) {
+      // Agregar al crédito existente
+      const sum = parseFloat(creditInputValue.value.toString()) + parseFloat(form.value.credit?.toString() || '0');
+      form.value.credit = sum;
+      
+      // Actualizar solo el crédito agregado (acumulativo)
+      creditAdded.value += creditInputValue.value;
+      
+      // Reducir el crédito del cliente
+      form.value.customer_credit = form.value.customer_credit - creditInputValue.value;
+      
+      toast.add({ 
+        severity: "success", 
+        summary: "Credit Applied", 
+        detail: `$${creditInputValue.value.toFixed(2)} credit has been applied successfully.`, 
+        life: 3000 
+      });
+    }
+  } else {
+    // Modo edición - calcular la diferencia con el crédito original
+    const originalCredit = parseFloat(payment.value.credit?.toString() || '0');
+    const newCredit = creditInputValue.value;
+    
+    form.value.credit = newCredit;
+    
+    // Calcular solo el crédito agregado respecto al original
+    creditAdded.value = newCredit - originalCredit;
     
     toast.add({ 
       severity: "success", 
-      summary: "Credit Applied", 
-      detail: `$${creditInputValue.value.toFixed(2)} credit has been applied successfully.`, 
+      summary: "Credit Updated", 
+      detail: `Credit has been updated to $${creditInputValue.value.toFixed(2)}.`, 
       life: 3000 
     });
-    
-    creditDialogVisible.value = false;
   }
+  
+  creditDialogVisible.value = false;
 };
 
 const newRowTemplate: Item = {

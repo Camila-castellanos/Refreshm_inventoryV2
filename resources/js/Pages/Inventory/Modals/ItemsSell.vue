@@ -28,7 +28,7 @@
 
       <div class="col-span-2">
         <label for="icondisplay" class="block mb-2 font-bold"> Customer </label>
-        <Select v-model="form.customer" :options="customers" filter optionLabel="customer" placeholder="Select" class="w-full">
+        <Select v-model="form.customer" :options="customers" filter optionLabel="customer" placeholder="Select" class="w-full" @change="updateCustomerCredit(form.customer)">
           <template #footer>
             <div class="p-3">
               <Button label="Add New Customer" fluid severity="secondary" text size="small" icon="pi pi-plus"
@@ -98,7 +98,19 @@
     </template>
   </Column>
         </DataTable>
-        <Button label="" icon="pi pi-plus" class="mt-2" @click="addNewRow" />
+        <div class="flex gap-2 mt-2">
+          <Button label="" icon="pi pi-plus" @click="addNewRow" />
+          <Button
+            v-if="form.customer && form.customer_credit > 0"
+            label="Add Credit"
+            icon="pi pi-credit-card"
+            @click="addCredit(totalWithCredit)" />
+          <Button
+            v-if="form.credit > 0"
+            label="Edit Credit"
+            icon="pi pi-pencil"
+            @click="editCredit" />
+        </div>
       </div>
 
       <div class="col-span-6">
@@ -115,9 +127,13 @@
             <label class="block font-medium">Tax</label>
             <div class="text-lg font-bold">{{ taxAmount }}$</div>
           </div>
+          <div v-if="form.credit > 0" class="flex justify-end w-full gap-2 py-2">
+            <label class="block font-medium">Credit</label>
+            <div class="text-lg font-bold text-green-600">-{{ parseFloat(final_credit).toFixed(2) }}$</div>
+          </div>
           <div class="flex justify-end w-full gap-2 py-2">
             <label class="block font-medium">Total</label>
-            <div class="text-lg font-bold">{{ total }}$</div>
+            <div class="text-lg font-bold">{{ form.credit > 0 ? totalWithCredit.toFixed(2) : total }}$</div>
           </div>
         </div>
       </div>
@@ -137,6 +153,16 @@
         </Button>
       </div>
     </div>
+  
+  <!-- Diálogo de crédito -->
+  <CreditDialog
+    v-model:creditDialogVisible="creditDialogVisible"
+    v-model:creditInputValue="creditInputValue"
+    :creditDialogMode="creditDialogMode"
+    :maxCredit="usableCredit"
+    :currentCredit="parseFloat(final_credit_with_tax)"
+    @confirm="confirmCreditApplication"
+  />
   </form>
 </template>
 
@@ -153,6 +179,8 @@ import Column from "primevue/column";
 import DataTable from "primevue/datatable";
 import { computed, inject, onMounted, Ref, ref } from "vue";
 import { ITEM_TYPE_OPTIONS, ItemType, getItemTypeLabel } from '@/Enums/itemType';
+import { useCredit } from '@/Composables/useCredit';
+import CreditDialog from '@/Components/CreditDialog.vue';
 const dialog = useDialog();
 const toast = useToast();
 
@@ -175,6 +203,13 @@ const taxAmount = computed(() => {
 // Total: Subtotal + Tax
 const total = computed(() => {
   return parseFloat((subtotal.value + taxAmount.value).toFixed(2));
+});
+
+// Total con crédito aplicado
+const totalWithCredit = computed(() => {
+  const baseTotal = parseFloat((subtotal.value + taxAmount.value).toFixed(2));
+  const creditValue = parseFloat(final_credit_with_tax.value);
+  return Math.max(0, baseTotal - creditValue);
 });
 
 const dialogRef: any = inject("dialogRef");
@@ -205,6 +240,15 @@ async function parseCustomersData() {
   });
 }
 
+// Función para actualizar crédito del cliente cuando se selecciona
+const updateCustomerCredit = (selectedCustomer: any) => {
+  if (selectedCustomer && selectedCustomer.credit) {
+    form.customer_credit = parseFloat(selectedCustomer.credit.toString()) || 0;
+  } else {
+    form.customer_credit = 0;
+  }
+};
+
 const form = useForm({
   date: new Date(),
   tax: "",
@@ -212,7 +256,24 @@ const form = useForm({
   payment_method: "",
   payment_account: "",
   memo_notes: "",
+  credit: 0,
+  customer_credit: 0,
+  removed_credit: 0,
 });
+
+// Usar el composable de crédito
+const {
+  creditDialogVisible,
+  creditInputValue,
+  creditDialogMode,
+  creditAdded,
+  final_credit,
+  final_credit_with_tax,
+  usableCredit,
+  addCredit,
+  editCredit,
+  confirmCreditApplication,
+} = useCredit(ref(form));
 
 // extra rows feature section
 const newRowTemplate = {
@@ -301,8 +362,11 @@ async function submitForm(e: Event, isConfirmed: boolean) {
     payment_account: form.payment_account?.name || "",
     tax_id: form.tax?.id ?? null,
     paid: isConfirmed ? 1 : 0, // 1 = Fully Paid, 0 = Unpaid
-    balance_remaining: isConfirmed ? 0 : total.value,
-    amount_paid: isConfirmed ? total.value : 0,
+    balance_remaining: isConfirmed ? 0 : totalWithCredit.value,
+    amount_paid: isConfirmed ? totalWithCredit.value : 0,
+    // Datos de crédito
+    credit: parseFloat(final_credit.value),
+    credit_added: creditAdded.value,
     items: params.value.items
     .filter((item: any) => !item.isNew) // Filtrar los elementos originales
     .map((item: any) => ({
