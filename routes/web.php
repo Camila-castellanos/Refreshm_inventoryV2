@@ -115,7 +115,7 @@ Route::middleware([
     Route::get("customer/list", [CustomerController::class, "customersList"])->name("customer.list");
     Route::get("customer/email", [CustomerController::class, "marketingEmail"])->name("marketing.email");
     Route::post("customer/email/send", [CustomerController::class, "sendMarketingEmail"])->name("send.marketing.email");
-
+Route::get('/customers/by-name/{name}', [CustomerController::class, 'getByName'])->name('customer.getByName');
     Route::resource("vendor", VendorController::class)->except(["show", "store"]);
     Route::post("vendor/store", [VendorController::class, "store"])->name("vendor.store");
     Route::get("vendor/list", [VendorController::class, "vendorList"])->name("vendor.list");

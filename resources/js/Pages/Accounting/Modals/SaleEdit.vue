@@ -182,13 +182,60 @@
       </div>
     </div>
   </form>
+
+  <!-- Diálogo de Input de Crédito -->
+  <Dialog 
+    v-model:visible="creditDialogVisible" 
+    modal 
+    :header="`Usable Credit: $${usableCredit.toFixed(2)}`" 
+    :style="{ width: '28rem' }"
+    class="p-fluid"
+  >
+    <div class="flex flex-col gap-4 p-4">
+      <div class="flex flex-col gap-3">
+        <label for="credit-amount" class="font-semibold text-center block">Credit Amount</label>
+          <InputNumber 
+            id="credit-amount"
+            v-model="creditInputValue" 
+            fluid
+            class="relative left-1"
+            mode="currency" 
+            currency="USD" 
+            locale="en-US"
+            :max="usableCredit"
+            :min="0"
+            showButtons
+            :step="0.01"
+          />
+      </div>
+      <small class="text-surface-500 text-center block">
+        Maximum credit available: ${{ usableCredit.toFixed(2) }}
+      </small>
+    </div>
+    
+    <template #footer>
+      <Button 
+        label="Cancel" 
+        variant="outlined"
+        severity="secondary" 
+        @click="creditDialogVisible = false" 
+      />
+      <Button 
+        label="Confirm" 
+        variant="outlined"
+        severity="secondary"
+        :disabled="!creditInputValue || creditInputValue <= 0 || creditInputValue > usableCredit"
+        @click="confirmCreditApplication" 
+      />
+    </template>
+  </Dialog>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, inject, computed, Ref } from "vue";
 import axios from "axios";
 import { useToast } from "primevue/usetoast";
-import { Button, Column, ConfirmDialog, DataTable, DatePicker, InputNumber, Select, Textarea, useConfirm, useDialog, InputText } from "primevue";
+import { Button, Column, ConfirmDialog, DataTable, DatePicker, InputNumber, Select, Textarea, useConfirm, useDialog, InputText, Dialog } from "primevue";
 import { Customer, Item, PaymentResponse, Tax } from "@/Lib/types";
 import { DynamicDialogCloseOptions, DynamicDialogInstance } from "primevue/dynamicdialogoptions";
 import AddTaxes from "./AddTaxes.vue";
@@ -261,18 +308,21 @@ onMounted(async () => {
     taxes.value = taxesResponse.data.map((tax: Tax) => ({ ...tax, name: `${tax.name} (${tax.percentage}%)` }));
     payment.value = dialogRef.value.data.payment;
     console.log("Payment data:", payment.value);
-    form.value.customer = payment.value.customer;
     form.value.payment_method = payment.value.payment_method;
     form.value.payment_account = payment.value.payment_account;
     form.value.tax = taxes.value.find((tax) => tax.id === payment.value.tax_id);
     form.value.customer = customers.value.find((customer) => customer.customer === payment.value.customer);
-    form.value.credit = payment.value.customer_credit;
     form.value.memo_notes = payment.value.notes || "";
     form.value.discount = dialogRef.value.data.discount || 0;
     form.value.status = dialogRef.value.data.status || "";
     form.value.customer_id = dialogRef.value.data.customer_id || null;
+    form.value.credit = payment.value.credit;
+    form.value.customer_credit = payment.value.customer_credit;
+    console.log(balance_remaining.value, form.value.customer_credit)
+    console.log("add credit bollean:", Number(balance_remaining) > 0 && form.customer_credit > 0)
     if (itemsResponse.data.length > 0) {
       form.value.date = new Date(itemsResponse.data[0].sold || new Date());
+      form.value.sale_credit = itemsResponse.data[0].credit || 0;
     }
   } catch (error) {
     console.error("Error fetching data:", error);
@@ -467,9 +517,18 @@ const amount_paid = computed(() => {
 });
 
 const balance_remaining = computed(() => {
-  let balance = total.value - amount_paid.value;
-  balance -= parseFloat(final_credit.value);
-  return round(balance);
+  
+  const totalValue = isNaN(total.value) ? 0 : total.value;
+  const amountPaidValue = isNaN(amount_paid.value) ? 0 : amount_paid.value;
+  const finalCreditValue = isNaN(parseFloat(final_credit.value)) ? 0 : parseFloat(final_credit.value);
+  
+  let balance = totalValue - amountPaidValue;
+  balance -= finalCreditValue;
+  
+  const result = round(balance);
+  const finalResult = isNaN(result) ? 0 : result;
+  
+  return finalResult;
 });
 
 const editCredit = () => {
@@ -478,7 +537,49 @@ const editCredit = () => {
 
 const addCredit = () => {
   if (Number(balance_remaining.value) > 0 && form.value.customer_credit > 0) {
-    toast.add({ severity: "success", summary: "Credit Applied", detail: "Customer credit applied successfully.", life: 3000 });
+    // Primer diálogo: Confirmación inicial
+    confirm.require({
+      message: 'Would You Like to Use Credit?',
+      header: 'Confirmation',
+      icon: 'pi pi-question-circle',
+      accept: () => {
+        // Mostrar diálogo de input de crédito
+        showCreditInputDialog();
+      },
+      acceptLabel: 'Yes',
+      rejectLabel: 'No'
+    });
+  }
+};
+
+// Variable reactiva para el diálogo de crédito
+const creditDialogVisible = ref(false);
+const creditInputValue = ref(0);
+const usableCredit = computed(() => {
+  const customerCreditNum = parseFloat(form.value.customer_credit.toString());
+  const balanceNum = parseFloat(balance_remaining.value.toString());
+  return customerCreditNum >= balanceNum ? balanceNum : customerCreditNum;
+});
+
+const showCreditInputDialog = () => {
+  creditInputValue.value = 0;
+  creditDialogVisible.value = true;
+};
+
+const confirmCreditApplication = () => {
+  if (creditInputValue.value > 0) {
+    const sum = parseFloat(creditInputValue.value.toString()) + parseFloat(form.value.credit?.toString() || '0');
+    form.value.credit = sum;
+    form.value.customer_credit = parseFloat(form.value.customer_credit.toString()) - parseFloat(creditInputValue.value.toString());
+    
+    toast.add({ 
+      severity: "success", 
+      summary: "Credit Applied", 
+      detail: `$${creditInputValue.value.toFixed(2)} credit has been applied successfully.`, 
+      life: 3000 
+    });
+    
+    creditDialogVisible.value = false;
   }
 };
 
