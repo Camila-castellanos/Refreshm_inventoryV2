@@ -16,6 +16,8 @@ use App\Models\EmailTemplate;
 use App\Models\Prospect;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Carbon\Carbon;
 use Exception;
@@ -30,66 +32,86 @@ class CustomerController extends Controller
      */
     public function index()
     {
-        $customers = Customer::all();
-        foreach ($customers as $customer) {
-            $items = Item::where(function($query) use ($customer) {
-    $query->where('customer', $customer->customer)
-          ->orWhere('customer', $customer->id);
-})->get();
-            $sale_pks = $items->map(function ($item) {
-                return $item->sale_id;
-            })->toArray();
+        // Cache key único por usuario para evitar conflictos
+        $user = Auth::user();
+        $cacheKey = "customers_index_user_{$user->id}";
+        
+        // Cache por 20 minutos (1200 segundos)
+        $customers = Cache::remember($cacheKey, 1200, function () {
+            $startDate = now()->subYear()->startOfDay();
+            $endDate = now()->endOfDay();
 
-            $total = [];
-            $profit = [];
-            $balance = [];
-            $sales = Sale::whereIn("id", $sale_pks)
-                ->whereBetween('created_at', [now()->subYear()->startOfDay(), now()->endOfDay()])
-                ->with('items') 
-                ->get();
-            foreach ($sales as $sale) {
-                $tax = intval($sale->tax) / 100;
-                $balance[] = $sale->balance_remaining;
-                foreach ($sale->items as $item) {
-                    if (isset($item)) {
-                        $selling_price = $item->selling_price + $item->selling_price * $tax;
-                        $total[] = $selling_price;
-                        $profit[] = (float) $selling_price - (float) $item->cost;
+            // Approach compatible with strict MySQL - using subqueries
+            return Customer::select([
+                    'customers.id', 
+                    'customers.customer', 
+                    'customers.first_name', 
+                    'customers.last_name', 
+                    'customers.email', 
+                    'customers.phone', 
+                    'customers.credit'
+                ])
+                ->selectSub(function($query) use ($startDate, $endDate) {
+                    $query->selectRaw('COALESCE(SUM(items.selling_price + (items.selling_price * COALESCE(sales.tax, 0) / 100)), 0)')
+                          ->from('items')
+                          ->join('sales', 'items.sale_id', '=', 'sales.id')
+                          ->whereRaw('(items.customer = customers.customer OR items.customer = customers.id)')
+                          ->whereBetween('sales.created_at', [$startDate, $endDate]);
+                }, 'revenue')
+                ->selectSub(function($query) use ($startDate, $endDate) {
+                    $query->selectRaw('COALESCE(SUM((items.selling_price + (items.selling_price * COALESCE(sales.tax, 0) / 100)) - COALESCE(items.cost, 0)), 0)')
+                          ->from('items')
+                          ->join('sales', 'items.sale_id', '=', 'sales.id')
+                          ->whereRaw('(items.customer = customers.customer OR items.customer = customers.id)')
+                          ->whereBetween('sales.created_at', [$startDate, $endDate]);
+                }, 'profit')
+                ->selectSub(function($query) use ($startDate, $endDate) {
+                    $query->selectRaw('COALESCE(SUM(DISTINCT sales.balance_remaining), 0)')
+                          ->from('sales')
+                          ->whereExists(function($subQuery) {
+                              $subQuery->selectRaw('1')
+                                       ->from('items')
+                                       ->whereRaw('items.sale_id = sales.id')
+                                       ->whereRaw('(items.customer = customers.customer OR items.customer = customers.id)');
+                          })
+                          ->whereBetween('sales.created_at', [$startDate, $endDate]);
+                }, 'balance')
+                ->get()
+                ->map(function ($customer) {
+                    // Calculate margin
+                    $revenue = (float) $customer->revenue;
+                    $profit = (float) $customer->profit;
+                    $customer->margin = $revenue > 0 ? ($profit / $revenue) * 100 : 0;
+
+                    // Ensure non-negative values
+                    $customer->revenue = max(0, $revenue);
+                    $customer->profit = max(0, $profit);
+                    $customer->margin = max(0, $customer->margin);
+                    $customer->balance = max(0, (float) $customer->balance);
+                    $customer->credit = (float) $customer->credit;
+
+                    // Process names efficiently
+                    if (is_array($customer->first_name)) {
+                        $names = [];
+                        foreach ($customer->first_name as $key => $fname) {
+                            $lastName = $customer->last_name[$key] ?? '';
+                            $fullName = trim("$fname $lastName");
+                            if ($fullName !== '') {
+                                $names[] = $fullName;
+                            }
+                        }
+                        $customer->name = implode(', ', $names);
+                    } else {
+                        $customer->name = trim(($customer->first_name ?? '') . ' ' . ($customer->last_name ?? ''));
                     }
-                }
-            }
-            $total = array_sum($total);
-            $profit = array_sum($profit);
-            if ($profit != 0) {
-                $margin = ($profit / $total) * 100;
-            } else {
-                $margin = 0;
-            }
 
-            $balance = array_sum($balance);
-            $customer->revenue = $total < 0 ? 0 : $total;
-            $customer->profit = $profit < 0 ? 0 : $profit;
-            $customer->margin = $margin < 0 ? 0 : $margin;
-            $customer->balance = $balance < 0 ? 0 : $balance;
-            $customer->credit = (float) $customer->credit;
+                    // Process contact info
+                    $customer->email = is_array($customer->email) ? implode(", ", $customer->email) : ($customer->email ?? '');
+                    $customer->phone = is_array($customer->phone) ? implode(", ", $customer->phone) : ($customer->phone ?? '');
 
-            if (is_array($customer->first_name)) {
-                $customer->name = '';
-                foreach ($customer->first_name as $key => $fname) {
-                    $last = $customer->last_name[$key] ?? '';
-                    $full = trim("$fname $last");
-                    if ($full !== '') {
-                        $customer->name .= $full . ', ';
-                    }
-                }
-                $customer->name = rtrim($customer->name, ', ');
-            }
-
-            $customer->email = implode(", ", $customer->email);
-            $customer->phone = implode(", ", $customer->phone);
-        }
-
-        Log::info("customers", ['customers' => $customers]);
+                    return $customer;
+                });
+        });
         
         return Inertia::render('Customers/Index', compact('customers'));
     }
@@ -171,6 +193,10 @@ class CustomerController extends Controller
             $contact->save();
         }
 
+        // Invalidar cache de customers
+        $user = Auth::user();
+        Cache::forget("customers_index_user_{$user->id}");
+
         return response()->json($customer, 201);
     }
 
@@ -247,6 +273,10 @@ class CustomerController extends Controller
             );
 
             if ($customer->update($customer_data)) {
+                // Invalidar cache de customers
+                $user = Auth::user();
+                Cache::forget("customers_index_user_{$user->id}");
+                
                 return response()->json($customer, 200);
             } else {
                 return response()->json('', 500);
@@ -266,6 +296,11 @@ class CustomerController extends Controller
     {
         if ($customer->delete()) {
             Contact::deleteContactsByCustomer($customer->id);
+            
+            // Invalidar cache de customers
+            $user = Auth::user();
+            Cache::forget("customers_index_user_{$user->id}");
+            
             return response()->json('OK', 200);
         } else {
             return response()->json('', 500);
@@ -292,72 +327,82 @@ class CustomerController extends Controller
     public function datewise(Request $request)
     {
         try {
-            $customers = Customer::all();
             $startDate = $request->startDate;
             $endDate = $request->endDate;
             $start = Carbon::createFromFormat('Y-m-d', $startDate)->startOfDay();
             $end = Carbon::createFromFormat('Y-m-d', $endDate)->endOfDay();
 
-            foreach ($customers as $customer) {
-                $items = Item::where(function($query) use ($customer) {
-    $query->where('customer', $customer->customer)
-          ->orWhere('customer', $customer->id);
-})->get();
-                $sale_pks = $items->map(function ($item) {
-                    return $item->sale_id;
-                })->toArray();
+            // Optimized query using subqueries like the index method
+            $customers = Customer::select([
+                    'customers.id', 
+                    'customers.customer', 
+                    'customers.first_name', 
+                    'customers.last_name', 
+                    'customers.email', 
+                    'customers.phone', 
+                    'customers.credit'
+                ])
+                ->selectSub(function($query) use ($start, $end) {
+                    $query->selectRaw('COALESCE(SUM(items.selling_price + (items.selling_price * COALESCE(sales.tax, 0) / 100)), 0)')
+                          ->from('items')
+                          ->join('sales', 'items.sale_id', '=', 'sales.id')
+                          ->whereRaw('(items.customer = customers.customer OR items.customer = customers.id)')
+                          ->whereBetween('sales.created_at', [$start, $end]);
+                }, 'revenue')
+                ->selectSub(function($query) use ($start, $end) {
+                    $query->selectRaw('COALESCE(SUM((items.selling_price + (items.selling_price * COALESCE(sales.tax, 0) / 100)) - COALESCE(items.cost, 0)), 0)')
+                          ->from('items')
+                          ->join('sales', 'items.sale_id', '=', 'sales.id')
+                          ->whereRaw('(items.customer = customers.customer OR items.customer = customers.id)')
+                          ->whereBetween('sales.created_at', [$start, $end]);
+                }, 'profit')
+                ->selectSub(function($query) use ($start, $end) {
+                    $query->selectRaw('COALESCE(SUM(DISTINCT sales.balance_remaining), 0)')
+                          ->from('sales')
+                          ->whereExists(function($subQuery) {
+                              $subQuery->selectRaw('1')
+                                       ->from('items')
+                                       ->whereRaw('items.sale_id = sales.id')
+                                       ->whereRaw('(items.customer = customers.customer OR items.customer = customers.id)');
+                          })
+                          ->whereBetween('sales.created_at', [$start, $end]);
+                }, 'balance')
+                ->get()
+                ->map(function ($customer) {
+                    // Calculate margin
+                    $revenue = (float) $customer->revenue;
+                    $profit = (float) $customer->profit;
+                    $customer->margin = $revenue > 0 ? ($profit / $revenue) * 100 : 0;
 
-                $total = [];
-                $profit = [];
-                $balance = [];
-                $sales = Sale::whereIn("id", $sale_pks)
-                    ->where(function($query) use ($start, $end) {
-                        $query->whereBetween('created_at', [$start, $end]);
-                    })
-                    ->with('items') 
-                    ->get();
-                foreach ($sales as $sale) {
-                    $tax = intval($sale->tax) / 100;
-                    $balance[] = $sale->balance_remaining;
-                    foreach ($sale->items as $item) {
-                        if (isset($item)) {
-                            $selling_price = $item->selling_price + $item->selling_price * $tax;
-                            $total[] = $selling_price;
-                            $profit[] = (float) $selling_price - (float) $item->cost;
+                    // Ensure non-negative values
+                    $customer->revenue = max(0, $revenue);
+                    $customer->profit = max(0, $profit);
+                    $customer->margin = max(0, $customer->margin);
+                    $customer->balance = max(0, (float) $customer->balance);
+                    $customer->credit = (float) $customer->credit;
+
+                    // Process names efficiently
+                    if (is_array($customer->first_name)) {
+                        $names = [];
+                        foreach ($customer->first_name as $key => $fname) {
+                            $lastName = $customer->last_name[$key] ?? '';
+                            $fullName = trim("$fname $lastName");
+                            if ($fullName !== '') {
+                                $names[] = $fullName;
+                            }
                         }
+                        $customer->name = implode(', ', $names);
+                    } else {
+                        $customer->name = trim(($customer->first_name ?? '') . ' ' . ($customer->last_name ?? ''));
                     }
-                }
-                $total = array_sum($total);
-                $profit = array_sum($profit);
-                if ($profit != 0) {
-                    $margin = ($profit / $total) * 100;
-                } else {
-                    $margin = 0;
-                }
 
-                $balance = array_sum($balance);
-                $customer->revenue = $total < 0 ? 0 : $total;
-                $customer->profit = $profit < 0 ? 0 : $profit;
-                $customer->margin = $margin < 0 ? 0 : $margin;
-                $customer->balance = $balance < 0 ? 0 : $balance;
-                $customer->credit = (float) $customer->credit;
+                    // Process contact info
+                    $customer->email = is_array($customer->email) ? implode(", ", $customer->email) : ($customer->email ?? '');
+                    $customer->phone = is_array($customer->phone) ? implode(", ", $customer->phone) : ($customer->phone ?? '');
 
-                if (is_array($customer->first_name)) {
-                    $customer->name = '';
-                    foreach ($customer->first_name as $key => $fname) {
-                        $last = $customer->last_name[$key] ?? '';
-                        $full = trim("$fname $last");
-                        if ($full !== '') {
-                            $customer->name .= $full . ', ';
-                        }
-                    }
-                    $customer->name = rtrim($customer->name, ', ');
-                }
-
-                $customer->email = implode(", ", $customer->email);
-                $customer->phone = implode(", ", $customer->phone);
-            }
-            
+                    return $customer;
+                });
+        
             return response()->json($customers, 200);
         } catch (Exception $e) {
             return response()->json($e->getMessage(), 500);
