@@ -30,6 +30,21 @@ class Customer extends Model
         return $this->belongsTo(User::class, 'user_id');
     }
 
+    /**
+     * Get sales related to this customer through items
+     */
+    public function sales()
+    {
+        return $this->hasManyThrough(
+            Sale::class,
+            Item::class,
+            'customer', // Foreign key on items table
+            'id',       // Foreign key on sales table  
+            'id',       // Local key on customers table
+            'sale_id'   // Local key on items table
+        );
+    }
+
     // For array
 
     protected $casts = [
