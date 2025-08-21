@@ -428,10 +428,13 @@ function deleteRow() {
   // Eliminar cada índice válido
   for (const idx of unique) {
     if (idx >= 0 && idx < tableData.value.length) {
-      tableData.value = tableData.value.splice(idx, 1);
+      tableData.value.splice(idx, 1);
     }
   }
+  // force reference update
+  tableData.value = [...tableData.value];
 
+  //clean selection
   selectedRows.value = [];
 
   // Asegurarnos de que siempre quede al menos una fila
