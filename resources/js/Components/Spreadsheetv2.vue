@@ -99,7 +99,9 @@
       <RevoGrid ref="revogrid" :columns="columns" :source="tableData" :columnTypes="columnTypes" :canFocus="!isLoading"
         :range="true" class="h-[80vh] w-full" :resize="true" theme="default" @beforeedit="handleBeforeEdit"
         @beforeRowAdd="onInsertRow" @universal-cell-contextmenu="showContextMenu" @beforeRowDelete="onDeleteRow"
-        :clipboard="{ copyable: true, pasteable: true }" 
+        :clipboard="{ copyable: true, pasteable: true }"
+        @beforesetrange="handleBeforeSetRange"
+        @beforecellfocus="handleBeforeCellFocus"
         row-key="location"/>
 
       <ContextMenu ref="menuRef" :model="menuItems" />
@@ -181,6 +183,9 @@ const showDraftName = ref(false)
 const currentLoadedDraftId = ref<number | null>(null);
 const showLoadDraft = ref(false);
 const dontSaveDraft = ref(false);
+const selectedRows = ref<number[]>([]);
+const lastRightClickAt = ref<number | null>(null);
+const isRightClickActive = ref(false);
 
 const menuItems = [
   { label: "Insert Row Above", command: () => insertRow("above") },
@@ -220,6 +225,10 @@ const columnTypes = ref<any>({
   select: new SelectTypePlugin(),
   number: new NumberTypePlugin({ format: "#,##0.00" }),
 });
+
+// function handleRangeChanged(e: RevoGridCustomEvent<any>) {
+//   console.log("RevoGrid range-changed event detail:", e);
+// }
 
 onMounted(async () => {
   const [storages, vendors] = await Promise.all([fetchStorages(), fetchVendors()]);
@@ -267,8 +276,29 @@ onMounted(async () => {
     draftSaveInterval = setInterval(saveDraftToLocalStorage, 60000);
     // save draft before unload
     window.addEventListener('beforeunload', saveDraftToLocalStorage);
-    
    
+      // Capturar eventos INMEDIATAMENTE en el elemento revo-grid
+  const revogridElement = revogrid.value?.$el;
+  if (revogridElement) {
+    console.log("Setting up immediate RevoGrid right-click detection");
+    
+    // Capturar mousedown con máxima prioridad
+    revogridElement.addEventListener('mousedown', (e: MouseEvent) => {
+      if (e.button === 2) {
+        isRightClickActive.value = true;
+        lastRightClickAt.value = Date.now();
+        console.log("IMMEDIATE right-click detected on RevoGrid");
+        
+        // Resetear después de 150ms
+        setTimeout(() => {
+          isRightClickActive.value = false;
+        }, 150);
+      } else {
+        isRightClickActive.value = false;
+      }
+    }, true);
+   } // useCapture = true - MÁXIMA PRIORIDAD
+
     if (route().current('items.edit')){
       isMounted.value = true;
       return;
@@ -282,6 +312,7 @@ onMounted(async () => {
     if ((props.initialData?.length ?? 0) > 0 && tableData.value[0].tax != null) {
     selectedTax.value = tableData.value[0].tax;
     }  
+
     // finish mounting
     isMounted.value = true;
 });
@@ -320,6 +351,7 @@ async function getUserTaxes() {
 
 function showContextMenu(e: CustomEvent<{ event: MouseEvent; rowIndex: number; prop: string }>) {
   e.preventDefault();
+  console.log("context menu event:", e.detail.event);
   if (props.initialData?.length) return;
   contextRow.value = e.detail.rowIndex;
   menuRef.value.show(e.detail.event);
@@ -916,4 +948,56 @@ function handleCleanLocalSave() {
   dontSaveDraft.value = true;
   window.location.reload();
 }
+
+async function handleBeforeSetRange(e: RevoGridCustomEvent<any>) {
+  const range = e.detail;
+  // normalizar/obtener índices de filas seleccionadas
+  const rows = getSelectedRowIndicesFromRange(range);
+  // actualizar la variable global del componente
+  selectedRows.value = rows;
+  console.log("RevoGrid before-set-range event (selected rows):", selectedRows.value);
+}
+
+function handleBeforeCellFocus(e: RevoGridCustomEvent<any>) {
+  console.log("=== FOCUS PREVENTION DEBUG ===");
+  console.log("Right-click flag active:", isRightClickActive.value);
+  console.log("Selected rows count:", selectedRows.value.length);
+  
+  // SI hay múltiples filas seleccionadas Y es right-click, NO hacer focus
+  if (selectedRows.value.length > 1 && isRightClickActive.value) {
+    console.log("🚫 PREVENTING FOCUS - Right-click on multiple selection");
+    e.preventDefault();
+    return;
+  }
+  
+  console.log("✅ ALLOWING FOCUS - Single selection or right-click context menu");
+}
+
+function getSelectedRowIndicesFromRange(range: any): number[] {
+  // Si no hay rango o está vacío, retornar array vacío
+  if (!range || !Array.isArray(range) || range.length === 0) {
+    return [];
+  }
+
+  // Extraer todos los rowIndex únicos del array de objetos
+  const rowIndices = [...new Set(range.map((item: any) => item.rowIndex))].filter(idx => typeof idx === 'number');
+  
+  // Si no hay rowIndex válidos, retornar vacío
+  if (rowIndices.length === 0) {
+    return [];
+  }
+
+  // Encontrar el rango continuo desde el mínimo hasta el máximo rowIndex
+  const minRow = Math.min(...rowIndices);
+  const maxRow = Math.max(...rowIndices);
+  
+  // Generar array consecutivo de índices de filas
+  const selectedRows: number[] = [];
+  for (let i = minRow; i <= maxRow; i++) {
+    selectedRows.push(i);
+  }
+  
+  return selectedRows;
+}
+      
 </script>
