@@ -238,6 +238,7 @@ const contextRow = ref<number | null>(null);
 const menuRef = ref<any>(null);
 const wrapper = ref<HTMLElement|null>(null);
 const headerObserver = ref<MutationObserver|null>(null);
+const bodyTooltips = ref<Record<string, HTMLElement>>({});
 const columns = ref<ColumnRegular[]>([
   {
     prop: "id",
@@ -300,10 +301,59 @@ function applyHeaderTooltips() {
   // If headerCells exist, attempt to map by visual order to columns
   headerCells.forEach((cell, index) => {
     const col = columns.value[index];
-    if (col && col.prop && headerTooltips.value[col.prop as string]) {
-      cell.setAttribute('title', headerTooltips.value[col.prop as string]);
-      cell.setAttribute('aria-label', headerTooltips.value[col.prop as string]);
+    const text = col && col.prop ? headerTooltips.value[col.prop as string] : null;
+    if (!text) return;
+
+    // set accessible attribute
+    cell.setAttribute('aria-label', text);
+
+    // create or reuse a body-level tooltip element (prevents clipping)
+    const key = String(index);
+    let tip = bodyTooltips.value[key];
+    if (!tip) {
+      tip = document.createElement('div');
+      tip.className = 'revogrid-header-tooltip-body';
+      tip.style.position = 'fixed';
+      tip.style.pointerEvents = 'none';
+      tip.style.opacity = '0';
+      tip.style.transition = 'opacity 120ms ease, transform 120ms ease';
+      document.body.appendChild(tip);
+      bodyTooltips.value[key] = tip;
     }
+    tip.textContent = text;
+
+    // ensure we don't attach duplicate handlers
+    if ((cell as any).__revogrid_tooltip_attached) return;
+
+    const show = (e: MouseEvent) => {
+      const rect = cell.getBoundingClientRect();
+      const left = rect.left + rect.width / 2 + 5;
+      const top = rect.top - 20; // moved further up
+      tip.style.left = left + 'px';
+      tip.style.top = top + 'px';
+      tip.style.transform = 'translate(-55%, -20px)';
+      tip.style.zIndex = '20000';
+      tip.style.opacity = '1';
+    };
+
+    const move = (e: MouseEvent) => {
+      const rect = cell.getBoundingClientRect();
+      const left = rect.left + rect.width / 2 + 5;
+      const top = rect.top - 20;
+      tip.style.left = left + 'px';
+      tip.style.top = top + 'px';
+    };
+
+    const hide = () => {
+      tip.style.opacity = '0';
+      tip.style.transform = 'translate(-50%, 0)';
+    };
+
+    cell.addEventListener('mouseenter', show);
+    cell.addEventListener('mousemove', move);
+    cell.addEventListener('mouseleave', hide);
+    (cell as any).__revogrid_tooltip_attached = true;
+    (cell as any).__revogrid_tooltip_handlers = { show, move, hide };
   });
 }
 
@@ -432,6 +482,40 @@ onBeforeUnmount(() => {
   window.removeEventListener('beforeunload', saveDraftToLocalStorage);
   // clear the draft save interval
   clearInterval(draftSaveInterval);
+  // disconnect header observer
+  if (headerObserver.value) {
+    headerObserver.value.disconnect();
+    headerObserver.value = null;
+  }
+
+  // remove any body-level tooltips and header handlers
+  try {
+    Object.values(bodyTooltips.value).forEach((el) => {
+      if (el && el.parentNode) el.parentNode.removeChild(el);
+    });
+    bodyTooltips.value = {};
+  } catch (err) {
+    console.warn('Failed to clean body tooltips', err);
+  }
+
+  // remove attached handlers on header cells
+  try {
+    const gridEl = revogrid.value?.$el as HTMLElement | null;
+    const headerCells = gridEl ? Array.from(gridEl.querySelectorAll('.rgHeaderCell')) as HTMLElement[] : [];
+    headerCells.forEach((cell) => {
+      const attached = (cell as any).__revogrid_tooltip_attached;
+      const handlers = (cell as any).__revogrid_tooltip_handlers;
+      if (attached && handlers) {
+        cell.removeEventListener('mouseenter', handlers.show);
+        cell.removeEventListener('mousemove', handlers.move);
+        cell.removeEventListener('mouseleave', handlers.hide);
+        delete (cell as any).__revogrid_tooltip_attached;
+        delete (cell as any).__revogrid_tooltip_handlers;
+      }
+    });
+  } catch (err) {
+    console.warn('Failed to remove header tooltip handlers', err);
+  }
 });
 
 async function getUserTaxes() {
@@ -1242,3 +1326,72 @@ function getRangeLimits(range: any) {
 }
       
 </script>
+
+<style>
+/* Minimalist, professional header tooltip styles
+   - Supports both in-header spans (.revogrid-header-tooltip)
+     and body-level floating tooltips (.revogrid-header-tooltip-body)
+*/
+/* Shared base */
+.revogrid-header-tooltip,
+.revogrid-header-tooltip-body {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1;
+  color: #0f172a; /* slate-900 text for contrast on light background */
+  background: #ffffff; /* light card background for minimal look */
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  box-shadow: 0 8px 24px rgba(2,6,23,0.12);
+  padding: 8px 12px;
+  border-radius: 8px;
+  white-space: nowrap;
+  pointer-events: none;
+  transform-origin: center bottom;
+}
+
+/* Body-level tooltip (positioned in JS) */
+.revogrid-header-tooltip-body {
+  position: fixed;
+  opacity: 0;
+  transform: translateY(-16px) translateX(-50%);
+  transition: opacity 180ms cubic-bezier(.2,.9,.2,1), transform 180ms cubic-bezier(.2,.9,.2,1);
+  z-index: 20000;
+  will-change: transform, opacity;
+}
+
+/* Decorative arrow for body tooltips */
+.revogrid-header-tooltip-body::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: -6px;
+  width: 10px;
+  height: 10px;
+  background: inherit;
+  border-left: 1px solid rgba(15,23,42,0.06);
+  border-bottom: 1px solid rgba(15,23,42,0.06);
+  transform-origin: center;
+  transform: translateX(-50%) rotate(45deg);
+}
+
+/* Inline/in-header fallback tooltip (positioned via CSS) */
+.rgHeaderCell .revogrid-header-tooltip,
+[data-col-index] .revogrid-header-tooltip {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  transform: translate(-50%, -18px) translateY(-16px);
+  opacity: 0;
+  transition: opacity 180ms cubic-bezier(.2,.9,.2,1), transform 180ms cubic-bezier(.2,.9,.2,1);
+  z-index: 10002;
+}
+
+.rgHeaderCell { position: relative; overflow: visible; }
+.rgHeaderCell:hover .revogrid-header-tooltip { opacity: 1; transform: translate(-50%, -28px) translateY(0); }
+
+[data-col-index] { position: relative; overflow: visible; }
+[data-col-index]:hover .revogrid-header-tooltip { opacity: 1; transform: translate(-50%, -28px) translateY(0); }
+
+</style>
