@@ -145,7 +145,7 @@ import RevoGrid, { BeforeSaveDataDetails, RevoGridCustomEvent, VGridVueTemplate,
 import axios from "axios";
 import { Button, ContextMenu, useDialog, useToast, Select, DatePicker, ToggleSwitch } from "primevue";
 import { useConfirm } from "primevue/useconfirm";
-import { nextTick, onMounted, ref, onBeforeUnmount, watch } from "vue";
+import { nextTick, onMounted, ref, onBeforeUnmount, watch, computed } from "vue";
 import UniversalCell from "./UniversalCell.vue";
 import { format } from "date-fns";
 import CreateTax from "@/Pages/Accounting/Modals/CreateTax.vue";
@@ -186,15 +186,53 @@ const dontSaveDraft = ref(false);
 const selectedRows = ref<number[]>([]);
 const lastRightClickAt = ref<number | null>(null);
 const isRightClickActive = ref(false);
+const selectedRangeLimits = ref<{
+  minRow: number | null;
+  maxRow: number | null;
+  minCol: number | null;
+  maxCol: number | null;
+} | null>(null);
 
-const menuItems = [
-  { label: "Insert Row Above", command: () => insertRow("above") },
-  { label: "Insert Row Below", command: () => insertRow("below") },
-  { label: "Insert 50 Rows Below", command: () => insertRow("bulk") },
-  { separator: true },
-  { label: "Delete Row", icon: "pi pi-trash", class: "text-red-600", command: () => deleteRow() },
-  {label: "Print Label", icon: "pi pi-print", command: () => openLabelsFromTable(mapSpreadsheetData([tableData.value[contextRow.value ?? 0]]))},
-];
+const menuItems = computed(() => {
+  const nSelected = selectedRows.value.length;
+  const items: any[] = [];
+
+  // Solo mostrar opciones de inserción si NO hay múltiples filas seleccionadas
+  if (nSelected <= 1) {
+    items.push(
+      { label: "Insert Row Above", command: () => insertRow("above") },
+      { label: "Insert Row Below", command: () => insertRow("below") },
+      { label: "Insert 50 Rows Below", command: () => insertRow("bulk") }
+    );
+  }
+
+  items.push({ separator: true });
+
+  // Delete label dinámico (singular/plural) y comando para borrar múltiples filas
+  const deleteLabel = nSelected > 1 ? `Delete Rows (${nSelected})` : "Delete Row";
+  items.push({
+    label: deleteLabel,
+    icon: "pi pi-trash",
+    class: "text-red-600",
+    command: () => deleteRow(),
+  });
+
+  // Print labels: calcular lista de filas a imprimir (seleccionadas o fila de contexto)
+  const printCount = nSelected > 0 ? nSelected : 1;
+  const printLabel = printCount > 1 ? `Print Labels (${printCount})` : `Print Label (${printCount})`;
+  items.push({
+    label: printLabel,
+    icon: "pi pi-print",
+    command: () => {
+      const rows = selectedRows.value.length > 0
+        ? selectedRows.value.map(i => tableData.value[i]).filter(Boolean)
+        : [tableData.value[contextRow.value ?? 0]];
+      openLabelsFromTable(mapSpreadsheetData(rows));
+    },
+  });
+
+  return items;
+});
 
 const contextRow = ref<number | null>(null);
 const menuRef = ref<any>(null);
@@ -377,9 +415,30 @@ function insertRow(position: "above" | "below" | "bulk") {
 }
 
 function deleteRow() {
-  const rowIndex = contextRow.value ?? 0;
-  if (tableData.value.length > 1) {
-    tableData.value = [...tableData.value.slice(0, rowIndex), ...tableData.value.slice(rowIndex + 1)];
+  // Si hay múltiples filas seleccionadas, borrarlas todas; si no, usar contextRow
+  const rowsToDelete = selectedRows.value.length > 1
+    ? [...selectedRows.value]
+    : [contextRow.value ?? 0];
+
+  // Normalizar: índices únicos y orden descendente para evitar desplazamientos al eliminar
+  const unique = Array.from(new Set(rowsToDelete)).filter(Number.isFinite).map(Number).sort((a, b) => b - a);
+
+  if (unique.length === 0) return;
+
+  // Eliminar cada índice válido
+  for (const idx of unique) {
+    if (idx >= 0 && idx < tableData.value.length) {
+      tableData.value = tableData.value.splice(idx, 1);
+    }
+  }
+
+  selectedRows.value = [];
+
+  // Asegurarnos de que siempre quede al menos una fila
+  if (tableData.value.length === 0) {
+    tableData.value = [{}] as ItemWithLocation[];
+    // Llamamos a renderPositions porque agregamos una fila nueva vacía
+    renderPositions(1);
   }
 }
 
@@ -952,25 +1011,39 @@ function handleCleanLocalSave() {
 async function handleBeforeSetRange(e: RevoGridCustomEvent<any>) {
   const range = e.detail;
   // normalizar/obtener índices de filas seleccionadas
-  const rows = getSelectedRowIndicesFromRange(range);
   // actualizar la variable global del componente
+  const rows = getSelectedRowIndicesFromRange(range);
   selectedRows.value = rows;
-  console.log("RevoGrid before-set-range event (selected rows):", selectedRows.value);
+  // save range
+  const limits = getRangeLimits(range);
+  selectedRangeLimits.value = limits;
 }
 
 function handleBeforeCellFocus(e: RevoGridCustomEvent<any>) {
-  console.log("=== FOCUS PREVENTION DEBUG ===");
-  console.log("Right-click flag active:", isRightClickActive.value);
-  console.log("Selected rows count:", selectedRows.value.length);
-  
+  const clickedRowIndex = e?.detail?.rowIndex ?? null;
+  const clickedColIndex = e?.detail?.colIndex ?? null;
+
+  if (clickedRowIndex === null) {
+    // no hay rowIndex válido; dejamos pasar por defecto
+    return;
+  }
+
+  // Si tenemos límites y la fila clickeada está dentro del rango seleccionado...
+  const limits = selectedRangeLimits.value;
+  const inSelectedRange = limits &&
+    clickedColIndex <= limits.maxCol &&
+    clickedRowIndex <= limits.maxRow;
+
+  console.log("selected rows more than one:", selectedRows.value.length > 1, "is right-click?:", isRightClickActive.value, "is selected range?:", inSelectedRange);
   // SI hay múltiples filas seleccionadas Y es right-click, NO hacer focus
-  if (selectedRows.value.length > 1 && isRightClickActive.value) {
+  if (selectedRows.value.length > 1 && isRightClickActive.value && inSelectedRange) {
     console.log("🚫 PREVENTING FOCUS - Right-click on multiple selection");
     e.preventDefault();
     return;
   }
   
   console.log("✅ ALLOWING FOCUS - Single selection or right-click context menu");
+  selectedRows.value = [];
 }
 
 function getSelectedRowIndicesFromRange(range: any): number[] {
@@ -998,6 +1071,45 @@ function getSelectedRowIndicesFromRange(range: any): number[] {
   }
   
   return selectedRows;
+}
+
+function getRangeLimits(range: any) {
+  if (!range || !Array.isArray(range) || range.length === 0) return null;
+
+  let minRow = Infinity;
+  let maxRow = -Infinity;
+  let minCol = Infinity;
+  let maxCol = -Infinity;
+  let found = false;
+
+  for (const item of range) {
+    const rRaw = item?.rowIndex ?? item?.row ?? item?.r;
+    const cRaw = item?.colIndex ?? item?.col ?? item?.c;
+
+    const r = Number.isFinite(Number(rRaw)) ? Number(rRaw) : null;
+    const c = Number.isFinite(Number(cRaw)) ? Number(cRaw) : null;
+
+    if (r !== null) {
+      found = true;
+      if (r < minRow) minRow = r;
+      if (r > maxRow) maxRow = r;
+    }
+
+    if (c !== null) {
+      found = true;
+      if (c < minCol) minCol = c;
+      if (c > maxCol) maxCol = c;
+    }
+  }
+
+  if (!found) return null;
+
+  return {
+    minRow: minRow === Infinity ? null : minRow,
+    maxRow: maxRow === -Infinity ? null : maxRow,
+    minCol: minCol === Infinity ? null : minCol,
+    maxCol: maxCol === -Infinity ? null : maxCol,
+  };
 }
       
 </script>
