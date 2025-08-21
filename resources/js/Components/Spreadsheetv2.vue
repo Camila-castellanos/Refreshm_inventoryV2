@@ -241,14 +241,14 @@ const columns = ref<ColumnRegular[]>([
   {
     prop: "id",
     name: '',
-    size: 50,
+    size: 20,
     readonly: true,
     cellTemplate: VGridVueTemplate(UniversalCell),
   },
   { prop: "manufacturer", name: "Manufacturer", size: 200, cellTemplate: VGridVueTemplate(UniversalCell) },
   { prop: "model", name: "Model", size: 150, cellTemplate: VGridVueTemplate(UniversalCell) },
   { prop: "colour", name: "Colour", size: 150, cellTemplate: VGridVueTemplate(UniversalCell) },
-  { prop: "battery", name: "Battery", size: 80, cellTemplate: VGridVueTemplate(UniversalCell) },
+  { prop: "battery", name: "Battery", size: 20, cellTemplate: VGridVueTemplate(UniversalCell) },
   { prop: "grade", name: "Grade", size: 80, cellTemplate: VGridVueTemplate(UniversalCell) },
   { prop: "issues", name: "Issues", size: 150, cellTemplate: VGridVueTemplate(UniversalCell) },
   { prop: "imei", name: "IMEI", size: 150, cellTemplate: VGridVueTemplate(UniversalCell) },
@@ -696,24 +696,80 @@ const initialColumns = ref<ColumnRegular[]>([])
 async function adjustColumnSizes() {
   await nextTick();
   if (!wrapper.value) return;
-  
+
   const totalWidth = wrapper.value.clientWidth;
 
   // si es móvil, volvemos a las columnas iniciales
   if (totalWidth < 768) {
-    console.log("mobile", initialColumns.value);
-    columns.value = initialColumns.value.map(col => ({ ...col }))
-    return
+    columns.value = initialColumns.value.map(col => ({ ...col }));
+    return;
   }
 
-  const count = columns.value.length;
-  const baseSize = Math.floor(totalWidth / count);
-  const used = baseSize * count;
-  const remainder = totalWidth - used;
-  columns.value = columns.value.map((col, i) => ({
-    ...col,
-    size: i === count - 1 ? baseSize + remainder : baseSize
-  }));
+  // Definir anchos fijos (si una columna está aquí, su tamaño será reservado)
+  const fixedWidths: Record<string, number> = {
+    id: 40,
+    battery: 50,
+    grade: 50,
+    subtotal: 120,
+    cost: 120,
+    selling_price: 120
+  };
+
+  // Calcular ancho reservado por las columnas fijas que existen actualmente
+  let reserved = 0;
+  const variableCols: ColumnRegular[] = [];
+  for (const col of columns.value) {
+    const key = col.prop as string;
+    if (fixedWidths[key]) {
+      col.size = fixedWidths[key];
+      reserved += fixedWidths[key];
+    } else {
+      variableCols.push(col);
+    }
+  }
+
+  // margen opcional para scrollbar/padding (puedes poner 0 si no quieres margen)
+  const scrollbarMargin = 0;
+  const remaining = Math.max(0, totalWidth - reserved - scrollbarMargin);
+
+  // Si no hay columnas variables, ajustar la última para llenar el espacio
+  if (variableCols.length === 0) {
+    const lastIndex = columns.value.length - 1;
+    if (lastIndex >= 0) {
+      columns.value[lastIndex].size = (columns.value[lastIndex].size || 100) + remaining;
+    }
+    return;
+  }
+
+  // Repartir el espacio restante entre las columnas variables de forma equitativa
+  const perCol = Math.floor(remaining / variableCols.length);
+  let leftover = remaining - perCol * variableCols.length;
+
+  // Construir el nuevo array asignando extra (uno por columna) hasta agotar 'leftover'
+  const newCols = columns.value.map((col) => {
+    const key = col.prop as string;
+    if (fixedWidths[key]) {
+      return { ...col, size: fixedWidths[key] };
+    }
+    const extra = leftover > 0 ? 1 : 0;
+    if (extra === 1) leftover -= 1;
+    return { ...col, size: perCol + extra };
+  });
+
+  // Si por redondeo sigue habiendo una pequeña diferencia, añadirla a la última columna
+  const assignedTotal = newCols.reduce((s, c) => s + (c.size || 0), 0);
+  const gap = totalWidth - assignedTotal;
+  if (gap > 0) {
+    // preferimos añadir el gap a la última columna (última del array)
+    const lastIdx = newCols.length - 1;
+    newCols[lastIdx].size = (newCols[lastIdx].size || 0) + gap;
+  } else if (gap < 0) {
+    // en caso extremo de overflow, recortamos la última columna
+    const lastIdx = newCols.length - 1;
+    newCols[lastIdx].size = Math.max(40, (newCols[lastIdx].size || 0) + gap); // no bajar de 40px
+  }
+
+  columns.value = newCols;
 }
 // handle paste event globally
 
