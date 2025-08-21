@@ -237,6 +237,7 @@ const menuItems = computed(() => {
 const contextRow = ref<number | null>(null);
 const menuRef = ref<any>(null);
 const wrapper = ref<HTMLElement|null>(null);
+const headerObserver = ref<MutationObserver|null>(null);
 const columns = ref<ColumnRegular[]>([
   {
     prop: "id",
@@ -257,6 +258,54 @@ const columns = ref<ColumnRegular[]>([
   { prop: "cost", name: "Total", columnType: "number", size: 120, cellTemplate: VGridVueTemplate(UniversalCell) },
   { prop: "selling_price", name: "Selling Price", columnType: "number", size: 120, cellTemplate: VGridVueTemplate(UniversalCell) },
 ]);
+
+// Optional tooltips for column headers: map column prop -> tooltip text
+const headerTooltips = ref<Record<string, string>>({
+  manufacturer: 'Device manufacturer',
+  model: 'Device model name',
+  colour: 'Device colour',
+  battery: 'Battery state',
+  grade: 'Device grade',
+  issues: 'Known issues or notes',
+  imei: 'IMEI / serial number',
+  location: 'Assigned storage location (auto)',
+  subtotal: 'Item subtotal (before tax)',
+  cost: 'Total cost (with tax)',
+  selling_price: 'Selling price',
+});
+
+function applyHeaderTooltips() {
+  // RevoGrid renders header cells with class 'rgHeaderCell' according to README
+  // We select all header cells and match them to columns by data-col-index attribute or order
+  const gridEl = revogrid.value?.$el as HTMLElement | undefined | null;
+  if (!gridEl) return;
+
+  // header cells may be inside shadow DOM or light DOM; try both
+  const headerCells = Array.from(gridEl.querySelectorAll('.rgHeaderCell')) as HTMLElement[];
+
+  if (headerCells.length === 0) {
+    // fallback: try to find any element with data-col-index attribute
+    const fallback = Array.from(gridEl.querySelectorAll('[data-col-index]')) as HTMLElement[];
+    fallback.forEach((cell) => {
+      const idx = Number(cell.getAttribute('data-col-index'));
+      const col = columns.value[idx];
+      if (col && col.prop && headerTooltips.value[col.prop as string]) {
+        cell.setAttribute('title', headerTooltips.value[col.prop as string]);
+        cell.setAttribute('aria-label', headerTooltips.value[col.prop as string]);
+      }
+    });
+    return;
+  }
+
+  // If headerCells exist, attempt to map by visual order to columns
+  headerCells.forEach((cell, index) => {
+    const col = columns.value[index];
+    if (col && col.prop && headerTooltips.value[col.prop as string]) {
+      cell.setAttribute('title', headerTooltips.value[col.prop as string]);
+      cell.setAttribute('aria-label', headerTooltips.value[col.prop as string]);
+    }
+  });
+}
 
 const columnTypes = ref<any>({
   date: new DateTypePlugin({ format: "yyyy-MM-dd" }),
@@ -307,7 +356,14 @@ onMounted(async () => {
     : [{}] as ItemWithLocation[];
     console.log("Initial table data:", tableData.value);
     await nextTick();
+    // Apply header tooltips once grid has rendered
+    applyHeaderTooltips();
     if (!props.initialData?.length) renderPositions(1);
+// Re-apply tooltips when columns change (e.g., sizing, reorder)
+watch(columns, async () => {
+  await nextTick();
+  applyHeaderTooltips();
+}, { deep: true });
     // load draft from local storage if exists
     loadDraftFromLocalStorage();
     // save draft to local storage every 60 seconds
@@ -336,6 +392,20 @@ onMounted(async () => {
       }
     }, true);
    } // useCapture = true - MÁXIMA PRIORIDAD
+
+   // Observe header changes to reapply tooltips when RevoGrid rerenders headers
+   try {
+     const headersRoot = revogridElement.querySelector('.rgHeader');
+     if (headersRoot) {
+       headerObserver.value = new MutationObserver(() => {
+         // small debounce
+         setTimeout(() => applyHeaderTooltips(), 50);
+       });
+       headerObserver.value.observe(headersRoot, { childList: true, subtree: true, attributes: true });
+     }
+   } catch (err) {
+     console.warn('Header observer setup failed', err);
+   }
 
     if (route().current('items.edit')){
       isMounted.value = true;
