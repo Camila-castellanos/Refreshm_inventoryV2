@@ -22,6 +22,9 @@ import AutoComplete from 'primevue/autocomplete';
 import FloatLabel from 'primevue/floatlabel';
 import { router } from "@inertiajs/vue3";
 
+// Ziggy `route` helper is provided globally at runtime; declare for TS
+declare const route: any;
+
 const emits = defineEmits<{
   (e: 'search', payload: string): void
 }>();
@@ -30,7 +33,7 @@ const query = ref('');
 const suggestions = ref<Array<{ label: string; value: any }>>([]);
 
 // Cada vez que el usuario escribe, emitimos el evento
-watch(query, q => emits('search', q));
+watch(query, (q: string) => emits('search', q));
 
 async function loadSuggestions({ query }: { query: string }) {
   try {
@@ -38,13 +41,15 @@ async function loadSuggestions({ query }: { query: string }) {
     console.log('Suggestions loaded:', res.data);
     suggestions.value = res.data.map((it: any) => ({
       value: it.id,
-      label: [           
-        it.model,                             
-        it.imei ? `IMEI: ${it.imei}` : null,   
-        it.vendor?.vendor                     
+      label: [
+        it.model,
+        it.grade ? `Grade: ${it.grade}` : null,
+        it.battery ? `Battery: ${it.battery}%` : null,
+        it.cost != null ? `Purchase Price: $${Number(it.cost).toFixed(2)}` : null,
+        it.selling_price != null ? `Sold Price: $${Number(it.selling_price).toFixed(2)}` : null,
       ]
-      .filter(Boolean)                         
-      .join(' · ')                            
+        .filter(Boolean)
+        .join(' · ')
     }));
     console.log('Formatted suggestions:', suggestions.value);
   } catch {
