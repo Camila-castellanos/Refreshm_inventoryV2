@@ -18,6 +18,43 @@
         @page {
             size: A4 portrait;
         }
+    /* Compact header (DOMPDF-friendly table layout) */
+    .invoice-header-table{ width:100%; border-collapse:collapse; margin-bottom:8px; }
+    .invoice-header-table td{ vertical-align:middle; }
+    .logo-block img{ max-width:140px; display:block; }
+    .company-info{ font-size:11px; color:#6b7280; text-align:right; }
+    .invoice-meta{ font-size:11px; text-align:right; display:inline-block; padding-left:12px; }
+    .invoice-meta .label{ display:block; font-size:9px; text-transform:uppercase; color:#6b7280; }
+    .invoice-meta .value{ font-weight:700; color:#0f172a; font-size:13px; }
+    /* Inline table to show invoice number and date horizontally (legacy) */
+    .invoice-meta-inline{ display:inline-table; vertical-align:middle; margin-left:12px; }
+    .invoice-meta-inline td{ padding:0 10px; text-align:left; vertical-align:middle; }
+    .invoice-meta-inline .meta-label{ display:block; font-size:9px; color:#6b7280; text-transform:uppercase; }
+    .invoice-meta-inline .meta-value{ display:block; font-weight:700; color:#0f172a; font-size:13px; }
+
+    /* Option 2: Boxed Top-Right Badge (Invoice meta) */
+    .invoice-badge{ background:#f3f4f6; border:1px solid #e6e6e6; padding:8px 10px; border-radius:6px; text-align:left; display:inline-table; vertical-align:middle; margin-left:12px; }
+    .invoice-badge td{ vertical-align:middle; }
+    .invoice-badge .badge-number{ font-size:18px; font-weight:700; color:#0f172a; }
+    .invoice-badge .badge-date{ font-size:11px; color:#6b7280; margin-top:4px; display:block; }
+    .invoice-subtitle{ font-size:12px; color:#6b7280; margin-top:4px; }
+    /* Bill To card (compact, DOMPDF-friendly) */
+    .bill-card{ background:#fbfbfb; border:1px solid #e6e6e6; padding:8px; border-radius:4px; font-size:12px; }
+    .bill-card .bill-label{ font-size:10px; color:#6b7280; text-transform:uppercase; }
+    .bill-card .bill-name{ font-weight:700; font-size:13px; margin:0 0 2px 0; line-height:1.15; }
+    .bill-card .bill-contact{ color:#374151; font-size:12px; margin-top:4px; line-height:1.2; }
+    /* ensure Bill To uses the same vertical rhythm as Bill From */
+    .bill-card .bill-to .bill-contact{ margin-top:4px; }
+    .bill-card .bill-to .bill-name{ margin:0 0 2px 0; }
+    /* normalize header children spacing to match bill-contact */
+    .bill-card .bill-header .bill-header-content > * { margin-top:4px; line-height:1.2; display:block; }
+    .bill-card .bill-header .bill-header-content > *:first-child { margin-top:0; }
+    /* label spacing and header normalization to align names */
+    .bill-card .bill-label{ display:block; margin-bottom:4px; }
+    .bill-card .bill-header{ margin-top:0; }
+    .bill-card .bill-header .bill-header-content{ color:#374151; font-size:12px; margin:0; }
+    .bill-card .bill-header .bill-header-content strong,
+    .bill-card .bill-header .bill-header-content b{ font-weight:700; color:#0f172a; font-size:13px; }
         /* Prevent price from wrapping and keep it aligned */
         .tbl-price {
             white-space: nowrap;
@@ -84,32 +121,76 @@
             $credit += $item['selling_price'];
         }
     @endphp
-    <div class="row m-0">
-        <div class="col-12">
-            <table width="100%">
-                <tbody style="margin:20px 0 !important;">
-                    <tr>
-                        {{-- Logo cell --}}
+    <table class="invoice-header-table">
+        <tr>
+            <td style="width:60%;">
+                <div style="display:flex; align-items:center;">
+                    <div class="logo-block">
                         @if(in_array('logo', $userActiveFields) && isset($logo))
-                        <td class="text-left" style="width:30%;padding:20px 0;">
-                            <img src="data:image/png;base64,{{ $logo }}" alt="" width="100%" style="max-width: 200px;" />
-                        </td>
+                            <img src="data:image/png;base64,{{ $logo }}" alt="logo" />
+                        @else
+                            <div style="font-weight:700; font-size:16px;">{{ config('app.name', 'Company') }}</div>
                         @endif
-                        {{-- Invoice title always visible --}}
-                        <td class="text-right" style="width:70%;padding:20px 0;"><h1>INVOICE</h1></td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
+                    </div>
+                    <table class="invoice-meta-inline" role="presentation">
+                        <tr>
+                             @if(in_array('invoice_number', $userActiveFields))
+                            <td>
+                                <span class="meta-label">Invoice</span>
+                                <span class="meta-value">#{{ $sales[0]->id }}</span>
+                            </td>
+                            @endif
+                            @if(in_array('invoice_due', $userActiveFields))
+                            <td>
+                                <span class="meta-label">Date</span>
+                                <span class="meta-value">{{ $sales[0]->created_at->format('F d, Y') }}</span>
+                            </td>
+                            @endif
+                        </tr>
+                    </table>
+                </div>
+                @if(in_array('billing_address', $userActiveFields))
+                    <div style="margin-top:8px;">
+                        <div class="bill-card">
+                            <table class="bill-card-table" role="presentation" style="width:100%; border-collapse:collapse;">
+                                <tr>
+                                    @if(in_array('header', $userActiveFields) && isset($header))
+                                    <td style="width:45%; vertical-align:top; padding-right:2px;">
+                                        <div class="bill-label">Bill From</div>
+                                            @php
+                                                $header_render = $header ?? '';
+                                                // wrap the first text node (before any tag) with span.bill-name
+                                                $header_render = preg_replace('/^\s*([^<]+)/', '<span class="bill-name">$1</span>', $header_render, 1);
+                                            @endphp
+                                            <div class="bill-header">
+                                                <div class="bill-header-content">{!! $header_render !!}</div>
+                                            </div>
+                                    </td>
+                                    @endif
+                                    <td style="width:55%; vertical-align:top; padding-left:2px;" class="bill-to">
+                                        <div class="bill-label">Bill To</div>
+                                        @if(isset($customer->billing_address))
+                                            <div class="bill-name">{{$customer->customer}}</div>
+                                            <div class="bill-contact">{{$customer->billing_address}}</div>
+                                            <div class="bill-contact">{{$customer->billing_address_city}}, {{$customer->billing_address_state}} {{$customer->billing_address_postal}}</div>
+                                            <div class="bill-contact">{{$customer->billing_address_country}}</div>
+                                            <div class="bill-contact">{{ $customer->phone[0] ?? '' }}</div>
+                                            <div class="bill-contact">{{ $customer->email[0] ?? '' }}</div>
+                                        @else
+                                            <div class="bill-name">{{$customer}}</div>
+                                        @endif
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                @endif
+            </td>
+            <td style="width:40%;"></td>
+        </tr>
+    </table>
 
-    @if(in_array('header', $userActiveFields) && isset($header))
-        <div class="text-right row m-0">
-            <div class="col-12">
-                {!! $header !!}
-            </div>
-        </div>
-    @endisset
+    <!-- header moved inside bill-card -->
 
     <hr />
 
@@ -117,34 +198,10 @@
         <tbody style="margin:20px 0 !important;">
             <tr>
                 @if(in_array('billing_address', $userActiveFields))
-                <td class="text-left" style="width:70%;padding:20px 0; ">
-                    <p class="mb-1"><strong>Bill To</strong></p>
-                    @if(isset($customer->billing_address))
-                        <p class="mb-2">{{$customer->customer}}</p>
-                        <p style="margin: 0">{{$customer->billing_address}}</p>
-                        <p style="margin: 0">{{$customer->billing_address_city}}, {{$customer->billing_address_state}}, {{$customer->billing_address_postal}}</p>
-                        <p class="mb-2">{{$customer->billing_address_country}}</p>
-                        <p style="margin: 0">{{$customer->phone[0]}}</p>
-                        <p>{{$customer->email[0]}}</p>
-                    @else
-                        <p class="mb-2">{{$customer}}</p>
-                    @endif
-                </td>
+                <!-- Bill To moved to header -->
                 @endif
                 <td class="text-right" style="width:45%; padding:20px 0;">
                     <table>
-                        @if(in_array('invoice_number', $userActiveFields))
-                        <tr>
-                            <td><strong>Invoice Number:</strong></td>
-                            <td class="text-left"><span>{{$sales[0]->id}}</span></td>
-                        </tr>
-                        @endif
-                        @if(in_array('invoice_due', $userActiveFields))
-                        <tr>
-                            <td><strong>Invoice Due:</strong></td>
-                            <td class="text-left">{{$sales[0]->created_at->format('F d, Y')}}</td>
-                        </tr>
-                        @endif
                         @if(in_array('payment_due', $userActiveFields))
                         <tr>
                             <td><strong>Payment Due:</strong></td>
