@@ -18,6 +18,41 @@
         @page {
             size: A4 portrait;
         }
+        /* Prevent price from wrapping and keep it aligned */
+        .tbl-price {
+            white-space: nowrap;
+            text-align: right;
+            padding-left: 8px;
+            padding-right: 8px;
+            border-right: 1px solid #e0e0e0;
+        }
+        /* Allow issues column to wrap and break words if necessary */
+        .tbl-issues {
+            white-space: normal;
+            word-break: break-word;
+            max-width: 320px; /* adjust as needed for your layout */
+        }
+        /* Ensure device column has reasonable width */
+        .tbl-device {
+            max-width: 220px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            padding-left: 8px;
+            padding-right: 8px;
+        }
+        /* Add vertical dividers between item table columns */
+        .items-table th,
+        .items-table td {
+            border-left: 1px solid #e0e0e0;
+            padding-left: 10px;
+        }
+        /* Keep first-child padding unless the cell is not .tbl-device */
+        .items-table thead th:first-child:not(.tbl-device),
+        .items-table tbody td:first-child:not(.tbl-device) {
+            border-left: none;
+            padding-left: 0;
+        }
     </style>
 </head>
 
@@ -146,20 +181,20 @@
         <hr />
     @endif
     @if(in_array('items', $userActiveFields))
-    <table class="table table-striped pb-4">
+    <table class="table table-striped pb-4 items-table">
         <thead>
             <tr>
                 @if(in_array('table_device', $userActiveFields))
-                    <th class="text-right" scope="col">DEVICE</th>
+                    <th class="text-right tbl-device" scope="col">DEVICE</th>
                 @endif
                 @if(in_array('table_issues', $userActiveFields))
-                    <th class="text-right" scope="col">ISSUES</th>
+                    <th class="text-right tbl-issues" scope="col">ISSUES</th>
                 @endif
                 @if(in_array('table_imei', $userActiveFields))
                     <th class="text-right" scope="col">IMEI</th>
                 @endif
                 @if(in_array('table_price', $userActiveFields))
-                    <th class="text-right" scope="col">PRICE</th>
+                    <th class="text-right tbl-price" scope="col">PRICE</th>
                 @endif
             </tr>
         </thead>
@@ -168,32 +203,32 @@
             @foreach($sale->items as $item)
             <tr>
                 @if(in_array('table_device', $userActiveFields))
-                    <td class="text-right">{{ $item["model"] }}</td>
+                    <td class="text-right tbl-device">{{ $item["model"] }}</td>
                 @endif
                 @if(in_array('table_issues', $userActiveFields))
-                    <td class="text-right">{{ $item["issues"] }}</td>
+                    <td class="text-right tbl-issues">{{ $item["issues"] }}</td>
                 @endif
                 @if(in_array('table_imei', $userActiveFields))
                     <td class="text-right">{{ $item["imei"] }}</td>
                 @endif
                 @if(in_array('table_price', $userActiveFields))
-                    <td class="text-right">$ {{ number_format($item["selling_price"], 2) }}</td>
+                    <td class="text-right tbl-price">$ {{ number_format($item["selling_price"], 2) }}</td>
                 @endif
             </tr>
             @endforeach
             @foreach($returned_items as $item)
             <tr>
                 @if(in_array('table_device', $userActiveFields))
-                    <td class="text-right">[CREDIT]: {{ $item["model"] }}</td>
+                    <td class="text-right tbl-device">[CREDIT]: {{ $item["model"] }}</td>
                 @endif
                 @if(in_array('table_issues', $userActiveFields))
-                    <td class="text-right">{{ $item["issues"] }}</td>
+                    <td class="text-right tbl-issues">{{ $item["issues"] }}</td>
                 @endif
                 @if(in_array('table_imei', $userActiveFields))
                     <td class="text-right">{{ $item["imei"] }}</td>
                 @endif
                 @if(in_array('table_price', $userActiveFields))
-                    <td class="text-right">$ {{ number_format($item["selling_price"], 2) }}</td>
+                    <td class="text-right tbl-price">$ {{ number_format($item["selling_price"], 2) }}</td>
                 @endif
                 @php
                     $credit += $item["selling_price"];
