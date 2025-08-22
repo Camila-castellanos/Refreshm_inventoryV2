@@ -104,7 +104,9 @@ onMounted(async () => {
     });
 
   let url = window.location.href;
-  let endpoint = url.split("/inventory/")[1];
+  // normalize endpoint: remove query string and trailing slash so switches match
+  let raw = (url.split("/inventory/")[1] || "").split("?")[0].replace(/\/$/, "");
+  let endpoint = raw;
   switch (endpoint) {
     case "items":
       currentTab.value = 0;
