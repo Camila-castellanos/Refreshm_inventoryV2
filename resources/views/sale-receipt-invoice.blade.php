@@ -37,9 +37,15 @@
     .invoice-badge td{ vertical-align:middle; }
     .invoice-badge .badge-number{ font-size:18px; font-weight:700; color:#0f172a; }
     .invoice-badge .badge-date{ font-size:11px; color:#6b7280; margin-top:4px; display:block; }
+
+    /* Small due card that sits to the right of the bill-card */
+    .due-card{ background: #ffffff; border:none; padding:8px 10px; border-radius:6px; width:170px; text-align:left; margin-left:8px; display:inline-table; vertical-align:top; }
+    .due-card .label{ font-size:10px; color:#6b7280; text-transform:uppercase; }
+    .due-card .value{ font-size:16px; font-weight:700; color:#0f172a; margin-top:4px; }
+    .due-card .sub{ font-size:11px; color:#6b7280; margin-top:6px; }
     .invoice-subtitle{ font-size:12px; color:#6b7280; margin-top:4px; }
     /* Bill To card (compact, DOMPDF-friendly) */
-    .bill-card{ background:#fbfbfb; border:1px solid #e6e6e6; padding:8px; border-radius:4px; font-size:12px; }
+    .bill-card{ background:#fbfbfb; border:none; padding:8px; border-radius:4px; font-size:12px; }
     .bill-card .bill-label{ font-size:10px; color:#6b7280; text-transform:uppercase; }
     .bill-card .bill-name{ font-weight:700; font-size:13px; margin:0 0 2px 0; line-height:1.15; }
     .bill-card .bill-contact{ color:#374151; font-size:12px; margin-top:4px; line-height:1.2; }
@@ -90,6 +96,15 @@
             border-left: none;
             padding-left: 0;
         }
+    /* Items table card styling */
+    .items-card{ background:#fbfbfb; border-radius:6px; padding:8px; margin-top:12px; }
+    .items-card .items-table{ width:100%; border-collapse:collapse; table-layout:fixed; }
+    .items-card .items-table thead th{ background:transparent; color:#0f172a; font-weight:700; padding:10px; text-align:left; }
+    .items-card .items-table tbody td{ background:#ffffff; padding:12px; vertical-align:top; }
+    .items-card .items-table tbody tr + tr td{ border-top:1px solid #f1f1f1; }
+    .items-card .items-table th.tbl-price, .items-card .items-table td.tbl-price{ width:110px; }
+    .items-card .items-table th.tbl-issues, .items-card .items-table td.tbl-issues{ width:40%; }
+    .items-card .items-table th.tbl-device, .items-card .items-table td.tbl-device{ width:30%; }
     </style>
 </head>
 
@@ -120,6 +135,11 @@
         foreach ($returned_items as $item) {
             $credit += $item['selling_price'];
         }
+    @endphp
+    @php
+        // Precompute a display-friendly sales total used in the header due-card
+        $salestotal = array_sum(array_column($sales->toArray(), 'total'));
+        $salestotal -= (array_sum(array_column($sales->toArray(), 'credit')) + (array_sum(array_column($sales->toArray(), 'credit')) * ($sales[0]->tax ?? 0) / 100));
     @endphp
     <table class="invoice-header-table">
         <tr>
@@ -186,48 +206,24 @@
                     </div>
                 @endif
             </td>
-            <td style="width:40%;"></td>
+            <td style="width:40%; vertical-align:top; padding-left:12px;">
+                @if(in_array('payment_due', $userActiveFields) || in_array('amount_due', $userActiveFields))
+                    <table class="bill-card due-card" role="presentation" style="width:100%; border-collapse:collapse;">
+                        <tr><td>
+                            @if(in_array('payment_due', $userActiveFields))
+                                <div class="label">Payment Due</div>
+                                <div class="value">{{ $sales[0]->created_at->format('F d, Y') }}</div>
+                            @endif
+                            @if(in_array('amount_due', $userActiveFields))
+                                <div class="sub"><strong>Amount Due:</strong> $ {{ number_format($salestotal,2) }}</div>
+                            @endif
+                        </td></tr>
+                    </table>
+                @endif
+            </td>
         </tr>
     </table>
-
-    <!-- header moved inside bill-card -->
-
-    <hr />
-
-    <table width="100%" style="border-bottom:1px solid #a9a9a921;">
-        <tbody style="margin:20px 0 !important;">
-            <tr>
-                @if(in_array('billing_address', $userActiveFields))
-                <!-- Bill To moved to header -->
-                @endif
-                <td class="text-right" style="width:45%; padding:20px 0;">
-                    <table>
-                        @if(in_array('payment_due', $userActiveFields))
-                        <tr>
-                            <td><strong>Payment Due:</strong></td>
-                            <td class="text-left">{{$sales[0]->created_at->format('F d, Y')}}</td>
-                        </tr>
-                        @endif
-                        @if(in_array('amount_due', $userActiveFields))
-                        <tr style="background-color:#a9a9a921; border-radius:3px;">
-                            <td>
-                                <strong>Amount Due:</strong>
-                            </td>
-                            <td class="text-left">
-                                @php
-                                    $salestotal = array_sum(array_column($sales->toarray(),'total'));
-                                    $salestotal -= (array_sum(array_column($sales->toarray(), 'credit')) + (array_sum(array_column($sales->toarray(), 'credit')) * $sales[0]->tax/100)) ;
-                                @endphp
-                                $ {{number_format($salestotal, 2)}}
-                            </td>
-                        </tr>
-                        @endif
-                    </table>
-                </td>
-            </tr>
-        </tbody>
-    </table>
-
+    
     @if(
         in_array('billing_address', $userActiveFields) ||
         in_array('invoice_number',   $userActiveFields) ||
