@@ -439,6 +439,7 @@ const onSubmit = async () => {
 
   try {
     const laravelRoute = route("items.request");
+    console.log("request structure:", request);
     const response = await axios.post(laravelRoute, request);
     showSelectedItems.value = false;
     toast.add({ severity: 'success', summary: 'Success', detail: response.data.message || 'Request submitted successfully.', life: 3000 });
@@ -489,6 +490,7 @@ onMounted(async () => {
   }
 
   // Ensure that the 'selected' property is not initially set on the props.items
+  console.log("Initial items:", props.items);
   if (props.items && props.items.length > 0) {
     props.items.forEach(item => {
 

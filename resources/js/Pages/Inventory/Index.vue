@@ -133,10 +133,10 @@ watchEffect(() => {
 });
 
 function openSellItemsModal() {
+  console.log('Opening ItemsSell dialog with items:', selectedItems.value);
   dialog.open(ItemsSell, {
     data: {
       items: selectedItems,
-      customers: props.customers,
     },
     props: {
       modal: true,
