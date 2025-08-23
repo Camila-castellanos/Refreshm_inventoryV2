@@ -39,7 +39,7 @@
     .invoice-badge .badge-date{ font-size:11px; color:#6b7280; margin-top:4px; display:block; }
 
     /* Small due card that sits to the right of the bill-card */
-    .due-card{ background: #ffffff; border:none; padding:8px 10px; border-radius:6px; width:170px; text-align:left; margin-left:8px; display:inline-table; vertical-align:top; }
+    .due-card{ background: #ffffff; border:none; padding:8px 10px; border-radius:6px; width:170px; text-align:left; display:inline-table; vertical-align:top; }
     .due-card .label{ font-size:10px; color:#6b7280; text-transform:uppercase; }
     .due-card .value{ font-size:16px; font-weight:700; color:#0f172a; margin-top:4px; }
     .due-card .sub{ font-size:11px; color:#6b7280; margin-top:6px; }
@@ -69,6 +69,9 @@
     .bill-card .bill-header .bill-header-content{ color:#374151; font-size:12px; margin:0; }
     .bill-card .bill-header .bill-header-content strong,
     .bill-card .bill-header .bill-header-content b{ font-weight:700; color:#0f172a; font-size:13px; }
+    .bill-card-table {
+        padding-bottom: 25px;
+    }
         /* Prevent price from wrapping and keep it aligned */
         .tbl-price {
             white-space: nowrap;
@@ -104,15 +107,31 @@
             border-left: none;
             padding-left: 0;
         }
-    /* Items table card styling */
-    .items-card{ background:#fbfbfb; border-radius:6px; padding:8px; margin-top:12px; }
-    .items-card .items-table{ width:100%; border-collapse:collapse; table-layout:fixed; }
-    .items-card .items-table thead th{ background:transparent; color:#0f172a; font-weight:700; padding:10px; text-align:left; }
-    .items-card .items-table tbody td{ background:#ffffff; padding:12px; vertical-align:top; }
-    .items-card .items-table tbody tr + tr td{ border-top:1px solid #f1f1f1; }
-    .items-card .items-table th.tbl-price, .items-card .items-table td.tbl-price{ width:110px; }
+    /* Items table card styling (modernized) */
+    .items-card{ background:#ffffff; border-radius:8px; padding:6px; margin-top:12px; box-shadow: 0 1px 2px rgba(15,23,42,0.04); border:1px solid #eef2f6; }
+    .items-card .items-table{ width:100%; border-collapse:separate; border-spacing:0; table-layout:fixed; font-size:13px; }
+    .items-card .items-table thead th{ background:#f8fafc; color:#0f172a; font-weight:700; padding:10px 12px; text-align:left; border-bottom:1px solid #e6eef6; }
+    .items-card .items-table tbody td{ background:#ffffff; padding:10px 12px; vertical-align:middle; color:#334155; }
+    .items-card .items-table tbody tr + tr td{ border-top:1px solid #f1f5f9; }
+    .items-card .items-table th.tbl-price, .items-card .items-table td.tbl-price{ width:120px; text-align:right; white-space:nowrap; }
     .items-card .items-table th.tbl-issues, .items-card .items-table td.tbl-issues{ width:40%; }
     .items-card .items-table th.tbl-device, .items-card .items-table td.tbl-device{ width:30%; }
+    /* Zebra rows for readability */
+    .items-card .items-table tbody tr:nth-child(odd) td{ background:#ffffff; }
+    .items-card .items-table tbody tr:nth-child(even) td{ background:#fbfdff; }
+    /* Subtle rounded corners for the table */
+    .items-card .items-table thead th:first-child{ border-top-left-radius:6px; }
+    .items-card .items-table thead th:last-child{ border-top-right-radius:6px; }
+    .items-card .items-table tbody tr:last-child td:first-child{ border-bottom-left-radius:6px; }
+    .items-card .items-table tbody tr:last-child td:last-child{ border-bottom-right-radius:6px; }
+    /* Ellipsis for device column to keep layout neat */
+    .items-card .items-table td.tbl-device{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    /* Make numeric columns bold and right aligned */
+    .items-card .items-table td.tbl-price{ font-weight:700; color:#0f172a; }
+    /* Responsive tweak for small widths when rendering PDF */
+    @media print, screen and (max-width:800px) {
+        .items-card .items-table th, .items-card .items-table td { padding:8px 8px; font-size:12px; }
+    }
 
     #items-table{
         background-color: #fbfbfb !important;
