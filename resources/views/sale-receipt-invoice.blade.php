@@ -48,6 +48,9 @@
     .totals-card .line{ font-size:12px; color:#374151; margin-top:6px; }
     .totals-card .line .label{ color:#6b7280; text-transform:uppercase; font-size:10px; }
     .totals-card .line .value{ float:right; font-weight:700; }
+    /* Footer card (placed under totals) */
+    .footer-card{ background:#fbfbfb; border:none; padding:10px; border-radius:6px; margin-top:8px; font-size:12px; color:#374151; }
+    .footer-card .content{ font-size:12px; color:#374151; }
     .invoice-subtitle{ font-size:12px; color:#6b7280; margin-top:4px; }
     /* Bill To card (compact, DOMPDF-friendly) */
     .bill-card{ background:#fbfbfb; border:none; padding:8px; border-radius:4px; font-size:12px; }
@@ -112,7 +115,7 @@
     .items-card .items-table th.tbl-device, .items-card .items-table td.tbl-device{ width:30%; }
 
     #items-table{
-        background-color: #fbfbfb;
+        background-color: #fbfbfb !important;
         margin-bottom:4px;
         border-bottom:1px solid #e0e0e0;
     }
@@ -248,6 +251,54 @@
                         </table>
                     @endif
                 @endif
+                @if(in_array('footer', $userActiveFields) && isset($footer))
+                    @php
+                        // Preserve line breaks: convert <br> and block tags to newlines first
+                        $tmp = $footer;
+                        // Normalize different br variants
+                        $tmp = preg_replace('#<(br|br\s*/)>#i', "\n", $tmp);
+                        // Treat span boundaries as line breaks: </span><span...> or </span> ... <span -> newline
+                        $tmp = preg_replace('#</span\s*>\s*<span[^>]*>#i', "\n", $tmp);
+                        // Also convert any closing or opening span tags to newline if isolated
+                        $tmp = preg_replace('#</?span[^>]*>#i', "\n", $tmp);
+                        // Convert block-level tags to newlines (p, div, li, h1..h6)
+                        $tmp = preg_replace('#</?(p|div|li|h[1-6])[^>]*>#i', "\n", $tmp);
+                        // Now strip remaining tags
+                        $footer_text = strip_tags($tmp);
+                        // decode HTML entities
+                        $footer_text = html_entity_decode($footer_text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                        // Replace non-breaking spaces and NBSP variants with regular space
+                        $footer_text = str_replace(["\xC2\xA0", "\xA0", chr(160), '&nbsp;'], ' ', $footer_text);
+                        // Remove zero-width / invisible Unicode characters
+                        $footer_text = preg_replace('/[\x{200B}\x{200C}\x{200D}\x{200E}\x{200F}\x{00AD}]/u', '', $footer_text);
+                        // Split into lines, trim each line, remove empty lines at ends and collapse multiple blank lines into single
+                        $lines = preg_split('/\r?\n/', $footer_text);
+                        $cleanLines = array();
+                        foreach ($lines as $line) {
+                            $l = preg_replace('/\s+/', ' ', $line);
+                            $l = trim($l);
+                            $cleanLines[] = $l;
+                        }
+                        // Remove leading/trailing empty lines
+                        while (count($cleanLines) && $cleanLines[0] === '') array_shift($cleanLines);
+                        while (count($cleanLines) && end($cleanLines) === '') array_pop($cleanLines);
+                        // Collapse multiple consecutive empty lines to a single empty line
+                        $finalLines = array();
+                        $prevEmpty = false;
+                        foreach ($cleanLines as $l) {
+                            $isEmpty = ($l === '');
+                            if ($isEmpty && $prevEmpty) continue;
+                            $finalLines[] = $l;
+                            $prevEmpty = $isEmpty;
+                        }
+                        $footer_text = implode("\n", $finalLines);
+                    @endphp
+                    <table class="bill-card footer-card" role="presentation" style="width:100%; border-collapse:collapse;">
+                        <tr><td>
+                            <div class="content">{!! nl2br(e($footer_text)) !!}</div>
+                        </td></tr>
+                    </table>
+                @endif
             </td>
         </tr>
     </table>
@@ -321,13 +372,6 @@
     </table>
     @endif
 
-    @if(in_array('footer', $userActiveFields) && isset($footer))
-    <div class="row m-0">
-        <div class="col-12">
-            {!! $footer !!}
-        </div>
-    </div>
-    @endif
 </body>
 
 </html>
