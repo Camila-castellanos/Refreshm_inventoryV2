@@ -12,7 +12,7 @@
           <template #option="slotProps">
             <div class="flex items-center">
               <div>
-                {{ `${slotProps.option.name} - ${slotProps.option.percentage}%` }}
+                {{ `${slotProps.option.name} - ${((slotProps.option as any).percentage)}%` }}
               </div>
             </div>
           </template>
@@ -119,13 +119,13 @@
       </div>
       <div class="col-span-6">
         <div class="flex flex-col items-end justify-between">
-          <div class="flex justify-end w-full gap-2 py-2">
-            <label class="block font-medium">Subtotal</label>
-            <div class="text-lg font-bold">{{ subtotal }}$</div>
+      <div class="flex justify-end w-full gap-2 py-2">
+        <label class="block font-medium">Subtotal</label>
+        <div class="text-lg font-bold">{{ (Number(subtotal) || 0).toFixed(2) }}$</div>
           </div>
           <div class="flex justify-end w-full gap-2 py-2">
             <label class="block font-medium">Tax</label>
-            <div class="text-lg font-bold">{{ taxAmount }}$</div>
+            <div class="text-lg font-bold">{{ (Number(taxAmount) || 0).toFixed(2) }}$</div>
           </div>
           <div v-if="form.credit > 0" class="flex justify-end w-full gap-2 py-2">
             <label class="block font-medium">Credit</label>
@@ -133,7 +133,7 @@
           </div>
           <div class="flex justify-end w-full gap-2 py-2">
             <label class="block font-medium">Total</label>
-            <div class="text-lg font-bold">{{ form.credit > 0 ? totalWithCredit.toFixed(2) : total }}$</div>
+            <div class="text-lg font-bold">{{ form.credit > 0 ? (Number(totalWithCredit) || 0).toFixed(2) : (Number(total) || 0).toFixed(2) }}$</div>
           </div>
         </div>
       </div>
@@ -183,33 +183,44 @@ import { useCredit } from '@/Composables/useCredit';
 import CreditDialog from '@/Components/CreditDialog.vue';
 const dialog = useDialog();
 const toast = useToast();
+// Ziggy runtime helper (global). Declared here to avoid TS errors in this file.
+declare const route: any;
 
 const subtotal = computed(() => {
   if (!params.value?.items) return 0;
-  return params.value.items.reduce((sum: number, item: any) => sum + (item.selling_price || 0), 0);
+  return params.value.items.reduce((sum: number, item: any) => {
+    const v = Number(item.selling_price || 0);
+    return sum + (isNaN(v) ? 0 : v);
+  }, 0);
 });
 
 const flatTax = computed(() => {
-  if (!form.tax || !form.tax.percentage) return 0;
-  return parseFloat((subtotal.value * (form.tax.percentage / 100)).toFixed(2));
+  const perc = Number((form.tax as any)?.percentage ?? 0);
+  if (!perc) return 0;
+  const sub = Number(subtotal.value) || 0;
+  return parseFloat((sub * (perc / 100)).toFixed(2));
 });
 
 // Tax: Calculate tax amount based on subtotal and selected tax percentage
 const taxAmount = computed(() => {
-  if (!form.tax || !form.tax.percentage) return 0;
-  return parseFloat((subtotal.value * (form.tax.percentage / 100)).toFixed(2));
+  const perc = Number((form.tax as any)?.percentage ?? 0);
+  if (!perc) return 0;
+  const sub = Number(subtotal.value) || 0;
+  return parseFloat((sub * (perc / 100)).toFixed(2));
 });
 
 // Total: Subtotal + Tax
 const total = computed(() => {
-  return parseFloat((subtotal.value + taxAmount.value).toFixed(2));
+  const sub = Number(subtotal.value) || 0;
+  const tax = Number(taxAmount.value) || 0;
+  return parseFloat((sub + tax).toFixed(2));
 });
 
 // Total con crédito aplicado
 const totalWithCredit = computed(() => {
-  const baseTotal = parseFloat((subtotal.value + taxAmount.value).toFixed(2));
-  const creditValue = parseFloat(final_credit_with_tax.value);
-  return Math.max(0, baseTotal - creditValue);
+  const baseTotal = Number(total) || 0;
+  const creditValue = parseFloat(String(final_credit_with_tax.value) || '0');
+  return Math.max(0, baseTotal - (isNaN(creditValue) ? 0 : creditValue));
 });
 
 const dialogRef: any = inject("dialogRef");
@@ -251,10 +262,10 @@ const updateCustomerCredit = (selectedCustomer: any) => {
 
 const form = useForm({
   date: new Date(),
-  tax: "",
-  customer: Object,
-  payment_method: "",
-  payment_account: "",
+  tax: null,
+  customer: null,
+  payment_method: null,
+  payment_account: null,
   memo_notes: "",
   credit: 0,
   customer_credit: 0,
@@ -352,15 +363,15 @@ async function submitForm(e: Event, isConfirmed: boolean) {
 
   const salePayload = {
     subtotal: subtotal.value,
-    tax: form?.tax?.percentage ?? 0,
+    tax: Number(((form.tax) as any)?.percentage ?? 0),
     total: total.value,
     discount: 0,
     flatTax: flatTax.value,
     payment_date: format(form.date, "yyyy-MM-dd"),
     notes: form.memo_notes,
-    payment_method: form.payment_method?.name || "",
-    payment_account: form.payment_account?.name || "",
-    tax_id: form.tax?.id ?? null,
+  payment_method: form.payment_method?.name || "",
+  payment_account: form.payment_account?.name || "",
+  tax_id: ((form.tax as any)?.id) ?? null,
     paid: isConfirmed ? 1 : 0, // 1 = Fully Paid, 0 = Unpaid
     balance_remaining: isConfirmed ? 0 : totalWithCredit.value,
     amount_paid: isConfirmed ? totalWithCredit.value : 0,
@@ -369,7 +380,7 @@ async function submitForm(e: Event, isConfirmed: boolean) {
     credit_added: creditAdded.value,
     items: params.value.items
     .filter((item: any) => !item.isNew) // Filtrar los elementos originales
-    .map((item: any) => ({
+  .map((item: any) => ({
       id: item.id,
       type: item.type,
       model: item.model,
@@ -377,10 +388,10 @@ async function submitForm(e: Event, isConfirmed: boolean) {
       selling_price: item.selling_price,
       issues: item.issues,
       sold: format(form.date, "yyyy-MM-dd"),
-      customer: form.customer.id,
+  customer: form.customer?.id ?? null,
       position: item.position,
       storage_id: item.storage_id,
-      profit: item.selling_price - (item.cost || 0), // Ensure cost exists
+  profit: item.selling_price - ((item.cost || 0) as any), // Ensure cost exists
     })),
 
   newItems: params.value.items
@@ -392,10 +403,10 @@ async function submitForm(e: Event, isConfirmed: boolean) {
       selling_price: item.selling_price,
       issues: item.issues,
       sold: format(form.date, "yyyy-MM-dd"),
-      customer: form.customer.id,
+      customer: form.customer?.id ?? null,
       position: item.position,
       storage_id: item.storage_id,
-      profit: item.selling_price - (item.cost || 0), // Ensure cost exists
+  profit: item.selling_price - (Number(item.cost || 0) || 0), // Ensure cost exists
     })),
   };
 
@@ -409,8 +420,9 @@ async function submitForm(e: Event, isConfirmed: boolean) {
 
     document.body.appendChild(link);
 
-    const invoiceNumber = data.split("sale/")[1].split("/")[0];
-    link.download = `${form.customer.customer} invoice #${invoiceNumber} .pdf`;
+  const invoiceNumber = data.split("sale/")[1].split("/")[0];
+  const customerLabel = (form.customer as any)?.customer || (form.customer as any)?.name || 'customer';
+  link.download = `${customerLabel} invoice #${invoiceNumber}.pdf`;
     link.click();
     document.body.removeChild(link);
     toast.add({ severity: "success", summary: "Success", detail: "Sale submitted successfully!", life: 3000 });

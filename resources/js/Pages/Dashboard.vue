@@ -56,6 +56,7 @@
           @update="handleCashOnHandUpdate" :editable="stat?.editable"/>
       </div>
     </div>
+  <IncomingRequestsDrawer />
   </AppLayout>
 </template>
 
@@ -73,6 +74,7 @@ import axios from "axios";
 import { startOfMonth, startOfYear, subMonths, subYears, format } from "date-fns";
 import StatCard from "@/Components/StatCard.vue";
 import GlobalSearchBar from "@/Components/GlobalSearchBar.vue";
+import IncomingRequestsDrawer from '@/Components/IncomingRequestsDrawer.vue';
 
 const toast = useToast();
 

@@ -31,6 +31,9 @@ use App\Imports\ItemsImport;
 use App\Exports\ItemDemoExport;
 use Illuminate\Support\Facades\Mail;
 use App\Models\Vendor;
+use App\Models\IncomingRequest;
+use App\Models\IncomingRequestItem;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Maatwebsite\Excel\Facades\Excel;
@@ -237,20 +240,127 @@ class ItemController extends Controller
 
     public function request(RequestItemsForm $request)
     {
-        $form = $request;
-        $name = $form["name"];
-        $email = $form["email"];
-        $store = $form["store"];
-        $notes = $form["notes"];
-        $items = $form["items"];
+        $data = $request->validated();
+        $name = $data['name'] ?? null;
+        $email = $data['email'] ?? null;
+        $store = $data['store'] ?? null;
+        $notes = $data['notes'] ?? null;
+        $items = $data['items'] ?? [];
 
         $uniqueItems = collect($items)->unique('id')->values()->all();
 
+        // Determine request owner: use the first non-null item's user_id if present, otherwise current user
+        $requestUserId = Auth::id();
+        foreach ($uniqueItems as $itTemp) {
+            if (isset($itTemp['user_id']) && $itTemp['user_id'] !== null) {
+                $requestUserId = $itTemp['user_id'];
+                break;
+            }
+        }
 
+        // Persist incoming request
+        $incoming = IncomingRequest::create([
+            'name' => $name,
+            'email' => $email,
+            'store' => $store,
+            'notes' => $notes,
+            'user_id' => $requestUserId,
+        ]);
 
+        // Persist each requested item as a snapshot
+        foreach ($uniqueItems as $it) {
+            IncomingRequestItem::create([
+                'incoming_request_id' => $incoming->id,
+                'original_item_id' => $it['id'] ?? null,
+                'date' => $it['date'] ?? null,
+                'supplier' => $it['supplier'] ?? null,
+                'manufacturer' => $it['manufacturer'] ?? null,
+                'storage_id' => $it['storage_id'] ?? null,
+                'position' => $it['position'] ?? null,
+                'model' => $it['model'] ?? null,
+                'colour' => $it['colour'] ?? null,
+                'battery' => $it['battery'] ?? null,
+                'grade' => $it['grade'] ?? null,
+                'issues' => $it['issues'] ?? null,
+                'cost' => $it['cost'] ?? null,
+                'imei' => $it['imei'] ?? null,
+                'selling_price' => $it['selling_price'] ?? null,
+                'customer' => $it['customer'] ?? null,
+                'user_id' => $it['user_id'] ?? Auth::id(),
+                'vendor_id' => $it['vendor_id'] ?? null,
+                'shop_id' => $it['shop_id'] ?? null,
+                'type' => $it['type'] ?? null,
+            ]);
+        }
+
+        // Send email as before
         $mail = Mail::to('will@refreshmobile.ca')->send(new RequestItems($name, $email, $store, $notes, $uniqueItems));
-        return response()->json($mail, 201);
+
+        return response()->json(['saved' => true, 'id' => $incoming->id], 201);
      
+    }
+
+    /**
+     * Return all incoming requests where processed = false
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function incomingRequests(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $processedParam = $request->query('processed', false);
+
+        $requests = IncomingRequest::with('items')
+            ->where('processed', $processedParam)
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json($requests);
+    }
+
+    /**
+     * Delete a single item from an incoming request
+     */
+    public function deleteIncomingRequestItem($id)
+    {
+        $item = IncomingRequestItem::findOrFail($id);
+        $item->delete();
+        return response()->json(['deleted' => true]);
+    }
+
+    /**
+     * Create a simple invoice (Sale) from an incoming request
+     */
+    public function createInvoiceFromRequest($id)
+    {
+        $requestModel = IncomingRequest::with('items')->findOrFail($id);
+
+        $userId = $requestModel->user_id ?? auth()->id();
+
+        $subtotal = 0;
+        $items = $requestModel->items ?? [];
+        foreach ($items as $it) {
+            $subtotal += (float) ($it->selling_price ?? $it->cost ?? 0);
+        }
+
+        $sale = Sale::create([
+            'user_id' => $userId,
+            'subtotal' => $subtotal,
+            'total' => $subtotal,
+            'date' => now(),
+        ]);
+
+        $receiptUrl = route('sales.receipt', $sale);
+        return response()->json(['created' => true, 'receipt' => $receiptUrl, 'sale_id' => $sale->id], 201);
+    }
+
+    /**
+     * Delete an entire incoming request with its items
+     */
+    public function deleteIncomingRequest($id)
+    {
+        $req = IncomingRequest::findOrFail($id);
+        $req->delete();
+        return response()->json(['deleted' => true]);
     }
 
     public function lcd()

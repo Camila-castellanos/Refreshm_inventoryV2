@@ -89,6 +89,10 @@ Route::middleware([
         Route::post("items/newlabels", [ItemController::class, "getLabelsNewItems"])->name("items.newlabels");
         Route::post("items/storeWithBill", [ItemController::class, "storeWithBill"])->name("items.storeWithBill");
         Route::get("items/getItems", [ItemController::class, "getItems"])->name("items.getItems");
+    Route::get("items/incoming-requests", [ItemController::class, "incomingRequests"])->name("items.incomingRequests");
+    Route::post("items/incoming-requests/{id}/create-invoice", [ItemController::class, "createInvoiceFromRequest"])->name("items.incomingRequests.createInvoice");
+    Route::delete("items/incoming-requests/items/{id}", [ItemController::class, "deleteIncomingRequestItem"])->name("items.incomingRequests.deleteItem");
+    Route::delete("items/incoming-requests/{id}", [ItemController::class, "deleteIncomingRequest"])->name("items.incomingRequests.delete");
         Route::resource("items", ItemController::class)
             ->except(["show", "update", "edit"]);
 
