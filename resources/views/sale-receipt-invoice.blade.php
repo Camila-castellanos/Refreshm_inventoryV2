@@ -43,6 +43,11 @@
     .due-card .label{ font-size:10px; color:#6b7280; text-transform:uppercase; }
     .due-card .value{ font-size:16px; font-weight:700; color:#0f172a; margin-top:4px; }
     .due-card .sub{ font-size:11px; color:#6b7280; margin-top:6px; }
+    /* Totals card (placed under due-card) */
+    .totals-card{ background:#fbfbfb; border:none; padding:8px 10px; border-radius:6px; margin-top:8px; }
+    .totals-card .line{ font-size:12px; color:#374151; margin-top:6px; }
+    .totals-card .line .label{ color:#6b7280; text-transform:uppercase; font-size:10px; }
+    .totals-card .line .value{ float:right; font-weight:700; }
     .invoice-subtitle{ font-size:12px; color:#6b7280; margin-top:4px; }
     /* Bill To card (compact, DOMPDF-friendly) */
     .bill-card{ background:#fbfbfb; border:none; padding:8px; border-radius:4px; font-size:12px; }
@@ -105,6 +110,14 @@
     .items-card .items-table th.tbl-price, .items-card .items-table td.tbl-price{ width:110px; }
     .items-card .items-table th.tbl-issues, .items-card .items-table td.tbl-issues{ width:40%; }
     .items-card .items-table th.tbl-device, .items-card .items-table td.tbl-device{ width:30%; }
+
+    #items-table{
+        background-color: #fbfbfb;
+        margin-bottom:4px;
+        border-bottom:1px solid #e0e0e0;
+    }
+    /* reduce bottom padding inside the items table cells to tighten spacing */
+    #items-table tbody td{ padding-bottom:8px; }
     </style>
 </head>
 
@@ -219,6 +232,21 @@
                             @endif
                         </td></tr>
                     </table>
+                    @if(in_array('subtotal', $userActiveFields) || in_array('tax', $userActiveFields) || in_array('total', $userActiveFields))
+                        <table class="totals-card" role="presentation" style="width:100%; border-collapse:collapse;">
+                            <tr><td>
+                                @if(in_array('subtotal', $userActiveFields))
+                                    <div class="line"><span class="label">Subtotal</span><span class="value">$ {{ number_format($subtotal,2) }}</span></div>
+                                @endif
+                                @if(in_array('tax', $userActiveFields))
+                                    <div class="line"><span class="label">Tax</span><span class="value">$ {{ number_format($flatTax,2) }}</span></div>
+                                @endif
+                                @if(in_array('total', $userActiveFields))
+                                    <div class="line"><span class="label">Total</span><span class="value">$ {{ number_format($total,2) }}</span></div>
+                                @endif
+                            </td></tr>
+                        </table>
+                    @endif
                 @endif
             </td>
         </tr>
@@ -234,7 +262,7 @@
         <hr />
     @endif
     @if(in_array('items', $userActiveFields))
-    <table class="table table-striped pb-4 items-table">
+    <table class="table items-table" id="items-table">
         <thead>
             <tr>
                 @if(in_array('table_device', $userActiveFields))
@@ -292,41 +320,6 @@
         </tbody>
     </table>
     @endif
-    <div class="row m-0">
-        <div class="col-span-4 offset-md-8">
-            <table class="table table-striped pb-4">
-                @if(in_array('subtotal', $userActiveFields))
-                <tr>
-                    <td class="text-right">
-                        <b>SUBTOTAL:</b> $ {{ number_format($subtotal, 2) }}
-                    </td>
-                </tr>
-                @endif
-                @if(in_array('tax', $userActiveFields))
-                <tr>
-                    <td class="text-right">
-                        <b>TAX:</b> $ {{ number_format($flatTax, 2) }}
-                    </td>
-                </tr>
-                @endif
-                @if(in_array('total', $userActiveFields))
-                <tr>
-                    <td class="text-right">
-                        <b>TOTAL:</b> $ {{ number_format($total, 2) }}
-                    </td>
-                </tr>
-                @endif
-                @if(in_array('credit', $userActiveFields) && $credit > 0)
-                <tr>
-                    <td class="text-right">
-                        <b>(CREDIT:)</b>
-                        <span class="text-red-500">- $ {{ number_format($credit + ($credit * ($sales[0]->tax ?? 0) / 100), 2) }}</span>
-                    </td>
-                </tr>
-                @endif
-            </table>
-        </div>
-    </div>
 
     @if(in_array('footer', $userActiveFields) && isset($footer))
     <div class="row m-0">
