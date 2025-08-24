@@ -18,6 +18,11 @@ class IncomingRequest extends Model
         'notes',
         'user_id',
         'processed',
+        'shipping',
+    ];
+
+    protected $casts = [
+        'shipping' => 'array',
     ];
 
     public function items()

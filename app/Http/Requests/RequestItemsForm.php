@@ -29,6 +29,7 @@ class RequestItemsForm extends FormRequest
       "store" => "nullable|string",
       "notes" => "string|nullable",
       "items" => "required|array|min:1",
+      "shipping" => "nullable|array"
     ];
   }
 }
