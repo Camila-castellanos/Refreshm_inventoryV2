@@ -28,6 +28,11 @@
                 <InputText id="store" type="text" v-model="store"
                   class="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
+              <div class="flex-1">
+                <label for="shipping" class="block text-gray-700 text-sm font-bold mb-1">Shipping:</label>
+                <Dropdown id="shipping" :options="shippingOptions" optionLabel="label" v-model="shipping" class="w-full"
+                  placeholder="Select shipping" />
+              </div>
             </div>
           </div>
 
@@ -319,6 +324,7 @@ import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import { ref, computed, watch } from 'vue';
 import { IconField, InputIcon, Dialog, Checkbox, RadioButton } from "primevue";
+import Dropdown from 'primevue/dropdown';
 import Card from 'primevue/card';
 import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';
@@ -363,6 +369,11 @@ const name = ref('');
 const email = ref('');
 const notes = ref('');
 const store = ref('');
+const shipping = ref<{ label: string; value: number } | null>({ label: 'Standard (Free)', value: 0 });
+const shippingOptions = [
+  { label: 'Standard (Free)', value: 0 },
+  { label: 'Express (+$25)', value: 25 }
+];
 
 
 
@@ -433,13 +444,13 @@ const onSubmit = async () => {
     name: name.value,
     email: email.value,
     store: store.value,
+  shipping: shipping.value,
     notes: notes.value,
     items: selectedItems.value.map(item => ({ ...item })), // Create a new array of selected items
   };
 
   try {
     const laravelRoute = route("items.request");
-    console.log("request structure:", request);
     const response = await axios.post(laravelRoute, request);
     showSelectedItems.value = false;
     toast.add({ severity: 'success', summary: 'Success', detail: response.data.message || 'Request submitted successfully.', life: 3000 });

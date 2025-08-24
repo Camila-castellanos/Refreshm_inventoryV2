@@ -78,6 +78,7 @@ import { useToast } from 'primevue/usetoast';
 import { useDialog } from 'primevue/usedialog';
 import ItemsSell from '../Pages/Inventory/Modals/ItemsSell.vue';
 import axios from 'axios';
+import { ItemType} from '@/Enums/itemType';
 
 const visible = ref(false);
 const requests = ref<any[]>([]);
@@ -96,6 +97,21 @@ async function createInvoice(req: any) {
     ...it,
     id: it.original_item_id ?? it.id,
   }));
+
+  // If the request includes shipping, add a synthetic item for the shipping fee
+  if (req.shipping) {
+    try {
+      mappedItems.push({
+        id: `shipping-${Date.now()}`,
+        original_item_id: null,
+        model: req.shipping.label || 'Shipping',
+        type: ItemType.SHIPPING_FEE,
+        selling_price: Number(req.shipping.value) || 0,
+      });
+    } catch (err) {
+      console.error('Error mapping shipping to item', err);
+    }
+  }
 
   // Open ItemsSell modal with the mapped request items
   console.log('Opening ItemsSell dialog with items:', mappedItems);

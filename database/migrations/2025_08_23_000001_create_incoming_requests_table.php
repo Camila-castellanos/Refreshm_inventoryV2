@@ -19,6 +19,7 @@ return new class extends Migration
             $table->string('email')->nullable();
             $table->string('store')->nullable();
             $table->text('notes')->nullable();
+            $table->json('shipping')->nullable();
             $table->unsignedBigInteger('user_id')->nullable();
             $table->boolean('processed')->default(false);
             $table->timestamps();

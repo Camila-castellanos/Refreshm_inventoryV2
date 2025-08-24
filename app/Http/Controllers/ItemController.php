@@ -259,12 +259,14 @@ class ItemController extends Controller
         }
 
         // Persist incoming request
+        $shippingData = $data['shipping'] ?? null;
         $incoming = IncomingRequest::create([
             'name' => $name,
             'email' => $email,
             'store' => $store,
             'notes' => $notes,
             'user_id' => $requestUserId,
+            'shipping' => $shippingData,
         ]);
 
         // Persist each requested item as a snapshot
