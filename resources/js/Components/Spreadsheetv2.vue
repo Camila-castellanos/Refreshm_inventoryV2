@@ -1246,52 +1246,14 @@ async function autoGenerateSalesPrices() {
       let updatedCount = 0;
 
       // Work on a copy of rows for safe updates
-      const rows = tableData.value.map(r => ({ ...r }));
+      const rows = tableData.value.map((r: ItemWithLocation) => ({ ...r }));
 
-      for (const u of updated) {
-        let rowIndex = -1;
-
-        // 1) If backend tells us it matched by id (matched_item_id), use that
-        if (u.matched_on === 'id' && u.matched_item_id != null) {
-          rowIndex = rows.findIndex(r => r.id === u.matched_item_id || r.id === u.id);
-        }
-
-        // 2) fallback: match by incoming item's id field
-        if (rowIndex === -1 && u.id != null) {
-          rowIndex = rows.findIndex(r => r.id === u.id);
-        }
-
-        // 3) match by imei (explicit)
-        if (rowIndex === -1 && u.matched_on === 'imei' && u.imei) {
-          rowIndex = rows.findIndex(r => r.imei && r.imei === u.imei);
-        }
-
-        // 4) fallback: any returned imei
-        if (rowIndex === -1 && u.imei) {
-          rowIndex = rows.findIndex(r => r.imei && r.imei === u.imei);
-        }
-
-        // 5) match by model (case-insensitive contains) when provided
-        if (rowIndex === -1 && u.model) {
-          const uModel = String(u.model).toLowerCase().trim();
-          rowIndex = rows.findIndex(r => r.model && String(r.model).toLowerCase().includes(uModel));
-        }
-
-        // 6) final fallback: incoming_index provided by server
-        if (rowIndex === -1 && typeof u.incoming_index === 'number' && u.incoming_index >= 0 && u.incoming_index < rows.length) {
-          rowIndex = u.incoming_index;
-        }
-
-        // apply update if found
-        if (rowIndex !== -1) {
-          const target = rows[rowIndex];
-          if (u.selling_price != null) {
-            target.selling_price = u.selling_price;
-            updatedCount++;
-          }
-          // attach metadata for UI/debug if needed
-          if (u.fields_used) target._selling_price_fields_used = u.fields_used;
-          if (u.matched_on) target._selling_price_matched_on = u.matched_on;
+      // Simple mapping by index - assumes response items are in same order as sent
+      for (let i = 0; i < updated.length && i < rows.length; i++) {
+        const updatedItem = updated[i];
+        if (updatedItem.selling_price != null) {
+          rows[i].selling_price = updatedItem.selling_price;
+          updatedCount++;
         }
       }
 
