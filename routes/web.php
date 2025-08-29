@@ -87,6 +87,8 @@ Route::middleware([
         Route::get("items/{item}/label", [ItemController::class, "label"])->name("items.label");
         Route::get("items/labels/{items}", [ItemController::class, "getLabels"])->name("items.labels");
         Route::post("items/newlabels", [ItemController::class, "getLabelsNewItems"])->name("items.newlabels");
+    // Auto-generate selling prices for a set of items (returns updated items)
+    Route::post("items/generate-selling-prices", [ItemController::class, "generateSellingPrice"])->name("items.generateSellingPrices");
         Route::post("items/storeWithBill", [ItemController::class, "storeWithBill"])->name("items.storeWithBill");
         Route::get("items/getItems", [ItemController::class, "getItems"])->name("items.getItems");
     Route::get("items/incoming-requests", [ItemController::class, "incomingRequests"])->name("items.incomingRequests");
