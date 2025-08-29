@@ -1099,11 +1099,9 @@ public function getLabelsNewItems(Request $request): \Illuminate\Http\Response
             // and only from the last 6 months (by created_at or updated_at)
             $sixMonthsAgo = now()->subMonths(6);
             $baseQuery = Item::whereNotNull('selling_price')
-                ->whereNull('sold')
-                ->whereNull('hold')
-                ->where(function($q) use ($sixMonthsAgo) {
-                    $q->where('created_at', '>=', $sixMonthsAgo)
-                      ->orWhere('updated_at', '>=', $sixMonthsAgo);
+                ->where(function($query) use ($sixMonthsAgo) {
+                    $query->where('created_at', '>=', $sixMonthsAgo)
+                          ->orWhere('updated_at', '>=', $sixMonthsAgo);
                 });
 
             // Build dynamic list of available fields for this item
@@ -1115,104 +1113,80 @@ public function getLabelsNewItems(Request $request): \Illuminate\Http\Response
 
             // No available fields -> cannot match
             if (!empty($available)) {
-                // Generate combinations ordered by descending size (prefer more specific)
-                // e.g. if available = [model,battery,grade], combos = [model+battery+grade, model+battery, model+grade, model]
-                $combos = [];
-                $n = count($available);
-                // generate all non-empty combinations
-                for ($len = $n; $len >= 1; $len--) {
-                    // combinations of size $len
-                    $indexes = range(0, $n - 1);
-                    $stack = [[]];
-                    foreach ($indexes as $i) {
-                        $new = [];
-                        foreach ($stack as $s) {
-                            $new[] = array_merge($s, [$i]);
-                            $new[] = $s;
-                        }
-                        $stack = $new;
-                    }
-                    foreach ($stack as $s) {
-                        if (count($s) === $len) {
-                            $combo = array_map(fn($idx) => $available[$idx], $s);
-                            $combos[] = $combo;
-                        }
-                    }
-                }
+                // Search using exactly the fields that the incoming item provides
+                $q = clone $baseQuery;
 
-                // Deduplicate combos by string key while preserving order
-                $seen = [];
-                $ordered = [];
-                foreach ($combos as $c) {
-                    $key = implode('+', $c);
-                    if (!isset($seen[$key])) {
-                        $seen[$key] = true;
-                        $ordered[] = $c;
-                    }
-                }
+                Log::info('generateSellingPrice searching with', [
+                    'available_fields' => $available,
+                    'field_values' => [
+                        'model' => $model ?? 'NULL',
+                        'battery' => $battery ?? 'NULL', 
+                        'grade' => $grade ?? 'NULL',
+                        'issues' => $issues ?? 'NULL'
+                    ]
+                ]);
 
-                // Try each combination from most specific to least
-                // Identify the full-combo key (all available fields) so we can early-exit if it fails
-                $fullComboKey = implode('+', $available);
-                foreach ($ordered as $combo) {
-                    $q = clone $baseQuery;
-                    foreach ($combo as $field) {
-                        // Special handling for battery: use range-based numeric comparisons
-                        if ($field === 'battery') {
-                            $batteryValue = ${$field};
-                            // try to extract numeric portion (e.g., "85%" or "85")
-                            $num = null;
-                            if (is_numeric($batteryValue)) {
-                                $num = (int)$batteryValue;
-                            } else {
-                                // strip non-digits
-                                preg_match('/(\d{1,3})/', $batteryValue ?? '', $m);
-                                if (!empty($m[1])) {
-                                    $num = (int)$m[1];
-                                }
-                            }
-
-                            if ($num === null) {
-                                // fallback to LIKE if we cannot parse a number
-                                $q->where($field, 'like', '%' . ${$field} . '%');
-                            } else {
-                                if ($num <= 79) {
-                                    $q->where($field, '<=', 79);
-                                } elseif ($num >= 85) {
-                                    $q->where($field, '>=', 85);
-                                } else {
-                                    // 80-84 range
-                                    $q->whereBetween($field, [80, 84]);
-                                }
-                            }
+                // Apply filters for all available fields (exact match based on what the item brings)
+                foreach ($available as $field) {
+                    // Special handling for battery: use range-based numeric comparisons
+                    if ($field === 'battery') {
+                        $batteryValue = ${$field};
+                        // try to extract numeric portion (e.g., "85%" or "85")
+                        $num = null;
+                        if (is_numeric($batteryValue)) {
+                            $num = (int)$batteryValue;
                         } else {
-                            $value = ${$field};
-                            $q->where($field, 'like', '%' . $value . '%');
+                            // strip non-digits
+                            preg_match('/(\d{1,3})/', $batteryValue ?? '', $m);
+                            if (!empty($m[1])) {
+                                $num = (int)$m[1];
+                            }
                         }
-                    }
 
-                    $match = $q->orderByDesc('updated_at')->orderByDesc('created_at')->first(['id','selling_price']);
-                    if ($match) {
-                        $foundPrice = round(floatval($match->selling_price), 2);
-                        Log::info('generateSellingPrice match', [
-                            'input_item_id' => $item['id'] ?? null,
-                            'matched_item_id' => $match->id,
-                            'fields_used' => implode('+', $combo),
-                        ]);
-                        break;
+                        if ($num === null) {
+                            // fallback to LIKE if we cannot parse a number
+                            $q->where($field, 'like', '%' . ${$field} . '%');
+                        } else {
+                            if ($num <= 79) {
+                                $q->where($field, '<=', 79);
+                            } elseif ($num >= 85) {
+                                $q->where($field, '>=', 85);
+                            } else {
+                                // 80-84 range
+                                $q->whereBetween($field, [80, 84]);
+                            }
+                        }
+                    } else {
+                        $value = ${$field};
+                        $q->where($field, 'like', '%' . $value . '%');
                     }
+                }
 
-                    // If this combo is exactly the full set of available fields and it didn't match,
-                    // then return null for this item (do NOT try smaller combos).
-                    $comboKey = implode('+', $combo);
-                    if ($comboKey === $fullComboKey) {
-                        Log::info('generateSellingPrice no match for full-combo, skipping partials', [
-                            'input_item_id' => $item['id'] ?? null,
-                            'tried_fields' => $comboKey,
-                        ]);
-                        // leave $foundPrice as null and break out of the combo loop
-                        break;
-                    }
+                // Clone the query before consuming it with first()/get()
+                $qForMatch = (clone $q)->orderByDesc('date');
+                $qForList = (clone $qForMatch);
+
+                $match = $qForMatch->first(['id','selling_price', 'model']);
+                $completelist = $qForList->get(['id','selling_price', 'model', 'battery', 'grade', 'issues', 'created_at', 'updated_at']);
+                
+                Log::info('generateSellingPrice all matches found', [
+                    'total_matches' => $completelist->count(),
+                    'matches' => $completelist->toArray()
+                ]);
+
+                if ($match) {
+                    $foundPrice = round(floatval($match->selling_price), 2);
+                    Log::info('generateSellingPrice match selected', [
+                        'model' => $match->model ?? null,
+                        'selling_price' => $foundPrice,
+                        'fields_used' => implode('+', $available),
+                        'matched_item_id' => $match->id ?? null,
+                    ]);
+                } else {
+                    Log::info('generateSellingPrice no match found', [
+                        'input_item_id' => $item['id'] ?? null,
+                        'tried_fields' => implode('+', $available),
+                    ]);
                 }
             }
 
