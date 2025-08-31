@@ -1116,16 +1116,6 @@ public function getLabelsNewItems(Request $request): \Illuminate\Http\Response
                 // Search using exactly the fields that the incoming item provides
                 $q = clone $baseQuery;
 
-                Log::info('generateSellingPrice searching with', [
-                    'available_fields' => $available,
-                    'field_values' => [
-                        'model' => $model ?? 'NULL',
-                        'battery' => $battery ?? 'NULL', 
-                        'grade' => $grade ?? 'NULL',
-                        'issues' => $issues ?? 'NULL'
-                    ]
-                ]);
-
                 // Apply filters for all available fields (exact match based on what the item brings)
                 foreach ($available as $field) {
                     // Special handling for battery: use range-based numeric comparisons
@@ -1194,8 +1184,6 @@ public function getLabelsNewItems(Request $request): \Illuminate\Http\Response
             $item['selling_price'] = $foundPrice;
             $updated[] = $item;
         }
-
-        Log::info('Generated selling prices for items count: ' . count($updated));
         return response()->json(['items' => $updated]);
     }
 }
