@@ -90,6 +90,7 @@ Route::middleware([
     // Auto-generate selling prices for a set of items (returns updated items)
     Route::post("items/generate-selling-prices", [ItemController::class, "generateSellingPrice"])->name("items.generateSellingPrices");
         Route::post("items/storeWithBill", [ItemController::class, "storeWithBill"])->name("items.storeWithBill");
+    Route::post("items/get_unique_models_by_manufacturer", [ItemController::class, "getUniqueModelsByManufacturer"])->name("Items.getUniqueModelsByManufacturer");
         Route::get("items/getItems", [ItemController::class, "getItems"])->name("items.getItems");
     Route::get("items/incoming-requests", [ItemController::class, "incomingRequests"])->name("items.incomingRequests");
     Route::post("items/incoming-requests/{id}/create-invoice", [ItemController::class, "createInvoiceFromRequest"])->name("items.incomingRequests.createInvoice");

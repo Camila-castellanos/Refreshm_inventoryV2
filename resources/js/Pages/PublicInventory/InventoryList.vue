@@ -124,6 +124,16 @@
               </div>
             </div>
           </div>
+          <!-- Models filter: moved directly under Manufacturer for mobile -->
+          <div v-if="filters.manufacturer.length > 0">
+            <label class="block text-gray-700 text-sm font-bold mb-1">Model:</label>
+            <div class="flex flex-col gap-2">
+              <div v-for="opt in modelsOptions" :key="opt.value" class="flex items-center">
+                <Checkbox :inputId="'model-mobile-' + opt.value" :value="opt.value" v-model="filters.model" />
+                <label :for="'model-mobile-' + opt.value" class="ml-2">{{ opt.label }}</label>
+              </div>
+            </div>
+          </div>
           <div>
             <label class="block text-gray-700 text-sm font-bold mb-1">Grade:</label>
             <div class="flex flex-wrap gap-2">
@@ -175,6 +185,16 @@
                   </div>
                 </div>
               </div>
+              <!-- Models filter: moved under Manufacturer for desktop -->
+              <div v-if="filters.manufacturer.length > 0">
+                <label class="block text-gray-700 text-sm font-bold mb-1">Model:</label>
+                <div class="flex flex-col gap-2">
+                  <div v-for="opt in modelsOptions" :key="opt.value" class="flex items-center">
+                    <Checkbox :inputId="'model-' + opt.value" :value="opt.value" v-model="filters.model" />
+                    <label :for="'model-' + opt.value" class="ml-2">{{ opt.label }}</label>
+                  </div>
+                </div>
+              </div>
               <div>
                 <label class="block text-gray-700 text-sm font-bold mb-1">Grade:</label>
                 <div class="flex flex-col gap-2">
@@ -203,6 +223,7 @@
                   </div>
                 </div>
               </div>
+              
             </div>
           </template>
         </Card>
@@ -387,7 +408,73 @@ const filters = ref({
   manufacturer: [], // Use array for checkboxes
   grade: [], // Use array for checkboxes
   hasIssues: "all", // Can be true, false, or null
+  model: [], // selected models (array)
 });
+
+// Models options populated when manufacturers are selected
+const modelsOptions = ref<Array<{ label: string; value: string }>>([]);
+
+// Normalize model string to match server-side normalization
+function normalizeModel(raw: any): string {
+  if (!raw) return '';
+  let m = String(raw).trim();
+  // Remove parenthetical content
+  m = m.replace(/\(.+?\)/gu, ' ');
+  // Remove storage sizes like '128GB', '256 GB'
+  m = m.replace(/\b\d+\s*gb\b/giu, ' ');
+  m = m.replace(/\b\d+\s*g\b/giu, ' ');
+  // Remove non-alphanumeric (keep spaces)
+  m = m.replace(/[^\p{L}\p{N} ]+/gu, ' ');
+  // Collapse whitespace
+  m = m.replace(/\s+/gu, ' ').trim();
+  return m.toLowerCase();
+}
+
+// Fetch models for selected manufacturers.
+async function fetchModelsByManufacturers() {
+  try {
+    // If no manufacturers selected, clear modelsOptions and return early
+    if (!filters.value.manufacturer || filters.value.manufacturer.length === 0) {
+      modelsOptions.value = [];
+      return;
+    }
+    // Build payload expected by the backend route
+    const payload = { manufacturers: filters.value.manufacturer };
+
+    // Build the Laravel route using the `route` helper.
+    const laravelRoute = route('Items.getUniqueModelsByManufacturer')
+
+    const response = await axios.post(laravelRoute, payload);
+
+    // Backend returns { models: [...] }
+    const models = response.data?.models ?? [];
+
+    // Map to Dropdown expected format { label, value }
+    modelsOptions.value = models.map(m => {
+      if (typeof m === 'string') return { label: m, value: m };
+      if (m && typeof m === 'object') return { label: m.label ?? m.value ?? '', value: m.value ?? m.label ?? '' };
+      return { label: String(m), value: String(m) };
+    });
+
+  } catch (error) {
+    console.error('Error fetching models by manufacturers:', error);
+    let message = 'Error fetching models.';
+    if (error.response && error.response.data && error.response.data.message) {
+      message = error.response.data.message;
+    }
+    toast.add({ severity: 'error', summary: 'Error', detail: message, life: 5000 });
+    modelsOptions.value = [];
+  }
+}
+
+// Watch manufacturers selection and fetch models accordingly
+watch(
+  () => filters.value.manufacturer,
+  (nv, ov) => {
+    fetchModelsByManufacturers();
+  },
+  { deep: true }
+);
 
 const uniqueManufacturers = computed(() => Array.from([...new Set(props.items?.map(item => item.manufacturer))]).sort());
 const uniqueGrades = computed(() => Array.from([...new Set(props.items?.map(item => item.grade).filter(Boolean))]).sort());
@@ -401,21 +488,17 @@ const filteredItemsBeforeFilters = computed(() => {
   );
 });
 
+// apply filters matching
 const filteredItemsWithFilters = computed(() => {
   return filteredItemsBeforeFilters.value.filter(item => {
     const manufacturerMatch = filters.value.manufacturer.length === 0 || filters.value.manufacturer.includes(item.manufacturer);
     const gradeMatch = filters.value.grade.length === 0 || filters.value.grade.includes(item.grade);
-    let issuesMatch = true; // Default to true if hasIssues is null
+    const issuesMatch = filters.value.hasIssues === 'all' ||
+      (filters.value.hasIssues === true && item.issues) ||
+      (filters.value.hasIssues === false && !item.issues);
+    const modelMatch = filters.value.model.length === 0 || filters.value.model.includes(normalizeModel(item.model));  
 
-    if (filters.value.hasIssues !== "all") {
-
-      if (filters.value.hasIssues === true) {
-        issuesMatch = !!item.issues; // true if item has issues
-      } else {
-        issuesMatch = !item.issues; // true if item has no issues
-      }
-    }
-    return manufacturerMatch && gradeMatch && issuesMatch;
+    return manufacturerMatch && gradeMatch && issuesMatch && modelMatch;
   });
 });
 
