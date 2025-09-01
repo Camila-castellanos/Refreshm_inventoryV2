@@ -95,6 +95,59 @@ class ItemController extends Controller
         return response()->json($items);
     }
 
+    /**
+     * Return unique normalized models for given manufacturers.
+     * Expects payload: { manufacturers: ["Apple", "Samsung"] }
+     * Normalizes manufacturer matching (case-insensitive) and model normalization
+     * (removes storage sizes like "128GB" so "iPhone 15 128GB" and "iPhone 15 256GB" collapse to "iPhone 15").
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function getUniqueModelsByManufacturer(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'manufacturers' => 'required|array',
+            'manufacturers.*' => 'string',
+        ]);
+
+        $manufacturers = array_map(fn($m) => mb_strtolower(trim($m)), $data['manufacturers']);
+
+        if (empty($manufacturers)) {
+            return response()->json(['models' => []]);
+        }
+
+        // Query items active in inventory (not sold, not on hold) and matching manufacturers case-insensitively
+        $models = Item::whereNull('sold')
+            ->whereNull('hold')
+            ->whereIn('type', ['device'])
+            ->whereIn(DB::raw('LOWER(manufacturer)'), $manufacturers)
+            ->pluck('model')
+            ->filter()
+            ->values();
+
+        // Normalize models: remove storage sizes like '128GB', parentheses content, punctuation and collapse whitespace
+        $normalized = collect($models)->map(function ($model) {
+            $m = trim((string)$model);
+            // Remove parenthetical notes: "(Unlocked)", etc.
+            $m = preg_replace('/\(.+?\)/u', ' ', $m);
+            // Remove storage sizes like '128GB', '256 GB', case-insensitive
+            $m = preg_replace('/\b\d+\s*gb\b/iu', ' ', $m);
+            // Remove other common capacity notations like '128gb', '128 g', '128g'
+            $m = preg_replace('/\b\d+\s*g\b/iu', ' ', $m);
+            // Replace any non-alphanumeric (except spaces) with space
+            $m = preg_replace('/[^\p{L}\p{N} ]+/u', ' ', $m);
+            // Collapse multiple spaces into one
+            $m = preg_replace('/\s+/u', ' ', $m);
+            $m = trim($m);
+            return mb_strtolower($m);
+        })->filter()->unique()->values()->sort()->map(function ($m) {
+            return ['label' => mb_convert_case($m, MB_CASE_TITLE, 'UTF-8'), 'value' => $m];
+        })->values()->all();
+
+        return response()->json(['models' => $normalized]);
+    }
+
 
     public function assignStorage(Request $request)
     {
