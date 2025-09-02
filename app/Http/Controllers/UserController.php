@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
 use Exception;
 use Illuminate\Support\Facades\Log;
+use App\Models\Tab;
 
 class UserController extends Controller
 {
@@ -304,5 +305,30 @@ class UserController extends Controller
             'success' => true,
             'fields' => $user->printable_invoice_fields,
         ], 200);
+    }
+
+    /**
+     * Return tabs that belong to the authenticated user.
+     *
+     * @param \Illuminate\Http\Request $request
+     * @return \Illuminate\Http\Response
+     */
+    public function userTabs(Request $request)
+    {
+        try {
+            $user = Auth::user();
+            if (!$user) {
+                return response()->json(['tabs' => []], 200);
+            }
+
+            $tabs = Tab::where('user_id', $user->id)
+                ->orderBy('order', 'asc')
+                ->get();
+
+            return response()->json(['tabs' => $tabs], 200);
+        } catch (Exception $e) {
+            Log::error('UserController@userTabs error: ' . $e->getMessage());
+            return response()->json(['error' => 'Could not retrieve tabs'], 500);
+        }
     }
 }

@@ -105,7 +105,7 @@ Route::middleware([
         Route::get("items/excel/create", [ItemController::class, "excelCreate"])->name("items.excel.create");
         Route::post("items/excel/store", [ItemController::class, "excelStore"])->name("items.excel.store");
         Route::get("items/excelDemo/download", [ItemController::class, "excelDemoDownload"])->name("items.excel.demo.download");
-
+        Route::get("items/tabs/{id}/items", [ItemController::class, "getTabItems"])->name("items.tabs.items");
         Route::post("sales", [SaleController::class, "store"])->name("sales.store");
         Route::get("sale/{sale}/receipt", [SaleController::class, "receipt"])->name("sales.receipt");
         Route::get("sale/{sale}/items", [SaleController::class, "soldItems"])->name("sales.sold");
@@ -136,9 +136,11 @@ Route::get('/customers/by-name/{name}', [CustomerController::class, 'getByName']
     Route::get("user/locations", [LocationController::class, "userLocations"])->name("locations.list");
     // Fetch and update user timezone
     Route::get("user/timezone", [UserController::class, "getTimezone"])->name('user.timezone.fetch');
+    Route::get('user/tabs', [\App\Http\Controllers\UserController::class, 'userTabs'])->name('tabs.user');
     Route::put("user/timezone", [UserController::class, "updateTimezone"])->name('user.timezone.update');
     Route::get('user/printable-tag-fields',[UserController::class, 'getPrintableTagFields'])->name('user.printableTagFields');
     Route::put('user/printable-tag-fields',[UserController::class, 'updatePrintableTagFields'])->name('user.updatePrintableTagFields');
+
     // Printable invoice fields
     Route::get('user/printable-invoice-fields',[UserController::class, 'getPrintableInvoiceFields'])->name('user.printableInvoiceFields');
     Route::put('user/printable-invoice-fields',[UserController::class, 'updatePrintableInvoiceFields'])->name('user.updatePrintableInvoiceFields');
