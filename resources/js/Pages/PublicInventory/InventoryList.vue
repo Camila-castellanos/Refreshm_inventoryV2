@@ -36,7 +36,7 @@
             </div>
           </div>
 
-          <div class="flex flex-col">
+      <div class="flex flex-col">
             <DataTable :value="selectedItems" responsiveLayout="scroll" class="p-datatable-striped">
               <Column field="model" header="Model" class="font-semibold hidden sm:table-cell" />
               <Column field="manufacturer" header="Manufacturer" class="hidden sm:table-cell" />
@@ -232,6 +232,19 @@
         <template #content>
           <h1>Company: {{ companyName }}</h1>
           <h1>Shop: {{ shopName }}</h1>
+          
+          <GenericTabs
+            :static-tabs="staticTabs"
+            :custom-tabs="customTabs"
+            v-model="activeTabValue"
+            :enable-drag="false"
+            :show-add-tab="false"
+            :show-delete-drop-zone="false"
+            @tab-click="onTabClick"
+            @request-add="onRequestAdd"
+            @reorder="onReorderTabs"
+            @request-remove="onRequestRemove"
+          >
           <div class="flex flex-col">
             <div class="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4 mb-6">
 
@@ -270,6 +283,7 @@
                                 <use xlink:href="#s" y="840" />
                                 <use xlink:href="#s" y="1260" />
                               </g>
+                  
                               <use xlink:href="#s" y="1680" />
                             </g>
                             <use xlink:href="#s4" x="247" y="210" />
@@ -334,6 +348,7 @@
               </div>
             </div>
           </div>
+          </GenericTabs>
         </template>
       </Card>
     </div>
@@ -350,6 +365,7 @@ import Card from 'primevue/card';
 import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';
 import Tag from 'primevue/tag';
+import GenericTabs from '@/Components/GenericTabs.vue';
 import { useToast } from 'primevue/usetoast';
 import { defineProps } from 'vue';
 import { router } from "@inertiajs/vue3";
@@ -403,6 +419,8 @@ const shippingOptions = [
 const searchQuery = ref('');
 const showSelectedItems = ref(false);
 const selectedItems = ref([]);
+// IDs of items for the currently selected tab. These are populated by `fetchTabItems`.
+const selectedTabItems = ref<Array<number>>(null);
 const showFilterModal = ref(false); // For mobile filter modal
 const filters = ref({
   manufacturer: [], // Use array for checkboxes
@@ -411,8 +429,58 @@ const filters = ref({
   model: [], // selected models (array)
 });
 
+// Tabs: Active Inventory, Sold, Hold (wrapping main listing)
+const staticTabs = ref<Array<{ name: string; id?: number | string; order?: number }>>([
+  { name: 'Active Inventory' },
+]);
+const customTabs = ref<Array<{ name: string; id?: number | string; order?: number }>>([]);
+const activeTabValue = ref<string>('s:0');
+
+// Dummy event handlers from GenericTabs
+const onTabClick = async (payload: { kind: 'static' | 'custom'; tab: any; index: number; value: string }) => {
+  console.log('Tab clicked:', payload.tab);
+  if(!payload.tab.id){
+    selectedTabItems.value = null;
+    return;
+  }
+  // If a custom tab with an id is clicked, fetch its items and store the ids
+  try {
+    if (payload && payload.tab && (payload.tab.id || payload.tab.ID)) {
+      const tabId = payload.tab.id ?? payload.tab.ID;
+      try {
+        const ids = await fetchTabItems(tabId);
+        selectedTabItems.value = Array.isArray(ids) ? ids : [];
+      } catch (err) {
+        console.error('Error fetching tab items on tab click', err);
+        selectedTabItems.value = [];
+      }
+    } else {
+      // For static tabs or tabs without id, clear the selectedTabItems to show all items
+      selectedTabItems.value = [];
+    }
+  } catch (e) {
+    console.error('onTabClick handler error', e);
+  }
+};
+
 // Models options populated when manufacturers are selected
 const modelsOptions = ref<Array<{ label: string; value: string }>>([]);
+
+// Fetch item IDs for a given tab id (calls route 'items.tabs.items')
+async function fetchTabItems(tabId) {
+  if (!tabId) return [];
+  try {
+    let laravelRoute = route('items.tabs.items', { id: tabId });
+    const response = await axios.get(laravelRoute);
+    // Expecting backend to return { item_ids: [...] } or { items: [...] }
+    const ids = response?.data?.item_ids ?? (response?.data?.items ? response.data.items.map(i => i.id) : []);
+    return ids;
+  } catch (error) {
+    console.error('Error fetching tab items:', error);
+    // Let the caller handle the assignment/notification; just return an empty array on error
+    return [];
+  }
+}
 
 // Normalize model string to match server-side normalization
 function normalizeModel(raw: any): string {
@@ -491,6 +559,10 @@ const filteredItemsBeforeFilters = computed(() => {
 // apply filters matching
 const filteredItemsWithFilters = computed(() => {
   return filteredItemsBeforeFilters.value.filter(item => {
+    // If tab-based selection exists, only include items whose id is in selectedTabItems
+    if (selectedTabItems.value) {
+      if (!selectedTabItems.value.includes(item.id)) return false;
+    }
     const manufacturerMatch = filters.value.manufacturer.length === 0 || filters.value.manufacturer.includes(item.manufacturer);
     const gradeMatch = filters.value.grade.length === 0 || filters.value.grade.includes(item.grade);
     const issuesMatch = filters.value.hasIssues === 'all' ||
@@ -570,6 +642,33 @@ const handleDownload = () => {
   }
 }
 
+// Fetch tabs for the authenticated user and populate `customTabs`.
+async function fetchUserTabs() {
+  try {
+    // route
+    let laravelRoute = route('tabs.user');
+
+    const response = await axios.get(laravelRoute);
+    const tabs = response.data?.tabs ?? [];
+
+    // Map to the expected shape { id, name, order }
+    customTabs.value = tabs.map((t: any) => ({
+      id: t.id ?? t.ID ?? t._id ?? null,
+      name: t.name ?? t.title ?? '',
+      order: t.order ?? 0,
+    }));
+  } catch (error) {
+    console.error('Error fetching user tabs:', error);
+    toast.add({
+      severity: 'warn',
+      summary: 'Tabs',
+      detail: 'No custom tabs could be loaded.',
+      life: 3000,
+    });
+    customTabs.value = [];
+  }
+}
+
 onMounted(async () => {
 
   try {
@@ -593,6 +692,9 @@ onMounted(async () => {
       }
     });
   }
+
+  // Fetch user-specific tabs
+  await fetchUserTabs();
 });
 </script>
 

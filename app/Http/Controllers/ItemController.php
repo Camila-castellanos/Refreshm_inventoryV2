@@ -1247,4 +1247,44 @@ public function getLabelsNewItems(Request $request): \Illuminate\Http\Response
         }
         return response()->json(['items' => $updated]);
     }
+
+    /**
+     * API: devuelve solo los IDs de los items que pertenecen a la tab indicada.
+     *
+     * @param int|string $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getTabItems($id): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+            if (!$user) {
+                return response()->json(['error' => 'Unauthenticated'], 401);
+            }
+
+            $tab = Tab::find($id);
+            if (!$tab) {
+                return response()->json(['error' => 'Tab not found'], 404);
+            }
+
+            // Aseguramos que la tab pertenece al usuario autenticado
+            if ($tab->user_id !== $user->id) {
+                return response()->json(['error' => 'Forbidden'], 403);
+            }
+
+            // Obtenemos sólo los IDs de items relacionados con esta tab,
+            // excluyendo items vendidos o en hold (misma lógica que en otras consultas).
+            $itemIds = Item::whereHas('tabItems', function ($q) use ($id) {
+                $q->where('tab_id', $id);
+            })
+            ->whereNull('sold')
+            ->whereNull('hold')
+            ->pluck('id');
+
+            return response()->json(['item_ids' => $itemIds], 200);
+        } catch (\Throwable $e) {
+            Log::error('getTabItems error: ' . $e->getMessage(), ['tab_id' => $id]);
+            return response()->json(['error' => 'Could not retrieve tab items'], 500);
+        }
+    }
 }
