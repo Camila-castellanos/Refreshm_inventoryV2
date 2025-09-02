@@ -1156,6 +1156,11 @@ public function getLabelsNewItems(Request $request): \Illuminate\Http\Response
                     $query->where('created_at', '>=', $sixMonthsAgo)
                           ->orWhere('updated_at', '>=', $sixMonthsAgo);
                 });
+            // If the incoming item has no `issues` value (null), restrict matches
+            // to items that also have `issues` set to null (exclude items with any issues).
+            if ($issues === null) {
+                $baseQuery->whereNull('issues');
+            }    
 
             // Build dynamic list of available fields for this item
             $available = [];
@@ -1206,11 +1211,14 @@ public function getLabelsNewItems(Request $request): \Illuminate\Http\Response
                 }
 
                 // Clone the query before consuming it with first()/get()
-                $qForMatch = (clone $q)->orderByDesc('date');
+                $qForMatch = (clone $q)
+                ->orderByRaw('CASE WHEN sold IS NULL THEN 0 ELSE 1 END ASC')
+                ->orderByDesc('date');
+
                 $qForList = (clone $qForMatch);
 
                 $match = $qForMatch->first(['id','selling_price', 'model']);
-                $completelist = $qForList->get(['id','selling_price', 'model', 'battery', 'grade', 'issues', 'created_at', 'updated_at']);
+                $completelist = $qForList->get(['id','selling_price', 'model', 'battery', 'grade', 'issues', 'created_at', 'updated_at', 'sold']);
                 
                 Log::info('generateSellingPrice all matches found', [
                     'total_matches' => $completelist->count(),
