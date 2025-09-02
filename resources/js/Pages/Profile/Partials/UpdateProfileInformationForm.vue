@@ -15,10 +15,21 @@
           <Button icon="pi pi-copy" severity="secondary" label="Invitation Link"
             @click="copyToClipboard(invitationLink)" />
         </div>
-        <div v-for="(store) in storeURLs" class="flex gap-4 items-center mb-4 mt-5">
-          <h2>Public store: {{ store.name }}</h2>
-          <Button icon="pi pi-external-link" severity="secondary" label="Go To Store" @click="goToStore(store.url)" />
-          <Button icon="pi pi-copy" severity="secondary" label="Copy Link" @click="copyToClipboard(store.url)" />
+
+        <div class="flex items-center gap-4 mb-4">
+          <label class="mr-2">Show shops</label>
+          <InputSwitch v-model="showShops" />
+        </div>
+
+        <div v-if="showShops">
+          <div v-for="(shop, idx) in props.user.shops" :key="shop.id" class="flex gap-4 items-center mb-4 mt-5">
+            <h2>Public store: {{ shop.name }}</h2>
+            <Button icon="pi pi-pencil" severity="secondary" label="Edit" @click="openEditShop(shop.id, shop.name)" />
+            <Button icon="pi pi-external-link" severity="secondary" label="Go To Store" @click="goToStore(storeURLs[idx]?.url ?? createStoreUrl(props.user.companyName, shop.name))" />
+            <Button icon="pi pi-copy" severity="secondary" label="Copy Link" @click="copyToClipboard(storeURLs[idx]?.url ?? createStoreUrl(props.user.companyName, shop.name))" />
+          </div>
+
+          <EditShopModal :modelValue="dialog.visible" @update:modelValue="val => dialog.visible = val" :shopId="dialog.shopId" :initialName="dialog.name" @saved="onShopSaved" />
         </div>
 
 
@@ -94,9 +105,10 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watchEffect, nextTick } from "vue";
+import { ref, reactive, onMounted, watchEffect, nextTick, watch } from "vue";
 import { Link, router, useForm, usePage } from "@inertiajs/vue3";
-import { useToast, Button, Card, InputText } from "primevue";
+import { useToast, Button, Card, InputText, InputSwitch } from "primevue";
+import EditShopModal from "../Modals/EditShopModal.vue";
 import createStoreUrl from "@/Utils/createPublicLink"
 import createInvitationLink from "@/Utils/createInvitationLink"
 import { stringifyQuery } from "vue-router";
@@ -105,6 +117,8 @@ const page = usePage()
 
 const storeURLs = ref([])
 const invitationLink = ref("")
+const showShops = ref(true);
+const dialog = reactive({ visible: false, shopId: null, name: '' })
 
 const props = defineProps({
   user: Object,
@@ -223,6 +237,20 @@ watchEffect(async () => {
 });
 
 onMounted(() => {
+  console.log("props onMounted: ", props)
+  // restore showShops preference from localStorage (if present)
+  try {
+    const stored = localStorage.getItem('showShops');
+    if(stored == null) {
+      showShops.value = false; // default to false if no preference is stored
+    } else {
+      showShops.value = stored === 'true';
+    }
+  } catch (e) {
+    // ignore if localStorage is not available
+    console.warn('Could not read showShops from localStorage', e);
+  }
+
   invitationLink.value = createInvitationLink(props.user.companyName)
   props.user.shops.map(shop => {
     const store = {}
@@ -230,6 +258,35 @@ onMounted(() => {
     store.url = createStoreUrl(props.user.companyName, shop.name)
     storeURLs.value.push(store);
   })
+});
+
+const openEditShop = (id, name) => {
+  dialog.shopId = id
+  dialog.name = name || ''
+  dialog.visible = true
+}
+
+const onShopSaved = ({ id, name }) => {
+  // update local storeURLs and props.user.shops entry
+  const idx = props.user.shops.findIndex(s => s.id === id)
+  if (idx !== -1) {
+    props.user.shops[idx].name = name
+    storeURLs.value[idx].name = name
+    try {
+      storeURLs.value[idx].url = createStoreUrl(props.user.companyName, name)
+    } catch (e) {
+      console.warn('Could not rebuild store url after edit', e)
+    }
+  }
+}
+
+// persist showShops to localStorage whenever it changes
+watch(showShops, (val) => {
+  try {
+    localStorage.setItem('showShops', String(val));
+  } catch (e) {
+    console.warn('Could not save showShops to localStorage', e);
+  }
 });
 </script>
 
