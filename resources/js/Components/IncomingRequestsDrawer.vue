@@ -39,7 +39,10 @@
           <div class="font-semibold text-lg">{{ activeRequest?.name || 'Solicitud' }}</div>
           <div class="text-sm text-gray-500">{{ activeRequest?.email }} — {{ activeRequest?.store }}</div>
           <div class="text-xs text-gray-400 mt-1">{{ activeRequest ? new Date(activeRequest.created_at).toLocaleString() : '' }}</div>
-          <div v-if="activeRequest?.notes" class="mt-2 text-sm text-gray-600">{{ activeRequest.notes }}</div>
+          <div v-if="activeRequest?.notes" class="mt-2">
+            <div class="text-xs font-medium text-gray-700 mb-1">Notes</div>
+            <div class="text-sm text-gray-600">{{ activeRequest.notes }}</div>
+          </div>
 
         </div>
 
@@ -65,9 +68,19 @@
             <li v-if="(activeRequest?.items || []).length === 0" class="py-2 text-sm text-gray-600">No items.</li>
           </ul>
         </div>
-        <div v-if="activeRequest?.shipping" class="mt-4 border-t pt-3">
-          <div class="text-sm font-medium text-gray-700">Shipping</div>
-          <div class="text-sm text-gray-600">{{ activeRequest.shipping.label }} — ${{ Number(activeRequest.shipping.value || 0).toFixed(2) }}</div>
+        <div class="mt-3 pt-2 border-t">
+          <div class="flex justify-between items-center">
+            <div class="text-sm text-gray-600">Subtotal (items)</div>
+            <div class="text-sm font-medium text-gray-800">${{ ((activeRequest?.items || []).reduce((acc, it) => acc + (Number(it.selling_price) || Number(it.cost) || 0), 0)).toFixed(2) }}</div>
+          </div>
+          <div class="flex justify-between items-center mt-1">
+            <div class="text-sm text-gray-600">{{ activeRequest?.shipping?.label || 'Shipping' }}</div>
+            <div class="text-sm font-medium text-gray-800">${{ (Number(activeRequest?.shipping?.value) || 0).toFixed(2) }}</div>
+          </div>
+          <div class="flex justify-between items-center mt-2 border-t pt-2">
+            <div class="text-base font-semibold">Total</div>
+            <div class="text-base font-bold text-black">${{ (((activeRequest?.items || []).reduce((acc, it) => acc + (Number(it.selling_price) || Number(it.cost) || 0), 0)) + (Number(activeRequest?.shipping?.value) || 0)).toFixed(2) }}</div>
+          </div>
         </div>
       </div>
     </Dialog>
@@ -96,6 +109,7 @@ const activeRequest = ref<any | null>(null);
 const toast = useToast();
 const dialog = useDialog();
 
+// log for testing and see ActiveRequest structure
 watch(activeRequest, (newVal) => {
   console.log('Active request changed:', newVal);
 });
