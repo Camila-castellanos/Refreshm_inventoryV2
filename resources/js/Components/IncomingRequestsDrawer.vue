@@ -40,6 +40,7 @@
           <div class="text-sm text-gray-500">{{ activeRequest?.email }} — {{ activeRequest?.store }}</div>
           <div class="text-xs text-gray-400 mt-1">{{ activeRequest ? new Date(activeRequest.created_at).toLocaleString() : '' }}</div>
           <div v-if="activeRequest?.notes" class="mt-2 text-sm text-gray-600">{{ activeRequest.notes }}</div>
+
         </div>
 
         <div class="flex justify-end mb-3 gap-2">
@@ -64,6 +65,10 @@
             <li v-if="(activeRequest?.items || []).length === 0" class="py-2 text-sm text-gray-600">No items.</li>
           </ul>
         </div>
+        <div v-if="activeRequest?.shipping" class="mt-4 border-t pt-3">
+          <div class="text-sm font-medium text-gray-700">Shipping</div>
+          <div class="text-sm text-gray-600">{{ activeRequest.shipping.label }} — ${{ Number(activeRequest.shipping.value || 0).toFixed(2) }}</div>
+        </div>
       </div>
     </Dialog>
   </div>
@@ -80,6 +85,7 @@ import ItemsSell from '../Pages/Inventory/Modals/ItemsSell.vue';
 import axios from 'axios';
 import { ItemType} from '@/Enums/itemType';
 
+
 const visible = ref(false);
 const requests = ref<any[]>([]);
 const loading = ref(false);
@@ -89,6 +95,10 @@ const dialogVisible = ref(false);
 const activeRequest = ref<any | null>(null);
 const toast = useToast();
 const dialog = useDialog();
+
+watch(activeRequest, (newVal) => {
+  console.log('Active request changed:', newVal);
+});
 
 async function createInvoice(req: any) {
   if (!req) return;

@@ -81,12 +81,15 @@
           </div>
         </div>
 
-        <h2 class="text-2xl justify-self-end font-black p-4 text-black">Total:
-          {{selectedItems.reduce((accumulator, currentItem) => {
-            return accumulator + currentItem.selling_price;
-          }, 0).toFixed(2)}}
+        <h2 class="text-2xl justify-self-end font-black p-4 text-black">
+          Total:
+          {{ (
+            selectedItems.reduce((accumulator, currentItem) => {
+              return accumulator + (Number(currentItem.selling_price) || 0);
+            }, 0)
+            + (shipping?.value ?? 0)
+          ).toFixed(2) }}
         </h2>
-
         <div class="flex w-full justify-around ">
           <Button severity="secondary" @click="showSelectedItems = false">CANCEL</Button>
           <Button @click="onSubmit">REQUEST DEVICES</Button>
