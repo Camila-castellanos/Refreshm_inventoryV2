@@ -228,7 +228,11 @@
         label="Confirm" 
         variant="outlined"
         severity="secondary"
-        :disabled="creditDialogMode === 'add' ? (!creditInputValue || creditInputValue <= 0 || creditInputValue > usableCredit) : (!creditInputValue || creditInputValue < 0)"
+        :disabled="
+          creditDialogMode === 'add'
+            ? (creditInputValue === null || creditInputValue === undefined || creditInputValue <= 0 || creditInputValue > usableCredit)
+            : (creditInputValue === null || creditInputValue === undefined || creditInputValue < 0)
+        "
         @click="confirmCreditApplication" 
       />
     </template>
@@ -511,20 +515,22 @@ const total = computed(() => round(subtotal.value + taxAmount.value));
 
 const final_credit = computed(() => {
   // Solo devolver el crédito sin IVA para evitar doble aplicación
-  const credit = parseFloat(form.value.credit?.toString() || '0')
-  const removed = parseFloat(form.value.removed_credit?.toString() || '0')
-  
-  // NO aplicar IVA aquí - se aplicará en el backend o cuando se muestre
-  return (credit - removed).toFixed(2)
+  const credit = Math.max(0, parseFloat(form.value.credit?.toString() || '0'));
+  const removed = Math.max(0, parseFloat(form.value.removed_credit?.toString() || '0'));
+  const net = credit - removed;
+  // Garantizar que el crédito no sea negativo
+  return Math.max(0, isNaN(net) ? 0 : net).toFixed(2);
 })
 
 // Si necesitas mostrar el crédito CON IVA en la UI, crea un computed separado:
 const final_credit_with_tax = computed(() => {
-  const credit = parseFloat(form.value.credit?.toString() || '0')
-  const removed = parseFloat(form.value.removed_credit?.toString() || '0')
-  const taxPct = parseFloat(form.value.tax?.percentage?.toString() || '0')
-  const creditWithTax = credit + (credit * taxPct) / 100
-  return (creditWithTax - removed).toFixed(2)
+  const credit = Math.max(0, parseFloat(form.value.credit?.toString() || '0'));
+  const removed = Math.max(0, parseFloat(form.value.removed_credit?.toString() || '0'));
+  const taxPct = Math.max(0, parseFloat(form.value.tax?.percentage?.toString() || '0'));
+  const creditWithTax = credit + (credit * taxPct) / 100;
+  const net = creditWithTax - removed;
+  // Garantizar que el crédito no sea negativo (aun con IVA considerado para UI)
+  return Math.max(0, isNaN(net) ? 0 : net).toFixed(2);
 })
 
 const amount_paid = computed(() => {
@@ -536,8 +542,8 @@ const balance_remaining = computed(() => {
   const totalValue = isNaN(total.value) ? 0 : total.value;
   const amountPaidValue = isNaN(amount_paid.value) ? 0 : amount_paid.value;
   
-  // Usar el crédito CON IVA para el cálculo del balance
-  const finalCreditValue = isNaN(parseFloat(final_credit_with_tax.value)) ? 0 : parseFloat(final_credit_with_tax.value);
+  // Usar el crédito SIN IVA para el cálculo del balance
+  const finalCreditValue = isNaN(parseFloat(final_credit.value)) ? 0 : parseFloat(final_credit.value);
   
   let balance = totalValue - amountPaidValue;
   balance -= finalCreditValue;
@@ -579,7 +585,8 @@ const confirmCreditApplication = () => {
     if (creditInputValue.value > 0) {
       // Agregar al crédito existente
       const sum = parseFloat(creditInputValue.value.toString()) + parseFloat(form.value.credit?.toString() || '0');
-      form.value.credit = sum;
+      // Asegurar que el crédito no quede negativo por ningún motivo
+      form.value.credit = Math.max(0, sum);
       
       // Actualizar solo el crédito agregado (acumulativo)
       creditAdded.value += creditInputValue.value;
@@ -597,7 +604,7 @@ const confirmCreditApplication = () => {
   } else {
     // Modo edición - calcular la diferencia con el crédito original
     const originalCredit = parseFloat(payment.value.credit?.toString() || '0');
-    const newCredit = creditInputValue.value;
+    const newCredit = Math.max(0, creditInputValue.value || 0);
     
     form.value.credit = newCredit;
     

@@ -230,16 +230,17 @@ class SaleController extends Controller
                 }
             }
 
-            // Manejar crédito con la nueva lógica
-            $creditAdded = (float) ($request->credit_added ?? 0);
-            $currentSaleCredit = (float) $sale->credit;
-            $finalCredit = $currentSaleCredit + $creditAdded;
+            // Manejar crédito usando SOLO el delta enviado (credit_added)
+            // credit_added puede ser positivo (agrega) o negativo (remueve)
+            $creditAdded = (float) ($request->credit_added ?? 0.0);
+            $currentSaleCredit = max(0.0, (float) $sale->credit);
+            $finalCredit = max(0.0, $currentSaleCredit + $creditAdded);
             
             // Si hay crédito agregado, actualizar el crédito del cliente
-            if ($creditAdded > 0) {
+            if ($creditAdded != 0.0) {
                 $customer = Customer::where('customer', $request->customer)->first();
                 if ($customer) {
-                    // Restar el crédito agregado del cliente
+                    // Ajustar el crédito del cliente por el delta (positivos restan, negativos suman)
                     $newCustomerCredit = $customer->credit - $creditAdded;
                     Customer::where('id', $customer->id)->update([
                         'credit' => max(0, $newCustomerCredit), // Asegurar que no sea negativo
@@ -256,9 +257,10 @@ class SaleController extends Controller
                 }
             }
 
-            // Si viene un crédito total diferente (modo edit), calcular la diferencia
-            if ($request->has('credit') && $request->credit != $currentSaleCredit) {
-                $requestCredit = (float) $request->credit;
+            // Si NO se envía credit_added pero cambia el total, usar diferencia total como delta
+            if (!$request->has('credit_added') && $request->has('credit') && $request->credit != $currentSaleCredit) {
+                // Forzar crédito solicitado a no negativo
+                $requestCredit = max(0.0, (float) $request->credit);
                 $creditDifference = $requestCredit - $currentSaleCredit;
                 
                 if ($creditDifference != 0) {
@@ -270,7 +272,8 @@ class SaleController extends Controller
                             'credit' => max(0, $newCustomerCredit),
                         ]);
                         
-                        $finalCredit = $requestCredit;
+                        // Asegurar que el crédito final no sea negativo
+                        $finalCredit = max(0.0, $requestCredit);
                         
                         Log::info("Credit update with total credit change", [
                             'request_credit' => $requestCredit,
@@ -297,6 +300,9 @@ class SaleController extends Controller
             } else if ($balance == 0) {
                 $paid = 1;
             }
+
+            // Garantizar nuevamente que el crédito guardado no sea negativo
+            $finalCredit = max(0.0, (float) $finalCredit);
 
             $sale->update([
                 'subtotal' => $request->subtotal,
