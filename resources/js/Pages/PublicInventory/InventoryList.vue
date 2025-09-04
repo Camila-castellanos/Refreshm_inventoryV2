@@ -3,38 +3,39 @@
   <div class="max-w-7xl mx-auto py-4">
     <div class="w-full flex justify-end gap-4 pb-4">
       <Dialog v-model:visible="showSelectedItems" header="Selected items" :modal="true" class="mx-4">
-        <div class="max-w-7xl mx-auto ">
-          <div class="flex flex-col gap-4">
-            <div class="flex flex-col sm:flex-row gap-4">
-              <div class="flex-1">
-                <label for="name" class="block text-gray-700 text-sm font-bold mb-1">Name:</label>
-                <InputText id="name" type="text" v-model="name"
-                  class="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        <Form v-slot="$form" :initialValues="initialValues" :resolver="requestResolver" :validateOnValueUpdate="false" :validateOnBlur="true" @submit="onSubmit">
+          <div class="max-w-7xl mx-auto ">
+            <div class="flex flex-col gap-4">
+              <div class="flex flex-col sm:flex-row gap-4">
+                <div class="flex-1">
+                  <label for="name" class="block text-gray-700 text-sm font-bold mb-1">Name: <span class="text-red-600">*</span></label>
+                  <InputText id="name" name="name" type="text" class="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" :invalid="$form.name?.touched && $form.name?.invalid" />
+                  <Message v-if="$form.name?.touched && $form.name?.invalid" severity="error" size="small" variant="simple">{{ $form.name.error?.message }}</Message>
+                </div>
+                <div class="flex-1">
+                  <label for="email" class="block text-gray-700 text-sm font-bold mb-1">E-mail: <span class="text-red-600">*</span></label>
+                  <InputText id="email" name="email" type="email" class="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" :invalid="$form.email?.touched && $form.email?.invalid" />
+                  <Message v-if="$form.email?.touched && $form.email?.invalid" severity="error" size="small" variant="simple">{{ $form.email.error?.message }}</Message>
+                </div>
               </div>
-              <div class="flex-1">
-                <label for="email" class="block text-gray-700 text-sm font-bold mb-1">E-mail:</label>
-                <InputText id="email" type="email" v-model="email"
-                  class="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              <div class="flex flex-col sm:flex-row gap-4">
+                <div class="flex-1">
+                  <label for="notes" class="block text-gray-700 text-sm font-bold mb-1">Memo / notes:</label>
+                  <Textarea id="notes" name="notes" rows="3" class="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" :invalid="$form.notes?.touched && $form.notes?.invalid"></Textarea>
+                  <Message v-if="$form.notes?.touched && $form.notes?.invalid" severity="error" size="small" variant="simple">{{ $form.notes.error?.message }}</Message>
+                </div>
+                <div class="flex-1">
+                  <label for="store" class="block text-gray-700 text-sm font-bold mb-1">Store:</label>
+                  <InputText id="store" name="store" type="text" class="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" :invalid="$form.store?.touched && $form.store?.invalid" />
+                  <Message v-if="$form.store?.touched && $form.store?.invalid" severity="error" size="small" variant="simple">{{ $form.store.error?.message }}</Message>
+                </div>
+                <div class="flex-1">
+                  <label for="shipping" class="block text-gray-700 text-sm font-bold mb-1">Shipping:</label>
+                  <Dropdown id="shipping" name="shipping" :options="shippingOptions" optionLabel="label" class="w-full" placeholder="Select shipping" :invalid="$form.shipping?.touched && $form.shipping?.invalid" />
+                  <Message v-if="$form.shipping?.touched && $form.shipping?.invalid" severity="error" size="small" variant="simple">{{ $form.shipping.error?.message }}</Message>
+                </div>
               </div>
             </div>
-            <div class="flex flex-col sm:flex-row gap-4">
-              <div class="flex-1">
-                <label for="notes" class="block text-gray-700 text-sm font-bold mb-1">Memo / notes:</label>
-                <Textarea id="notes" v-model="notes" rows="3"
-                  class="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"></Textarea>
-              </div>
-              <div class="flex-1">
-                <label for="store" class="block text-gray-700 text-sm font-bold mb-1">Store:</label>
-                <InputText id="store" type="text" v-model="store"
-                  class="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
-              </div>
-              <div class="flex-1">
-                <label for="shipping" class="block text-gray-700 text-sm font-bold mb-1">Shipping:</label>
-                <Dropdown id="shipping" :options="shippingOptions" optionLabel="label" v-model="shipping" class="w-full"
-                  placeholder="Select shipping" />
-              </div>
-            </div>
-          </div>
 
       <div class="flex flex-col">
             <DataTable :value="selectedItems" responsiveLayout="scroll" class="p-datatable-striped">
@@ -84,17 +85,16 @@
         <h2 class="text-2xl justify-self-end font-black p-4 text-black">
           Total:
           {{ (
-            selectedItems.reduce((accumulator, currentItem) => {
-              return accumulator + (Number(currentItem.selling_price) || 0);
-            }, 0)
-            + (shipping?.value ?? 0)
+            selectedItems.reduce((accumulator, currentItem) => accumulator + (Number(currentItem.selling_price) || 0), 0)
+            + ($form.shipping?.value?.value ?? 0)
           ).toFixed(2) }}
         </h2>
         <div class="flex w-full justify-around ">
-          <Button severity="secondary" @click="showSelectedItems = false">CANCEL</Button>
-          <Button @click="onSubmit">REQUEST DEVICES</Button>
+          <Button severity="secondary" type="button" @click="showSelectedItems = false">CANCEL</Button>
+          <Button type="submit">REQUEST DEVICES</Button>
         </div>
 
+        </Form>
       </Dialog>
 
 
@@ -368,6 +368,8 @@ import Card from 'primevue/card';
 import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';
 import Tag from 'primevue/tag';
+import Message from 'primevue/message';
+import { Form } from '@primevue/forms';
 import GenericTabs from '@/Components/GenericTabs.vue';
 import { useToast } from 'primevue/usetoast';
 import { defineProps } from 'vue';
@@ -405,15 +407,35 @@ watch(exchangeActive, (newValue) => {
 });
 
 
-const name = ref('');
-const email = ref('');
-const notes = ref('');
-const store = ref('');
-const shipping = ref<{ label: string; value: number } | null>({ label: 'Standard (Free)', value: 0 });
 const shippingOptions = [
   { label: 'Standard (Free)', value: 0 },
   { label: 'Express (+$25)', value: 25 }
 ];
+
+// Form initial values and resolver (simple required + email)
+const initialValues = {
+  name: '',
+  email: '',
+  notes: '',
+  store: '',
+  shipping: shippingOptions[0]
+};
+
+const requestResolver = (values) => {
+  const errors = {};
+  if (!values.name || String(values.name).trim().length === 0) {
+    errors.name = [{ message: 'Name is required' }];
+  }
+  if (!values.email || String(values.email).trim().length === 0) {
+    errors.email = [{ message: 'Email is required' }];
+  } else if (!/^\S+@\S+\.\S+$/.test(String(values.email))) {
+    errors.email = [{ message: 'Invalid email address' }];
+  }
+  if (!values.shipping || typeof values.shipping.value !== 'number') {
+    errors.shipping = [{ message: 'Please select a shipping method' }];
+  }
+  return { errors };
+};
 
 
 
@@ -577,6 +599,10 @@ const filteredItemsWithFilters = computed(() => {
   });
 });
 
+const selectedItemsTotal = computed(() =>
+  selectedItems.value.reduce((acc, cur) => acc + (Number(cur.selling_price) || 0), 0)
+);
+
 const addItem = (item) => {
   item.selected = true;
   selectedItems.value.push(item);
@@ -597,14 +623,16 @@ const getSelectedItems = () => {
   showSelectedItems.value = true;
 };
 
-const onSubmit = async () => {
+const onSubmit = async (event) => {
+  if (event && event.valid === false) return;
+  const values = event?.values ?? initialValues;
   let request = {
-    name: name.value,
-    email: email.value,
-    store: store.value,
-  shipping: shipping.value,
-    notes: notes.value,
-    items: selectedItems.value.map(item => ({ ...item })), // Create a new array of selected items
+    name: values.name,
+    email: values.email,
+    store: values.store,
+    shipping: values.shipping,
+    notes: values.notes,
+    items: selectedItems.value.map(item => ({ ...item })),
   };
 
   try {
