@@ -13,8 +13,8 @@
         <Button icon="p#buttoni pi-bars" aria-label="Menu" @click="toggleDrawer" class="hide-breakpoint" />
       </template>
       <template #item="{ item, props, hasSubmenu, root }">
-        <a v-ripple class="flex items-center text-lg pb-0 border-b-0 transition-all hover:border-b-2 px-4 py-2" v-bind="props.action" :href="item.url">
-          <i v-if="item.icon" aria-hidden="true"></i>
+        <a v-ripple :class="['flex items-center text-lg pb-0 border-b-0 transition-all hover:border-b-2 px-4 py-2', { 'black_border_current_page': isActive(item) }]" v-bind="props.action" :href="item.url">
+          <i v-if="item.icon" :class="item.icon" aria-hidden="true"></i>
           <span>{{ item.label }}</span>
           <Badge v-if="item.badge" :class="{ 'ml-auto': !root, 'ml-2': root }" :value="item.badge" />
           <span v-if="item.shortcut"
@@ -37,7 +37,7 @@
 
   <Drawer v-model:visible="drawerVisible" class="">
       <div class="flex flex-col items-center justify-start w-full h-full gap-8">
-        <Button variant="outlined" class="w-full flex items-center gap-3" severity="secondary" v-for="item in navItems" :key="item.label"
+        <Button variant="outlined" :class="['w-full flex items-center gap-3', { 'black_border_current_page-drawer': isActive(item) }]" severity="secondary" v-for="item in navItems" :key="item.label"
           @click="() => { router.visit(`${item.url}`); drawerVisible = false }">
           <i v-if="item.icon" :class="item.icon" aria-hidden="true"></i>
           {{ item.label }} 
@@ -48,7 +48,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, onUnmounted, computed } from 'vue';
 import Button from 'primevue/button';
 import Drawer from 'primevue/drawer';
 import Menubar from 'primevue/menubar';
@@ -65,6 +65,13 @@ const themeKey = 'theme-mode';
 const isDarkMode = ref(localStorage.getItem(themeKey) === 'dark');
 const menu = ref();
 const drawerVisible = ref(false);
+
+// track current path so we can highlight active nav item
+const currentPath = ref(window.location.pathname + window.location.search);
+
+function updateCurrentPath() {
+  currentPath.value = window.location.pathname + window.location.search;
+}
 
 const userInitial = computed(() => (user?.name ? user.name.charAt(0).toUpperCase() : '?'));
 
@@ -124,12 +131,40 @@ onMounted(() => {
     navItems.value = navItems.value.filter((item) => item.roles.includes(user.role));
     dropdownNavItems.value = dropdownNavItems.value.filter((item) => item.roles.includes(user.role));
   }
+
+  window.addEventListener('popstate', updateCurrentPath);
+  document.addEventListener('inertia:finish', updateCurrentPath);
 });
+
+onUnmounted(() => {
+  window.removeEventListener('popstate', updateCurrentPath);
+  document.removeEventListener('inertia:finish', updateCurrentPath);
+});
+
+function isActive(item) {
+  if (!item || !item.url) return false;
+  try {
+    const url = new URL(item.url, window.location.origin);
+    const itemPath = url.pathname + url.search;
+    return currentPath.value === itemPath || currentPath.value.startsWith(url.pathname);
+  } catch (e) {
+    return false;
+  }
+}
 
 const openMenu = (event) => {
   menu.value.toggle(event);
 };
 </script>
+
+<style>
+:root {
+  /* reusable color variables for navbar */
+  --nav-text: #858c93; /* default muted gray */
+  --nav-text-dark: #292c31; /* darker text / black tone */
+  --nav-border: var(--nav-text-dark);
+}
+</style>
 
 <style scoped>
 @media screen and (min-width: 961px) {
@@ -164,8 +199,12 @@ const openMenu = (event) => {
 }
 
 .menuBar :deep(.p-menubar-item-link):hover {
-  border-bottom: 3px solid black;
-  color: #292c31 !important; 
+  border-bottom: 3px solid var(--nav-border);
+  color: var(--nav-text-dark) !important; 
+}
+
+.menuBar :deep(.p-menubar-item-content){
+  background-color: transparent !important;
 }
 
 .menuBar :deep(.p-menubar-item-content):hover {
@@ -175,11 +214,24 @@ const openMenu = (event) => {
 /* style menu item text and icons */
 .menuBar :deep(.p-menuitem-link),
 .menuBar :deep(.p-menubar-item-link) {
-  color: var(--nav-text, #858c93) !important; /* darker text */
+  color: var(--nav-text) !important; /* muted text */
   font-weight: 500 !important; /* semi-bold */
 }
 
 .menuBar img {
   display: block;
+}
+
+
+.menuBar :deep(.black_border_current_page) {
+  border-bottom-width: 3px !important;
+  border-bottom-style: solid !important;
+  border-bottom-color: var(--nav-border) !important;
+  color: var(--nav-text-dark) !important;
+}
+
+/* drawer button active state */
+.black_border_current_page-drawer {
+  border-bottom: 3px solid var(--nav-border) !important;
 }
 </style>
