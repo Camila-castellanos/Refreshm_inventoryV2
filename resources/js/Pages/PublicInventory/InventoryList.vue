@@ -3,36 +3,53 @@
   <div class="max-w-7xl mx-auto py-4">
     <div class="w-full flex justify-end gap-4 pb-4">
       <Dialog v-model:visible="showSelectedItems" header="Selected items" :modal="true" class="mx-4">
-        <Form v-slot="$form" :initialValues="initialValues" :resolver="requestResolver" :validateOnValueUpdate="false" :validateOnBlur="true" @submit="onSubmit">
+        <Form
+          ref="requestFormRef"
+          v-slot="$form"
+          :initialValues="initialValues"
+          :resolver="requestResolver"
+          :validateOnValueUpdate="false"
+          :validateOnBlur="true"
+          :validateOnSubmit="true"
+          @submit="onSubmit"
+        >
           <div class="max-w-7xl mx-auto ">
             <div class="flex flex-col gap-4">
               <div class="flex flex-col sm:flex-row gap-4">
                 <div class="flex-1">
                   <label for="name" class="block text-gray-700 text-sm font-bold mb-1">Name: <span class="text-red-600">*</span></label>
-                  <InputText id="name" name="name" type="text" class="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" :invalid="$form.name?.touched && $form.name?.invalid" />
-                  <Message v-if="$form.name?.touched && $form.name?.invalid" severity="error" size="small" variant="simple">{{ $form.name.error?.message }}</Message>
+                  <InputText id="name" name="name" type="text" class="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" :invalid="($form.name?.touched || $form.submitted) && $form.name?.invalid" />
+                  <Message v-if="($form.name?.touched || $form.submitted) && $form.name?.invalid" severity="error" size="small" variant="simple">{{ $form.name.error?.message }}</Message>
                 </div>
                 <div class="flex-1">
                   <label for="email" class="block text-gray-700 text-sm font-bold mb-1">E-mail: <span class="text-red-600">*</span></label>
-                  <InputText id="email" name="email" type="email" class="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" :invalid="$form.email?.touched && $form.email?.invalid" />
-                  <Message v-if="$form.email?.touched && $form.email?.invalid" severity="error" size="small" variant="simple">{{ $form.email.error?.message }}</Message>
+                  <InputText id="email" name="email" type="email" class="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" :invalid="($form.email?.touched || $form.submitted) && $form.email?.invalid" />
+                  <Message v-if="($form.email?.touched || $form.submitted) && $form.email?.invalid" severity="error" size="small" variant="simple">{{ $form.email.error?.message }}</Message>
                 </div>
               </div>
               <div class="flex flex-col sm:flex-row gap-4">
                 <div class="flex-1">
                   <label for="notes" class="block text-gray-700 text-sm font-bold mb-1">Memo / notes:</label>
-                  <Textarea id="notes" name="notes" rows="3" class="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" :invalid="$form.notes?.touched && $form.notes?.invalid"></Textarea>
-                  <Message v-if="$form.notes?.touched && $form.notes?.invalid" severity="error" size="small" variant="simple">{{ $form.notes.error?.message }}</Message>
+                  <Textarea id="notes" name="notes" rows="3" class="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" :invalid="($form.notes?.touched || $form.submitted) && $form.notes?.invalid"></Textarea>
+                  <Message v-if="($form.notes?.touched || $form.submitted) && $form.notes?.invalid" severity="error" size="small" variant="simple">{{ $form.notes.error?.message }}</Message>
                 </div>
                 <div class="flex-1">
                   <label for="store" class="block text-gray-700 text-sm font-bold mb-1">Store:</label>
-                  <InputText id="store" name="store" type="text" class="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" :invalid="$form.store?.touched && $form.store?.invalid" />
-                  <Message v-if="$form.store?.touched && $form.store?.invalid" severity="error" size="small" variant="simple">{{ $form.store.error?.message }}</Message>
+                  <InputText id="store" name="store" type="text" class="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" :invalid="($form.store?.touched || $form.submitted) && $form.store?.invalid" />
+                  <Message v-if="($form.store?.touched || $form.submitted) && $form.store?.invalid" severity="error" size="small" variant="simple">{{ $form.store.error?.message }}</Message>
                 </div>
                 <div class="flex-1">
                   <label for="shipping" class="block text-gray-700 text-sm font-bold mb-1">Shipping:</label>
-                  <Dropdown id="shipping" name="shipping" :options="shippingOptions" optionLabel="label" class="w-full" placeholder="Select shipping" :invalid="$form.shipping?.touched && $form.shipping?.invalid" />
-                  <Message v-if="$form.shipping?.touched && $form.shipping?.invalid" severity="error" size="small" variant="simple">{{ $form.shipping.error?.message }}</Message>
+                  <Dropdown
+                    id="shipping"
+                    name="shipping"
+                    ref="shippingDropdown"
+                    v-model="shippingValue"
+                    :options="shippingOptions"
+                    optionLabel="label"
+                    class="w-full"
+                    placeholder="Select shipping"
+                  />
                 </div>
               </div>
             </div>
@@ -86,7 +103,7 @@
           Total:
           {{ (
             selectedItems.reduce((accumulator, currentItem) => accumulator + (Number(currentItem.selling_price) || 0), 0)
-            + ($form.shipping?.value?.value ?? 0)
+            + (shippingValue?.value ?? 0)
           ).toFixed(2) }}
         </h2>
         <div class="flex w-full justify-around ">
@@ -421,18 +438,21 @@ const initialValues = {
   shipping: shippingOptions[0]
 };
 
-const requestResolver = (values) => {
+const requestResolver = (data) => {
   const errors = {};
-  if (!values.name || String(values.name).trim().length === 0) {
+  console.log("resolver dispatched with data:", data);
+  if(!data.values){
+    return { errors: { name: [{ message: 'Name is required' }], email: [{ message: 'Email is required' }] } };
+  }
+  if (!data.values.name || String(data.values.name).trim().length === 0) {
+    console.log("Name validation failed");
     errors.name = [{ message: 'Name is required' }];
   }
-  if (!values.email || String(values.email).trim().length === 0) {
+  if (!data.values.email || String(data.values.email).trim().length === 0) {
     errors.email = [{ message: 'Email is required' }];
-  } else if (!/^\S+@\S+\.\S+$/.test(String(values.email))) {
+    console.log("Email validation failed");
+  } else if (!/^\S+@\S+\.\S+$/.test(String(data.values.email))) {
     errors.email = [{ message: 'Invalid email address' }];
-  }
-  if (!values.shipping || typeof values.shipping.value !== 'number') {
-    errors.shipping = [{ message: 'Please select a shipping method' }];
   }
   return { errors };
 };
@@ -443,6 +463,11 @@ const requestResolver = (values) => {
 
 const searchQuery = ref('');
 const showSelectedItems = ref(false);
+// Ref to access the rendered form element for native extraction
+const requestFormRef = ref(null);
+// Independent shipping refs (decoupled from Form)
+const shippingDropdown = ref(null);
+const shippingValue = ref(shippingOptions[0]);
 const selectedItems = ref([]);
 // IDs of items for the currently selected tab. These are populated by `fetchTabItems`.
 const selectedTabItems = ref<Array<number>>(null);
@@ -623,20 +648,21 @@ const getSelectedItems = () => {
   showSelectedItems.value = true;
 };
 
-const onSubmit = async (event) => {
-  if (event && event.valid === false) return;
-  const values = event?.values ?? initialValues;
-  let request = {
-    name: values.name,
-    email: values.email,
-    store: values.store,
-    shipping: values.shipping,
-    notes: values.notes,
-    items: selectedItems.value.map(item => ({ ...item })),
+const onSubmit = async (data) => {
+  const request = {
+    name: data.states.name.value || '',
+    email: data.states.email.value || '',
+    notes: data.states.notes.value || '',
+    store: data.states.store.value || '',
+    shipping: shippingValue.value,
+    items: selectedItems.value.map(item => item.id),
   };
+
+  console.log('Submitting request with data:', request);
 
   try {
     const laravelRoute = route("items.request");
+    console.log('Sending request with data:', request);
     const response = await axios.post(laravelRoute, request);
     showSelectedItems.value = false;
     toast.add({ severity: 'success', summary: 'Success', detail: response.data.message || 'Request submitted successfully.', life: 3000 });

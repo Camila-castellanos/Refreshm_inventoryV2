@@ -298,9 +298,22 @@ class ItemController extends Controller
         $email = $data['email'] ?? null;
         $store = $data['store'] ?? null;
         $notes = $data['notes'] ?? null;
-        $items = $data['items'] ?? [];
+        $itemsInput = $data['items'] ?? [];
+        $itemsNormalized = collect($itemsInput)->map(function ($it) {
+            if (is_array($it)) {
+                return $it;
+            }
+            if (is_object($it)) {
+                return (array) $it;
+            }
+            if (is_numeric($it)) {
+                $model = Item::find((int) $it);
+                return $model ? $model->toArray() : null;
+            }
+            return null;
+        })->filter()->values();
 
-        $uniqueItems = collect($items)->unique('id')->values()->all();
+        $uniqueItems = $itemsNormalized->unique('id')->values()->all();
 
         // Determine request owner: use the first non-null item's user_id if present, otherwise current user
         $requestUserId = Auth::id();
