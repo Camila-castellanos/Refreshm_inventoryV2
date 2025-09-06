@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen w-screen">
+  <div class="min-h-screen max-w-screen">
     <Navbar />
 
     <main class="min-h-screen">
@@ -16,4 +16,5 @@
 <script setup>
 import Navbar from '@/Components/Navbar.vue';
 import SessionExpiredDialog from '@/Components/SessionExpiredDialog.vue';
+import { ConfirmDialog, Toast, DynamicDialog } from 'primevue';
 </script>
