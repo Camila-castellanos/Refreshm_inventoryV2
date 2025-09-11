@@ -1,10 +1,19 @@
 <template>
   <Dialog v-model:visible="visible" @hide="onHide" header="Edit Shop" modal style="width: 32rem">
-    <div class="p-fluid p-2 flex flex-col items-center">
+    <div class="p-fluid p-2 flex flex-col items-center gap-4">
       <FloatLabel class="w-full sm:w-3/4 z-50" variant="on">
         <InputText id="shopName" v-model="name" class="w-full" />
-        <label for="shopName">{{ name }}</label>
+        <label for="shopName">Shop Name</label>
       </FloatLabel>
+      
+      <FloatLabel class="w-full sm:w-3/4 z-40" variant="on">
+        <InputText id="shopSlug" v-model="slug" class="w-full" />
+        <label for="shopSlug">Custom URL Slug (optional)</label>
+      </FloatLabel>
+      
+      <small class="text-xs text-gray-500 w-full sm:w-3/4 text-center">
+        Leave slug empty to auto-generate from shop name
+      </small>
     </div>
 
     <div class="flex justify-end gap-2 mt-4">
@@ -39,6 +48,7 @@ const emit = defineEmits(['update:modelValue', 'saved'])
 
 const visible = ref(props.modelValue)
 const name = ref('')
+const slug = ref('')
 const saving = ref(false)
 const toast = useToast()
 
@@ -56,6 +66,7 @@ const loadShop = async () => {
   try {
     const res = await axios.get(route('shops.show', props.shopId))
     name.value = res.data.name || ''
+    slug.value = res.data.slug || ''
   } catch (e) {
     console.error('Could not load shop', e)
     toast.add({ severity: 'error', summary: 'Error', detail: 'Could not load shop details', life: 3000 })
@@ -79,9 +90,16 @@ const save = async () => {
   try {
     // send update request
     const payload = { name: name.value.trim() }
-    await axios.put(route('shops.update', props.shopId), payload)
+    if (slug.value && slug.value.trim()) {
+      payload.slug = slug.value.trim()
+    }
+    const response = await axios.put(route('shops.update', props.shopId), payload)
     toast.add({ severity: 'success', summary: 'Saved', detail: 'Shop updated', life: 3000 })
-    emit('saved', { id: props.shopId, name: name.value.trim() })
+    emit('saved', { 
+      id: props.shopId, 
+      name: name.value.trim(), 
+      slug: response.data.slug 
+    })
     visible.value = false
   } catch (e) {
     console.error('Save failed', e)

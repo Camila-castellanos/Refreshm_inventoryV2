@@ -26,12 +26,13 @@ class ShopController extends Controller
     }
 
     /**
-     * Update the shop name.
+     * Update the shop name and slug.
      */
     public function update(Request $request, Shop $shop)
     {
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
+            'slug' => ['sometimes', 'string', 'max:255', 'unique:shops,slug,' . $shop->id],
         ]);
 
         // Basic ownership check placeholder
@@ -43,8 +44,18 @@ class ShopController extends Controller
         }
 
         $shop->name = $data['name'];
+        
+        // Update slug if provided, otherwise let the model auto-generate it from the new name
+        if (isset($data['slug'])) {
+            $shop->slug = $data['slug'];
+        }
+        
         $shop->save();
 
-        return response()->json(['id' => $shop->id, 'name' => $shop->name]);
+        return response()->json([
+            'id' => $shop->id, 
+            'name' => $shop->name,
+            'slug' => $shop->slug
+        ]);
     }
 }

@@ -266,20 +266,32 @@ const openEditShop = (id, name) => {
   dialog.visible = true
 }
 
-const onShopSaved = ({ id, name }) => {
+const onShopSaved = ({ id, name, slug }) => {
   // update local storeURLs and props.user.shops entry
   const idx = props.user.shops.findIndex(s => s.id === id)
   if (idx !== -1) {
     props.user.shops[idx].name = name
+    // Update slug if provided
+    if (slug) {
+      props.user.shops[idx].slug = slug
+    }
     storeURLs.value[idx].name = name
     try {
-      // Use the existing slug if available, otherwise create from name + id
+      // Use the updated slug (either provided or existing), otherwise create from name + id
       const existingShop = props.user.shops[idx]
       storeURLs.value[idx].url = createStoreUrl(name, existingShop.slug, existingShop.id)
     } catch (e) {
       console.warn('Could not rebuild store url after edit', e)
     }
   }
+  
+  // Show success toast
+  toast.add({
+    severity: 'success',
+    summary: 'Shop Updated',
+    detail: `Shop "${name}" has been updated successfully${slug ? ' with new URL' : ''}`,
+    life: 3000
+  });
 }
 
 // persist showShops to localStorage whenever it changes
