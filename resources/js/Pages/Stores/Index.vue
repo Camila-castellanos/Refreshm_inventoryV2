@@ -60,6 +60,7 @@ const handleSelection = (items: any[]) => {
 };
 
 onMounted(() => {
+  console.log("Stores:", props.stores);
   parseItems()
 });
 

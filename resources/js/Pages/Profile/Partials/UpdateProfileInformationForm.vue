@@ -21,12 +21,64 @@
           <InputSwitch v-model="showShops" />
         </div>
 
-        <div v-if="showShops">
-          <div v-for="(shop, idx) in props.user.shops" :key="shop.id" class="flex gap-4 items-center mb-4 mt-5">
-            <h2>Public store: {{ shop.name }}</h2>
-            <Button icon="pi pi-pencil" severity="secondary" label="Edit" @click="openEditShop(shop.id, shop.name)" />
-            <Button icon="pi pi-external-link" severity="secondary" label="Go To Store" @click="goToStore(storeURLs[idx]?.url ?? createStoreUrl(shop.name, shop.slug, shop.id))" />
-            <Button icon="pi pi-copy" severity="secondary" label="Copy Link" @click="copyToClipboard(storeURLs[idx]?.url ?? createStoreUrl(shop.name, shop.slug, shop.id))" />
+        <div v-if="showShops" class="space-y-4">
+          <div class="border-b border-gray-200 pb-2 mb-6">
+            <h3 class="text-lg font-semibold text-gray-900">Public Shops</h3>
+            <p class="text-sm text-gray-600 mt-1">Manage your public shops settings and access links</p>
+          </div>
+          
+          <div v-for="(shop, idx) in props.user.shops" :key="shop.id" 
+               class="group bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-all duration-200 hover:border-gray-300">
+            <div class="flex items-center justify-between">
+              <div class="flex-1">
+                <div class="flex items-center gap-3 mb-3">
+                  <div class="w-3 h-3 bg-green-500 rounded-full"></div>
+                  <h4 class="text-lg font-medium text-gray-900">{{ shop.name }}</h4>
+                </div>
+                
+                <div class="flex items-center gap-2 text-sm text-gray-500">
+                  <i class="pi pi-link text-xs"></i>
+                  <button 
+                    @click="copyToClipboard(storeURLs[idx]?.url ?? createStoreUrl(shop.name, shop.slug, shop.id))"
+                    class="font-mono bg-gray-50 hover:bg-gray-100 px-2 py-1 rounded text-xs text-left transition-colors duration-200 cursor-pointer group/link flex items-center gap-1"
+                    v-tooltip.top="'Click to copy full URL'"
+                  >
+                    <span class="truncate max-w-xl">{{ getFullUrl(storeURLs[idx]?.url) }}</span>
+                    <i class="pi pi-copy text-xs opacity-0 group-hover/link:opacity-100 transition-opacity duration-200"></i>
+                  </button>
+                </div>
+              </div>
+              
+              <div class="flex items-center gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                <Button 
+                  icon="pi pi-pencil" 
+                  size="small" 
+                  text 
+                  rounded 
+                  class="text-gray-500 hover:text-gray-700 hover:bg-gray-100" 
+                  @click="openEditShop(shop.id, shop.name)"
+                  v-tooltip.top="'Edit store details'"
+                />
+                <Button 
+                  icon="pi pi-external-link" 
+                  size="small" 
+                  text 
+                  rounded 
+                  class="text-blue-500 hover:text-blue-700 hover:bg-blue-50" 
+                  @click="goToStore(storeURLs[idx]?.url ?? createStoreUrl(shop.name, shop.slug, shop.id))"
+                  v-tooltip.top="'Open store in new tab'"
+                />
+                <Button 
+                  icon="pi pi-copy" 
+                  size="small" 
+                  text 
+                  rounded 
+                  class="text-green-500 hover:text-green-700 hover:bg-green-50" 
+                  @click="copyToClipboard(storeURLs[idx]?.url ?? createStoreUrl(shop.name, shop.slug, shop.id))"
+                  v-tooltip.top="'Copy store link'"
+                />
+              </div>
+            </div>
           </div>
 
           <EditShopModal :modelValue="dialog.visible" @update:modelValue="val => dialog.visible = val" :shopId="dialog.shopId" :initialName="dialog.name" @saved="onShopSaved" />
@@ -259,6 +311,36 @@ onMounted(() => {
     storeURLs.value.push(store);
   })
 });
+
+const getUrlPath = (url) => {
+  if (!url) return 'Generating...';
+  try {
+    // Create URL object safely in browser environment
+    const urlObj = new window.URL(url);
+    return urlObj.pathname;
+  } catch (e) {
+    // Fallback: extract path manually if URL constructor fails
+    const match = url.match(/https?:\/\/[^\/]+(.*)$/);
+    return match ? match[1] : url;
+  }
+};
+
+const getFullUrl = (url) => {
+  if (!url) return 'Generating...';
+  
+  try {
+    // If the URL is already complete, return it
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    
+    // If it's a relative URL, add current host
+    const currentHost = window.location.origin;
+    return `${currentHost}${url.startsWith('/') ? url : '/' + url}`;
+  } catch (e) {
+    return url;
+  }
+};
 
 const openEditShop = (id, name) => {
   dialog.shopId = id

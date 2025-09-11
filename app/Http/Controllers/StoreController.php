@@ -27,13 +27,23 @@ class StoreController extends Controller
     $filter = $request->query('filter', 'own'); // obtain the filter from the query string, default to 'own'
     switch (Auth::user()->role) {
       case "ADMIN":
-        $stores = array_merge([Auth::user()->store], Auth::user()->stores->toArray());
+        // Only add the user's store if it exists (not null)
+        $userStore = Auth::user()->store;
+        if ($userStore) {
+          $stores[] = $userStore;
+        }
+        $stores = array_merge($stores, Auth::user()->stores->toArray());
         break;
       case "OWNER":
         if ($filter === 'all') {
-          $stores = Store::all();
+          $stores = Store::all()->toArray();
         } else {
-          $stores = array_merge([Auth::user()->store], Auth::user()->stores->toArray()); // filter stores by owner
+          // Only add the user's store if it exists (not null)
+          $userStore = Auth::user()->store;
+          if ($userStore) {
+            $stores[] = $userStore;
+          }
+          $stores = array_merge($stores, Auth::user()->stores->toArray());
         }
         break;
       default:
