@@ -114,18 +114,25 @@
         </Form>
       </Dialog>
 
-
-
-      <button @click="handleDownload" class="flex items-center">
-        <span class="pi pi-download mr-2"></span>
-        <p class="hidden lg:block">Download Spreadsheet</p>
-      </button>
-
-      <Button @click="getSelectedItems">REQUEST DEVICES</Button>
-
     </div>
-    <div class="flex justify-end pb-4">
 
+    <!-- Header section with shop title and action buttons -->
+    <div class="w-full flex justify-between items-center pb-6 border-b border-gray-200 mb-6">
+      <div class="flex-1">
+        <h1 class="text-3xl font-bold text-gray-900 tracking-tight">{{ shopName }}</h1>
+        <p class="text-sm text-gray-600 mt-1">Browse our available inventory</p>
+      </div>
+      
+      <div class="flex items-center gap-4">
+        <button @click="handleDownload" class="flex items-center px-4 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors duration-200">
+          <span class="pi pi-download mr-2"></span>
+          <span class="hidden lg:inline">Download Spreadsheet</span>
+        </button>
+
+        <Button @click="getSelectedItems" class="bg-gray-900 hover:bg-gray-800 text-white px-6 py-2 rounded-lg font-medium transition-colors duration-200">
+          REQUEST DEVICES
+        </Button>
+      </div>
     </div>
 
     <div class="md:hidden mb-4 flex items-center gap-2">
@@ -248,11 +255,8 @@
           </template>
         </Card>
       </div>
-      <Card class="shadow-sm md:w-3/4">
+      <Card class="shadow-sm md:w-3/4 !mt-0">
         <template #content>
-          <h1>Company: {{ companyName }}</h1>
-          <h1>Shop: {{ shopName }}</h1>
-          
           <GenericTabs
             :static-tabs="staticTabs"
             :custom-tabs="customTabs"
@@ -345,7 +349,7 @@
                       </div>
 
                       <div
-                        class=" grow md:h-24 flex flex-col md:flex-row justify-end items-start md:items-center gap-4 mt-4 md:mt-0 w-full md:w-auto">
+                        class=" grow md:h-24 flex flex-col md:flex-row justify-end items-start md:items-center gap-4 md:mt-0 w-full md:w-auto">
                         <div v-if="item.issues" class="h-full md:w-64 flex items-start pt-1">
                           <div
                             class="h-full text-orange-500  md:text-center md:flex justify-center items-center w-full text-sm italic font-semibold md:border border-black rounded-md md:p-4">
