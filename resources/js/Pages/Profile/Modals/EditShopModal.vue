@@ -64,7 +64,7 @@ const loadShop = async () => {
   }
 
   try {
-    const res = await axios.get(route('shops.show', props.shopId))
+    const res = await axios.get(`/shops/${props.shopId}`)
     name.value = res.data.name || ''
     slug.value = res.data.slug || ''
   } catch (e) {
@@ -93,7 +93,7 @@ const save = async () => {
     if (slug.value && slug.value.trim()) {
       payload.slug = slug.value.trim()
     }
-    const response = await axios.put(route('shops.update', props.shopId), payload)
+    const response = await axios.put(`/shops/${props.shopId}`, payload)
     toast.add({ severity: 'success', summary: 'Saved', detail: 'Shop updated', life: 3000 })
     emit('saved', { 
       id: props.shopId, 
@@ -103,7 +103,8 @@ const save = async () => {
     visible.value = false
   } catch (e) {
     console.error('Save failed', e)
-    toast.add({ severity: 'error', summary: 'Save Failed', detail: 'Could not save shop', life: 3000 })
+    const error_message = e.response.data.message || null
+    toast.add({ severity: 'error', summary: 'Save Failed', detail: `Could not save shop: ${error_message || 'Unknown error'}`, life: 3000 })
   } finally {
     saving.value = false
   }
