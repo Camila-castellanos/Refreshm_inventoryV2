@@ -1,6 +1,6 @@
 <template>
   <div>
-    <section class="w-full px-2 py-1 mx-auto mt-4">
+    <section class="w-full mx-auto">
       <Tabs v-model:value="currentValue" scrollable>
         <TabList class="bg-white">
           <!-- Static tabs -->

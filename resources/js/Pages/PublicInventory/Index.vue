@@ -10,7 +10,7 @@
     </nav>
 
     <main class="container mx-auto py-8 px-4">
-      <InventoryList :items=items :shopName=shopName :companyName=companyName></InventoryList>
+      <InventoryList :items=items :shopName=shopName></InventoryList>
     </main>
   </div>
 </template>
@@ -23,7 +23,6 @@ import InventoryList from './InventoryList.vue';
 interface Props {
   items?: any[]; // Using 'any[]' for simplicity, you can be more specific
   shopName?: string;
-  companyName?: string;
 }
 
 const props = defineProps<Props>();
