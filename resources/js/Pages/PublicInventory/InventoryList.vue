@@ -118,9 +118,21 @@
 
     <!-- Header section with shop title and action buttons -->
     <div class="w-full flex justify-between items-center pb-6 border-b border-gray-200 mb-6">
-      <div class="flex-1">
-        <h1 class="text-3xl font-bold text-gray-900 tracking-tight">{{ shopName }}</h1>
-        <p class="text-sm text-gray-600 mt-1">Browse our available inventory</p>
+      <div class="flex-1 flex items-center gap-4">
+        <div>
+          <h1 class="text-3xl font-bold text-gray-900 tracking-tight">{{ currentShopName }}</h1>
+          <p class="text-sm text-gray-600 mt-1">Browse our available inventory</p>
+        </div>
+        <Button 
+          v-if="props.shopId" 
+          icon="pi pi-pencil" 
+          size="small" 
+          text 
+          rounded 
+          class="text-gray-500 hover:text-gray-700" 
+          @click="showEditShopModal = true"
+          aria-label="Edit shop name"
+        />
       </div>
       
       <div class="flex items-center gap-4">
@@ -133,9 +145,7 @@
           REQUEST DEVICES
         </Button>
       </div>
-    </div>
-
-    <div class="md:hidden mb-4 flex items-center gap-2">
+    </div>    <div class="md:hidden mb-4 flex items-center gap-2">
       <Dialog v-model:visible="showFilterModal" header="Filter Items" :modal="true"
         :breakpoints="{ '960px': '75vw', '640px': '90vw' }">
         <div class="flex flex-col gap-4">
@@ -376,6 +386,15 @@
         </template>
       </Card>
     </div>
+
+    <!-- Edit Shop Modal -->
+    <EditShopModal 
+      v-if="props.shopId"
+      v-model="showEditShopModal"
+      :shop-id="props.shopId"
+      :initial-name="currentShopName"
+      @saved="handleShopUpdated"
+    />
   </div>
 </template>
 
@@ -392,6 +411,7 @@ import Tag from 'primevue/tag';
 import Message from 'primevue/message';
 import { Form } from '@primevue/forms';
 import GenericTabs from '@/Components/GenericTabs.vue';
+import EditShopModal from '@/Pages/Profile/Modals/EditShopModal.vue';
 import { useToast } from 'primevue/usetoast';
 import { defineProps } from 'vue';
 import { router } from "@inertiajs/vue3";
@@ -403,12 +423,19 @@ import downloadSpreadsheet from '@/Utils/downloadSpreadsheet';
 interface Props {
   items?: any[]; // Using 'any[]' for simplicity, you can be more specific
   shopName?: string;
+  shopSlug?: string;
+  shopId?: number;
   companyName?: string;
 }
 
 const props = defineProps<Props>();
 
 const toast = useToast();
+
+// Make shopName reactive so it can be updated
+const currentShopName = ref(props.shopName || '');
+const currentShopSlug = ref(props.shopSlug || '');
+const showEditShopModal = ref(false);
 
 const country = ref("CA")
 
@@ -702,6 +729,34 @@ const handleDownload = () => {
     toast.add({ severity: 'warn', summary: 'Alert', detail: error.message, life: 5000 });
   }
 }
+
+// Handle shop update from modal
+const handleShopUpdated = (updatedShop: { id: number; name: string; slug: string }) => {
+  currentShopName.value = updatedShop.name;
+  currentShopSlug.value = updatedShop.slug;
+  
+  toast.add({
+    severity: 'success',
+    summary: 'Shop Updated',
+    detail: `Shop name updated to "${updatedShop.name}"`,
+    life: 3000
+  });
+  
+  // Optionally update the URL with the new slug
+  if (updatedShop.slug && window.history.replaceState) {
+    const currentUrl = window.location.href;
+    const urlParts = currentUrl.split('/');
+    const shopSegmentIndex = urlParts.findIndex((part, index) => 
+      index > 0 && (part === props.shopSlug || part === props.shopId?.toString())
+    );
+    
+    if (shopSegmentIndex !== -1) {
+      urlParts[shopSegmentIndex] = updatedShop.slug;
+      const newUrl = urlParts.join('/');
+      window.history.replaceState({}, '', newUrl);
+    }
+  }
+};
 
 // Fetch tabs for the authenticated user and populate `customTabs`.
 async function fetchUserTabs() {
