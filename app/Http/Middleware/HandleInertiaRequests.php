@@ -74,8 +74,7 @@ class HandleInertiaRequests extends Middleware
             return [
                 'id' => $shop->id,
                 'name' => $shop->name,
-                // Add 'slug' if you are using slugs and need them globally
-                // 'slug' => $shop->slug,
+                'slug' => $shop->slug,
             ];
         })->all() ?? []; // ->all() converts collection to array, ?? [] handles null collection
 

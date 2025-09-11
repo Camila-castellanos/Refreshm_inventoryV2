@@ -25,8 +25,8 @@
           <div v-for="(shop, idx) in props.user.shops" :key="shop.id" class="flex gap-4 items-center mb-4 mt-5">
             <h2>Public store: {{ shop.name }}</h2>
             <Button icon="pi pi-pencil" severity="secondary" label="Edit" @click="openEditShop(shop.id, shop.name)" />
-            <Button icon="pi pi-external-link" severity="secondary" label="Go To Store" @click="goToStore(storeURLs[idx]?.url ?? createStoreUrl(props.user.companyName, shop.name))" />
-            <Button icon="pi pi-copy" severity="secondary" label="Copy Link" @click="copyToClipboard(storeURLs[idx]?.url ?? createStoreUrl(props.user.companyName, shop.name))" />
+            <Button icon="pi pi-external-link" severity="secondary" label="Go To Store" @click="goToStore(storeURLs[idx]?.url ?? createStoreUrl(shop.name, shop.slug, shop.id))" />
+            <Button icon="pi pi-copy" severity="secondary" label="Copy Link" @click="copyToClipboard(storeURLs[idx]?.url ?? createStoreUrl(shop.name, shop.slug, shop.id))" />
           </div>
 
           <EditShopModal :modelValue="dialog.visible" @update:modelValue="val => dialog.visible = val" :shopId="dialog.shopId" :initialName="dialog.name" @saved="onShopSaved" />
@@ -255,7 +255,7 @@ onMounted(() => {
   props.user.shops.map(shop => {
     const store = {}
     store.name = shop.name
-    store.url = createStoreUrl(props.user.companyName, shop.name)
+    store.url = createStoreUrl(shop.name, shop.slug, shop.id)
     storeURLs.value.push(store);
   })
 });
@@ -273,7 +273,9 @@ const onShopSaved = ({ id, name }) => {
     props.user.shops[idx].name = name
     storeURLs.value[idx].name = name
     try {
-      storeURLs.value[idx].url = createStoreUrl(props.user.companyName, name)
+      // Use the existing slug if available, otherwise create from name + id
+      const existingShop = props.user.shops[idx]
+      storeURLs.value[idx].url = createStoreUrl(name, existingShop.slug, existingShop.id)
     } catch (e) {
       console.warn('Could not rebuild store url after edit', e)
     }
