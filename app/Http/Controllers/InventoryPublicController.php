@@ -12,26 +12,32 @@ class InventoryPublicController extends Controller
 {
     /**
      * Display a listing of the resource for a specific shop.
-     * Includes Shop Name and Company Name.
+     * Uses shop slug for lookup with fallback to ID.
      */
-    public function index(string $companyName, string $shopName): \Inertia\Response
+    public function index(string $shopSlug): \Inertia\Response
     {
-
-         // Convert underscores back to spaces for database lookup
-         $companyName = str_replace('_', ' ', $companyName);
-         $shopName = str_replace('_', ' ', $shopName);
-
         $shop = null; // Initialize $shop
         try {
-            $shop = Shop::where('name', $shopName)
-                        ->whereHas('company', function ($query) use ($companyName) {
-                            $query->where('name', $companyName);
-                        })
-                        ->with('company')
-                        ->firstOrFail();
+            // First try to find by slug
+            $shop = Shop::where('slug', $shopSlug)->with('company')->first();
+            
+            // If not found and shopSlug looks like an ID (numeric), try by ID
+            if (!$shop && is_numeric($shopSlug)) {
+                $shop = Shop::where('id', $shopSlug)->with('company')->first();
+            }
+            
+            // If still not found, try by name (final fallback)
+            if (!$shop) {
+                // Convert underscores back to spaces for name lookup
+                $shopName = str_replace('_', ' ', $shopSlug);
+                $shop = Shop::where('name', $shopName)->with('company')->first();
+            }
+            
+            if (!$shop) {
+                abort(404);
+            }
 
-
-        } catch (ModelNotFoundException $e) {
+        } catch (\Exception $e) {
             abort(404);
         }
 
