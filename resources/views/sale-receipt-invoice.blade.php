@@ -15,6 +15,10 @@
     <!-- Styles -->
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
     <style>
+        :root {
+            --fanstatic_gray: #fbfbfb;
+        }
+        
         @page {
             size: A4 portrait;
         }
@@ -44,16 +48,16 @@
     .due-card .value{ font-size:16px; font-weight:700; color:#0f172a; margin-top:4px; }
     .due-card .sub{ font-size:11px; color:#6b7280; margin-top:6px; }
     /* Totals card (placed under due-card) */
-    .totals-card{ background:#fbfbfb; border:none; padding:8px 10px; border-radius:6px; margin-top:8px; }
+    .totals-card{ background:var(--fanstatic_gray); border:none; padding:8px 10px; border-radius:6px; margin-top:8px; }
     .totals-card .line{ font-size:12px; color:#374151; margin-top:6px; }
     .totals-card .line .label{ color:#6b7280; text-transform:uppercase; font-size:10px; }
     .totals-card .line .value{ float:right; font-weight:700; }
     /* Footer card (placed under totals) */
-    .footer-card{ background:#fbfbfb; border:none; padding:10px; border-radius:6px; margin-top:8px; font-size:12px; color:#374151; }
+    .footer-card{ background:var(--fanstatic_gray); border:none; padding:10px; border-radius:6px; margin-top:8px; font-size:12px; color:#374151; }
     .footer-card .content{ font-size:12px; color:#374151; }
     .invoice-subtitle{ font-size:12px; color:#6b7280; margin-top:4px; }
     /* Bill To card (compact, DOMPDF-friendly) */
-    .bill-card{ background:#fbfbfb; border:none; padding:8px; border-radius:4px; font-size:12px; }
+    .bill-card{ background:var(--fanstatic_gray); border:none; padding:8px; border-radius:4px; font-size:12px; }
     .bill-card .bill-label{ font-size:10px; color:#6b7280; text-transform:uppercase; }
     .bill-card .bill-name{ font-weight:700; font-size:13px; margin:0 0 2px 0; line-height:1.15; }
     .bill-card .bill-contact{ color:#374151; font-size:12px; margin-top:4px; line-height:1.2; }
@@ -78,7 +82,7 @@
             text-align: right;
             padding-left: 8px;
             padding-right: 8px;
-            border-right: 1px solid #e0e0e0;
+            
         }
         /* Allow issues column to wrap and break words if necessary */
         .tbl-issues {
@@ -98,7 +102,6 @@
         /* Add vertical dividers between item table columns */
         .items-table th,
         .items-table td {
-            border-left: 1px solid #e0e0e0;
             padding-left: 10px;
         }
         /* Keep first-child padding unless the cell is not .tbl-device */
@@ -108,25 +111,22 @@
             padding-left: 0;
         }
     /* Items table card styling (modernized) */
-    .items-card{ background:#ffffff; border-radius:8px; padding:6px; margin-top:12px; box-shadow: 0 1px 2px rgba(15,23,42,0.04); border:1px solid #eef2f6; }
-    .items-card .items-table{ width:100%; border-collapse:separate; border-spacing:0; table-layout:fixed; font-size:13px; }
-    .items-card .items-table thead th{ background:#f8fafc; color:#0f172a; font-weight:700; padding:10px 12px; text-align:left; border-bottom:1px solid #e6eef6; }
-    .items-card .items-table tbody td{ background:#ffffff; padding:10px 12px; vertical-align:middle; color:#334155; }
-    .items-card .items-table tbody tr + tr td{ border-top:1px solid #f1f5f9; }
-    .items-card .items-table th.tbl-price, .items-card .items-table td.tbl-price{ width:120px; text-align:right; white-space:nowrap; }
+    .items-card{ background:#ffffff; border-radius:8px; padding:6px; margin-top:12px; box-shadow: 0 1px 2px rgba(15,23,42,0.04); }
+    .items-card .items-table{ width:100%; border-collapse:separate; border-spacing:0 2px; table-layout:fixed; font-size:13px; background:#ffffff; }
+    .items-card .items-table thead th{ background:#f8fafc; color:#0f172a; font-weight:700; padding:10px 12px; text-align:center; border-radius:4px; }
+    .items-card .items-table tbody td{ padding:10px 12px; vertical-align:middle; color:#334155; text-align:center; border-radius:4px; }
+    .items-card .items-table th.tbl-price, .items-card .items-table td.tbl-price{ width:120px; white-space:nowrap; }
     .items-card .items-table th.tbl-issues, .items-card .items-table td.tbl-issues{ width:40%; }
     .items-card .items-table th.tbl-device, .items-card .items-table td.tbl-device{ width:30%; }
-    /* Zebra rows for readability */
+    /* Zebra rows for readability - mantener colores alternos en las celdas */
     .items-card .items-table tbody tr:nth-child(odd) td{ background:#ffffff; }
     .items-card .items-table tbody tr:nth-child(even) td{ background:#fbfdff; }
-    /* Subtle rounded corners for the table */
-    .items-card .items-table thead th:first-child{ border-top-left-radius:6px; }
-    .items-card .items-table thead th:last-child{ border-top-right-radius:6px; }
-    .items-card .items-table tbody tr:last-child td:first-child{ border-bottom-left-radius:6px; }
-    .items-card .items-table tbody tr:last-child td:last-child{ border-bottom-right-radius:6px; }
+    /* Rounded corners para las celdas individuales */
+    .items-card .items-table tbody td{ border-radius:4px; }
+    .items-card .items-table thead th{ border-radius:4px; }
     /* Ellipsis for device column to keep layout neat */
     .items-card .items-table td.tbl-device{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    /* Make numeric columns bold and right aligned */
+    /* Make numeric columns bold */
     .items-card .items-table td.tbl-price{ font-weight:700; color:#0f172a; }
     /* Responsive tweak for small widths when rendering PDF */
     @media print, screen and (max-width:800px) {
@@ -134,12 +134,35 @@
     }
 
     #items-table{
-        background-color: #fbfbfb !important;
+        background-color: #ffffff !important;
         margin-bottom:4px;
-        border-bottom:1px solid #e0e0e0;
+        
     }
     /* reduce bottom padding inside the items table cells to tighten spacing */
     #items-table tbody td{ padding-bottom:8px; }
+    .items-table {
+    border: none !important;
+}
+.items-table td,
+.items-table th {
+    border: none !important;
+    border-top: none !important;
+    border-bottom: none !important;
+    background-color: var(--fanstatic_gray) !important;
+}
+
+/* Clase genérica para centrar todas las celdas de la tabla */
+.items-table-centered th,
+.items-table-centered td {
+    text-align: center !important;
+}
+
+/* Clase para agregar gap entre filas de la tabla */
+.items-table-gap {
+    border-collapse: separate;
+    border-spacing: 0 1px;
+}
+
     </style>
 </head>
 
@@ -242,18 +265,15 @@
                 @endif
             </td>
             <td style="width:40%; vertical-align:top; padding-left:12px;">
-                @if(in_array('payment_due', $userActiveFields) || in_array('amount_due', $userActiveFields))
+                <!-- @if(in_array('payment_due', $userActiveFields) || in_array('amount_due', $userActiveFields))
                     <table class="bill-card due-card" role="presentation" style="width:100%; border-collapse:collapse;">
                         <tr><td>
                             @if(in_array('payment_due', $userActiveFields))
                                 <div class="label">Payment Due</div>
                                 <div class="value">{{ $sales[0]->created_at->format('F d, Y') }}</div>
                             @endif
-                            @if(in_array('amount_due', $userActiveFields))
-                                <div class="sub"><strong>Amount Due:</strong> $ {{ number_format($salestotal,2) }}</div>
-                            @endif
                         </td></tr>
-                    </table>
+                    </table> -->
                     @if(in_array('subtotal', $userActiveFields) || in_array('tax', $userActiveFields) || in_array('total', $userActiveFields))
                         <table class="totals-card" role="presentation" style="width:100%; border-collapse:collapse;">
                             <tr><td>
@@ -266,6 +286,9 @@
                                 @if(in_array('total', $userActiveFields))
                                     <div class="line"><span class="label">Total</span><span class="value">$ {{ number_format($total,2) }}</span></div>
                                 @endif
+                                <!-- @if(in_array('amount_due', $userActiveFields))
+                                    <div class="line"><span class="label">Amount Due</span><span class="value">$ {{ number_format($salestotal,2) }}</span></div>
+                                @endif -->
                             </td></tr>
                         </table>
                     @endif
@@ -332,20 +355,20 @@
         <hr />
     @endif
     @if(in_array('items', $userActiveFields))
-    <table class="table items-table" id="items-table">
+    <table class="table items-table items-table-centered items-table-gap" id="items-table">
         <thead>
             <tr>
                 @if(in_array('table_device', $userActiveFields))
-                    <th class="text-right tbl-device" scope="col">DEVICE</th>
+                    <th class="tbl-device" scope="col">DEVICE</th>
                 @endif
                 @if(in_array('table_issues', $userActiveFields))
-                    <th class="text-right tbl-issues" scope="col">ISSUES</th>
+                    <th class="tbl-issues" scope="col">ISSUES</th>
                 @endif
                 @if(in_array('table_imei', $userActiveFields))
-                    <th class="text-right" scope="col">IMEI</th>
+                    <th scope="col">IMEI</th>
                 @endif
                 @if(in_array('table_price', $userActiveFields))
-                    <th class="text-right tbl-price" scope="col">PRICE</th>
+                    <th class="tbl-price" scope="col">PRICE</th>
                 @endif
             </tr>
         </thead>
@@ -354,32 +377,32 @@
             @foreach($sale->items as $item)
             <tr>
                 @if(in_array('table_device', $userActiveFields))
-                    <td class="text-right tbl-device">{{ $item["model"] }}</td>
+                    <td class="tbl-device">{{ $item["model"] }}</td>
                 @endif
                 @if(in_array('table_issues', $userActiveFields))
-                    <td class="text-right tbl-issues">{{ $item["issues"] }}</td>
+                    <td class="tbl-issues">{{ $item["issues"] }}</td>
                 @endif
                 @if(in_array('table_imei', $userActiveFields))
-                    <td class="text-right">{{ $item["imei"] }}</td>
+                    <td>{{ $item["imei"] }}</td>
                 @endif
                 @if(in_array('table_price', $userActiveFields))
-                    <td class="text-right tbl-price">$ {{ number_format($item["selling_price"], 2) }}</td>
+                    <td class="tbl-price">$ {{ number_format($item["selling_price"], 2) }}</td>
                 @endif
             </tr>
             @endforeach
             @foreach($returned_items as $item)
             <tr>
                 @if(in_array('table_device', $userActiveFields))
-                    <td class="text-right tbl-device">[CREDIT]: {{ $item["model"] }}</td>
+                    <td class="tbl-device">[CREDIT]: {{ $item["model"] }}</td>
                 @endif
                 @if(in_array('table_issues', $userActiveFields))
-                    <td class="text-right tbl-issues">{{ $item["issues"] }}</td>
+                    <td class="tbl-issues">{{ $item["issues"] }}</td>
                 @endif
                 @if(in_array('table_imei', $userActiveFields))
-                    <td class="text-right">{{ $item["imei"] }}</td>
+                    <td>{{ $item["imei"] }}</td>
                 @endif
                 @if(in_array('table_price', $userActiveFields))
-                    <td class="text-right tbl-price">$ {{ number_format($item["selling_price"], 2) }}</td>
+                    <td class="tbl-price">$ {{ number_format($item["selling_price"], 2) }}</td>
                 @endif
                 @php
                     $credit += $item["selling_price"];
