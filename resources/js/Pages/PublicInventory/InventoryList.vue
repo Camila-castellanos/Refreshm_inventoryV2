@@ -419,6 +419,7 @@ import axios from 'axios';
 import Textarea from 'primevue/textarea';
 import { onMounted } from 'vue';
 import downloadSpreadsheet from '@/Utils/downloadSpreadsheet';
+import { formatDeviceModel } from '@/Utils/FormatUtils';
 
 interface Props {
   items?: any[]; // Using 'any[]' for simplicity, you can be more specific
@@ -598,11 +599,25 @@ async function fetchModelsByManufacturers() {
     // Backend returns { models: [...] }
     const models = response.data?.models ?? [];
 
-    // Map to Dropdown expected format { label, value }
+    // Map to Dropdown expected format { label, value } with formatted labels
     modelsOptions.value = models.map(m => {
-      if (typeof m === 'string') return { label: m, value: m };
-      if (m && typeof m === 'object') return { label: m.label ?? m.value ?? '', value: m.value ?? m.label ?? '' };
-      return { label: String(m), value: String(m) };
+      if (typeof m === 'string') {
+        return { 
+          label: formatDeviceModel(m), 
+          value: m 
+        };
+      }
+      if (m && typeof m === 'object') {
+        const label = m.label ?? m.value ?? '';
+        return { 
+          label: formatDeviceModel(label), 
+          value: m.value ?? m.label ?? '' 
+        };
+      }
+      return { 
+        label: formatDeviceModel(String(m)), 
+        value: String(m) 
+      };
     });
 
   } catch (error) {
