@@ -32,7 +32,7 @@ use Inertia\Inertia;
 Route::get('/publicstore/{shopSlug}', [InventoryPublicController::class, "index"])->name('public.inventory.shop.index');
 Route::get('/publicstore', function () {abort(404);});
 Route::get("items/tabs/{id}/items", [ItemController::class, "getTabItems"])->name("items.tabs.items");
-
+Route::post("publicInventory/request", [ItemController::class, "request"])->name("items.request");
 
 Route::post('/logout', function (Request $request) {
     Auth::guard('web')->logout();
@@ -166,8 +166,6 @@ Route::get('/customers/by-name/{name}', [CustomerController::class, 'getByName']
     Route::resource("email_templates", EmailsController::class);
 
     Route::post("store/contact", [ContactController::class, "store"])->name("contact.store");
-
-    Route::post("publicInventory/request", [ItemController::class, "request"])->name("items.request");
 
 
     Route::post("invitation", [InvitationController::class, "accept"])->name("invitation");
