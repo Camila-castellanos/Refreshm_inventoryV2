@@ -53,37 +53,13 @@ class InventoryPublicController extends Controller
             abort(404);
         }
 
-        // --- Adjust this query based on your actual data ---
-        $items = Item::where("shop_id", $shop->id)
+        $items = Item::withoutGlobalScopes()
+            ->where("shop_id", $shop->id)
             // Option 1: Original - Assumes NULL means available
             ->whereNull("sold")
             ->whereNull("hold")
-
-            // Option 2: Example - Assumes NULL OR 0 means available
-            // ->where(function ($query) {
-            //     $query->whereNull('sold')->orWhere('sold', 0);
-            // })
-            // ->where(function ($query) {
-            //     $query->whereNull('hold')->orWhere('hold', 0);
-            // })
-
-            // Option 3: Example - Assumes NULL OR '' means available
-            // ->where(function ($query) {
-            //     $query->whereNull('sold')->orWhere('sold', '');
-            // })
-            // ->where(function ($query) {
-            //     $query->whereNull('hold')->orWhere('hold', '');
-            // })
-
+            ->whereNotNull('model')
             ->get();
-        // --- End adjustment section ---
-
-
-        // Log the number of items found for debugging
-
-        // Keep dd() for immediate feedback during active debugging
-        // Remove it once you confirm the count is correct
-        // dd($items->pluck('id', 'name')); // Dump item names and IDs for easier checking
 
 
         return Inertia::render('PublicInventory/Index', [
