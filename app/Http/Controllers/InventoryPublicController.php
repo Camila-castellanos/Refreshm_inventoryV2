@@ -7,6 +7,7 @@ use App\Models\Item;
 use Inertia\Inertia;
 use App\Models\Shop; // Make sure Shop model is imported
 use App\Models\Company; // Potentially needed if accessing company directly
+use App\Models\Tab; // Import Tab model for user tabs
 
 class InventoryPublicController extends Controller
 {
@@ -17,24 +18,35 @@ class InventoryPublicController extends Controller
     public function index(string $shopSlug): \Inertia\Response
     {
         $shop = null; // Initialize $shop
+        $userTabs = []; // Initialize user tabs
+        
         try {
             // First try to find by slug
-            $shop = Shop::where('slug', $shopSlug)->with('company')->first();
+            $shop = Shop::where('slug', $shopSlug)->with(['company.owner'])->first();
             
             // If not found and shopSlug looks like an ID (numeric), try by ID
             if (!$shop && is_numeric($shopSlug)) {
-                $shop = Shop::where('id', $shopSlug)->with('company')->first();
+                $shop = Shop::where('id', $shopSlug)->with(['company.owner'])->first();
             }
             
             // If still not found, try by name (final fallback)
             if (!$shop) {
                 // Convert underscores back to spaces for name lookup
                 $shopName = str_replace('_', ' ', $shopSlug);
-                $shop = Shop::where('name', $shopName)->with('company')->first();
+                $shop = Shop::where('name', $shopName)->with(['company.owner'])->first();
             }
             
             if (!$shop) {
                 abort(404);
+            }
+
+            // Get the owner's tabs if available
+            if ($shop->company && $shop->company->owner) {
+                // Get the owner's tabs ordered by their order field
+                $userTabs = Tab::where('user_id', $shop->company->owner->id)
+                    ->orderBy('order', 'asc')
+                    ->get(['id', 'name', 'order'])
+                    ->toArray();
             }
 
         } catch (\Exception $e) {
@@ -77,7 +89,8 @@ class InventoryPublicController extends Controller
         return Inertia::render('PublicInventory/Index', [
             'items' => $items,
             'shopName' => $shop->name,
-            'companyName' => $shop->company->name,
+            'shopSlug' => $shop->slug,
+            'userTabs' => $userTabs,
         ]);
     }
     /*

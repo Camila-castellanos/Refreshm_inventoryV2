@@ -1270,19 +1270,9 @@ public function getLabelsNewItems(Request $request): \Illuminate\Http\Response
     public function getTabItems($id): JsonResponse
     {
         try {
-            $user = Auth::user();
-            if (!$user) {
-                return response()->json(['error' => 'Unauthenticated'], 401);
-            }
-
             $tab = Tab::find($id);
             if (!$tab) {
                 return response()->json(['error' => 'Tab not found'], 404);
-            }
-
-            // Aseguramos que la tab pertenece al usuario autenticado
-            if ($tab->user_id !== $user->id) {
-                return response()->json(['error' => 'Forbidden'], 403);
             }
 
             // Obtenemos sólo los IDs de items relacionados con esta tab,

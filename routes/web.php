@@ -31,7 +31,7 @@ use Inertia\Inertia;
 
 Route::get('/publicstore/{shopSlug}', [InventoryPublicController::class, "index"])->name('public.inventory.shop.index');
 Route::get('/publicstore', function () {abort(404);});
-
+Route::get("items/tabs/{id}/items", [ItemController::class, "getTabItems"])->name("items.tabs.items");
 
 
 Route::post('/logout', function (Request $request) {
@@ -104,7 +104,6 @@ Route::middleware([
         Route::get("items/excel/create", [ItemController::class, "excelCreate"])->name("items.excel.create");
         Route::post("items/excel/store", [ItemController::class, "excelStore"])->name("items.excel.store");
         Route::get("items/excelDemo/download", [ItemController::class, "excelDemoDownload"])->name("items.excel.demo.download");
-        Route::get("items/tabs/{id}/items", [ItemController::class, "getTabItems"])->name("items.tabs.items");
         Route::post("sales", [SaleController::class, "store"])->name("sales.store");
         Route::get("sale/{sale}/receipt", [SaleController::class, "receipt"])->name("sales.receipt");
         Route::get("sale/{sale}/items", [SaleController::class, "soldItems"])->name("sales.sold");
