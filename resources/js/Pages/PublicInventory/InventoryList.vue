@@ -123,16 +123,7 @@
           <h1 class="text-3xl font-bold text-gray-900 tracking-tight">{{ currentShopName }}</h1>
           <p class="text-sm text-gray-600 mt-1">Browse our available inventory</p>
         </div>
-        <Button 
-          v-if="props.shopId" 
-          icon="pi pi-pencil" 
-          size="small" 
-          text 
-          rounded 
-          class="text-gray-500 hover:text-gray-700" 
-          @click="showEditShopModal = true"
-          aria-label="Edit shop name"
-        />
+
       </div>
       
       <div class="flex items-center gap-4">
@@ -387,14 +378,7 @@
       </Card>
     </div>
 
-    <!-- Edit Shop Modal -->
-    <EditShopModal 
-      v-if="props.shopId"
-      v-model="showEditShopModal"
-      :shop-id="props.shopId"
-      :initial-name="currentShopName"
-      @saved="handleShopUpdated"
-    />
+
   </div>
 </template>
 
@@ -411,7 +395,6 @@ import Tag from 'primevue/tag';
 import Message from 'primevue/message';
 import { Form } from '@primevue/forms';
 import GenericTabs from '@/Components/GenericTabs.vue';
-import EditShopModal from '@/Pages/Profile/Modals/EditShopModal.vue';
 import { useToast } from 'primevue/usetoast';
 import { defineProps } from 'vue';
 import { router } from "@inertiajs/vue3";
@@ -421,12 +404,18 @@ import { onMounted } from 'vue';
 import downloadSpreadsheet from '@/Utils/downloadSpreadsheet';
 import { formatDeviceModel } from '@/Utils/FormatUtils';
 
+// Ziggy `route` helper is provided globally at runtime; declare for TS
+declare const route: any;
+
 interface Props {
   items?: any[]; // Using 'any[]' for simplicity, you can be more specific
   shopName?: string;
   shopSlug?: string;
-  shopId?: number;
-  companyName?: string;
+  userTabs?: Array<{
+    id: number;
+    name: string;
+    order: number;
+  }>;
 }
 
 const props = defineProps<Props>();
@@ -436,7 +425,6 @@ const toast = useToast();
 // Make shopName reactive so it can be updated
 const currentShopName = ref(props.shopName || '');
 const currentShopSlug = ref(props.shopSlug || '');
-const showEditShopModal = ref(false);
 
 const country = ref("CA")
 
@@ -529,6 +517,7 @@ const onTabClick = async (payload: { kind: 'static' | 'custom'; tab: any; index:
   try {
     if (payload && payload.tab && (payload.tab.id || payload.tab.ID)) {
       const tabId = payload.tab.id ?? payload.tab.ID;
+      console.log('Fetching items for tab id:', tabId);
       try {
         const ids = await fetchTabItems(tabId);
         selectedTabItems.value = Array.isArray(ids) ? ids : [];
@@ -745,58 +734,20 @@ const handleDownload = () => {
   }
 }
 
-// Handle shop update from modal
-const handleShopUpdated = (updatedShop: { id: number; name: string; slug: string }) => {
-  currentShopName.value = updatedShop.name;
-  currentShopSlug.value = updatedShop.slug;
-  
-  toast.add({
-    severity: 'success',
-    summary: 'Shop Updated',
-    detail: `Shop name updated to "${updatedShop.name}"`,
-    life: 3000
-  });
-  
-  // Optionally update the URL with the new slug
-  if (updatedShop.slug && window.history.replaceState) {
-    const currentUrl = window.location.href;
-    const urlParts = currentUrl.split('/');
-    const shopSegmentIndex = urlParts.findIndex((part, index) => 
-      index > 0 && (part === props.shopSlug || part === props.shopId?.toString())
-    );
-    
-    if (shopSegmentIndex !== -1) {
-      urlParts[shopSegmentIndex] = updatedShop.slug;
-      const newUrl = urlParts.join('/');
-      window.history.replaceState({}, '', newUrl);
-    }
-  }
-};
-
-// Fetch tabs for the authenticated user and populate `customTabs`.
-async function fetchUserTabs() {
-  try {
-    // route
-    let laravelRoute = route('tabs.user');
-
-    const response = await axios.get(laravelRoute);
-    const tabs = response.data?.tabs ?? [];
-
+// Initialize tabs from props instead of fetching
+function initializeUserTabs() {
+  if (props.userTabs && props.userTabs.length > 0) {
     // Map to the expected shape { id, name, order }
-    customTabs.value = tabs.map((t: any) => ({
-      id: t.id ?? t.ID ?? t._id ?? null,
-      name: t.name ?? t.title ?? '',
-      order: t.order ?? 0,
+    customTabs.value = props.userTabs.map((tab: { id: number; name: string; order: number }) => ({
+      id: tab.id,
+      name: tab.name,
+      order: tab.order,
     }));
-  } catch (error) {
-    console.error('Error fetching user tabs:', error);
-    toast.add({
-      severity: 'warn',
-      summary: 'Tabs',
-      detail: 'No custom tabs could be loaded.',
-      life: 3000,
-    });
+    
+    console.log('Initialized custom tabs from shop owner:', customTabs.value);
+  } else {
     customTabs.value = [];
+    console.log('No custom tabs available for this shop');
   }
 }
 
@@ -824,8 +775,8 @@ onMounted(async () => {
     });
   }
 
-  // Fetch user-specific tabs
-  await fetchUserTabs();
+  // Initialize custom tabs from the shop owner's tabs
+  initializeUserTabs();
 });
 </script>
 

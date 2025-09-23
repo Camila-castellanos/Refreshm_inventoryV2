@@ -10,22 +10,27 @@
     </nav>
 
     <main class="container mx-auto py-8 px-4">
-      <InventoryList :items=items :shopName=shopName></InventoryList>
+      <InventoryList :items=items :shopName=shopName :shopSlug=shopSlug :userTabs=userTabs></InventoryList>
     </main>
   </div>
 </template>
 
 <script setup lang="ts">
 
-import { defineProps } from 'vue';
+import { defineProps, onMounted } from 'vue';
 import InventoryList from './InventoryList.vue';
 
 interface Props {
   items?: any[]; // Using 'any[]' for simplicity, you can be more specific
   shopName?: string;
+  shopSlug?: string;
+  userTabs?: { id: number; name: string; order: number }[];
 }
 
 const props = defineProps<Props>();
 
+onMounted(() => {
+  console.log('Received props:', props);
+});
 
 </script>
