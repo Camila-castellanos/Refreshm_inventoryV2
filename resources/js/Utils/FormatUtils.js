@@ -29,7 +29,7 @@ export function formatDeviceModel(model) {
     { pattern: /\bair\b/gi, replacement: 'Air' },
     
     // Generation formatting
-    { pattern: /\b(\d+)(rd|nd|st|th)\s*gen\b/gi, replacement: '$1$2 Gen' },
+    { pattern: /\b(\d+)(rd|nd|st|th)\s*gen\b/gi, replacement: (match, num, suffix) => `${num}${suffix.toLowerCase()} Gen` },
     { pattern: /\bgen\s*(\d+)/gi, replacement: 'Gen $1' },
     
     // Samsung models

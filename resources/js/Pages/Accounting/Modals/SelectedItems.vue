@@ -30,14 +30,11 @@ const confirm = useConfirm();
 const toast = useToast();
 const items: Ref<Item[]> = ref([]);
 const saleId: Ref<string | number> = ref(0);
-const customer: Ref<string | null> = ref(null);
-const saleDate: Ref<string | Date | null> = ref(null);
 const dialogRef = inject("dialogRef") as Ref<DynamicDialogInstance>;
 
 onMounted(() => {
   items.value = dialogRef.value.data.items;
   saleId.value = dialogRef.value.data.saleId;
-  customer.value = dialogRef.value.data.customer;
 });
 
 const remove = (item: Item) => {
@@ -58,8 +55,6 @@ const submit = async () => {
         const response = await axios.post(route("payments.addNewItems"), {
           items: items.value,
           sale_id: saleId.value,
-          customer: customer.value,
-          sale_date: saleDate.value,
         });
         toast.add({ severity: "success", summary: "Success", detail: "Items added successfully!", life: 3000 });
         dialogRef.value.close(true);

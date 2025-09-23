@@ -443,25 +443,24 @@ class PaymentController extends Controller
     $items = $request->items;
 
     $sale = Sale::find($request->sale_id);
-    $sale_date = $request->sale_date ? $request->sale_date : ($sale->created_at ? $sale->created_at : Carbon::now()->format('Y-m-d'));
+    $sale_date = $sale->created_at ? $sale->created_at : Carbon::now()->format('Y-m-d');
     $tax = intval($sale->tax) / 100;
-      $discount = $sale->discount;
-      $balance = $sale->balance_remaining;
+    $discount = $sale->discount;
+    $balance = $sale->balance_remaining;
     $finalTotal = $sale->total;
     $finaFlatTax = $sale->flatTax;
     $finalSubTotal = $sale->subtotal;
-    $customer = $request->customer ?? null;
-    // If no customer is provided, try to find one from the other items in the sale
-    if (!$customer) {
-        $fallbackCustomer = null;
-        foreach ($sale->items as $item) {
-            if (!empty($item->customer)) {
-                $fallbackCustomer = $item->customer;
-                break;
-            }
+    
+    // Get customer from the sale's existing items
+    $customer = null;
+    foreach ($sale->items as $item) {
+        if (!empty($item->customer)) {
+            $customer = $item->customer;
+            break;
         }
-        $customer = $fallbackCustomer;
     }
+    
+    // If customer is numeric (ID), get the customer name
     if (is_numeric($customer)) {
       $customerModel = Customer::find($customer);
       $customer = $customerModel ? $customerModel->customer : $customer;
@@ -472,7 +471,7 @@ class PaymentController extends Controller
       Item::where('id', $item['id'])->update([
         'sold' => $sale_date ?? Carbon::now(),
         'selling_price' => $item['selling_price'],
-        'customer' => $item['customer'] ?? $customer,
+        'customer' => $customer, // Always use the sale's customer
         'profit' => $item['selling_price'] - $itemData->cost,
         'sale_id' => $request->sale_id,
         'sold_position' => $item['position'],
@@ -488,12 +487,15 @@ class PaymentController extends Controller
       $finalSubTotal += $subtotal;
       $finaFlatTax += $flatTax;
       $finalTotal += $total;
-      $balance += $total;
     }
+
+    // Calculate the new balance correctly: total - amount_paid
+    $balance = $finalTotal - $sale->amount_paid;
 
     $paid = 0;
     if ($sale->amount_paid >= $finalTotal) {
       $paid = 1;
+      $balance = 0; // If fully paid, balance should be 0
     }
 
     Sale::where('id', $request->sale_id)->update([
