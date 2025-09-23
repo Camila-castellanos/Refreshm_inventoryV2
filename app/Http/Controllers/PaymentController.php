@@ -735,6 +735,33 @@ private function getPaymentsData($userId, $dataStatus,$startDate=null, $endDate=
 
         // Formatear la respuesta (como en original)
         $sold = Carbon::parse($firstItem->sold);
+        
+        // Calculate the correct balance_remaining and verify data integrity
+        $calculated_balance = max(0, $sale->total - $sale->amount_paid);
+        $current_balance = max(0, $sale->balance_remaining);
+        
+        // If calculated balance differs from stored balance, update the sale
+        if (abs($calculated_balance - $current_balance) > 0.01) { // Using 0.01 for floating point comparison
+            $updated_paid_status = ($calculated_balance == 0) ? 1 : 0;
+            
+            Sale::where('id', $sale->id)->update([
+                'balance_remaining' => $calculated_balance,
+                'paid' => $updated_paid_status,
+                'updated_at' => now(),
+            ]);
+            
+            // Log the correction for debugging
+            Log::info("Balance corrected for sale {$sale->id}: from {$current_balance} to {$calculated_balance}");
+            
+            // Use the corrected values in response
+            $final_balance = $calculated_balance;
+            $final_paid_status = $updated_paid_status;
+        } else {
+            // Use existing values
+            $final_balance = $current_balance;
+            $final_paid_status = $sale->paid;
+        }
+        
         $response[] = [
             'id' => $firstItem->id,
             'date' => $sold->format("Y-m-d"),
@@ -747,8 +774,8 @@ private function getPaymentsData($userId, $dataStatus,$startDate=null, $endDate=
             'credit' => (float) $sale->credit ?? 0,
             'total' => $sale->total,
             'amount_paid' => max(0, $sale->amount_paid),
-            'balance_remaining' => max(0, $sale->balance_remaining),
-            'status' => $sale->paid == 1 ? "Paid" : 'Unpaid',
+            'balance_remaining' => $final_balance,
+            'status' => $final_paid_status == 1 ? "Paid" : 'Unpaid',
             'payments' => $salePayments,
             'sale_id' => $sale->id,
             'payment_method' => $sale->payment_method,
