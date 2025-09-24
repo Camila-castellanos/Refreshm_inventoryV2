@@ -361,10 +361,54 @@ class ItemController extends Controller
             ]);
         }
 
-        // Send email as before
-        $mail = Mail::to('will@refreshmobile.ca')->send(new RequestItems($name, $email, $store, $notes, $uniqueItems));
+        // Determine email destination from items' users or use default
+        $destinationEmail = 'will@refreshmobile.ca'; // Default email
+        
+        // Try to get email from the first item's user
+        foreach ($uniqueItems as $item) {
+            if (isset($item['user_id']) && $item['user_id']) {
+                $user = User::find($item['user_id']);
+                if ($user && $user->email) {
+                    $destinationEmail = $user->email;
+                    break; // Use the first valid email found
+                }
+            }
+        }
 
-        return response()->json(['saved' => true, 'id' => $incoming->id], 201);
+        // Send email with proper error handling
+        try {
+            Mail::to($destinationEmail)->send(new RequestItems($name, $email, $store, $notes, $uniqueItems));
+            
+            Log::info('RequestItems email sent successfully', [
+                'incoming_request_id' => $incoming->id,
+                'destination_email' => $destinationEmail,
+                'items_count' => count($uniqueItems)
+            ]);
+
+            return response()->json([
+                'saved' => true, 
+                'id' => $incoming->id,
+                'email_sent' => true,
+                'message' => 'Request saved and email sent successfully',
+                'destination_email' => $destinationEmail
+            ], 201);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to send RequestItems email', [
+                'error' => $e->getMessage(),
+                'incoming_request_id' => $incoming->id,
+                'destination_email' => $destinationEmail,
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'saved' => true, 
+                'id' => $incoming->id,
+                'email_sent' => false,
+                'message' => 'Request saved but failed to send email: ' . $e->getMessage(),
+                'destination_email' => $destinationEmail
+            ], 500);
+        }
      
     }
 
