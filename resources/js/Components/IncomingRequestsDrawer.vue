@@ -122,15 +122,16 @@ async function createInvoice(req: any) {
     id: it.original_item_id ?? it.id,
   }));
 
-  // If the request includes shipping, add a synthetic item for the shipping fee
-  if (req.shipping) {
+  // If the request includes shipping and it's NOT "Standard (Free)", add a synthetic item for the shipping fee
+  if (req.shipping && req.shipping.label !== 'Standard (Free)') {
     try {
       mappedItems.push({
-        id: `shipping-${Date.now()}`,
+        id: null,
         original_item_id: null,
         model: req.shipping.label || 'Shipping',
         type: ItemType.SHIPPING_FEE,
         selling_price: Number(req.shipping.value) || 0,
+        isNew: true,
       });
     } catch (err) {
       console.error('Error mapping shipping to item', err);

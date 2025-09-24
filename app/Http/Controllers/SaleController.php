@@ -116,9 +116,9 @@ class SaleController extends Controller
                     'updated_at' => now(),
                 ]);
             }
-            $item->update($sale_item);
-
+            
             if ($item) {
+                $item->update($sale_item);
                 $item->update([
                     'position' => null,
                     'storage_id' => null,
