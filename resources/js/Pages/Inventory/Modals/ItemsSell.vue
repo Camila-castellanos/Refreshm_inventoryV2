@@ -397,15 +397,15 @@ async function submitForm(e: Event, isConfirmed: boolean) {
   newItems: params.value.items
     .filter((item: any) => item.isNew) // Filtrar los elementos nuevos
     .map((item: any) => ({
-      model: item.model,
-      type: item.type,
-      imei: item.imei,
-      selling_price: item.selling_price,
-      issues: item.issues,
+      model: item.model ?? null,
+      type: item.type ?? null,
+      imei: item.imei ?? null,
+      selling_price: item.selling_price ?? null,
+      issues: item.issues ?? null,
       sold: format(form.date, "yyyy-MM-dd"),
       customer: form.customer?.id ?? null,
-      position: item.position,
-      storage_id: item.storage_id,
+      position: item.position ?? null,
+      storage_id: item.storage_id ?? null,
   profit: item.selling_price - (Number(item.cost || 0) || 0), // Ensure cost exists
     })),
   };
