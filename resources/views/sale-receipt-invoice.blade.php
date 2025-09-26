@@ -185,19 +185,28 @@
         $flatTax = 0;
         $total = 0;
         $credit = 0;
+        $sale_credit = 0; // Credit from sale itself
         foreach ($sales as $sale) {
             $subtotal += $sale->subtotal;
             $flatTax  += $sale->flatTax;
             $total    += $sale->total;
+            $sale_credit += (float) ($sale->credit ?? 0); // Add sale credit
         }
         foreach ($returned_items as $item) {
             $credit += $item['selling_price'];
         }
+        // Total credit is returned items + sale credit
+        $total_credit = $credit + $sale_credit;
+        // Final total after credit
+        $final_total = $total - $total_credit;
     @endphp
     @php
         // Precompute a display-friendly sales total used in the header due-card
-        $salestotal = array_sum(array_column($sales->toArray(), 'total'));
-        $salestotal -= (array_sum(array_column($sales->toArray(), 'credit')) + (array_sum(array_column($sales->toArray(), 'credit')) * ($sales[0]->tax ?? 0) / 100));
+        $salestotal = $sales->sum('total');
+        // Subtract all credits (returned items credit + sale credit)
+        $all_sale_credits = $sales->sum('credit');
+        $returned_items_credit = collect($returned_items)->sum('selling_price');
+        $salestotal -= ($all_sale_credits + $returned_items_credit);
     @endphp
     <table class="invoice-header-table">
         <tr>
@@ -283,8 +292,11 @@
                                 @if(in_array('tax', $userActiveFields))
                                     <div class="line"><span class="label">Tax</span><span class="value">$ {{ number_format($flatTax,2) }}</span></div>
                                 @endif
+                                @if($total_credit > 0)
+                                    <div class="line"><span class="label">Credit Applied</span><span class="value">-$ {{ number_format($total_credit,2) }}</span></div>
+                                @endif
                                 @if(in_array('total', $userActiveFields))
-                                    <div class="line"><span class="label">Total</span><span class="value">$ {{ number_format($total,2) }}</span></div>
+                                    <div class="line"><span class="label">Total</span><span class="value">$ {{ number_format($final_total,2) }}</span></div>
                                 @endif
                                 <!-- @if(in_array('amount_due', $userActiveFields))
                                     <div class="line"><span class="label">Amount Due</span><span class="value">$ {{ number_format($salestotal,2) }}</span></div>

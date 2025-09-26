@@ -736,8 +736,9 @@ private function getPaymentsData($userId, $dataStatus,$startDate=null, $endDate=
         // Formatear la respuesta (como en original)
         $sold = Carbon::parse($firstItem->sold);
         
-        // Calculate the correct balance_remaining and verify data integrity
-        $calculated_balance = max(0, $sale->total - $sale->amount_paid);
+        // Calculate the correct balance_remaining considering credit and verify data integrity
+        $sale_credit = (float) ($sale->credit ?? 0);
+        $calculated_balance = max(0, $sale->total - $sale->amount_paid - $sale_credit);
         $current_balance = max(0, $sale->balance_remaining);
         
         // If calculated balance differs from stored balance, update the sale
@@ -751,7 +752,7 @@ private function getPaymentsData($userId, $dataStatus,$startDate=null, $endDate=
             ]);
             
             // Log the correction for debugging
-            Log::info("Balance corrected for sale {$sale->id}: from {$current_balance} to {$calculated_balance}");
+            Log::info("Balance corrected for sale {$sale->id}: from {$current_balance} to {$calculated_balance} (including credit: {$sale_credit})");
             
             // Use the corrected values in response
             $final_balance = $calculated_balance;
@@ -771,7 +772,7 @@ private function getPaymentsData($userId, $dataStatus,$startDate=null, $endDate=
             'customer_id' => $customer_id,
             'customer_credit' => (float) $customer_credit,
             'customer_email' => $customer_emails ? $customer_emails : null,
-            'credit' => (float) $sale->credit ?? 0,
+            'credit' => $sale_credit,
             'total' => $sale->total,
             'amount_paid' => max(0, $sale->amount_paid),
             'balance_remaining' => $final_balance,
