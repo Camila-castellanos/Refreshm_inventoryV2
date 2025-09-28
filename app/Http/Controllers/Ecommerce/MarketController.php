@@ -7,13 +7,14 @@ use App\Models\Ecommerce\Market;
 use App\Models\Item;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Inertia\Inertia;
 
 class MarketController extends Controller
 {
     /**
      * Display the market homepage with featured items and basic info.
      */
-    public function index(Market $market)
+    public function index(Request $request, Market $market)
     {
         try {
             // Load the related shop and company for additional info
@@ -25,7 +26,7 @@ class MarketController extends Controller
             }
 
             // Get featured items (latest available items)
-            $featuredItems = $market->featuredItems(8)->get();
+            $featuredItems = $market->featuredItems(12)->get();
 
             // Get total available items count
             $totalItemsCount = $market->publishedItems()->count();
@@ -36,17 +37,17 @@ class MarketController extends Controller
             // Get market stats
             $stats = $market->getStats();
 
-            // Get safe market data with fallbacks
+            // Get safe market data
             $safeMarketData = $market->getSafeData();
 
-            return view('ecommerce.market.index', compact(
-                'market',
-                'featuredItems',
-                'totalItemsCount',
-                'categories',
-                'stats',
-                'safeMarketData'
-            ));
+            return Inertia::render('Ecommerce/PublicMarket/Home', [
+                'market' => $safeMarketData,
+                'initialItems' => $featuredItems,
+                'categories' => $categories->values(), // Reset array keys
+                'stats' => $stats,
+                'totalItems' => $totalItemsCount,
+                'currentCategory' => $request->get('category')
+            ]);
         } catch (\Exception $e) {
             // Log the error for debugging
             Log::error('Market index error: ' . $e->getMessage(), [
@@ -56,6 +57,55 @@ class MarketController extends Controller
 
             // Return a user-friendly error page
             abort(503, 'This market is temporarily unavailable. Please try again later.');
+        }
+    }
+
+    /**
+     * API endpoint for infinite scroll - Load more products
+     */
+    public function products(Request $request, Market $market)
+    {
+        try {
+            $market->load(['shop']);
+
+            // Verify shop accessibility
+            if (!$market->shop) {
+                return response()->json(['error' => 'Market unavailable'], 503);
+            }
+
+            $perPage = 12;
+            $page = $request->get('page', 1);
+            $category = $request->get('category');
+
+            // Build query
+            $query = $market->publishedItems();
+
+            // Filter by category if provided
+            if ($category) {
+                $query->where('type', $category);
+            }
+
+            // Get paginated results
+            $items = $query->latest()
+                ->paginate($perPage, ['*'], 'page', $page);
+
+            return response()->json([
+                'data' => $items->items(),
+                'current_page' => $items->currentPage(),
+                'last_page' => $items->lastPage(),
+                'per_page' => $items->perPage(),
+                'total' => $items->total(),
+                'has_more_pages' => $items->hasMorePages()
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Market products API error: ' . $e->getMessage(), [
+                'market_id' => $market->id ?? null,
+                'page' => $request->get('page'),
+                'category' => $request->get('category'),
+            ]);
+
+            return response()->json(['error' => 'Unable to load products'], 500);
         }
     }
 
@@ -110,6 +160,10 @@ class MarketController extends Controller
             }
 
             // Ensure the item belongs to this market's shop
+            Log::info('Market product check', [
+                'market_shop_id' => $market->shop_id ?? null,
+                'item_shop_id' => $item->shop_id ?? null,
+            ]);
             if ($item->shop_id !== $market->shop_id) {
                 abort(404, 'Product not found in this market');
             }
@@ -124,15 +178,15 @@ class MarketController extends Controller
 
             // Get related items (same type, different items)
             $relatedItems = $market->getItemsByCategory($item->type ?? 'general')
-                ->where('id', '!=', $item->id)
+                ->where('items.id', '!=', $item->id)
                 ->limit(4)
                 ->get();
 
-            return view('ecommerce.market.product', compact(
-                'market',
-                'item',
-                'relatedItems'
-            ));
+            return Inertia::render('Ecommerce/PublicMarket/Product', [
+                'market' => $market->getSafeData(),
+                'item' => $item,
+                'relatedItems' => $relatedItems
+            ]);
         } catch (\Exception $e) {
             Log::error('Market product error: ' . $e->getMessage(), [
                 'market_id' => $market->id ?? null,

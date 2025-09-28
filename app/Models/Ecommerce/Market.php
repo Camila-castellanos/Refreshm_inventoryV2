@@ -263,10 +263,14 @@ class Market extends Model
     public function getSafeData(): array
     {
         return [
+            'id' => $this->id ?? null,
+            'slug' => $this->slug ?? null,
             'name' => $this->name ?: 'Market Store',
             'description' => $this->description ?: 'Quality products at great prices',
             'tagline' => $this->tagline ?: 'Your trusted marketplace',
             'currency' => $this->currency ?: 'USD',
+            'show_inventory_count' => $this->show_inventory_count ?: false,
+            'is_active' => $this->is_active ?: false,
             'logo_url' => $this->logo_url,
             'banner_url' => $this->banner_url,
             'theme_colors' => $this->theme_colors ?: [
