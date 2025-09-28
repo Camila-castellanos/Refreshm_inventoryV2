@@ -242,15 +242,15 @@ Route::get('/customers/by-name/{name}', [CustomerController::class, 'getByName']
     Route::put('shops/{shop}', [ShopController::class, 'update'])->name('shops.update');
 
     // Ecommerce Admin Routes (Authenticated and company-specific)
-    Route::prefix('admin/ecommerce/markets')->name('ecommerce.admin.markets.')->group(function () {
+    Route::prefix('ecommerce/markets')->name('ecommerce.markets.')->group(function () {
         Route::get('/', [App\Http\Controllers\Ecommerce\MarketAdminController::class, 'index'])->name('index');
         Route::get('/create', [App\Http\Controllers\Ecommerce\MarketAdminController::class, 'create'])->name('create');
         Route::post('/', [App\Http\Controllers\Ecommerce\MarketAdminController::class, 'store'])->name('store');
-        Route::get('/{market}/edit', [App\Http\Controllers\Ecommerce\MarketAdminController::class, 'edit'])->name('edit');
-        Route::put('/{market}', [App\Http\Controllers\Ecommerce\MarketAdminController::class, 'update'])->name('update');
-        Route::delete('/{market}', [App\Http\Controllers\Ecommerce\MarketAdminController::class, 'destroy'])->name('destroy');
-        Route::get('/{market}/analytics', [App\Http\Controllers\Ecommerce\MarketAdminController::class, 'analytics'])->name('analytics');
-        Route::patch('/{market}/toggle-status', [App\Http\Controllers\Ecommerce\MarketAdminController::class, 'toggleStatus'])->name('toggle-status');
+        Route::get('/{market:id}/edit', [App\Http\Controllers\Ecommerce\MarketAdminController::class, 'edit'])->name('edit');
+        Route::put('/{market:id}', [App\Http\Controllers\Ecommerce\MarketAdminController::class, 'update'])->name('update');
+        Route::delete('/{market:id}', [App\Http\Controllers\Ecommerce\MarketAdminController::class, 'destroy'])->name('destroy');
+        Route::get('/{market:id}/analytics', [App\Http\Controllers\Ecommerce\MarketAdminController::class, 'analytics'])->name('analytics');
+        Route::patch('/{market:id}/toggle-status', [App\Http\Controllers\Ecommerce\MarketAdminController::class, 'toggleStatus'])->name('toggle-status');
     });
 
     });

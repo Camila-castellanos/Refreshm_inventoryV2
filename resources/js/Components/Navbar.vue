@@ -112,7 +112,7 @@ const logout = () => {
 const navItems = ref([
   { label: 'Dashboard', icon: 'pi pi-chart-bar', url: '/dashboard', roles: ['OWNER', 'ADMIN'] },
   { label: 'Inventory', icon: 'pi pi-warehouse', url: '/inventory/items', roles: ['OWNER', 'USER', 'ADMIN'] },
-  { label: 'Markets', icon: 'pi pi-shopping-cart', url: route('ecommerce.admin.markets.index'), roles: ['OWNER', 'ADMIN'] },
+  { label: 'Markets', icon: 'pi pi-shopping-cart', url: route('ecommerce.markets.index'), roles: ['OWNER', 'ADMIN'] },
   { label: 'Accounting', icon: 'pi pi-calculator', url: '/accounting/payments', roles: ['ADMIN', 'OWNER'] },
   { label: 'Contacts', icon: 'pi pi-users', url: '/customer', roles: ['OWNER', 'USER', 'ADMIN'] },
   { label: 'Stores', icon: 'pi pi-shop', url: route('stores.index', { filter: 'all' }), roles: ['OWNER'] },

@@ -69,15 +69,15 @@ class Market extends Model
      */
     protected static function booted(): void
     {
-        static::creating(function (ConsumerShop $consumerShop) {
-            if (empty($consumerShop->slug)) {
-                $consumerShop->slug = $consumerShop->generateUniqueSlug($consumerShop->name);
+        static::creating(function (Market $market) {
+            if (empty($market->slug)) {
+                $market->slug = $market->generateUniqueSlug($market->name);
             }
         });
 
-        static::updating(function (ConsumerShop $consumerShop) {
-            if ($consumerShop->isDirty('name') && empty($consumerShop->slug)) {
-                $consumerShop->slug = $consumerShop->generateUniqueSlug($consumerShop->name);
+        static::updating(function (Market $market) {
+            if ($market->isDirty('name') && empty($market->slug)) {
+                $market->slug = $market->generateUniqueSlug($market->name);
             }
         });
     }
@@ -120,19 +120,23 @@ class Market extends Model
     }
 
     /**
-     * Retrieve the model for a bound value.
-     * Returns null if market is not found or inactive
+     * Custom route model binding
+     * For public routes (by slug): only show active markets
+     * For admin routes (by id): show all markets for company access control
      */
     public function resolveRouteBinding($value, $field = null)
     {
-        $market = $this->where('slug', $value)->where('is_active', true)->first();
+        // Determine the field to search by
+        $searchField = $field ?: 'slug';
         
-        // If market not found, return null (will trigger 404)
-        if (!$market) {
-            return null;
+        // For slug-based binding (public routes), filter by active status
+        if ($searchField === 'slug') {
+            return $this->where('slug', $value)->where('is_active', true)->first();
         }
         
-        return $market;
+        // For ID-based binding (admin routes), don't filter by active status
+        // Company access control is handled in the controller
+        return $this->where($searchField, $value)->first();
     }
 
     /**

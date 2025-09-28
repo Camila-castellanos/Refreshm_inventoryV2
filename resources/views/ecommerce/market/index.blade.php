@@ -20,14 +20,14 @@
         tailwind.config = {
             theme: {
                 extend: {
-                    colors: @json($market->theme_colors ?? [
-                        'primary' => [
-                            '50' => '#f0f9ff',
-                            '500' => '#3b82f6',
-                            '600' => '#2563eb',
-                            '700' => '#1d4ed8',
-                        ]
-                    ])
+                    colors: {
+                        primary: {
+                            '50': '#f0f9ff',
+                            '500': '#3b82f6',
+                            '600': '#2563eb',
+                            '700': '#1d4ed8'
+                        }
+                    }
                 }
             }
         }
@@ -36,8 +36,8 @@
     <style>
         .gradient-bg {
             background: linear-gradient(135deg, 
-                {{ $market->theme_colors['gradient']['from'] ?? '#667eea' }} 0%, 
-                {{ $market->theme_colors['gradient']['to'] ?? '#764ba2' }} 100%);
+                {{ $market->theme_colors['gradient']['from'] ?? '#f8fafc' }} 0%, 
+                {{ $market->theme_colors['gradient']['to'] ?? '#e2e8f0' }} 100%);
         }
         .card-hover {
             transition: all 0.3s ease;
@@ -120,7 +120,7 @@
     </header>
 
     <!-- Hero Section -->
-    <section class="gradient-bg text-white py-20">
+    <section class="gradient-bg text-gray-800 py-20">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             @if($market->banner_url)
                 <div class="mb-8">
@@ -145,15 +145,15 @@
             
             <div class="flex flex-col sm:flex-row gap-4 justify-center">
                 <button onclick="document.getElementById('products').scrollIntoView()" 
-                        class="btn-primary px-8 py-4 rounded-lg font-semibold text-lg shadow-lg">
+                        class="inline-flex items-center justify-center px-8 py-4 rounded-lg font-semibold text-lg bg-slate-100 text-gray-700 hover:text-gray-900 border border-gray-200 hover:border-gray-300 transition-all duration-200 shadow-sm hover:shadow-md">
                     Shop Now
                 </button>
                 @if($totalItemsCount > 0)
-                    <div class="flex items-center justify-center space-x-2 bg-white/10 px-6 py-4 rounded-lg backdrop-blur-sm">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                        </svg>
-                        <span class="font-medium">{{ $totalItemsCount }} Products Available</span>
+                    <div class="flex items-center justify-center space-x-2 bg-slate-100 px-6 py-4 rounded-lg border border-gray-200">
+                        <div class="inline-flex items-center justify-center w-6 h-6 rounded-md bg-slate-100 text-gray-500">
+                            <i class="pi pi-check text-sm"></i>
+                        </div>
+                        <span class="font-medium text-gray-700">{{ $totalItemsCount }} Products Available</span>
                     </div>
                 @endif
             </div>
@@ -165,20 +165,20 @@
     <section class="py-12 bg-white border-b border-gray-200">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
-                <div class="text-center">
-                    <div class="text-3xl font-bold text-primary-600">{{ $stats['total_products'] }}</div>
+                <div class="text-center p-4 rounded-lg bg-slate-100 border border-gray-200">
+                    <div class="text-3xl font-bold text-gray-800">{{ $stats['total_products'] }}</div>
                     <div class="text-sm font-medium text-gray-600">Products Available</div>
                 </div>
-                <div class="text-center">
-                    <div class="text-3xl font-bold text-primary-600">{{ $stats['categories_count'] }}</div>
+                <div class="text-center p-4 rounded-lg bg-slate-100 border border-gray-200">
+                    <div class="text-3xl font-bold text-gray-800">{{ $stats['categories_count'] }}</div>
                     <div class="text-sm font-medium text-gray-600">Categories</div>
                 </div>
-                <div class="text-center">
-                    <div class="text-3xl font-bold text-primary-600">${{ number_format($stats['price_range']['min'], 0) }}</div>
+                <div class="text-center p-4 rounded-lg bg-slate-100 border border-gray-200">
+                    <div class="text-3xl font-bold text-gray-800">${{ number_format($stats['price_range']['min'], 0) }}</div>
                     <div class="text-sm font-medium text-gray-600">Starting Price</div>
                 </div>
-                <div class="text-center">
-                    <div class="text-3xl font-bold text-primary-600">${{ number_format($stats['price_range']['max'], 0) }}</div>
+                <div class="text-center p-4 rounded-lg bg-slate-100 border border-gray-200">
+                    <div class="text-3xl font-bold text-gray-800">${{ number_format($stats['price_range']['max'], 0) }}</div>
                     <div class="text-sm font-medium text-gray-600">Top Price</div>
                 </div>
             </div>

@@ -6,13 +6,15 @@
                     Markets
                 </h2>
                 <Link
-                    :href="route('ecommerce.admin.markets.create')"
-                    class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-md transition-colors duration-200 flex items-center"
+                    :href="route('ecommerce.markets.create')"
+                    class=""
                 >
-                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                    </svg>
-                    Create Market
+                    <Button 
+                        label="Create Market" 
+                        icon="pi pi-plus" 
+                        severity="primary"
+                        class=""
+                    />
                 </Link>
             </div>
         </template>
@@ -20,6 +22,24 @@
         <div class="py-12">
             <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
                 <div class="bg-white overflow-hidden shadow-xl sm:rounded-lg">
+                    <!-- Header with Create Button -->
+                    <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                        <div>
+                            <h3 class="text-lg font-medium text-gray-900">Your Markets</h3>
+                            <p class="text-sm text-gray-600">Manage your online marketplaces</p>
+                        </div>
+                        <Link
+                            :href="route('ecommerce.markets.create')"
+                            class=""
+                        >
+                            <Button 
+                                label="Create Market" 
+                                icon="pi pi-plus" 
+                                severity="primary"
+                            />
+                        </Link>
+                    </div>
+
                     <!-- Markets Table -->
                     <div v-if="markets.data && markets.data.length > 0" class="overflow-hidden">
                         <table class="min-w-full divide-y divide-gray-200">
@@ -50,10 +70,8 @@
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <div class="flex items-center">
                                             <div class="flex-shrink-0 h-10 w-10">
-                                                <div class="h-10 w-10 rounded-lg bg-indigo-100 flex items-center justify-center">
-                                                    <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                                                    </svg>
+                                                <div class="h-10 w-10 rounded-lg bg-slate-100 flex items-center justify-center">
+                                                    <i class="pi pi-shopping-bag text-lg text-gray-500"></i>
                                                 </div>
                                             </div>
                                             <div class="ml-4">
@@ -72,10 +90,10 @@
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <span
                                             :class="{
-                                                'bg-green-100 text-green-800': market.is_active,
-                                                'bg-gray-100 text-gray-800': !market.is_active
+                                                'text-zinc-900': market.is_active,
+                                                'text-zinc-600': !market.is_active
                                             }"
-                                            class="inline-flex px-2 text-xs font-semibold rounded-full"
+                                            class="inline-flex px-3 py-1 text-xs font-medium rounded-md bg-slate-100"
                                         >
                                             {{ market.is_active ? 'Active' : 'Inactive' }}
                                         </span>
@@ -87,39 +105,33 @@
                                         {{ formatDate(market.created_at) }}
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                        <div class="flex items-center space-x-2">
+                                        <div class="flex items-center justify-end space-x-1">
                                             <!-- Visit Market -->
                                             <a
                                                 :href="`/market/${market.slug}`"
                                                 target="_blank"
-                                                class="text-indigo-600 hover:text-indigo-900 p-1 rounded hover:bg-indigo-50 transition-colors"
-                                                title="Visit Market"
+                                                class="inline-flex items-center justify-center w-8 h-8 rounded-md text-gray-500 hover:text-blue-500 transition-colors duration-200 bg-slate-100"
+                                                v-tooltip.top="'Visit Market'"
                                             >
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                                </svg>
+                                                <i class="pi pi-external-link text-sm"></i>
                                             </a>
                                             
                                             <!-- Edit Market -->
                                             <Link
-                                                :href="route('ecommerce.admin.markets.edit', market.id)"
-                                                class="text-gray-600 hover:text-gray-900 p-1 rounded hover:bg-gray-50 transition-colors"
-                                                title="Edit Market"
+                                                :href="route('ecommerce.markets.edit', market.id)"
+                                                class="inline-flex items-center justify-center w-8 h-8 rounded-md text-gray-500 hover:text-gray-700 transition-colors duration-200 bg-slate-100"
+                                                v-tooltip.top="'Edit Market'"
                                             >
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                                </svg>
+                                                <i class="pi pi-pencil text-sm"></i>
                                             </Link>
 
                                             <!-- Delete Market -->
                                             <button
                                                 @click="deleteMarket(market)"
-                                                class="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50 transition-colors"
-                                                title="Delete Market"
+                                                class="inline-flex items-center justify-center w-8 h-8 rounded-md text-gray-500 hover:text-red-500 transition-colors duration-200 bg-slate-100"
+                                                v-tooltip.top="'Delete Market'"
                                             >
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                </svg>
+                                                <i class="pi pi-trash text-sm"></i>
                                             </button>
                                         </div>
                                     </td>
@@ -130,16 +142,20 @@
 
                     <!-- Empty State -->
                     <div v-else class="text-center py-12">
-                        <svg class="w-24 h-24 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                        </svg>
+                        <div class="w-16 h-16 mx-auto mb-4 rounded-lg flex items-center justify-center bg-slate-100">
+                            <i class="pi pi-shopping-bag text-2xl text-gray-500"></i>
+                        </div>
                         <h3 class="text-lg font-medium text-gray-900 mb-2">No markets yet</h3>
                         <p class="text-gray-600 mb-6">Create your first market to start selling online.</p>
                         <Link
                             :href="route('ecommerce.markets.create')"
-                            class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-md transition-colors duration-200"
+                            class=""
                         >
-                            Create Market
+                            <Button
+                                label="Create Market"
+                                icon="pi pi-plus"
+                                severity="primary"
+                            />
                         </Link>
                     </div>
                 </div>
@@ -180,18 +196,20 @@
             </template>
 
             <template #footer>
-                <SecondaryButton @click="closeModal">
-                    Cancel
-                </SecondaryButton>
+                <Button 
+                    @click="closeModal" 
+                    label="Cancel" 
+                    severity="secondary"
+                    outlined
+                />
 
-                <DangerButton
-                    class="ml-3"
-                    :class="{ 'opacity-25': deleteForm.processing }"
-                    :disabled="deleteForm.processing"
+                <Button
+                    label="Delete Market"
+                    severity="danger"
+                    :loading="deleteForm.processing"
                     @click="confirmDelete"
-                >
-                    Delete Market
-                </DangerButton>
+                    class="ml-3"
+                />
             </template>
         </DialogModal>
     </AppLayout>
@@ -202,8 +220,7 @@ import { ref } from 'vue'
 import { useForm } from '@inertiajs/vue3'
 import AppLayout from '@/Layouts/AppLayout.vue'
 import DialogModal from '@/Components/DialogModal.vue'
-import DangerButton from '@/Components/DangerButton.vue'
-import SecondaryButton from '@/Components/SecondaryButton.vue'
+import Button from 'primevue/button'
 import { Link } from '@inertiajs/vue3'
 
 // Props
@@ -229,7 +246,7 @@ const deleteMarket = (market) => {
 }
 
 const confirmDelete = () => {
-    deleteForm.delete(route('ecommerce.admin.markets.destroy', marketBeingDeleted.value.id), {
+    deleteForm.delete(route('ecommerce.markets.destroy', marketBeingDeleted.value.id), {
         onSuccess: () => closeModal(),
         onFinish: () => deleteForm.reset()
     })
