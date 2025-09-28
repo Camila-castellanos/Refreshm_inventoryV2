@@ -1,266 +1,254 @@
 <template>
     <AppLayout title="Edit Market">
-        <div class="py-12">
-            <div class="max-w-2xl mx-auto sm:px-6 lg:px-8">
-                <div class="bg-white dark:bg-gray-800 shadow-xl rounded-lg">
-                    <!-- Header -->
-                    <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                        <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-100">
-                            Edit Market: {{ form.name }}
-                        </h2>
-                        <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                            Current URL: <a :href="marketUrl" target="_blank" class="text-blue-600 hover:underline">{{ marketUrl }}</a>
-                        </p>
-                    </div>
+        <template #header>
+            <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+                Edit Market: {{ form.name }}
+            </h2>
+        </template>
 
-                    <!-- Form -->
+        <div class="py-12">
+            <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+                <div class="bg-white overflow-hidden shadow-xl sm:rounded-lg">
                     <form @submit.prevent="submitForm" class="p-6">
-                        <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <!-- Basic Information -->
+                            <div class="col-span-2">
+                                <h3 class="text-lg font-medium text-gray-900 mb-4">Basic Information</h3>
+                            </div>
+
                             <!-- Market Name -->
-                            <div class="sm:col-span-2">
-                                <label for="name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            <div class="col-span-2">
+                                <label for="name" class="block text-sm font-medium text-gray-900 mb-2">
                                     Market Name *
                                 </label>
-                                <input
-                                    v-model="form.name"
-                                    type="text"
+                                <InputText
                                     id="name"
-                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
-                                    :class="{ 'border-red-300 focus:border-red-500 focus:ring-red-500': form.errors.name }"
-                                    required
+                                    v-model="form.name"
+                                    placeholder="Enter market name"
+                                    :class="{ 'p-invalid': form.errors.name }"
+                                    class="w-full"
                                 />
-                                <div v-if="form.errors.name" class="mt-2 text-sm text-red-600">
-                                    {{ form.errors.name }}
-                                </div>
-                                <div v-if="form.name" class="mt-1 text-xs text-gray-500">
-                                    URL Slug: {{ generatedSlug }}
-                                </div>
+                                <small v-if="form.errors.name" class="p-error">{{ form.errors.name }}</small>
+                                <small v-if="generatedSlug" class="text-gray-500 mt-1">URL Slug: {{ generatedSlug }}</small>
                             </div>
 
                             <!-- Shop Selection -->
-                            <div class="sm:col-span-2">
-                                <label for="shop_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    Shop *
+                            <div class="col-span-2">
+                                <label for="shop_id" class="block text-sm font-medium text-gray-900 mb-2">
+                                    Associated Shop *
                                 </label>
-                                <select
-                                    v-model="form.shop_id"
+                                <Dropdown
                                     id="shop_id"
-                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                                    :class="{ 'border-red-300 focus:border-red-500 focus:ring-red-500': form.errors.shop_id }"
-                                    required
-                                >
-                                    <option value="" disabled>Select a Shop</option>
-                                    <option v-for="shop in shops" :key="shop.id" :value="shop.id">
-                                        {{ shop.name }}
-                                    </option>
-                                </select>
-                                <div v-if="form.errors.shop_id" class="mt-2 text-sm text-red-600">
-                                    {{ form.errors.shop_id }}
-                                </div>
-                            </div>
-
-                            <!-- Tagline -->
-                            <div class="sm:col-span-2">
-                                <label for="tagline" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    Tagline
-                                </label>
-                                <input
-                                    v-model="form.tagline"
-                                    type="text"
-                                    id="tagline"
-                                    placeholder="e.g., Premium Quality Products"
-                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
-                                    :class="{ 'border-red-300 focus:border-red-500 focus:ring-red-500': form.errors.tagline }"
+                                    v-model="form.shop_id"
+                                    :options="shops"
+                                    optionLabel="name"
+                                    optionValue="id"
+                                    placeholder="Select a shop"
+                                    :class="{ 'p-invalid': form.errors.shop_id }"
+                                    class="w-full"
                                 />
-                                <div v-if="form.errors.tagline" class="mt-2 text-sm text-red-600">
-                                    {{ form.errors.tagline }}
-                                </div>
+                                <small v-if="form.errors.shop_id" class="p-error">{{ form.errors.shop_id }}</small>
                             </div>
 
                             <!-- Description -->
-                            <div class="sm:col-span-2">
-                                <label for="description" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            <div class="col-span-2">
+                                <label for="description" class="block text-sm font-medium text-gray-900 mb-2">
                                     Description
                                 </label>
-                                <textarea
-                                    v-model="form.description"
+                                <Textarea
                                     id="description"
+                                    v-model="form.description"
+                                    placeholder="Describe your market..."
+                                    :class="{ 'p-invalid': form.errors.description }"
+                                    class="w-full"
                                     rows="3"
-                                    placeholder="Describe your market and what customers can expect..."
-                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
-                                    :class="{ 'border-red-300 focus:border-red-500 focus:ring-red-500': form.errors.description }"
-                                ></textarea>
-                                <div v-if="form.errors.description" class="mt-2 text-sm text-red-600">
-                                    {{ form.errors.description }}
-                                </div>
+                                />
+                                <small v-if="form.errors.description" class="p-error">{{ form.errors.description }}</small>
+                            </div>
+
+                            <!-- Tagline -->
+                            <div>
+                                <label for="tagline" class="block text-sm font-medium text-gray-900 mb-2">
+                                    Tagline
+                                </label>
+                                <InputText
+                                    id="tagline"
+                                    v-model="form.tagline"
+                                    placeholder="e.g., Premium Quality Products"
+                                    :class="{ 'p-invalid': form.errors.tagline }"
+                                    class="w-full"
+                                />
+                                <small v-if="form.errors.tagline" class="p-error">{{ form.errors.tagline }}</small>
                             </div>
 
                             <!-- Currency -->
                             <div>
-                                <label for="currency" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                <label for="currency" class="block text-sm font-medium text-gray-900 mb-2">
                                     Currency *
                                 </label>
-                                <select
-                                    v-model="form.currency"
+                                <Dropdown
                                     id="currency"
-                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                                    :class="{ 'border-red-300 focus:border-red-500 focus:ring-red-500': form.errors.currency }"
-                                    required
-                                >
-                                    <option value="" disabled>Select Currency</option>
-                                    <option value="USD">USD - US Dollar</option>
-                                    <option value="EUR">EUR - Euro</option>
-                                    <option value="GBP">GBP - British Pound</option>
-                                    <option value="CAD">CAD - Canadian Dollar</option>
-                                    <option value="AUD">AUD - Australian Dollar</option>
-                                </select>
-                                <div v-if="form.errors.currency" class="mt-2 text-sm text-red-600">
-                                    {{ form.errors.currency }}
-                                </div>
+                                    v-model="form.currency"
+                                    :options="currencyOptions"
+                                    optionLabel="label"
+                                    optionValue="value"
+                                    placeholder="Select currency"
+                                    :class="{ 'p-invalid': form.errors.currency }"
+                                    class="w-full"
+                                />
+                                <small v-if="form.errors.currency" class="p-error">{{ form.errors.currency }}</small>
                             </div>
 
                             <!-- Settings -->
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                    Settings
+                            <div class="col-span-2 border-t pt-6">
+                                <h3 class="text-lg font-medium text-gray-900 mb-4">Settings</h3>
+                            </div>
+
+                            <!-- Show Inventory Count -->
+                            <div class="flex items-center gap-2">
+                                <Checkbox
+                                    id="show_inventory_count"
+                                    v-model="form.show_inventory_count"
+                                    :binary="true"
+                                />
+                                <label for="show_inventory_count" class="text-sm text-gray-900">
+                                    Show inventory count to customers
                                 </label>
-                                <div class="space-y-2">
-                                    <label class="flex items-center">
-                                        <input
-                                            v-model="form.show_inventory_count"
-                                            type="checkbox"
-                                            class="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
-                                        />
-                                        <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Show inventory count</span>
-                                    </label>
-                                    <label class="flex items-center">
-                                        <input
-                                            v-model="form.is_active"
-                                            type="checkbox"
-                                            class="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
-                                        />
-                                        <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Market is active</span>
-                                    </label>
-                                </div>
                             </div>
-                        </div>
 
-                        <!-- Contact Information -->
-                        <div class="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-                            <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Contact Information</h3>
-                            <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                                <div>
-                                    <label for="contact_email" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        Contact Email
-                                    </label>
-                                    <input
-                                        v-model="form.contact_email"
-                                        type="email"
-                                        id="contact_email"
-                                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
-                                        :class="{ 'border-red-300 focus:border-red-500 focus:ring-red-500': form.errors.contact_email }"
-                                    />
-                                    <div v-if="form.errors.contact_email" class="mt-2 text-sm text-red-600">
-                                        {{ form.errors.contact_email }}
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label for="contact_phone" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        Contact Phone
-                                    </label>
-                                    <input
-                                        v-model="form.contact_phone"
-                                        type="text"
-                                        id="contact_phone"
-                                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
-                                        :class="{ 'border-red-300 focus:border-red-500 focus:ring-red-500': form.errors.contact_phone }"
-                                    />
-                                    <div v-if="form.errors.contact_phone" class="mt-2 text-sm text-red-600">
-                                        {{ form.errors.contact_phone }}
-                                    </div>
-                                </div>
-
-                                <div class="sm:col-span-2">
-                                    <label for="address" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        Address
-                                    </label>
-                                    <textarea
-                                        v-model="form.address"
-                                        id="address"
-                                        rows="2"
-                                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
-                                        :class="{ 'border-red-300 focus:border-red-500 focus:ring-red-500': form.errors.address }"
-                                    ></textarea>
-                                    <div v-if="form.errors.address" class="mt-2 text-sm text-red-600">
-                                        {{ form.errors.address }}
-                                    </div>
-                                </div>
+                            <!-- Active Status -->
+                            <div class="flex items-center gap-2">
+                                <Checkbox
+                                    id="is_active"
+                                    v-model="form.is_active"
+                                    :binary="true"
+                                />
+                                <label for="is_active" class="text-sm text-gray-900">
+                                    Market is active and publicly accessible
+                                </label>
                             </div>
-                        </div>
 
-                        <!-- SEO Settings -->
-                        <div class="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-                            <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">SEO Settings</h3>
-                            <div class="grid grid-cols-1 gap-6">
-                                <div>
-                                    <label for="meta_title" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        Meta Title
-                                    </label>
-                                    <input
-                                        v-model="form.meta_title"
-                                        type="text"
-                                        id="meta_title"
-                                        :placeholder="form.name ? `${form.name} - Online Market` : 'Your Market - Online Market'"
-                                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
-                                        :class="{ 'border-red-300 focus:border-red-500 focus:ring-red-500': form.errors.meta_title }"
-                                    />
-                                    <div v-if="form.errors.meta_title" class="mt-2 text-sm text-red-600">
-                                        {{ form.errors.meta_title }}
-                                    </div>
-                                </div>
+                            <!-- Contact Information -->
+                            <div class="col-span-2 border-t pt-6">
+                                <h3 class="text-lg font-medium text-gray-900 mb-4">Contact Information</h3>
+                            </div>
 
-                                <div>
-                                    <label for="meta_description" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        Meta Description
-                                    </label>
-                                    <textarea
-                                        v-model="form.meta_description"
-                                        id="meta_description"
-                                        rows="2"
-                                        :placeholder="form.name ? `Browse and shop ${form.name} collection of quality products.` : 'Browse and shop our collection of quality products.'"
-                                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
-                                        :class="{ 'border-red-300 focus:border-red-500 focus:ring-red-500': form.errors.meta_description }"
-                                    ></textarea>
-                                    <div v-if="form.errors.meta_description" class="mt-2 text-sm text-red-600">
-                                        {{ form.errors.meta_description }}
-                                    </div>
-                                </div>
+                            <!-- Contact Email -->
+                            <div>
+                                <label for="contact_email" class="block text-sm font-medium text-gray-900 mb-2">
+                                    Contact Email
+                                </label>
+                                <InputText
+                                    id="contact_email"
+                                    v-model="form.contact_email"
+                                    type="email"
+                                    placeholder="contact@yourmarket.com"
+                                    :class="{ 'p-invalid': form.errors.contact_email }"
+                                    class="w-full"
+                                />
+                                <small v-if="form.errors.contact_email" class="p-error">{{ form.errors.contact_email }}</small>
+                            </div>
+
+                            <!-- Contact Phone -->
+                            <div>
+                                <label for="contact_phone" class="block text-sm font-medium text-gray-900 mb-2">
+                                    Contact Phone
+                                </label>
+                                <InputText
+                                    id="contact_phone"
+                                    v-model="form.contact_phone"
+                                    type="tel"
+                                    placeholder="+1 (555) 123-4567"
+                                    :class="{ 'p-invalid': form.errors.contact_phone }"
+                                    class="w-full"
+                                />
+                                <small v-if="form.errors.contact_phone" class="p-error">{{ form.errors.contact_phone }}</small>
+                            </div>
+
+                            <!-- Address -->
+                            <div class="col-span-2">
+                                <label for="address" class="block text-sm font-medium text-gray-900 mb-2">
+                                    Business Address
+                                </label>
+                                <Textarea
+                                    id="address"
+                                    v-model="form.address"
+                                    rows="2"
+                                    placeholder="123 Main Street, City, State 12345"
+                                    :class="{ 'p-invalid': form.errors.address }"
+                                    class="w-full"
+                                />
+                                <small v-if="form.errors.address" class="p-error">{{ form.errors.address }}</small>
+                            </div>
+
+                            <!-- SEO Settings -->
+                            <div class="col-span-2 border-t pt-6">
+                                <h3 class="text-lg font-medium text-gray-900 mb-4">SEO Settings</h3>
+                            </div>
+
+                            <!-- Meta Title -->
+                            <div>
+                                <label for="meta_title" class="block text-sm font-medium text-gray-900 mb-2">
+                                    Meta Title
+                                </label>
+                                <InputText
+                                    id="meta_title"
+                                    v-model="form.meta_title"
+                                    :placeholder="form.name ? `${form.name} - Online Market` : 'Leave empty to auto-generate'"
+                                    :class="{ 'p-invalid': form.errors.meta_title }"
+                                    class="w-full"
+                                />
+                                <small v-if="form.errors.meta_title" class="p-error">{{ form.errors.meta_title }}</small>
+                            </div>
+
+                            <!-- Meta Description -->
+                            <div>
+                                <label for="meta_description" class="block text-sm font-medium text-gray-900 mb-2">
+                                    Meta Description
+                                </label>
+                                <Textarea
+                                    id="meta_description"
+                                    v-model="form.meta_description"
+                                    rows="2"
+                                    :placeholder="form.name ? `Browse and shop ${form.name} collection of quality products.` : 'Leave empty to auto-generate'"
+                                    :class="{ 'p-invalid': form.errors.meta_description }"
+                                    class="w-full"
+                                />
+                                <small v-if="form.errors.meta_description" class="p-error">{{ form.errors.meta_description }}</small>
                             </div>
                         </div>
 
                         <!-- Form Actions -->
-                        <div class="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
-                            <Link
-                                :href="route('ecommerce.admin.markets.index')"
-                                class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-600"
+                        <div class="flex items-center justify-end gap-4 mt-8 pt-6 border-t">
+                            <Link 
+                                :href="route('ecommerce.markets.index')" 
+                                class=""
                             >
-                                Cancel
+                                <Button 
+                                    label="Cancel" 
+                                    severity="secondary"
+                                    outlined
+                                />
                             </Link>
-                            
-                            <div class="flex space-x-3">
-                                <button
-                                    type="submit"
-                                    :disabled="form.processing"
-                                    class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    <svg v-if="form.processing" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                    </svg>
-                                    {{ form.processing ? 'Updating...' : 'Update Market' }}
-                                </button>
-                            </div>
+
+                            <Button
+                                type="submit"
+                                label="Update Market"
+                                icon="pi pi-save"
+                                severity="primary"
+                                :loading="form.processing"
+                                loadingIcon="pi pi-spin pi-spinner"
+                            />
+                        </div>
+
+                        <!-- Market URL Preview -->
+                        <div v-if="form.name && generatedSlug" class="mt-6 p-4 bg-gray-50 rounded-lg">
+                            <p class="text-sm text-gray-600">
+                                <span class="font-bold">Market URL:</span>
+                                <span class="ml-2 text-gray-500 font-mono">
+                                    {{ appUrl }}/market/{{ generatedSlug }}
+                                </span>
+                            </p>
                         </div>
                     </form>
                 </div>
@@ -273,12 +261,26 @@
 import { computed, onMounted } from 'vue';
 import { useForm, Link } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import Button from 'primevue/button';
+import InputText from 'primevue/inputtext';
+import Textarea from 'primevue/textarea';
+import Dropdown from 'primevue/dropdown';
+import Checkbox from 'primevue/checkbox';
 
 const props = defineProps({
     market: Object,
     shops: Array,
     appUrl: String
 });
+
+// Currency options
+const currencyOptions = [
+    { label: 'USD - US Dollar', value: 'USD' },
+    { label: 'EUR - Euro', value: 'EUR' },
+    { label: 'GBP - British Pound', value: 'GBP' },
+    { label: 'CAD - Canadian Dollar', value: 'CAD' },
+    { label: 'AUD - Australian Dollar', value: 'AUD' }
+];
 
 const form = useForm({
     name: '',
@@ -327,7 +329,7 @@ const marketUrl = computed(() => {
 });
 
 const submitForm = () => {
-    form.put(route('ecommerce.admin.markets.update', props.market.id), {
+    form.put(route('ecommerce.markets.update', props.market.id), {
         preserveScroll: true,
         onSuccess: () => {
             // Redirect will be handled by the controller

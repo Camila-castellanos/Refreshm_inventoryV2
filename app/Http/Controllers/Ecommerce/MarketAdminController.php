@@ -20,7 +20,7 @@ class MarketAdminController extends Controller
     {
         $markets = Market::with(['shop.company'])
             ->whereHas('shop', function ($query) {
-                $query->where('company_id', Auth::user()->currentTeam->id);
+                $query->where('company_id', Auth::user()->company_id);
             })
             ->withCount(['publishedItems'])
             ->latest()
@@ -37,7 +37,7 @@ class MarketAdminController extends Controller
     public function create()
     {
         // Get shops belonging to the current user's company
-        $shops = Shop::where('company_id', Auth::user()->currentTeam->id)
+        $shops = Shop::where('company_id', Auth::user()->company_id)
             ->orderBy('name')
             ->get(['id', 'name']);
 
@@ -58,7 +58,7 @@ class MarketAdminController extends Controller
                 'required',
                 'exists:shops,id',
                 Rule::exists('shops', 'id')->where(function ($query) {
-                    $query->where('company_id', Auth::user()->currentTeam->id);
+                    $query->where('company_id', Auth::user()->company_id);
                 }),
             ],
             'description' => 'nullable|string|max:1000',
@@ -101,7 +101,7 @@ class MarketAdminController extends Controller
         ]);
 
         return redirect()
-            ->route('ecommerce.admin.markets.index')
+            ->route('ecommerce.markets.index')
             ->with('success', 'Market created successfully! You can now visit it at: ' . route('ecommerce.index', $market->slug));
     }
 
@@ -111,14 +111,14 @@ class MarketAdminController extends Controller
     public function edit(Market $market)
     {
         // Ensure the market belongs to the current user's company
-        if ($market->shop->company_id !== Auth::user()->currentTeam->id) {
+        if ($market->shop->company_id !== Auth::user()->company_id) {
             abort(403, 'Unauthorized access to this market.');
         }
 
         $market->load(['shop']);
 
         // Get shops belonging to the current user's company
-        $shops = Shop::where('company_id', Auth::user()->currentTeam->id)
+        $shops = Shop::where('company_id', Auth::user()->company_id)
             ->orderBy('name')
             ->get(['id', 'name']);
 
@@ -135,7 +135,7 @@ class MarketAdminController extends Controller
     public function update(Request $request, Market $market)
     {
         // Ensure the market belongs to the current user's company
-        if ($market->shop->company_id !== Auth::user()->currentTeam->id) {
+        if ($market->shop->company_id !== Auth::user()->company_id) {
             abort(403, 'Unauthorized access to this market.');
         }
 
@@ -145,7 +145,7 @@ class MarketAdminController extends Controller
                 'required',
                 'exists:shops,id',
                 Rule::exists('shops', 'id')->where(function ($query) {
-                    $query->where('company_id', Auth::user()->currentTeam->id);
+                    $query->where('company_id', Auth::user()->company_id);
                 }),
             ],
             'description' => 'nullable|string|max:1000',
@@ -186,7 +186,7 @@ class MarketAdminController extends Controller
         $market->update($validated);
 
         return redirect()
-            ->route('ecommerce.admin.markets.index')
+            ->route('ecommerce.markets.index')
             ->with('success', 'Market updated successfully!');
     }
 
@@ -196,7 +196,7 @@ class MarketAdminController extends Controller
     public function destroy(Market $market)
     {
         // Ensure the market belongs to the current user's company
-        if ($market->shop->company_id !== Auth::user()->currentTeam->id) {
+        if ($market->shop->company_id !== Auth::user()->company_id) {
             abort(403, 'Unauthorized access to this market.');
         }
 
@@ -204,7 +204,7 @@ class MarketAdminController extends Controller
         $market->delete();
 
         return redirect()
-            ->route('ecommerce.admin.markets.index')
+            ->route('ecommerce.markets.index')
             ->with('success', "Market '{$marketName}' deleted successfully.");
     }
 
@@ -214,7 +214,7 @@ class MarketAdminController extends Controller
     public function analytics(Market $market)
     {
         // Ensure the market belongs to the current user's company
-        if ($market->shop->company_id !== Auth::user()->currentTeam->id) {
+        if ($market->shop->company_id !== Auth::user()->company_id) {
             abort(403, 'Unauthorized access to this market.');
         }
 
@@ -249,7 +249,7 @@ class MarketAdminController extends Controller
     public function toggleStatus(Market $market)
     {
         // Ensure the market belongs to the current user's company
-        if ($market->shop->company_id !== Auth::user()->currentTeam->id) {
+        if ($market->shop->company_id !== Auth::user()->company_id) {
             abort(403, 'Unauthorized access to this market.');
         }
 
