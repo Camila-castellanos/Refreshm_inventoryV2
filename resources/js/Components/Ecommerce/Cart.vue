@@ -182,7 +182,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, defineExpose } from 'vue'
 import Drawer from 'primevue/drawer'
 
 // Props
@@ -198,32 +198,14 @@ const props = defineProps({
 })
 
 // Emits
-const emit = defineEmits(['close', 'checkout', 'item-updated', 'item-removed'])
+const emit = defineEmits(['close', 'checkout', 'item-updated', 'item-removed', 'cart-loaded'])
 
 // Local state
 const isVisible = ref(props.visible)
 const isLoading = ref(false)
 
-// Mock cart data - In real app, this would come from Pinia store
-const items = ref([
-    // Example cart items - replace with actual cart store
-    {
-        id: 1,
-        model: 'iPhone 12 Pro',
-        manufacturer: 'Apple',
-        selling_price: 599,
-        quantity: 1,
-        type: 'smartphone'
-    },
-    {
-        id: 2,
-        model: 'MacBook Air M1',
-        manufacturer: 'Apple',
-        selling_price: 899,
-        quantity: 2,
-        type: 'laptop'
-    }
-])
+// Cart items - starts empty
+const items = ref([])
 
 // Computed properties
 const itemCount = computed(() => {
@@ -247,6 +229,9 @@ watch(() => props.visible, (newValue) => {
 watch(isVisible, (newValue) => {
     if (!newValue) {
         emit('close')
+    } else {
+        // When cart opens, emit current count to sync with layout
+        emit('cart-loaded', itemCount.value)
     }
 })
 
@@ -263,13 +248,55 @@ const handleClose = () => {
     emit('close')
 }
 
+const addItem = (product) => {
+    console.log('Cart: Adding item', product)
+    
+    // Check if item already exists in cart
+    const existingItem = items.value.find(item => item.id === product.id)
+    
+    if (existingItem) {
+        // If item exists, increase quantity
+        existingItem.quantity += 1
+        console.log(`Cart: Updated quantity for ${product.model} to ${existingItem.quantity}`)
+    } else {
+        // If new item, add to cart with quantity 1
+        const cartItem = {
+            id: product.id,
+            model: product.model,
+            manufacturer: product.manufacturer,
+            selling_price: product.selling_price,
+            quantity: 1,
+            type: product.type,
+            // Add any other necessary product fields
+            imei: product.imei,
+            issues: product.issues
+        }
+        items.value.push(cartItem)
+        console.log(`Cart: Added new item ${product.model}`)
+    }
+    
+    // Emit the updated count to sync with layout
+    emit('item-updated', { 
+        itemId: product.id,
+        quantity: existingItem ? existingItem.quantity : 1,
+        totalItemCount: itemCount.value 
+    })
+    
+    return true // Return success
+}
+
 const updateQuantity = (itemId, newQuantity) => {
     if (newQuantity < 1) return
     
     const item = items.value.find(item => item.id === itemId)
     if (item) {
         item.quantity = newQuantity
-        emit('item-updated', { itemId, quantity: newQuantity })
+        // Emit both the update details and the new total count
+        emit('item-updated', { 
+            itemId, 
+            quantity: newQuantity,
+            totalItemCount: itemCount.value 
+        })
     }
 }
 
@@ -277,7 +304,11 @@ const removeItem = (itemId) => {
     const index = items.value.findIndex(item => item.id === itemId)
     if (index !== -1) {
         items.value.splice(index, 1)
-        emit('item-removed', itemId)
+        // Emit the total count after removal
+        emit('item-removed', {
+            itemId,
+            totalItemCount: itemCount.value
+        })
     }
 }
 
@@ -311,6 +342,11 @@ const proceedToCheckout = () => {
         alert('Redirecting to checkout... (Not implemented yet)')
     }, 1500)
 }
+
+// Expose methods to parent component
+defineExpose({
+    addItem
+})
 </script>
 
 <style scoped>

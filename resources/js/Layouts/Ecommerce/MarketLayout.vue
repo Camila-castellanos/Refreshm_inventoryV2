@@ -136,9 +136,9 @@
                             Home
                         </Link>
                         <Link 
-                            :href="route('market.products', market.slug)"
+                            :href="route('market.products-list', market.slug)"
                             :class="['text-sm font-medium transition-colors duration-200', 
-                                    isCurrentRoute('market.products') ? 'text-gray-900' : 'text-gray-600 hover:text-gray-900']"
+                                    isCurrentRoute('market.products-list') ? 'text-gray-900' : 'text-gray-600 hover:text-gray-900']"
                         >
                             Products
                         </Link>
@@ -173,9 +173,9 @@
                             Home
                         </Link>
                         <Link 
-                            :href="route('market.products', market.slug)"
+                            :href="route('market.products-list', market.slug)"
                             :class="['block text-sm font-medium transition-colors duration-200', 
-                                    isCurrentRoute('market.products') ? 'text-gray-900' : 'text-gray-600 hover:text-gray-900']"
+                                    isCurrentRoute('market.products-list') ? 'text-gray-900' : 'text-gray-600 hover:text-gray-900']"
                             @click="closeMobileMenu"
                         >
                             Products
@@ -254,7 +254,7 @@
                                 </Link>
                             </li>
                             <li>
-                                <Link :href="route('market.products', market.slug)" class="hover:text-gray-900 transition-colors duration-200">
+                                <Link :href="route('market.products-list', market.slug)" class="hover:text-gray-900 transition-colors duration-200">
                                     Products
                                 </Link>
                             </li>
@@ -293,18 +293,20 @@
 
         <!-- Cart Drawer -->
         <Cart
+            ref="cartComponent"
             :visible="showCart"
             :market="market"
             @close="closeCart"
             @checkout="handleCheckout"
             @item-updated="handleCartItemUpdated"
             @item-removed="handleCartItemRemoved"
+            @cart-loaded="syncCartCount"
         />
     </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, provide } from 'vue'
 import { Link, usePage } from '@inertiajs/vue3'
 import Cart from '@/Components/Ecommerce/Cart.vue'
 
@@ -324,9 +326,10 @@ const searchQuery = ref('')
 const showMobileSearch = ref(false)
 const showMobileMenu = ref(false)
 const showCart = ref(false)
+const cartComponent = ref(null) // Reference to Cart component
 
 // Mock data - Replace with actual stores/API calls
-const cartCount = ref(3)
+const cartCount = ref(0) // Start with 0, will be updated when cart loads
 const wishlistCount = ref(5)
 
 // Computed
@@ -390,6 +393,31 @@ const closeCart = () => {
     showCart.value = false
 }
 
+// Add method to sync cart count from Cart component
+const syncCartCount = (totalCount) => {
+    cartCount.value = totalCount
+}
+
+const addItemToCart = (item) => {
+    console.log('Adding item to cart:', item)
+    
+    // Add item to cart component
+    if (cartComponent.value) {
+        const success = cartComponent.value.addItem(item)
+        
+        if (success) {
+            // Show success feedback
+            console.log(`✅ ${item.model} added to cart!`)
+            
+            // Optionally show cart briefly
+            // showCart.value = true
+            // setTimeout(() => showCart.value = false, 2000)
+        }
+    } else {
+        console.error('❌ Cart component not available')
+    }
+}
+
 const handleCheckout = (checkoutData) => {
     console.log('Proceeding to checkout:', checkoutData)
     // TODO: Implement checkout logic
@@ -398,14 +426,23 @@ const handleCheckout = (checkoutData) => {
 
 const handleCartItemUpdated = (updateData) => {
     console.log('Cart item updated:', updateData)
+    // Update cart count when quantity changes
+    // This will be called with the total item count from the cart
+    if (updateData.totalItemCount !== undefined) {
+        cartCount.value = updateData.totalItemCount
+    }
     // TODO: Update cart state in store
 }
 
-const handleCartItemRemoved = (itemId) => {
-    console.log('Cart item removed:', itemId)
-    if (itemId === 'all') {
+const handleCartItemRemoved = (data) => {
+    console.log('Cart item removed:', data)
+    if (typeof data === 'object' && data.totalItemCount !== undefined) {
+        // Updated to receive total count from cart
+        cartCount.value = data.totalItemCount
+    } else if (data === 'all') {
         cartCount.value = 0
     } else {
+        // Fallback: simple decrement (not ideal)
         cartCount.value = Math.max(0, cartCount.value - 1)
     }
     // TODO: Update cart state in store
@@ -416,6 +453,10 @@ onMounted(() => {
     // Initialize any required data
     console.log('Market Layout mounted for:', props.market.name)
 })
+
+// Provide cart functions to child components
+provide('addToCart', addItemToCart)
+provide('toggleCart', toggleCart)
 </script>
 
 <style scoped>
