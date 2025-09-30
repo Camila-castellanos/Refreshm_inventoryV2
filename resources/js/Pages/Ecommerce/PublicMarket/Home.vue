@@ -1,5 +1,4 @@
 <template>
-    <MarketLayout :market="market">
         <!-- Meta Head -->
         <Head 
             :title="market.meta_title || `${market.name} - Online Market`"
@@ -200,7 +199,6 @@
                 </div>
             </div>
         </section>
-    </MarketLayout>
 </template>
 
 <script setup>
@@ -210,6 +208,7 @@ import Carousel from 'primevue/carousel'
 import MarketLayout from '@/Layouts/Ecommerce/MarketLayout.vue'
 import ProductCard from '@/Components/Ecommerce/ProductCard.vue'
 
+defineOptions({layout: MarketLayout})
 // Props
 const props = defineProps({
     market: Object,
@@ -222,6 +221,8 @@ const props = defineProps({
         default: null
     }
 })
+
+
 
 // Reactive Data
 const currentSlide = ref(0)

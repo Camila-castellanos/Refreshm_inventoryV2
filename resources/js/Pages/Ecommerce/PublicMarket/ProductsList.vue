@@ -1,5 +1,4 @@
 <template>
-    <MarketLayout :market="market">
         <!-- Meta Head -->
         <Head 
             :title="`Products - ${market.name}`"
@@ -156,7 +155,6 @@
                 </div>
             </div>
         </section>
-    </MarketLayout>
 </template>
 
 <script setup>
@@ -166,6 +164,7 @@ import Dropdown from 'primevue/dropdown'
 import MarketLayout from '@/Layouts/Ecommerce/MarketLayout.vue'
 import ProductCard from '@/Components/Ecommerce/ProductCard.vue'
 
+defineOptions({ layout: MarketLayout })
 // Props
 const props = defineProps({
     market: Object,
