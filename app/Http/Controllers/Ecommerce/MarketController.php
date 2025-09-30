@@ -231,6 +231,35 @@ class MarketController extends Controller
     }
 
     /**
+     * Display the contact page
+     */
+    public function contact(Market $market)
+    {
+        try {
+            $market->load(['shop']);
+
+            // Verify shop accessibility
+            if (!$market->shop) {
+                abort(503, 'This market is temporarily unavailable');
+            }
+
+            // Get safe market data
+            $safeMarketData = $market->getSafeData();
+
+            return Inertia::render('Ecommerce/PublicMarket/Contact', [
+                'market' => $safeMarketData
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Market contact error: ' . $e->getMessage(), [
+                'market_id' => $market->id ?? null,
+                'market_slug' => $market->slug ?? null,
+            ]);
+
+            abort(503, 'Contact page is temporarily unavailable. Please try again later.');
+        }
+    }
+
+    /**
      * Get market info for API
      */
     public function info(Market $market)

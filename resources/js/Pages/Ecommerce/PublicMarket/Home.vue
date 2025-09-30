@@ -1,37 +1,10 @@
 <template>
-    <div>
+    <MarketLayout :market="market">
         <!-- Meta Head -->
         <Head 
             :title="market.meta_title || `${market.name} - Online Market`"
             :description="market.meta_description || `Browse and shop ${market.name} collection of quality refurbished devices and electronics.`"
         />
-
-        <!-- Navigation Header -->
-        <header class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
-            <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex justify-between items-center h-16">
-                    <div class="flex items-center">
-                        <h1 class="text-xl font-bold text-gray-900">{{ market.name }}</h1>
-                        <span v-if="market.tagline" class="ml-3 text-sm text-gray-600">{{ market.tagline }}</span>
-                    </div>
-                    
-                    <!-- Categories Dropdown - Temporarily hidden -->
-                    <!-- 
-                    <div v-if="categories.length > 0" class="flex items-center space-x-6">
-                        <Dropdown
-                            v-model="selectedCategory"
-                            :options="categoryOptions"
-                            optionLabel="label"
-                            optionValue="value"
-                            placeholder="Categories"
-                            class="w-40"
-                            @change="filterByCategory"
-                        />
-                    </div>
-                    -->
-                </div>
-            </nav>
-        </header>
 
         <!-- Hero Section -->
         <section class="gradient-bg text-gray-800 py-20">
@@ -207,50 +180,14 @@
                 </div>
             </div>
         </section>
-
-        <!-- Footer -->
-        <footer class="bg-gray-900 text-white py-12">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    <div>
-                        <h3 class="text-lg font-semibold mb-4">{{ market.name }}</h3>
-                        <p v-if="market.description" class="text-gray-400">{{ market.description }}</p>
-                    </div>
-                    
-                    <div>
-                        <h4 class="text-md font-semibold mb-4">Quick Links</h4>
-                        <ul class="space-y-2 text-gray-400">
-                            <li><button @click="scrollToProducts" class="hover:text-white transition-colors">All Products</button></li>
-                            <li v-for="category in categories.slice(0, 4)" :key="category">
-                                <button @click="filterByCategory(category)" class="hover:text-white transition-colors">
-                                    {{ formatCategoryName(category) }}
-                                </button>
-                            </li>
-                        </ul>
-                    </div>
-                    
-                    <div>
-                        <h4 class="text-md font-semibold mb-4">Contact</h4>
-                        <ul class="space-y-2 text-gray-400">
-                            <li v-if="market.contact_email">
-                                <a :href="`mailto:${market.contact_email}`" class="hover:text-white transition-colors">
-                                    {{ market.contact_email }}
-                                </a>
-                            </li>
-                            <li v-if="market.contact_phone">{{ market.contact_phone }}</li>
-                            <li v-if="market.address">{{ market.address }}</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        </footer>
-    </div>
+    </MarketLayout>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { Head, router } from '@inertiajs/vue3'
 import Dropdown from 'primevue/dropdown'
+import MarketLayout from '@/Layouts/Ecommerce/MarketLayout.vue'
 
 // Props
 const props = defineProps({
@@ -390,6 +327,7 @@ onUnmounted(() => {
 .line-clamp-2 {
     display: -webkit-box;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
 }
