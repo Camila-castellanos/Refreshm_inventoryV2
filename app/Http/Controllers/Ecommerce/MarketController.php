@@ -25,8 +25,8 @@ class MarketController extends Controller
                 abort(503, 'This market is temporarily unavailable');
             }
 
-            // Get featured items (latest available items)
-            $featuredItems = $market->featuredItems(12)->get();
+            // Get only 8 featured items for the homepage
+            $featuredItems = $market->featuredItems(8)->get();
 
             // Get total available items count
             $totalItemsCount = $market->publishedItems()->count();
@@ -42,11 +42,10 @@ class MarketController extends Controller
 
             return Inertia::render('Ecommerce/PublicMarket/Home', [
                 'market' => $safeMarketData,
-                'initialItems' => $featuredItems,
+                'initialItems' => $featuredItems, // Only 8 featured items for homepage
                 'categories' => $categories->values(), // Reset array keys
                 'stats' => $stats,
-                'totalItems' => $totalItemsCount,
-                'currentCategory' => $request->get('category')
+                'totalItems' => $totalItemsCount
             ]);
         } catch (\Exception $e) {
             // Log the error for debugging
@@ -76,6 +75,8 @@ class MarketController extends Controller
             $perPage = 12;
             $page = $request->get('page', 1);
             $category = $request->get('category');
+            $brand = $request->get('brand');
+            $sort = $request->get('sort', 'latest');
 
             // Build query
             $query = $market->publishedItems();
@@ -85,9 +86,30 @@ class MarketController extends Controller
                 $query->where('type', $category);
             }
 
+            // Filter by brand if provided
+            if ($brand) {
+                $query->where('manufacturer', $brand);
+            }
+
+            // Apply sorting
+            switch ($sort) {
+                case 'price_low':
+                    $query->orderBy('selling_price', 'asc');
+                    break;
+                case 'price_high':
+                    $query->orderBy('selling_price', 'desc');
+                    break;
+                case 'name':
+                    $query->orderBy('model', 'asc');
+                    break;
+                case 'latest':
+                default:
+                    $query->latest();
+                    break;
+            }
+
             // Get paginated results
-            $items = $query->latest()
-                ->paginate($perPage, ['*'], 'page', $page);
+            $items = $query->paginate($perPage, ['*'], 'page', $page);
 
             return response()->json([
                 'data' => $items->items(),
@@ -103,9 +125,97 @@ class MarketController extends Controller
                 'market_id' => $market->id ?? null,
                 'page' => $request->get('page'),
                 'category' => $request->get('category'),
+                'brand' => $request->get('brand'),
+                'sort' => $request->get('sort'),
             ]);
 
             return response()->json(['error' => 'Unable to load products'], 500);
+        }
+    }
+
+    /**
+     * Display a detailed products list page
+     */
+    public function productsList(Request $request, Market $market)
+    {
+        try {
+            $market->load(['shop']);
+
+            // Verify shop accessibility
+            if (!$market->shop) {
+                abort(503, 'This market is temporarily unavailable');
+            }
+
+            $perPage = 24; // More items per page for list view
+            $category = $request->get('category');
+            $brand = $request->get('brand');
+            $sort = $request->get('sort', 'latest'); // latest, price_low, price_high, name
+
+            // Build query
+            $query = $market->publishedItems();
+
+            // Filter by category if provided
+            if ($category) {
+                $query->where('type', $category);
+            }
+
+            // Filter by brand if provided
+            if ($brand) {
+                $query->where('manufacturer', $brand);
+            }
+
+            // Apply sorting
+            switch ($sort) {
+                case 'price_low':
+                    $query->orderBy('selling_price', 'asc');
+                    break;
+                case 'price_high':
+                    $query->orderBy('selling_price', 'desc');
+                    break;
+                case 'name':
+                    $query->orderBy('model', 'asc');
+                    break;
+                case 'latest':
+                default:
+                    $query->latest();
+                    break;
+            }
+
+            // Get initial items for infinite scroll (first page only)
+            $initialItems = $query->take($perPage)->get();
+
+            // Get available categories for filtering
+            $categories = $market->getAvailableCategories();
+
+            // Get market stats
+            $stats = $market->getStats();
+
+            // Get safe market data
+            $safeMarketData = $market->getSafeData();
+
+            return Inertia::render('Ecommerce/PublicMarket/ProductsList', [
+                'market' => $safeMarketData,
+                'initialItems' => $initialItems, // Changed from items to initialItems
+                'categories' => $categories->values(),
+                'stats' => $stats,
+                'currentCategory' => $category,
+                'currentBrand' => $brand,
+                'currentSort' => $sort,
+                'filters' => [
+                    'category' => $category,
+                    'brand' => $brand,
+                    'sort' => $sort
+                ]
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Market products list error: ' . $e->getMessage(), [
+                'market_id' => $market->id ?? null,
+                'category' => $category,
+                'brand' => $brand,
+                'sort' => $sort,
+            ]);
+
+            abort(503, 'Products list is temporarily unavailable. Please try again later.');
         }
     }
 
