@@ -257,15 +257,16 @@ Route::get('/customers/by-name/{name}', [CustomerController::class, 'getByName']
 });
 
 // Ecommerce Routes (Public Market - No authentication required)
-Route::prefix('market/{market:slug}')->name('ecommerce.')->group(function () {
+Route::prefix('market/{market:slug}')->name('market.')->group(function () {
     Route::get('/', [App\Http\Controllers\Ecommerce\MarketController::class, 'index'])->name('index');
     Route::get('/products', [App\Http\Controllers\Ecommerce\MarketController::class, 'products'])->name('products');
     Route::get('/category/{category}', [App\Http\Controllers\Ecommerce\MarketController::class, 'category'])->name('category');
     Route::get('/product/{item}', [App\Http\Controllers\Ecommerce\MarketController::class, 'product'])->name('product');
     Route::get('/search', [App\Http\Controllers\Ecommerce\MarketController::class, 'search'])->name('search');
+    Route::get('/contact', [App\Http\Controllers\Ecommerce\MarketController::class, 'contact'])->name('contact');
 })->middleware('web');
 
 // Ecommerce API Routes (Public - for AJAX calls)
-Route::prefix('api/market/{market:slug}')->name('ecommerce.api.')->group(function () {
+Route::prefix('api/market/{market:slug}')->name('market.api.')->group(function () {
     Route::get('/info', [App\Http\Controllers\Ecommerce\MarketController::class, 'info'])->name('info');
 });
