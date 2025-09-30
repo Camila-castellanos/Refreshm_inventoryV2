@@ -56,7 +56,8 @@
                                     {{ market.currency }} {{ formatPrice(item.selling_price) }}
                                 </div>
                                 
-                                <!-- Quantity Controls -->
+                                <!-- Quantity Controls - Commented out for refurbished individual items -->
+                                <!-- 
                                 <div class="flex items-center space-x-2">
                                     <button 
                                         @click="updateQuantity(item.id, item.quantity - 1)"
@@ -77,12 +78,20 @@
                                         <i class="pi pi-plus text-xs"></i>
                                     </button>
                                 </div>
+                                -->
+                                
+                                <!-- Quantity Display (Fixed at 1) -->
+                                <div class="flex items-center">
+                                    <span class="text-sm font-medium text-gray-600 px-3 py-1 bg-slate-100 rounded-md border border-gray-200">
+                                        Qty: {{ item.quantity }}
+                                    </span>
+                                </div>
                             </div>
                             
                             <!-- Subtotal and Remove -->
                             <div class="flex items-center justify-between mt-3">
                                 <div class="text-sm text-gray-600">
-                                    Subtotal: {{ market.currency }} {{ formatPrice(item.selling_price * item.quantity) }}
+                                    Price: {{ market.currency }} {{ formatPrice(item.selling_price) }}
                                 </div>
                                 
                                 <button 
@@ -179,11 +188,54 @@
             </div>
         </div>
     </Drawer>
+
+    <!-- Clear Cart Confirmation Dialog -->
+    <Dialog 
+        v-model:visible="showClearConfirm" 
+        modal 
+        :header="false"
+        :closable="false"
+        :style="{ width: '400px' }"
+        class="clear-confirm-dialog"
+    >
+        <div class="p-6">
+            <div class="flex items-center space-x-4 mb-4">
+                <div class="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
+                    <i class="pi pi-exclamation-triangle text-red-500 text-xl"></i>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900">Clear Cart</h3>
+                    <p class="text-gray-600 text-sm">This action cannot be undone</p>
+                </div>
+            </div>
+            
+            <p class="text-gray-700 mb-6">
+                Are you sure you want to remove all items from your cart? 
+                You will lose {{ itemCount }} {{ itemCount === 1 ? 'item' : 'items' }} from your cart.
+            </p>
+            
+            <div class="flex space-x-3 justify-end">
+                <button 
+                    @click="showClearConfirm = false"
+                    class="px-4 py-2 rounded-lg bg-slate-100 text-gray-700 hover:text-gray-900 border border-gray-200 hover:border-gray-300 font-medium transition-all duration-200"
+                >
+                    Cancel
+                </button>
+                <button 
+                    @click="confirmClearCart"
+                    class="px-4 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600 font-medium transition-all duration-200"
+                >
+                    Clear Cart
+                </button>
+            </div>
+        </div>
+    </Dialog>
 </template>
 
 <script setup>
 import { ref, computed, watch, defineExpose } from 'vue'
 import Drawer from 'primevue/drawer'
+import Dialog from 'primevue/dialog'
 
 // Props
 const props = defineProps({
@@ -203,6 +255,7 @@ const emit = defineEmits(['close', 'checkout', 'item-updated', 'item-removed', '
 // Local state
 const isVisible = ref(props.visible)
 const isLoading = ref(false)
+const showClearConfirm = ref(false)
 
 // Cart items - starts empty
 const items = ref([])
@@ -255,17 +308,19 @@ const addItem = (product) => {
     const existingItem = items.value.find(item => item.id === product.id)
     
     if (existingItem) {
-        // If item exists, increase quantity
-        existingItem.quantity += 1
-        console.log(`Cart: Updated quantity for ${product.model} to ${existingItem.quantity}`)
+        // For refurbished items, don't allow multiple quantities
+        // Just show a message that item is already in cart
+        console.log(`Cart: ${product.model} is already in cart`)
+        // Don't show alert here, let ProductCard handle the UI
+        return false // Return false to indicate item wasn't added
     } else {
-        // If new item, add to cart with quantity 1
+        // If new item, add to cart with quantity 1 (fixed)
         const cartItem = {
             id: product.id,
             model: product.model,
             manufacturer: product.manufacturer,
             selling_price: product.selling_price,
-            quantity: 1,
+            quantity: 1, // Always 1 for refurbished items
             type: product.type,
             // Add any other necessary product fields
             imei: product.imei,
@@ -273,18 +328,25 @@ const addItem = (product) => {
         }
         items.value.push(cartItem)
         console.log(`Cart: Added new item ${product.model}`)
+        
+        // Emit the updated count to sync with layout
+        emit('item-updated', { 
+            itemId: product.id,
+            quantity: 1,
+            totalItemCount: itemCount.value 
+        })
+        
+        // Dispatch global event for ProductCards to listen
+        window.dispatchEvent(new CustomEvent('cart-item-added', {
+            detail: { itemId: product.id }
+        }))
+        
+        return true // Return success
     }
-    
-    // Emit the updated count to sync with layout
-    emit('item-updated', { 
-        itemId: product.id,
-        quantity: existingItem ? existingItem.quantity : 1,
-        totalItemCount: itemCount.value 
-    })
-    
-    return true // Return success
 }
 
+// Quantity update method - Commented out for refurbished items
+/*
 const updateQuantity = (itemId, newQuantity) => {
     if (newQuantity < 1) return
     
@@ -299,24 +361,44 @@ const updateQuantity = (itemId, newQuantity) => {
         })
     }
 }
+*/
 
 const removeItem = (itemId) => {
     const index = items.value.findIndex(item => item.id === itemId)
     if (index !== -1) {
+        const removedItem = items.value[index]
         items.value.splice(index, 1)
+        
         // Emit the total count after removal
         emit('item-removed', {
             itemId,
             totalItemCount: itemCount.value
         })
+        
+        // Dispatch global event for ProductCards to listen
+        window.dispatchEvent(new CustomEvent('cart-item-removed', {
+            detail: { itemId: itemId }
+        }))
+        
+        console.log(`Cart: Removed ${removedItem.model} from cart`)
     }
 }
 
 const clearCart = () => {
-    if (confirm('Are you sure you want to clear your cart?')) {
-        items.value = []
-        emit('item-removed', 'all')
-    }
+    showClearConfirm.value = true
+}
+
+const confirmClearCart = () => {
+    items.value = []
+    emit('item-removed', 'all')
+    
+    // Dispatch global event for ProductCards to listen
+    window.dispatchEvent(new CustomEvent('cart-cleared'))
+    
+    // Close confirmation dialog
+    showClearConfirm.value = false
+    
+    console.log('Cart: Cart cleared successfully')
 }
 
 const saveForLater = () => {
@@ -345,7 +427,11 @@ const proceedToCheckout = () => {
 
 // Expose methods to parent component
 defineExpose({
-    addItem
+    addItem,
+    hasItem: (productId) => {
+        return items.value.some(item => item.id === productId)
+    },
+    removeItem // Use the existing removeItem method
 })
 </script>
 

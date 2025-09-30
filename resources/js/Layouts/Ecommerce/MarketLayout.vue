@@ -418,6 +418,37 @@ const addItemToCart = (item) => {
     }
 }
 
+const removeItemFromCart = (productId) => {
+    console.log('Removing item from cart:', productId)
+    
+    if (cartComponent.value) {
+        cartComponent.value.removeItem(productId) // Use existing removeItem method
+        console.log(`✅ Item removed from cart!`)
+    } else {
+        console.error('❌ Cart component not available')
+    }
+}
+
+const isItemInCart = (productId) => {
+    if (cartComponent.value) {
+        return cartComponent.value.hasItem(productId)
+    }
+    return false
+}
+
+// 🔧 FIXED: Provide cart functions immediately after definition
+console.log('🔄 MarketLayout: Providing cart functions...')
+console.log('Providing addToCart:', typeof addItemToCart, addItemToCart)
+console.log('Providing removeFromCart:', typeof removeItemFromCart, removeItemFromCart)
+console.log('Providing isItemInCart:', typeof isItemInCart, isItemInCart)
+
+provide('addToCart', addItemToCart)
+provide('removeFromCart', removeItemFromCart)
+provide('isItemInCart', isItemInCart)
+provide('toggleCart', toggleCart)
+
+console.log('✅ MarketLayout: Cart functions provided!')
+
 const handleCheckout = (checkoutData) => {
     console.log('Proceeding to checkout:', checkoutData)
     // TODO: Implement checkout logic
@@ -445,18 +476,19 @@ const handleCartItemRemoved = (data) => {
         // Fallback: simple decrement (not ideal)
         cartCount.value = Math.max(0, cartCount.value - 1)
     }
-    // TODO: Update cart state in store
+    return false
 }
 
 // Lifecycle
 onMounted(() => {
     // Initialize any required data
     console.log('Market Layout mounted for:', props.market.name)
+    console.log('Cart functions being provided:')
+    console.log('addItemToCart:', typeof addItemToCart, addItemToCart)
+    console.log('removeItemFromCart:', typeof removeItemFromCart, removeItemFromCart)
+    console.log('isItemInCart:', typeof isItemInCart, isItemInCart)
+    console.log('cartComponent ref:', cartComponent.value)
 })
-
-// Provide cart functions to child components
-provide('addToCart', addItemToCart)
-provide('toggleCart', toggleCart)
 </script>
 
 <style scoped>

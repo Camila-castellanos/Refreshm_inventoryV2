@@ -1,30 +1,12 @@
 <template>
-    <div>
-        <!-- Meta Head -->
-        <Head 
-            :title="`${item.model} - ${market.name}`"
-            :description="`${item.model} ${item.manufacturer || ''} available at ${market.name}. ${item.issues ? item.issues.substring(0, 150) : 'Quality refurbished device.'}`"
-        />
+    <!-- Meta Head -->
+    <Head 
+        :title="`${item.model} - ${market.name}`"
+        :description="`${item.model} ${item.manufacturer || ''} available at ${market.name}. ${item.issues ? item.issues.substring(0, 150) : 'Quality refurbished device.'}`"
+    />
 
-        <!-- Navigation Header -->
-        <header class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
-            <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex justify-between items-center h-16">
-                    <div class="flex items-center space-x-4">
-                        <button @click="goBack" class="inline-flex items-center justify-center w-8 h-8 rounded-md text-gray-500 hover:text-gray-700 bg-slate-100 border border-gray-200 hover:border-gray-300 transition-all duration-200">
-                            <i class="pi pi-arrow-left text-sm"></i>
-                        </button>
-                        <div>
-                            <h1 class="text-lg font-bold text-gray-900">{{ market.name }}</h1>
-                            <span v-if="market.tagline" class="text-xs text-gray-600">{{ market.tagline }}</span>
-                        </div>
-                    </div>
-                </div>
-            </nav>
-        </header>
-
-        <!-- Product Details Section -->
-        <main class="py-8 bg-white">
+    <!-- Product Details Section -->
+    <main class="py-8 bg-white">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
                     
@@ -118,6 +100,21 @@
 
                         <!-- Action Buttons -->
                         <div class="space-y-4">
+                            <!-- Add to Cart Button -->
+                            <button @click="handleAddToCart" 
+                                   :class="[
+                                       'w-full inline-flex items-center justify-center px-8 py-4 rounded-lg font-semibold text-lg transition-all duration-200 shadow-sm hover:shadow-md',
+                                       isInCart 
+                                           ? 'bg-red-500 text-white hover:bg-red-600 border border-red-500' 
+                                           : 'bg-slate-100 text-gray-700 hover:text-gray-900 border border-gray-200 hover:border-gray-300'
+                                   ]">
+                                <i :class="[
+                                    'text-sm mr-2',
+                                    isInCart ? 'pi pi-trash' : 'pi pi-shopping-cart'
+                                ]"></i>
+                                {{ isInCart ? 'Remove from Cart' : 'Add to Cart' }}
+                            </button>
+                            
                             <button @click="contactSeller" 
                                    class="w-full inline-flex items-center justify-center px-8 py-4 rounded-lg font-semibold text-lg bg-slate-100 text-gray-700 hover:text-gray-900 border border-gray-200 hover:border-gray-300 transition-all duration-200 shadow-sm hover:shadow-md">
                                 <i class="pi pi-envelope text-sm mr-2"></i>
@@ -186,45 +183,17 @@
             </div>
         </section>
 
-        <!-- Footer -->
-        <footer class="bg-gray-900 text-white py-12">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    <div>
-                        <h3 class="text-lg font-semibold mb-4">{{ market.name }}</h3>
-                        <p v-if="market.description" class="text-gray-400">{{ market.description }}</p>
-                    </div>
-                    
-                    <div>
-                        <h4 class="text-md font-semibold mb-4">Contact</h4>
-                        <ul class="space-y-2 text-gray-400">
-                            <li v-if="market.contact_email">
-                                <a :href="`mailto:${market.contact_email}`" class="hover:text-white transition-colors">
-                                    {{ market.contact_email }}
-                                </a>
-                            </li>
-                            <li v-if="market.contact_phone">{{ market.contact_phone }}</li>
-                            <li v-if="market.address">{{ market.address }}</li>
-                        </ul>
-                    </div>
-                    
-                    <div>
-                        <h4 class="text-md font-semibold mb-4">Quick Actions</h4>
-                        <ul class="space-y-2 text-gray-400">
-                            <li><button @click="goBack" class="hover:text-white transition-colors">Back to Products</button></li>
-                            <li><button @click="contactSeller" class="hover:text-white transition-colors">Contact Seller</button></li>
-                            <li><button @click="shareProduct" class="hover:text-white transition-colors">Share Product</button></li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        </footer>
-    </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, inject, onUnmounted } from 'vue'
 import { Head, router } from '@inertiajs/vue3'
+import MarketLayout from '@/Layouts/Ecommerce/MarketLayout.vue'
+
+// 🔧 FIXED: Use MarketLayout as persistent layout instead of wrapping
+defineOptions({
+    layout: MarketLayout
+})
 
 // Props
 const props = defineProps({
@@ -235,6 +204,86 @@ const props = defineProps({
         default: () => []
     }
 })
+
+// Cart functionality injection - should work now with proper layout
+const addToCart = inject('addToCart')
+const removeFromCart = inject('removeFromCart')
+const isItemInCart = inject('isItemInCart')
+
+// Reactive state
+const isInCart = ref(false)
+
+// Check if item is in cart on mount
+const checkCartStatus = () => {
+    console.log('Product page: Checking cart status')
+    console.log('isItemInCart function available:', !!isItemInCart)
+    console.log('Item ID:', props.item?.id)
+    
+    if (isItemInCart && props.item?.id) {
+        const inCart = isItemInCart(props.item.id)
+        console.log('Item in cart result:', inCart)
+        isInCart.value = inCart
+    } else {
+        console.warn('Product page: Cannot check cart status - missing function or item ID')
+    }
+}
+
+// Handle add/remove from cart
+const handleAddToCart = () => {
+    console.log('Product page: handleAddToCart called')
+    console.log('Product item:', props.item)
+    console.log('Current isInCart:', isInCart.value)
+    console.log('Available functions:', { addToCart: !!addToCart, removeFromCart: !!removeFromCart, isItemInCart: !!isItemInCart })
+    console.log("addtocart function called: " , addToCart )
+    if (!props.item?.id) {
+        console.warn('Product page: No item ID available')
+        return
+    }
+    
+    if (isInCart.value) {
+        // Remove from cart
+        console.log('Product page: Removing from cart')
+        if (removeFromCart) {
+            const result = removeFromCart(props.item.id)
+            console.log('Remove result:', result)
+            isInCart.value = false
+        } else {
+            console.error('Product page: removeFromCart function not available')
+        }
+    } else {
+        // Add to cart
+        console.log('Product page: Adding to cart')
+        if (addToCart) {
+            const success = addToCart(props.item)
+            console.log('Add to cart result:', success)
+            if (success) {
+                isInCart.value = true
+                console.log('Product page: Item added successfully, isInCart set to true')
+            } else {
+                console.log('Product page: Item not added (possibly already in cart)')
+            }
+        } else {
+            console.error('Product page: addToCart function not available')
+        }
+    }
+}
+
+// Global event handlers for cart synchronization
+const handleCartItemAdded = (event) => {
+    if (event.detail.itemId === props.item?.id) {
+        isInCart.value = true
+    }
+}
+
+const handleCartItemRemoved = (event) => {
+    if (event.detail.itemId === props.item?.id) {
+        isInCart.value = false
+    }
+}
+
+const handleCartCleared = () => {
+    isInCart.value = false
+}
 
 // Methods
 const formatPrice = (price) => {
@@ -295,8 +344,46 @@ const shareProduct = () => {
 
 // Lifecycle
 onMounted(() => {
+    console.log('🔄 Product.vue: onMounted started')
+    
     // Scroll to top when component mounts
     window.scrollTo(0, 0)
+    
+    // Debug injection with timing
+    console.log('🔍 Product page mounted - Cart functions check:')
+    console.log('addToCart type:', typeof addToCart)
+    console.log('addToCart value:', addToCart)
+    console.log('removeFromCart type:', typeof removeFromCart)
+    console.log('removeFromCart value:', removeFromCart)
+    console.log('isItemInCart type:', typeof isItemInCart)
+    console.log('isItemInCart value:', isItemInCart)
+    
+    // Try calling the functions to see what happens
+    if (typeof addToCart === 'function') {
+        console.log('✅ addToCart is a function!')
+    } else {
+        console.log('❌ addToCart is not a function, type:', typeof addToCart)
+    }
+    
+    // Check cart status
+    setTimeout(() => {
+        console.log('🕐 Delayed cart status check...')
+        checkCartStatus()
+    }, 200)
+    
+    // Add global event listeners
+    window.addEventListener('cart-item-added', handleCartItemAdded)
+    window.addEventListener('cart-item-removed', handleCartItemRemoved)
+    window.addEventListener('cart-cleared', handleCartCleared)
+    
+    console.log('✅ Product.vue: onMounted completed')
+})
+
+onUnmounted(() => {
+    // Cleanup event listeners
+    window.removeEventListener('cart-item-added', handleCartItemAdded)
+    window.removeEventListener('cart-item-removed', handleCartItemRemoved)
+    window.removeEventListener('cart-cleared', handleCartCleared)
 })
 </script>
 
@@ -304,6 +391,7 @@ onMounted(() => {
 .line-clamp-2 {
     display: -webkit-box;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
 }

@@ -69,6 +69,23 @@
                 >
                     View Details
                 </button>
+                
+                <button 
+                    @click="handleAddToCart"
+                    :disabled="isAddingToCart"
+                    :class="[
+                        'inline-flex items-center justify-center px-3 py-2 rounded-lg border transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium',
+                        isInCart 
+                            ? 'bg-red-50 text-red-700 hover:text-red-900 border-red-200 hover:border-red-300' 
+                            : 'bg-slate-100 text-gray-700 hover:text-gray-900 border-gray-200 hover:border-gray-300'
+                    ]"
+                    :title="isInCart ? 'Remove from Cart' : 'Add to Cart'"
+                >
+                    <i v-if="isAddingToCart" class="pi pi-spin pi-spinner text-xs mr-1"></i>
+                    <i v-else-if="isInCart" class="pi pi-trash text-xs mr-1"></i>
+                    <i v-else class="pi pi-shopping-cart text-xs mr-1"></i>
+                    {{ isInCart ? 'Remove' : 'Add' }}
+                </button>
             </div>
             
             <div v-else class="flex space-x-2">
@@ -83,10 +100,16 @@
                 <button 
                     @click="handleAddToCart"
                     :disabled="isAddingToCart"
-                    class="inline-flex items-center justify-center px-3 py-2 rounded-lg bg-slate-100 text-gray-700 hover:text-gray-900 border border-gray-200 hover:border-gray-300 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                    v-tooltip.top="'Add to Cart'"
+                    :class="[
+                        'inline-flex items-center justify-center px-3 py-2 rounded-lg border transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed',
+                        isInCart 
+                            ? 'bg-red-50 text-red-700 hover:text-red-900 border-red-200 hover:border-red-300' 
+                            : 'bg-slate-100 text-gray-700 hover:text-gray-900 border-gray-200 hover:border-gray-300'
+                    ]"
+                    :title="isInCart ? 'Remove from Cart' : 'Add to Cart'"
                 >
                     <i v-if="isAddingToCart" class="pi pi-spin pi-spinner text-xs"></i>
+                    <i v-else-if="isInCart" class="pi pi-trash text-xs"></i>
                     <i v-else class="pi pi-shopping-cart text-xs"></i>
                 </button>
             </div>
@@ -102,7 +125,7 @@
 </template>
 
 <script setup>
-import { ref, inject } from 'vue'
+import { ref, inject, onMounted, onUnmounted, watch } from 'vue'
 
 // Props
 const props = defineProps({
@@ -128,7 +151,19 @@ const isAddingToCart = ref(false)
 
 // Inject cart functions from MarketLayout
 const addToCartFromLayout = inject('addToCart')
+const removeFromCartFromLayout = inject('removeFromCart')
+const isItemInCartFromLayout = inject('isItemInCart')
 const toggleCartFromLayout = inject('toggleCart')
+
+// Reactive state to track if item is in cart
+const isInCart = ref(false)
+
+// Check cart status on mount and periodically
+const checkCartStatus = () => {
+    if (isItemInCartFromLayout) {
+        isInCart.value = isItemInCartFromLayout(props.item.id)
+    }
+}
 
 // Methods
 const formatPrice = (price) => {
@@ -156,34 +191,86 @@ const handleAddToCart = async () => {
     isAddingToCart.value = true
     
     try {
-        if (addToCartFromLayout) {
-            // Add item to cart
-            addToCartFromLayout(props.item)
-            
-            // Show success feedback
-            console.log(`✅ ${props.item.model} added to cart!`)
-            
-            // Brief loading animation
-            await new Promise(resolve => setTimeout(resolve, 150))
-            
-            // Optional: Brief cart preview after a short delay
-            setTimeout(() => {
-                if (toggleCartFromLayout) {
-                    toggleCartFromLayout()
-                }
-            }, 100)
-            
+        if (isInCart.value) {
+            // Remove from cart
+            if (removeFromCartFromLayout) {
+                removeFromCartFromLayout(props.item.id)
+                console.log(`✅ ${props.item.model} removed from cart!`)
+                
+                // Update local state
+                isInCart.value = false
+            }
         } else {
-            console.error('❌ Add to cart function not available')
-            alert(`${props.item.model} - Add to cart functionality coming soon!`)
+            // Add to cart
+            if (addToCartFromLayout) {
+                const success = addToCartFromLayout(props.item)
+                
+                if (success !== false) { // Check if not explicitly false (for duplicates)
+                    console.log(`✅ ${props.item.model} added to cart!`)
+                    
+                    // Update local state
+                    isInCart.value = true
+                    
+                    // Optional: Brief cart preview after a short delay
+                    setTimeout(() => {
+                        if (toggleCartFromLayout) {
+                            toggleCartFromLayout()
+                        }
+                    }, 100)
+                }
+            }
         }
+        
+        // Brief loading animation
+        await new Promise(resolve => setTimeout(resolve, 150))
+        
     } catch (error) {
-        console.error('Error adding to cart:', error)
-        alert('Error adding item to cart. Please try again.')
+        console.error('Error with cart operation:', error)
+        alert('Error with cart operation. Please try again.')
     } finally {
         isAddingToCart.value = false
     }
 }
+
+// Lifecycle hooks
+onMounted(() => {
+    checkCartStatus()
+    
+    // Listen for global cart events
+    window.addEventListener('cart-item-added', handleCartItemAdded)
+    window.addEventListener('cart-item-removed', handleCartItemRemoved)
+    window.addEventListener('cart-cleared', handleCartCleared)
+})
+
+onUnmounted(() => {
+    // Cleanup event listeners
+    window.removeEventListener('cart-item-added', handleCartItemAdded)
+    window.removeEventListener('cart-item-removed', handleCartItemRemoved)
+    window.removeEventListener('cart-cleared', handleCartCleared)
+})
+
+// Event handlers for global cart events
+const handleCartItemAdded = (event) => {
+    if (event.detail.itemId === props.item.id) {
+        isInCart.value = true
+        console.log(`ProductCard: ${props.item.model} marked as IN CART`)
+    }
+}
+
+const handleCartItemRemoved = (event) => {
+    if (event.detail.itemId === props.item.id) {
+        isInCart.value = false
+        console.log(`ProductCard: ${props.item.model} marked as NOT IN CART`)
+    }
+}
+
+const handleCartCleared = () => {
+    isInCart.value = false
+    console.log(`ProductCard: ${props.item.model} marked as NOT IN CART (cart cleared)`)
+}
+
+// Watch for cart changes (this would need to be triggered when cart updates)
+// For now, we'll rely on the user interaction feedback
 </script>
 
 <style scoped>
