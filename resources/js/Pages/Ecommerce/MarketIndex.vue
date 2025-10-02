@@ -166,33 +166,51 @@
         </div>
 
         <!-- Delete Confirmation Modal -->
-        <DialogModal :show="confirmingMarketDeletion" @close="closeModal">
-            <template #title>
-                Delete Market
-            </template>
-
-            <template #content>
-                Are you sure you want to delete the market "{{ marketBeingDeleted?.name }}"? 
-                This action cannot be undone and will make the market inaccessible to customers.
-            </template>
+        <Dialog
+            v-model:visible="confirmingMarketDeletion"
+            modal
+            :closable="true"
+            :style="{ width: '500px' }"
+            :header="`Delete Market`"
+        >
+            <div class="space-y-4">
+                <div class="flex items-start space-x-3">
+                    <div class="flex-shrink-0">
+                        <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                            <i class="pi pi-exclamation-triangle text-red-600"></i>
+                        </div>
+                    </div>
+                    <div class="flex-1">
+                        <p class="text-sm text-gray-700">
+                            Are you sure you want to delete the market <span class="font-semibold">"{{ marketBeingDeleted?.name }}"</span>?
+                        </p>
+                        <p class="text-sm text-gray-600 mt-2">
+                            This action cannot be undone and will make the market inaccessible to customers. All associated data will be permanently removed.
+                        </p>
+                    </div>
+                </div>
+            </div>
 
             <template #footer>
-                <Button 
-                    @click="closeModal" 
-                    label="Cancel" 
-                    severity="secondary"
-                    outlined
-                />
+                <div class="flex justify-end space-x-2">
+                    <Button 
+                        @click="closeModal" 
+                        label="Cancel" 
+                        severity="secondary"
+                        outlined
+                        :disabled="deleteForm.processing"
+                    />
 
-                <Button
-                    label="Delete Market"
-                    severity="danger"
-                    :loading="deleteForm.processing"
-                    @click="confirmDelete"
-                    class="ml-3"
-                />
+                    <Button
+                        label="Delete Market"
+                        icon="pi pi-trash"
+                        severity="danger"
+                        :loading="deleteForm.processing"
+                        @click="confirmDelete"
+                    />
+                </div>
             </template>
-        </DialogModal>
+        </Dialog>
     </AppLayout>
 </template>
 
@@ -200,7 +218,7 @@
 import { ref } from 'vue'
 import { useForm } from '@inertiajs/vue3'
 import AppLayout from '@/Layouts/AppLayout.vue'
-import DialogModal from '@/Components/DialogModal.vue'
+import Dialog from 'primevue/dialog'
 import Button from 'primevue/button'
 import { Link } from '@inertiajs/vue3'
 
