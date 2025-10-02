@@ -83,7 +83,7 @@ class MarketAdminController extends Controller
             $counter++;
         }
 
-        // Create the market
+                // Create the market
         $market = Market::create([
             'name' => $validated['name'],
             'slug' => $slug,
@@ -100,9 +100,12 @@ class MarketAdminController extends Controller
             'meta_description' => $validated['meta_description'] ?: ('Browse and shop ' . $validated['name'] . ' collection of quality products.'),
         ]);
 
+        // Build the public market URL
+        $publicMarketUrl = route('market.index', $market->slug);
+
         return redirect()
             ->route('ecommerce.markets.index')
-            ->with('success', 'Market created successfully! You can now visit it at: ' . route('ecommerce.index', $market->slug));
+            ->with('success', 'Market created successfully! Public URL: ' . $publicMarketUrl);
     }
 
     /**
@@ -260,7 +263,7 @@ class MarketAdminController extends Controller
         $status = $market->is_active ? 'activated' : 'deactivated';
 
         return redirect()
-            ->back()
+            ->route('ecommerce.markets.index')
             ->with('success', "Market {$status} successfully.");
     }
 }
