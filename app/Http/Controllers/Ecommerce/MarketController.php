@@ -77,9 +77,20 @@ class MarketController extends Controller
             $category = $request->get('category');
             $brand = $request->get('brand');
             $sort = $request->get('sort', 'latest');
+            $search = $request->get('search'); // Search query
 
             // Build query
             $query = $market->publishedItems();
+
+            // Filter by search query if provided
+            if ($search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('model', 'like', "%{$search}%")
+                      ->orWhere('manufacturer', 'like', "%{$search}%")
+                      ->orWhere('type', 'like', "%{$search}%")
+                      ->orWhere('imei', 'like', "%{$search}%");
+                });
+            }
 
             // Filter by category if provided
             if ($category) {
@@ -127,6 +138,7 @@ class MarketController extends Controller
                 'category' => $request->get('category'),
                 'brand' => $request->get('brand'),
                 'sort' => $request->get('sort'),
+                'search' => $request->get('search'),
             ]);
 
             return response()->json(['error' => 'Unable to load products'], 500);
@@ -150,9 +162,20 @@ class MarketController extends Controller
             $category = $request->get('category');
             $brand = $request->get('brand');
             $sort = $request->get('sort', 'latest'); // latest, price_low, price_high, name
+            $search = $request->get('search'); // Search query
 
             // Build query
             $query = $market->publishedItems();
+
+            // Filter by search query if provided
+            if ($search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('model', 'like', "%{$search}%")
+                      ->orWhere('manufacturer', 'like', "%{$search}%")
+                      ->orWhere('type', 'like', "%{$search}%")
+                      ->orWhere('imei', 'like', "%{$search}%");
+                });
+            }
 
             // Filter by category if provided
             if ($category) {
@@ -201,10 +224,12 @@ class MarketController extends Controller
                 'currentCategory' => $category,
                 'currentBrand' => $brand,
                 'currentSort' => $sort,
+                'currentSearch' => $search,
                 'filters' => [
                     'category' => $category,
                     'brand' => $brand,
-                    'sort' => $sort
+                    'sort' => $sort,
+                    'search' => $search
                 ]
             ]);
         } catch (\Exception $e) {
@@ -213,6 +238,7 @@ class MarketController extends Controller
                 'category' => $category,
                 'brand' => $brand,
                 'sort' => $sort,
+                'search' => $search ?? null,
             ]);
 
             abort(503, 'Products list is temporarily unavailable. Please try again later.');
