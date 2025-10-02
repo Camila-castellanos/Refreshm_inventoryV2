@@ -14,6 +14,18 @@
                             {{ getPageTitle() }}
                         </h1>
                         
+                        <!-- Search Query Display -->
+                        <div v-if="props.currentSearch" class="flex items-center gap-2 mt-2">
+                            <span class="text-gray-600">
+                                Search results for: <span class="font-medium text-gray-900">"{{ props.currentSearch }}"</span>
+                            </span>
+                            <button
+                                @click="clearSearch"
+                                class="text-sm text-gray-500 hover:text-gray-700 underline"
+                            >
+                                Clear search
+                            </button>
+                        </div>
                     </div>
                     
                     <!-- Filters and Sort -->
@@ -143,15 +155,29 @@
                     </div>
                     <h3 class="text-xl font-medium text-gray-900 mb-2">No products found</h3>
                     <p class="text-gray-600 mb-6">
-                        {{ currentCategory ? 'Try browsing a different category.' : 'Check back later for new arrivals.' }}
+                        {{ props.currentSearch 
+                            ? `No products match your search for "${props.currentSearch}". Try a different search term.` 
+                            : currentCategory 
+                                ? 'Try browsing a different category.' 
+                                : 'Check back later for new arrivals.' 
+                        }}
                     </p>
-                    <button 
-                        v-if="currentCategory"
-                        @click="clearFilters"
-                        class="inline-flex items-center justify-center px-6 py-3 rounded-lg bg-slate-100 text-gray-700 hover:text-gray-900 border border-gray-200 hover:border-gray-300 font-medium transition-all duration-200"
-                    >
-                        View All Products
-                    </button>
+                    <div class="flex justify-center gap-4">
+                        <button 
+                            v-if="props.currentSearch"
+                            @click="clearSearch"
+                            class="inline-flex items-center justify-center px-6 py-3 rounded-lg bg-gray-900 text-white hover:bg-gray-800 font-medium transition-all duration-200"
+                        >
+                            Clear Search
+                        </button>
+                        <button 
+                            v-if="currentCategory || selectedBrand.value"
+                            @click="clearFilters"
+                            class="inline-flex items-center justify-center px-6 py-3 rounded-lg bg-slate-100 text-gray-700 hover:text-gray-900 border border-gray-200 hover:border-gray-300 font-medium transition-all duration-200"
+                        >
+                            View All Products
+                        </button>
+                    </div>
                 </div>
             </div>
         </section>
@@ -174,6 +200,7 @@ const props = defineProps({
     currentCategory: String,
     currentBrand: String,
     currentSort: String,
+    currentSearch: String,
     filters: Object
 })
 
@@ -268,6 +295,10 @@ const updateFilters = () => {
         params.append('sort', selectedSort.value)
     }
 
+    if (props.currentSearch) {
+        params.append('search', props.currentSearch)
+    }
+
     // Make API call to get filtered results
     const url = `/market/${props.market.slug}/products`
     
@@ -298,7 +329,8 @@ const loadMoreItems = () => {
         page: currentPage.value,
         ...(selectedCategory.value && { category: selectedCategory.value }),
         ...(selectedBrand.value && { brand: selectedBrand.value }),
-        ...(selectedSort.value && { sort: selectedSort.value })
+        ...(selectedSort.value && { sort: selectedSort.value }),
+        ...(props.currentSearch && { search: props.currentSearch })
     }
     
     const url = `/market/${props.market.slug}/products`
@@ -351,6 +383,30 @@ const clearFilters = () => {
             console.error('Error clearing filters:', error)
             loading.value = false
         })
+}
+
+const clearSearch = () => {
+    // Navigate to products list without search parameter
+    const params = new URLSearchParams()
+    
+    if (selectedCategory.value) {
+        params.append('category', selectedCategory.value)
+    }
+    
+    if (selectedBrand.value) {
+        params.append('brand', selectedBrand.value)
+    }
+    
+    if (selectedSort.value && selectedSort.value !== 'latest') {
+        params.append('sort', selectedSort.value)
+    }
+    
+    const queryString = params.toString()
+    const newUrl = queryString 
+        ? `/market/${props.market.slug}/products-list?${queryString}` 
+        : `/market/${props.market.slug}/products-list`
+    
+    window.location.href = newUrl
 }
 
 // Remove pagination methods - not needed for infinite scroll

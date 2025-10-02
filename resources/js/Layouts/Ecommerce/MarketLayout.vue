@@ -306,7 +306,7 @@
 
 <script setup>
 import { ref, computed, onMounted, provide, watch } from 'vue'
-import { Link, usePage } from '@inertiajs/vue3'
+import { Link, usePage, router } from '@inertiajs/vue3'
 import Cart from '@/Components/Ecommerce/Cart.vue'
 import { useCartStore } from '@/stores/cartStore'
 
@@ -374,8 +374,14 @@ const closeMobileMenu = () => {
 
 const performSearch = () => {
     if (searchQuery.value.trim()) {
-        // Redirect to search results page
-        window.location.href = route('market.search', { market: props.market.slug, q: searchQuery.value.trim() })
+        // Use Inertia router to navigate to products list with search query
+        router.visit(route('market.products-list', { 
+            market: props.market.slug,
+            search: searchQuery.value.trim() 
+        }), {
+            preserveState: false,
+            preserveScroll: false
+        })
     }
 }
 
