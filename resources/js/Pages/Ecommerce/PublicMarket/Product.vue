@@ -182,15 +182,14 @@
                 </div>
             </div>
         </section>
-
 </template>
 
 <script setup>
 import { ref, onMounted, inject, onUnmounted } from 'vue'
 import { Head, router } from '@inertiajs/vue3'
 import MarketLayout from '@/Layouts/Ecommerce/MarketLayout.vue'
+import { useCart } from '@/composables/useCart'
 
-// 🔧 FIXED: Use MarketLayout as persistent layout instead of wrapping
 defineOptions({
     layout: MarketLayout
 })
@@ -205,84 +204,53 @@ const props = defineProps({
     }
 })
 
-// Cart functionality injection - should work now with proper layout
-const addToCart = inject('addToCart')
-const removeFromCart = inject('removeFromCart')
-const isItemInCart = inject('isItemInCart')
+// Use cart composable
+const { hasItem, addItem, removeItem } = useCart()
+
+// Cart functionality injection (backup if needed)
+const addToCart = inject('addToCart', null)
+const removeFromCart = inject('removeFromCart', null)
 
 // Reactive state
 const isInCart = ref(false)
 
-// Check if item is in cart on mount
+// Check if item is in cart
 const checkCartStatus = () => {
-    console.log('Product page: Checking cart status')
-    console.log('isItemInCart function available:', !!isItemInCart)
-    console.log('Item ID:', props.item?.id)
-    
-    if (isItemInCart && props.item?.id) {
-        const inCart = isItemInCart(props.item.id)
-        console.log('Item in cart result:', inCart)
-        isInCart.value = inCart
-    } else {
-        console.warn('Product page: Cannot check cart status - missing function or item ID')
+    if (props.item?.id) {
+        isInCart.value = hasItem(props.item.id)
     }
 }
 
 // Handle add/remove from cart
 const handleAddToCart = () => {
-    console.log('Product page: handleAddToCart called')
-    console.log('Product item:', props.item)
-    console.log('Current isInCart:', isInCart.value)
-    console.log('Available functions:', { addToCart: !!addToCart, removeFromCart: !!removeFromCart, isItemInCart: !!isItemInCart })
-    console.log("addtocart function called: " , addToCart )
-    if (!props.item?.id) {
-        console.warn('Product page: No item ID available')
-        return
-    }
+    if (!props.item?.id) return
     
     if (isInCart.value) {
-        // Remove from cart
-        console.log('Product page: Removing from cart')
-        if (removeFromCart) {
-            const result = removeFromCart(props.item.id)
-            console.log('Remove result:', result)
-            isInCart.value = false
-        } else {
-            console.error('Product page: removeFromCart function not available')
-        }
+        // Remove from cart using composable
+        removeItem(props.item.id)
+        isInCart.value = false
     } else {
-        // Add to cart
-        console.log('Product page: Adding to cart')
-        if (addToCart) {
-            const success = addToCart(props.item)
-            console.log('Add to cart result:', success)
-            if (success) {
-                isInCart.value = true
-                console.log('Product page: Item added successfully, isInCart set to true')
-            } else {
-                console.log('Product page: Item not added (possibly already in cart)')
-            }
-        } else {
-            console.error('Product page: addToCart function not available')
+        // Add to cart using composable
+        const success = addItem(props.item)
+        if (success) {
+            isInCart.value = true
         }
     }
 }
 
-// Global event handlers for cart synchronization
-const handleCartItemAdded = (event) => {
-    if (event.detail.itemId === props.item?.id) {
-        isInCart.value = true
-    }
-}
-
-const handleCartItemRemoved = (event) => {
-    if (event.detail.itemId === props.item?.id) {
+// Global event handler for cart updates
+const handleCartUpdate = (event) => {
+    const { action, itemId } = event.detail
+    
+    if (itemId === props.item?.id) {
+        if (action === 'added') {
+            isInCart.value = true
+        } else if (action === 'removed') {
+            isInCart.value = false
+        }
+    } else if (action === 'cleared') {
         isInCart.value = false
     }
-}
-
-const handleCartCleared = () => {
-    isInCart.value = false
 }
 
 // Methods
@@ -344,46 +312,19 @@ const shareProduct = () => {
 
 // Lifecycle
 onMounted(() => {
-    console.log('🔄 Product.vue: onMounted started')
-    
     // Scroll to top when component mounts
     window.scrollTo(0, 0)
     
-    // Debug injection with timing
-    console.log('🔍 Product page mounted - Cart functions check:')
-    console.log('addToCart type:', typeof addToCart)
-    console.log('addToCart value:', addToCart)
-    console.log('removeFromCart type:', typeof removeFromCart)
-    console.log('removeFromCart value:', removeFromCart)
-    console.log('isItemInCart type:', typeof isItemInCart)
-    console.log('isItemInCart value:', isItemInCart)
+    // Check initial cart status
+    checkCartStatus()
     
-    // Try calling the functions to see what happens
-    if (typeof addToCart === 'function') {
-        console.log('✅ addToCart is a function!')
-    } else {
-        console.log('❌ addToCart is not a function, type:', typeof addToCart)
-    }
-    
-    // Check cart status
-    setTimeout(() => {
-        console.log('🕐 Delayed cart status check...')
-        checkCartStatus()
-    }, 200)
-    
-    // Add global event listeners
-    window.addEventListener('cart-item-added', handleCartItemAdded)
-    window.addEventListener('cart-item-removed', handleCartItemRemoved)
-    window.addEventListener('cart-cleared', handleCartCleared)
-    
-    console.log('✅ Product.vue: onMounted completed')
+    // Add global event listener for cart updates
+    window.addEventListener('cart-updated', handleCartUpdate)
 })
 
 onUnmounted(() => {
-    // Cleanup event listeners
-    window.removeEventListener('cart-item-added', handleCartItemAdded)
-    window.removeEventListener('cart-item-removed', handleCartItemRemoved)
-    window.removeEventListener('cart-cleared', handleCartCleared)
+    // Cleanup event listener
+    window.removeEventListener('cart-updated', handleCartUpdate)
 })
 </script>
 

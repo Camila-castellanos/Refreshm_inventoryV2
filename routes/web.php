@@ -265,6 +265,7 @@ Route::prefix('market/{market:slug}')->name('market.')->group(function () {
     Route::get('/product/{item}', [App\Http\Controllers\Ecommerce\MarketController::class, 'product'])->name('product');
     Route::get('/search', [App\Http\Controllers\Ecommerce\MarketController::class, 'search'])->name('search');
     Route::get('/contact', [App\Http\Controllers\Ecommerce\MarketController::class, 'contact'])->name('contact');
+    Route::get('/cart', [App\Http\Controllers\Ecommerce\MarketController::class, 'cart'])->name('cart');
 })->middleware('web');
 
 // Ecommerce API Routes (Public - for AJAX calls)

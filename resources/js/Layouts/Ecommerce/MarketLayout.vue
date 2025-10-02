@@ -300,15 +300,15 @@
             @checkout="handleCheckout"
             @item-updated="handleCartItemUpdated"
             @item-removed="handleCartItemRemoved"
-            @cart-loaded="syncCartCount"
         />
     </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, provide } from 'vue'
+import { ref, computed, onMounted, provide, watch } from 'vue'
 import { Link, usePage } from '@inertiajs/vue3'
 import Cart from '@/Components/Ecommerce/Cart.vue'
+import { useCartStore } from '@/stores/cartStore'
 
 // Props
 const props = defineProps({
@@ -317,6 +317,9 @@ const props = defineProps({
         required: true
     }
 })
+
+// Initialize cart store
+const cartStore = useCartStore()
 
 // Page context
 const page = usePage()
@@ -328,8 +331,8 @@ const showMobileMenu = ref(false)
 const showCart = ref(false)
 const cartComponent = ref(null) // Reference to Cart component
 
-// Mock data - Replace with actual stores/API calls
-const cartCount = ref(0) // Start with 0, will be updated when cart loads
+// Use cart count from store
+const cartCount = computed(() => cartStore.itemCount)
 const wishlistCount = ref(5)
 
 // Computed
@@ -393,39 +396,18 @@ const closeCart = () => {
     showCart.value = false
 }
 
-// Add method to sync cart count from Cart component
-const syncCartCount = (totalCount) => {
-    cartCount.value = totalCount
-}
-
 const addItemToCart = (item) => {
-    console.log('Adding item to cart:', item)
-    
     // Add item to cart component
     if (cartComponent.value) {
         const success = cartComponent.value.addItem(item)
-        
-        if (success) {
-            // Show success feedback
-            console.log(`✅ ${item.model} added to cart!`)
-            
-            // Optionally show cart briefly
-            // showCart.value = true
-            // setTimeout(() => showCart.value = false, 2000)
-        }
-    } else {
-        console.error('❌ Cart component not available')
+        return success
     }
+    return false
 }
 
 const removeItemFromCart = (productId) => {
-    console.log('Removing item from cart:', productId)
-    
     if (cartComponent.value) {
-        cartComponent.value.removeItem(productId) // Use existing removeItem method
-        console.log(`✅ Item removed from cart!`)
-    } else {
-        console.error('❌ Cart component not available')
+        cartComponent.value.removeItem(productId)
     }
 }
 
@@ -436,18 +418,11 @@ const isItemInCart = (productId) => {
     return false
 }
 
-// 🔧 FIXED: Provide cart functions immediately after definition
-console.log('🔄 MarketLayout: Providing cart functions...')
-console.log('Providing addToCart:', typeof addItemToCart, addItemToCart)
-console.log('Providing removeFromCart:', typeof removeItemFromCart, removeItemFromCart)
-console.log('Providing isItemInCart:', typeof isItemInCart, isItemInCart)
-
+// Provide cart functions
 provide('addToCart', addItemToCart)
 provide('removeFromCart', removeItemFromCart)
 provide('isItemInCart', isItemInCart)
 provide('toggleCart', toggleCart)
-
-console.log('✅ MarketLayout: Cart functions provided!')
 
 const handleCheckout = (checkoutData) => {
     console.log('Proceeding to checkout:', checkoutData)
@@ -456,38 +431,20 @@ const handleCheckout = (checkoutData) => {
 }
 
 const handleCartItemUpdated = (updateData) => {
-    console.log('Cart item updated:', updateData)
-    // Update cart count when quantity changes
-    // This will be called with the total item count from the cart
-    if (updateData.totalItemCount !== undefined) {
-        cartCount.value = updateData.totalItemCount
-    }
-    // TODO: Update cart state in store
+    // No need to manually update cartCount, it's computed from store
 }
 
 const handleCartItemRemoved = (data) => {
-    console.log('Cart item removed:', data)
-    if (typeof data === 'object' && data.totalItemCount !== undefined) {
-        // Updated to receive total count from cart
-        cartCount.value = data.totalItemCount
-    } else if (data === 'all') {
-        cartCount.value = 0
-    } else {
-        // Fallback: simple decrement (not ideal)
-        cartCount.value = Math.max(0, cartCount.value - 1)
-    }
+    // No need to manually update cartCount, it's computed from store
     return false
 }
 
 // Lifecycle
 onMounted(() => {
-    // Initialize any required data
-    console.log('Market Layout mounted for:', props.market.name)
-    console.log('Cart functions being provided:')
-    console.log('addItemToCart:', typeof addItemToCart, addItemToCart)
-    console.log('removeItemFromCart:', typeof removeItemFromCart, removeItemFromCart)
-    console.log('isItemInCart:', typeof isItemInCart, isItemInCart)
-    console.log('cartComponent ref:', cartComponent.value)
+    // Initialize cart store with current market
+    if (props.market?.slug) {
+        cartStore.setMarket(props.market.slug)
+    }
 })
 </script>
 
