@@ -17,6 +17,8 @@ import { ZiggyVue } from "../../vendor/tightenco/ziggy";
 import AppLayout from "./Layouts/AppLayout.vue";
 import { dialogManager } from "./dialogManager";
 import { root } from "postcss";
+import { createPinia } from 'pinia';
+import piniaPluginPersistedstate from 'pinia-plugin-persistedstate';
 const appName = import.meta.env.VITE_APP_NAME || "QuoteRefreshm";
 
 axios.defaults.withCredentials = true;
@@ -100,6 +102,10 @@ createInertiaApp({
   },
 
   setup({ el, App, props, plugin }) {
+    // Crear Pinia con plugin de persistencia
+    const pinia = createPinia();
+    pinia.use(piniaPluginPersistedstate);
+
     // Crear la instancia de la aplicación
     const app = createApp({
       render: () =>  h(App, props),
@@ -124,6 +130,7 @@ createInertiaApp({
     // Registrar plugins y montar la aplicación
     app
       .use(plugin)
+      .use(pinia)
       .use(ZiggyVue)
       .use(PrimeVue, {
         theme: {

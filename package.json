@@ -33,6 +33,8 @@
         "@revolist/revogrid-column-select": "^3.1.9",
         "@revolist/vue3-datagrid": "^4.14.5",
         "jspreadsheet-ce": "^4.15.0",
+        "pinia": "^3.0.3",
+        "pinia-plugin-persistedstate": "^4.5.0",
         "primeflex": "^3.3.1",
         "primeicons": "^7.0.0",
         "primevue": "^4.3.5",

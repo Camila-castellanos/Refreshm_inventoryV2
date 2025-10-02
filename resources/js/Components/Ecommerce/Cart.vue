@@ -156,7 +156,6 @@
                         <i v-else class="pi pi-credit-card text-sm mr-2"></i>
                         {{ isLoading ? 'Processing...' : 'Proceed to Checkout' }}
                     </button>
-                    
                     <div class="flex space-x-3">
                         <button 
                             @click="clearCart"
@@ -233,9 +232,10 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, defineExpose } from 'vue'
+import { ref, computed, watch, defineExpose, onMounted } from 'vue'
 import Drawer from 'primevue/drawer'
 import Dialog from 'primevue/dialog'
+import { useCartStore } from '@/stores/cartStore'
 
 // Props
 const props = defineProps({
@@ -250,28 +250,27 @@ const props = defineProps({
 })
 
 // Emits
-const emit = defineEmits(['close', 'checkout', 'item-updated', 'item-removed', 'cart-loaded'])
+const emit = defineEmits(['close', 'checkout', 'item-updated', 'item-removed'])
+
+// Initialize cart store
+const cartStore = useCartStore()
 
 // Local state
 const isVisible = ref(props.visible)
 const isLoading = ref(false)
 const showClearConfirm = ref(false)
 
-// Cart items - starts empty
-const items = ref([])
+// Use cart items from store
+const items = computed(() => cartStore.items)
+const itemCount = computed(() => cartStore.itemCount)
+const subtotal = computed(() => cartStore.subtotal)
+const total = computed(() => cartStore.total)
 
-// Computed properties
-const itemCount = computed(() => {
-    return items.value.reduce((total, item) => total + item.quantity, 0)
-})
-
-const subtotal = computed(() => {
-    return items.value.reduce((total, item) => total + (item.selling_price * item.quantity), 0)
-})
-
-const total = computed(() => {
-    // For now, total equals subtotal (no shipping, taxes, etc.)
-    return subtotal.value
+// Initialize market slug on mount
+onMounted(() => {
+    if (props.market?.slug) {
+        cartStore.setMarket(props.market.slug)
+    }
 })
 
 // Watch for prop changes
@@ -282,9 +281,13 @@ watch(() => props.visible, (newValue) => {
 watch(isVisible, (newValue) => {
     if (!newValue) {
         emit('close')
-    } else {
-        // When cart opens, emit current count to sync with layout
-        emit('cart-loaded', itemCount.value)
+    }
+})
+
+// Watch cart changes to emit updates
+watch(itemCount, (newCount, oldCount) => {
+    if (newCount !== oldCount) {
+        // Optional: emit for parent component updates if needed
     }
 })
 
@@ -302,86 +305,30 @@ const handleClose = () => {
 }
 
 const addItem = (product) => {
-    console.log('Cart: Adding item', product)
+    const success = cartStore.addItem(product)
     
-    // Check if item already exists in cart
-    const existingItem = items.value.find(item => item.id === product.id)
-    
-    if (existingItem) {
-        // For refurbished items, don't allow multiple quantities
-        // Just show a message that item is already in cart
-        console.log(`Cart: ${product.model} is already in cart`)
-        // Don't show alert here, let ProductCard handle the UI
-        return false // Return false to indicate item wasn't added
-    } else {
-        // If new item, add to cart with quantity 1 (fixed)
-        const cartItem = {
-            id: product.id,
-            model: product.model,
-            manufacturer: product.manufacturer,
-            selling_price: product.selling_price,
-            quantity: 1, // Always 1 for refurbished items
-            type: product.type,
-            // Add any other necessary product fields
-            imei: product.imei,
-            issues: product.issues
-        }
-        items.value.push(cartItem)
-        console.log(`Cart: Added new item ${product.model}`)
-        
-        // Emit the updated count to sync with layout
-        emit('item-updated', { 
-            itemId: product.id,
-            quantity: 1,
-            totalItemCount: itemCount.value 
-        })
-        
-        // Dispatch global event for ProductCards to listen
-        window.dispatchEvent(new CustomEvent('cart-item-added', {
-            detail: { itemId: product.id }
-        }))
-        
-        return true // Return success
+    if (!success) {
+        return false
     }
-}
-
-// Quantity update method - Commented out for refurbished items
-/*
-const updateQuantity = (itemId, newQuantity) => {
-    if (newQuantity < 1) return
     
-    const item = items.value.find(item => item.id === itemId)
-    if (item) {
-        item.quantity = newQuantity
-        // Emit both the update details and the new total count
-        emit('item-updated', { 
-            itemId, 
-            quantity: newQuantity,
-            totalItemCount: itemCount.value 
-        })
-    }
+    // Emit the updated count to sync with layout
+    emit('item-updated', { 
+        itemId: product.id,
+        quantity: 1,
+        totalItemCount: itemCount.value 
+    })
+    
+    return true
 }
-*/
 
 const removeItem = (itemId) => {
-    const index = items.value.findIndex(item => item.id === itemId)
-    if (index !== -1) {
-        const removedItem = items.value[index]
-        items.value.splice(index, 1)
-        
-        // Emit the total count after removal
-        emit('item-removed', {
-            itemId,
-            totalItemCount: itemCount.value
-        })
-        
-        // Dispatch global event for ProductCards to listen
-        window.dispatchEvent(new CustomEvent('cart-item-removed', {
-            detail: { itemId: itemId }
-        }))
-        
-        console.log(`Cart: Removed ${removedItem.model} from cart`)
-    }
+    cartStore.removeItem(itemId)
+    
+    // Emit the total count after removal
+    emit('item-removed', {
+        itemId,
+        totalItemCount: itemCount.value
+    })
 }
 
 const clearCart = () => {
@@ -389,16 +336,11 @@ const clearCart = () => {
 }
 
 const confirmClearCart = () => {
-    items.value = []
+    cartStore.clearCart()
     emit('item-removed', 'all')
-    
-    // Dispatch global event for ProductCards to listen
-    window.dispatchEvent(new CustomEvent('cart-cleared'))
     
     // Close confirmation dialog
     showClearConfirm.value = false
-    
-    console.log('Cart: Cart cleared successfully')
 }
 
 const saveForLater = () => {
@@ -409,29 +351,15 @@ const saveForLater = () => {
 const proceedToCheckout = () => {
     if (items.value.length === 0) return
     
-    isLoading.value = true
-    
-    // Simulate API call
-    setTimeout(() => {
-        isLoading.value = false
-        emit('checkout', {
-            items: items.value,
-            total: total.value,
-            market: props.market
-        })
-        
-        // In real implementation, this would redirect to checkout page
-        alert('Redirecting to checkout... (Not implemented yet)')
-    }, 1500)
+    // Navigate to order review page
+    window.location.href = `/market/${props.market.slug}/cart`
 }
 
 // Expose methods to parent component
 defineExpose({
     addItem,
-    hasItem: (productId) => {
-        return items.value.some(item => item.id === productId)
-    },
-    removeItem // Use the existing removeItem method
+    hasItem: (productId) => cartStore.hasItem(productId),
+    removeItem
 })
 </script>
 
