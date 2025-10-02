@@ -29,6 +29,7 @@ export function useCart() {
         updateQuantity: cartStore.updateQuantity,
         clearCart: cartStore.clearCart,
         hasItem: cartStore.hasItem,
+        isItemInCart: cartStore.hasItem, // Alias for better readability
         getItem: cartStore.getItem,
         
         // Backend sync (prepared for future)

@@ -125,7 +125,8 @@
 </template>
 
 <script setup>
-import { ref, inject, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, watchEffect, onMounted } from 'vue'
+import { useCart } from '@/composables/useCart'
 
 // Props
 const props = defineProps({
@@ -146,24 +147,18 @@ const props = defineProps({
 // Emits
 const emit = defineEmits(['view-product'])
 
+// Use cart composable
+const { addItem, removeItem, hasItem, items } = useCart()
+
 // Local state for loading feedback
 const isAddingToCart = ref(false)
-
-// Inject cart functions from MarketLayout
-const addToCartFromLayout = inject('addToCart')
-const removeFromCartFromLayout = inject('removeFromCart')
-const isItemInCartFromLayout = inject('isItemInCart')
-const toggleCartFromLayout = inject('toggleCart')
-
-// Reactive state to track if item is in cart
 const isInCart = ref(false)
 
-// Check cart status on mount and periodically
-const checkCartStatus = () => {
-    if (isItemInCartFromLayout) {
-        isInCart.value = isItemInCartFromLayout(props.item.id)
-    }
-}
+// Watch items changes and update isInCart state
+watchEffect(() => {
+    // This will automatically re-run whenever items.value changes
+    isInCart.value = items.value.some(item => item.id === props.item.id)
+})
 
 // Methods
 const formatPrice = (price) => {
@@ -193,32 +188,10 @@ const handleAddToCart = async () => {
     try {
         if (isInCart.value) {
             // Remove from cart
-            if (removeFromCartFromLayout) {
-                removeFromCartFromLayout(props.item.id)
-                console.log(`✅ ${props.item.model} removed from cart!`)
-                
-                // Update local state
-                isInCart.value = false
-            }
+            removeItem(props.item.id)
         } else {
             // Add to cart
-            if (addToCartFromLayout) {
-                const success = addToCartFromLayout(props.item)
-                
-                if (success !== false) { // Check if not explicitly false (for duplicates)
-                    console.log(`✅ ${props.item.model} added to cart!`)
-                    
-                    // Update local state
-                    isInCart.value = true
-                    
-                    // Optional: Brief cart preview after a short delay
-                    setTimeout(() => {
-                        if (toggleCartFromLayout) {
-                            toggleCartFromLayout()
-                        }
-                    }, 100)
-                }
-            }
+            addItem(props.item)
         }
         
         // Brief loading animation
@@ -232,45 +205,11 @@ const handleAddToCart = async () => {
     }
 }
 
-// Lifecycle hooks
+// Check initial state on mount
 onMounted(() => {
-    checkCartStatus()
-    
-    // Listen for global cart events
-    window.addEventListener('cart-item-added', handleCartItemAdded)
-    window.addEventListener('cart-item-removed', handleCartItemRemoved)
-    window.addEventListener('cart-cleared', handleCartCleared)
+    isInCart.value = items.value.some(item => item.id === props.item.id)
 })
 
-onUnmounted(() => {
-    // Cleanup event listeners
-    window.removeEventListener('cart-item-added', handleCartItemAdded)
-    window.removeEventListener('cart-item-removed', handleCartItemRemoved)
-    window.removeEventListener('cart-cleared', handleCartCleared)
-})
-
-// Event handlers for global cart events
-const handleCartItemAdded = (event) => {
-    if (event.detail.itemId === props.item.id) {
-        isInCart.value = true
-        console.log(`ProductCard: ${props.item.model} marked as IN CART`)
-    }
-}
-
-const handleCartItemRemoved = (event) => {
-    if (event.detail.itemId === props.item.id) {
-        isInCart.value = false
-        console.log(`ProductCard: ${props.item.model} marked as NOT IN CART`)
-    }
-}
-
-const handleCartCleared = () => {
-    isInCart.value = false
-    console.log(`ProductCard: ${props.item.model} marked as NOT IN CART (cart cleared)`)
-}
-
-// Watch for cart changes (this would need to be triggered when cart updates)
-// For now, we'll rely on the user interaction feedback
 </script>
 
 <style scoped>
