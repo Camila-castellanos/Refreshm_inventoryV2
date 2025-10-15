@@ -1,0 +1,10 @@
+<svg width="800" height="600" viewBox="0 0 800 600" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="800" height="600" fill="#F3F4F6"/>
+  <rect x="275" y="150" width="250" height="350" rx="20" fill="#E5E7EB"/>
+  <circle cx="400" cy="200" r="30" fill="#D1D5DB"/>
+  <rect x="320" y="260" width="160" height="10" rx="5" fill="#D1D5DB"/>
+  <rect x="340" y="290" width="120" height="10" rx="5" fill="#D1D5DB"/>
+  <rect x="320" y="320" width="160" height="10" rx="5" fill="#D1D5DB"/>
+  <text x="400" y="420" text-anchor="middle" fill="#9CA3AF" font-family="Arial, sans-serif" font-size="24" font-weight="500">No Image</text>
+  <text x="400" y="455" text-anchor="middle" fill="#9CA3AF" font-family="Arial, sans-serif" font-size="16">Item Photo</text>
+</svg>

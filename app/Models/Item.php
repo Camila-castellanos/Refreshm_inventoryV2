@@ -10,10 +10,13 @@ use App\Models\DraftItem;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use App\Models\Scopes\CompanyItemScope;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
-class Item extends Model
+class Item extends Model implements HasMedia
 {
-    use HasFactory;
+    use HasFactory, InteractsWithMedia;
 
     protected $fillable = [
         "date", "sale_id", "supplier", "manufacturer", "storage_id", "position",
@@ -27,8 +30,16 @@ class Item extends Model
     
     // Cast date and sold attributes as full datetime
     protected $casts = [
-    'date' => 'datetime',
+        'date' => 'datetime',
         'sold' => 'datetime',
+    ];
+
+    // Append custom attributes to JSON
+    protected $appends = [
+        'main_photo_url',
+        'main_photo_thumb',
+        'photo_urls',
+        'photo_count',
     ];
 
     protected static function booted()
@@ -53,6 +64,89 @@ class Item extends Model
 
     public function storage() {
         return $this->belongsTo(Storage::class);
+    }
+
+    /**
+     * Register media collections for item photos
+     */
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('item-photos')
+            ->useFallbackUrl('/images/item-placeholder.svg')
+            ->useFallbackPath(public_path('/images/item-placeholder.svg'))
+            ->registerMediaConversions(function (Media $media) {
+                $this->addMediaConversion('thumb')
+                    ->width(300)
+                    ->height(300)
+                    ->sharpen(10)
+                    ->nonQueued();
+                    
+                $this->addMediaConversion('preview')
+                    ->width(800)
+                    ->height(600)
+                    ->sharpen(10)
+                    ->nonQueued();
+                    
+                $this->addMediaConversion('detail')
+                    ->width(1200)
+                    ->height(900)
+                    ->sharpen(10)
+                    ->nonQueued();
+            });
+    }
+
+    /**
+     * Get the main item photo URL
+     */
+    public function getMainPhotoUrlAttribute(): string
+    {
+        return $this->getFirstMediaUrl('item-photos', 'preview') 
+            ?: asset('images/item-placeholder.svg');
+    }
+
+    /**
+     * Get the main item photo thumbnail URL
+     */
+    public function getMainPhotoThumbAttribute(): string
+    {
+        return $this->getFirstMediaUrl('item-photos', 'thumb') 
+            ?: asset('images/item-placeholder.svg');
+    }
+
+    /**
+     * Get all item photos URLs
+     */
+    public function getPhotoUrlsAttribute(): array
+    {
+        return $this->getMedia('item-photos')
+            ->map(function (Media $media) {
+                return [
+                    'id' => $media->id,
+                    'original' => $media->getUrl(),
+                    'thumb' => $media->getUrl('thumb'),
+                    'preview' => $media->getUrl('preview'),
+                    'detail' => $media->getUrl('detail'),
+                    'name' => $media->file_name,
+                    'size' => $media->size,
+                ];
+            })
+            ->toArray();
+    }
+
+    /**
+     * Check if item has photos
+     */
+    public function hasPhotos(): bool
+    {
+        return $this->getMedia('item-photos')->isNotEmpty();
+    }
+
+    /**
+     * Get photo count
+     */
+    public function getPhotoCountAttribute(): int
+    {
+        return $this->getMedia('item-photos')->count();
     }
 
     public function getVendorNameAttribute()

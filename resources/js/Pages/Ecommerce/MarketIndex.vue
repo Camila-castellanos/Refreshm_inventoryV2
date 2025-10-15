@@ -97,6 +97,15 @@
                                                 <i class="pi pi-external-link text-sm"></i>
                                             </a>
                                             
+                                            <!-- Manage Items -->
+                                            <Link
+                                                :href="route('ecommerce.items.index', market.id)"
+                                                class="inline-flex items-center justify-center w-8 h-8 rounded-md text-gray-500 hover:text-purple-500 transition-colors duration-200 bg-slate-100"
+                                                v-tooltip.top="'Manage Items'"
+                                            >
+                                                <i class="pi pi-box text-sm"></i>
+                                            </Link>
+
                                             <!-- Edit Market -->
                                             <Link
                                                 :href="route('ecommerce.markets.edit', market.id)"
