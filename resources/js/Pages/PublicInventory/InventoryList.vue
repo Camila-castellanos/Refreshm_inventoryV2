@@ -3,48 +3,35 @@
   <div class="max-w-7xl mx-auto py-4">
     <div class="w-full flex justify-end gap-4 pb-4">
       <Dialog v-model:visible="showSelectedItems" header="Selected items" :modal="true" class="mx-4">
-        <Form
-          ref="requestFormRef"
-          v-slot="$form"
-          :initialValues="initialValues"
-          :resolver="requestResolver"
-          :validateOnValueUpdate="false"
-          :validateOnBlur="true"
-          :validateOnSubmit="true"
-          @submit="onSubmit"
-        >
+        <form @submit.prevent="handleFormSubmit">
           <div class="max-w-7xl mx-auto ">
             <div class="flex flex-col gap-4">
               <div class="flex flex-col sm:flex-row gap-4">
                 <div class="flex-1">
                   <label for="name" class="block text-gray-700 text-sm font-bold mb-1">Name: <span class="text-red-600">*</span></label>
-                  <InputText id="name" name="name" type="text" class="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" :invalid="($form.name?.touched || $form.submitted) && $form.name?.invalid" />
-                  <Message v-if="($form.name?.touched || $form.submitted) && $form.name?.invalid" severity="error" size="small" variant="simple">{{ $form.name.error?.message }}</Message>
+                  <InputText id="name" v-model="formData.name" type="text" class="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" :invalid="!!formErrors.name" />
+                  <Message v-if="formErrors.name" severity="error" size="small" variant="simple">{{ formErrors.name }}</Message>
                 </div>
                 <div class="flex-1">
                   <label for="email" class="block text-gray-700 text-sm font-bold mb-1">E-mail: <span class="text-red-600">*</span></label>
-                  <InputText id="email" name="email" type="email" class="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" :invalid="($form.email?.touched || $form.submitted) && $form.email?.invalid" />
-                  <Message v-if="($form.email?.touched || $form.submitted) && $form.email?.invalid" severity="error" size="small" variant="simple">{{ $form.email.error?.message }}</Message>
+                  <InputText id="email" v-model="formData.email" type="email" class="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" :invalid="!!formErrors.email" />
+                  <Message v-if="formErrors.email" severity="error" size="small" variant="simple">{{ formErrors.email }}</Message>
                 </div>
               </div>
               <div class="flex flex-col sm:flex-row gap-4">
                 <div class="flex-1">
                   <label for="notes" class="block text-gray-700 text-sm font-bold mb-1">Memo / notes:</label>
-                  <Textarea id="notes" name="notes" rows="3" class="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" :invalid="($form.notes?.touched || $form.submitted) && $form.notes?.invalid"></Textarea>
-                  <Message v-if="($form.notes?.touched || $form.submitted) && $form.notes?.invalid" severity="error" size="small" variant="simple">{{ $form.notes.error?.message }}</Message>
+                  <Textarea id="notes" v-model="formData.notes" rows="3" class="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"></Textarea>
                 </div>
                 <div class="flex-1">
                   <label for="store" class="block text-gray-700 text-sm font-bold mb-1">Store:</label>
-                  <InputText id="store" name="store" type="text" class="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" :invalid="($form.store?.touched || $form.submitted) && $form.store?.invalid" />
-                  <Message v-if="($form.store?.touched || $form.submitted) && $form.store?.invalid" severity="error" size="small" variant="simple">{{ $form.store.error?.message }}</Message>
+                  <InputText id="store" v-model="formData.store" type="text" class="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
                 <div class="flex-1">
                   <label for="shipping" class="block text-gray-700 text-sm font-bold mb-1">Shipping:</label>
                   <Dropdown
                     id="shipping"
-                    name="shipping"
-                    ref="shippingDropdown"
-                    v-model="shippingValue"
+                    v-model="formData.shipping"
                     :options="shippingOptions"
                     optionLabel="label"
                     class="w-full"
@@ -101,9 +88,9 @@
 
         <h2 class="text-2xl justify-self-end font-black p-4 text-black">
           Total:
-          {{ (
+          ${{ (
             selectedItems.reduce((accumulator, currentItem) => accumulator + (Number(currentItem.selling_price) || 0), 0)
-            + (shippingValue?.value ?? 0)
+            + (formData.shipping?.value ?? 0)
           ).toFixed(2) }}
         </h2>
         <div class="flex w-full justify-around ">
@@ -111,7 +98,7 @@
           <Button type="submit">REQUEST DEVICES</Button>
         </div>
 
-        </Form>
+        </form>
       </Dialog>
 
     </div>
@@ -393,7 +380,6 @@ import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';
 import Tag from 'primevue/tag';
 import Message from 'primevue/message';
-import { Form } from '@primevue/forms';
 import GenericTabs from '@/Components/GenericTabs.vue';
 import { useToast } from 'primevue/usetoast';
 import { defineProps } from 'vue';
@@ -449,32 +435,38 @@ const shippingOptions = [
   { label: 'Express (+$25)', value: 25 }
 ];
 
-// Form initial values and resolver (simple required + email)
-const initialValues = {
+// Form data and errors
+const formData = ref({
   name: '',
   email: '',
   notes: '',
   store: '',
   shipping: shippingOptions[0]
-};
+});
 
-const requestResolver = (data) => {
-  const errors = {};
-  console.log("resolver dispatched with data:", data);
-  if(!data.values){
-    return { errors: { name: [{ message: 'Name is required' }], email: [{ message: 'Email is required' }] } };
+const formErrors = ref({
+  name: '',
+  email: ''
+});
+
+const validateForm = () => {
+  formErrors.value = { name: '', email: '' };
+  let isValid = true;
+
+  if (!formData.value.name || formData.value.name.trim().length === 0) {
+    formErrors.value.name = 'Name is required';
+    isValid = false;
   }
-  if (!data.values.name || String(data.values.name).trim().length === 0) {
-    console.log("Name validation failed");
-    errors.name = [{ message: 'Name is required' }];
+
+  if (!formData.value.email || formData.value.email.trim().length === 0) {
+    formErrors.value.email = 'Email is required';
+    isValid = false;
+  } else if (!/^\S+@\S+\.\S+$/.test(formData.value.email)) {
+    formErrors.value.email = 'Invalid email address';
+    isValid = false;
   }
-  if (!data.values.email || String(data.values.email).trim().length === 0) {
-    errors.email = [{ message: 'Email is required' }];
-    console.log("Email validation failed");
-  } else if (!/^\S+@\S+\.\S+$/.test(String(data.values.email))) {
-    errors.email = [{ message: 'Invalid email address' }];
-  }
-  return { errors };
+
+  return isValid;
 };
 
 
@@ -483,11 +475,6 @@ const requestResolver = (data) => {
 
 const searchQuery = ref('');
 const showSelectedItems = ref(false);
-// Ref to access the rendered form element for native extraction
-const requestFormRef = ref(null);
-// Independent shipping refs (decoupled from Form)
-const shippingDropdown = ref(null);
-const shippingValue = ref(shippingOptions[0]);
 const selectedItems = ref([]);
 // IDs of items for the currently selected tab. These are populated by `fetchTabItems`.
 const selectedTabItems = ref<Array<number>>(null);
@@ -683,13 +670,17 @@ const getSelectedItems = () => {
   showSelectedItems.value = true;
 };
 
-const onSubmit = async (data) => {
+const handleFormSubmit = async () => {
+  if (!validateForm()) {
+    return;
+  }
+
   const request = {
-    name: data.states.name.value || '',
-    email: data.states.email.value || '',
-    notes: data.states.notes.value || '',
-    store: data.states.store.value || '',
-    shipping: shippingValue.value,
+    name: formData.value.name,
+    email: formData.value.email,
+    notes: formData.value.notes,
+    store: formData.value.store,
+    shipping: formData.value.shipping,
     items: selectedItems.value.map(item => item.id),
   };
 
