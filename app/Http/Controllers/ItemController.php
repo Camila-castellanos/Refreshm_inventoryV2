@@ -1319,16 +1319,17 @@ public function getLabelsNewItems(Request $request): \Illuminate\Http\Response
                 return response()->json(['error' => 'Tab not found'], 404);
             }
 
-            // Obtenemos sólo los IDs de items relacionados con esta tab,
-            // excluyendo items vendidos o en hold (misma lógica que en otras consultas).
-            $itemIds = Item::whereHas('tabItems', function ($q) use ($id) {
-                $q->where('tab_id', $id);
-            })
-            ->whereNull('sold')
-            ->whereNull('hold')
-            ->pluck('id');
+            // Usamos JOIN directo en lugar de whereHas para mejor rendimiento
+            // y retornamos los items completos con sus relaciones
+            $items = Item::select('items.*')
+                ->join('tab_items', 'items.id', '=', 'tab_items.item_id')
+                ->where('tab_items.tab_id', $id)
+                ->whereNull('items.sold')
+                ->whereNull('items.hold')
+                ->with(['storage:id,name,limit', 'vendor:id,vendor'])
+                ->get();
 
-            return response()->json(['item_ids' => $itemIds], 200);
+            return response()->json(['items' => $items], 200);
         } catch (\Throwable $e) {
             Log::error('getTabItems error: ' . $e->getMessage(), ['tab_id' => $id]);
             return response()->json(['error' => 'Could not retrieve tab items'], 500);
