@@ -258,6 +258,19 @@
             @request-remove="onRequestRemove"
           >
           <div class="flex flex-col">
+            <!-- Loading indicator -->
+            <div v-if="isLoadingTabItems" class="flex flex-col justify-center items-center min-h-[60vh]">
+              <div class="loading-phone">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-20 h-20 text-gray-700">
+                  <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+                  <line x1="12" y1="18" x2="12.01" y2="18"></line>
+                </svg>
+              </div>
+              <span class="mt-6 text-gray-600 text-xl font-medium">Loading items...</span>
+            </div>
+
+            <!-- Content (hidden while loading) -->
+            <div v-else>
             <div class="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4 mb-6">
 
               <div class="w-full flex items-center justify-between">
@@ -359,6 +372,7 @@
                 </Card>
               </div>
             </div>
+            </div><!-- Close v-else wrapper -->
           </div>
           </GenericTabs>
         </template>
@@ -476,8 +490,10 @@ const validateForm = () => {
 const searchQuery = ref('');
 const showSelectedItems = ref(false);
 const selectedItems = ref([]);
-// IDs of items for the currently selected tab. These are populated by `fetchTabItems`.
-const selectedTabItems = ref<Array<number>>(null);
+// Items for the currently selected tab. If null, show all items from props.
+// If set to an array, show only these items (fetched from backend).
+const selectedTabItems = ref<Array<any>>(null);
+const isLoadingTabItems = ref(false); // Loading state for tab items
 const showFilterModal = ref(false); // For mobile filter modal
 const filters = ref({
   manufacturer: [], // Use array for checkboxes
@@ -500,42 +516,45 @@ const onTabClick = async (payload: { kind: 'static' | 'custom'; tab: any; index:
     selectedTabItems.value = null;
     return;
   }
-  // If a custom tab with an id is clicked, fetch its items and store the ids
+  // If a custom tab with an id is clicked, fetch its complete items from backend
   try {
     if (payload && payload.tab && (payload.tab.id || payload.tab.ID)) {
       const tabId = payload.tab.id ?? payload.tab.ID;
       console.log('Fetching items for tab id:', tabId);
+      isLoadingTabItems.value = true; // Start loading
       try {
-        const ids = await fetchTabItems(tabId);
-        selectedTabItems.value = Array.isArray(ids) ? ids : [];
+        const items = await fetchTabItems(tabId);
+        selectedTabItems.value = Array.isArray(items) ? items : [];
       } catch (err) {
         console.error('Error fetching tab items on tab click', err);
         selectedTabItems.value = [];
+      } finally {
+        isLoadingTabItems.value = false; // Stop loading
       }
     } else {
       // For static tabs or tabs without id, clear the selectedTabItems to show all items
-      selectedTabItems.value = [];
+      selectedTabItems.value = null;
     }
   } catch (e) {
     console.error('onTabClick handler error', e);
+    isLoadingTabItems.value = false; // Ensure loading stops on error
   }
 };
 
 // Models options populated when manufacturers are selected
 const modelsOptions = ref<Array<{ label: string; value: string }>>([]);
 
-// Fetch item IDs for a given tab id (calls route 'items.tabs.items')
+// Fetch complete items for a given tab id (calls route 'items.tabs.items')
 async function fetchTabItems(tabId) {
   if (!tabId) return [];
   try {
     let laravelRoute = route('items.tabs.items', { id: tabId });
     const response = await axios.get(laravelRoute);
-    // Expecting backend to return { item_ids: [...] } or { items: [...] }
-    const ids = response?.data?.item_ids ?? (response?.data?.items ? response.data.items.map(i => i.id) : []);
-    return ids;
+    // Backend now returns complete items instead of just IDs
+    const items = response?.data?.items ?? [];
+    return items;
   } catch (error) {
     console.error('Error fetching tab items:', error);
-    // Let the caller handle the assignment/notification; just return an empty array on error
     return [];
   }
 }
@@ -621,7 +640,9 @@ const uniqueGrades = computed(() => Array.from([...new Set(props.items?.map(item
 
 const filteredItemsBeforeFilters = computed(() => {
   const query = searchQuery.value.toLowerCase();
-  return props.items.filter(item =>
+  // Use selectedTabItems if a tab is active, otherwise use all items from props
+  const itemsToFilter = selectedTabItems.value ?? props.items;
+  return itemsToFilter.filter(item =>
     Object.values(item).some(value =>
       typeof value === 'string' && value.toLowerCase().includes(query)
     )
@@ -631,10 +652,7 @@ const filteredItemsBeforeFilters = computed(() => {
 // apply filters matching
 const filteredItemsWithFilters = computed(() => {
   return filteredItemsBeforeFilters.value.filter(item => {
-    // If tab-based selection exists, only include items whose id is in selectedTabItems
-    if (selectedTabItems.value) {
-      if (!selectedTabItems.value.includes(item.id)) return false;
-    }
+    // Tab filtering is now handled by filteredItemsBeforeFilters
     const manufacturerMatch = filters.value.manufacturer.length === 0 || filters.value.manufacturer.includes(item.manufacturer);
     const gradeMatch = filters.value.grade.length === 0 || filters.value.grade.includes(item.grade);
     const issuesMatch = filters.value.hasIssues === 'all' ||
@@ -781,8 +799,21 @@ onMounted(async () => {
   font-size: 0.875rem;
 }
 
-
 .cursor {
   cursor: pointer;
+}
+
+/* Loading phone animation */
+.loading-phone {
+  animation: rotate 2s linear infinite;
+}
+
+@keyframes rotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 </style>
