@@ -373,6 +373,9 @@
                 @if(in_array('table_device', $userActiveFields))
                     <th class="tbl-device" scope="col">DEVICE</th>
                 @endif
+                @if(in_array('table_grade', $userActiveFields))
+                    <th scope="col">GRADE</th>
+                @endif
                 @if(in_array('table_issues', $userActiveFields))
                     <th class="tbl-issues" scope="col">ISSUES</th>
                 @endif
@@ -391,6 +394,9 @@
                 @if(in_array('table_device', $userActiveFields))
                     <td class="tbl-device">{{ $item["model"] }}</td>
                 @endif
+                @if(in_array('table_grade', $userActiveFields))
+                    <td>{{ $item["grade"] ?? '' }}</td>
+                @endif
                 @if(in_array('table_issues', $userActiveFields))
                     <td class="tbl-issues">{{ $item["issues"] }}</td>
                 @endif
@@ -406,6 +412,9 @@
             <tr>
                 @if(in_array('table_device', $userActiveFields))
                     <td class="tbl-device">[CREDIT]: {{ $item["model"] }}</td>
+                @endif
+                @if(in_array('table_grade', $userActiveFields))
+                    <td>{{ $item["grade"] ?? '' }}</td>
                 @endif
                 @if(in_array('table_issues', $userActiveFields))
                     <td class="tbl-issues">{{ $item["issues"] }}</td>
