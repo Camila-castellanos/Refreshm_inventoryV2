@@ -3,48 +3,35 @@
   <div class="max-w-7xl mx-auto py-4">
     <div class="w-full flex justify-end gap-4 pb-4">
       <Dialog v-model:visible="showSelectedItems" header="Selected items" :modal="true" class="mx-4">
-        <Form
-          ref="requestFormRef"
-          v-slot="$form"
-          :initialValues="initialValues"
-          :resolver="requestResolver"
-          :validateOnValueUpdate="false"
-          :validateOnBlur="true"
-          :validateOnSubmit="true"
-          @submit="onSubmit"
-        >
+        <form @submit.prevent="handleFormSubmit">
           <div class="max-w-7xl mx-auto ">
             <div class="flex flex-col gap-4">
               <div class="flex flex-col sm:flex-row gap-4">
                 <div class="flex-1">
                   <label for="name" class="block text-gray-700 text-sm font-bold mb-1">Name: <span class="text-red-600">*</span></label>
-                  <InputText id="name" name="name" type="text" class="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" :invalid="($form.name?.touched || $form.submitted) && $form.name?.invalid" />
-                  <Message v-if="($form.name?.touched || $form.submitted) && $form.name?.invalid" severity="error" size="small" variant="simple">{{ $form.name.error?.message }}</Message>
+                  <InputText id="name" v-model="formData.name" type="text" class="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" :invalid="!!formErrors.name" />
+                  <Message v-if="formErrors.name" severity="error" size="small" variant="simple">{{ formErrors.name }}</Message>
                 </div>
                 <div class="flex-1">
                   <label for="email" class="block text-gray-700 text-sm font-bold mb-1">E-mail: <span class="text-red-600">*</span></label>
-                  <InputText id="email" name="email" type="email" class="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" :invalid="($form.email?.touched || $form.submitted) && $form.email?.invalid" />
-                  <Message v-if="($form.email?.touched || $form.submitted) && $form.email?.invalid" severity="error" size="small" variant="simple">{{ $form.email.error?.message }}</Message>
+                  <InputText id="email" v-model="formData.email" type="email" class="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" :invalid="!!formErrors.email" />
+                  <Message v-if="formErrors.email" severity="error" size="small" variant="simple">{{ formErrors.email }}</Message>
                 </div>
               </div>
               <div class="flex flex-col sm:flex-row gap-4">
                 <div class="flex-1">
                   <label for="notes" class="block text-gray-700 text-sm font-bold mb-1">Memo / notes:</label>
-                  <Textarea id="notes" name="notes" rows="3" class="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" :invalid="($form.notes?.touched || $form.submitted) && $form.notes?.invalid"></Textarea>
-                  <Message v-if="($form.notes?.touched || $form.submitted) && $form.notes?.invalid" severity="error" size="small" variant="simple">{{ $form.notes.error?.message }}</Message>
+                  <Textarea id="notes" v-model="formData.notes" rows="3" class="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"></Textarea>
                 </div>
                 <div class="flex-1">
                   <label for="store" class="block text-gray-700 text-sm font-bold mb-1">Store:</label>
-                  <InputText id="store" name="store" type="text" class="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" :invalid="($form.store?.touched || $form.submitted) && $form.store?.invalid" />
-                  <Message v-if="($form.store?.touched || $form.submitted) && $form.store?.invalid" severity="error" size="small" variant="simple">{{ $form.store.error?.message }}</Message>
+                  <InputText id="store" v-model="formData.store" type="text" class="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
                 <div class="flex-1">
                   <label for="shipping" class="block text-gray-700 text-sm font-bold mb-1">Shipping:</label>
                   <Dropdown
                     id="shipping"
-                    name="shipping"
-                    ref="shippingDropdown"
-                    v-model="shippingValue"
+                    v-model="formData.shipping"
                     :options="shippingOptions"
                     optionLabel="label"
                     class="w-full"
@@ -101,9 +88,9 @@
 
         <h2 class="text-2xl justify-self-end font-black p-4 text-black">
           Total:
-          {{ (
+          ${{ (
             selectedItems.reduce((accumulator, currentItem) => accumulator + (Number(currentItem.selling_price) || 0), 0)
-            + (shippingValue?.value ?? 0)
+            + (formData.shipping?.value ?? 0)
           ).toFixed(2) }}
         </h2>
         <div class="flex w-full justify-around ">
@@ -111,7 +98,7 @@
           <Button type="submit">REQUEST DEVICES</Button>
         </div>
 
-        </Form>
+        </form>
       </Dialog>
 
     </div>
@@ -271,6 +258,19 @@
             @request-remove="onRequestRemove"
           >
           <div class="flex flex-col">
+            <!-- Loading indicator -->
+            <div v-if="isLoadingTabItems" class="flex flex-col justify-center items-center min-h-[60vh]">
+              <div class="loading-phone">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-20 h-20 text-gray-700">
+                  <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+                  <line x1="12" y1="18" x2="12.01" y2="18"></line>
+                </svg>
+              </div>
+              <span class="mt-6 text-gray-600 text-xl font-medium">Loading items...</span>
+            </div>
+
+            <!-- Content (hidden while loading) -->
+            <div v-else>
             <div class="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4 mb-6">
 
               <div class="w-full flex items-center justify-between">
@@ -372,6 +372,7 @@
                 </Card>
               </div>
             </div>
+            </div><!-- Close v-else wrapper -->
           </div>
           </GenericTabs>
         </template>
@@ -393,7 +394,6 @@ import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';
 import Tag from 'primevue/tag';
 import Message from 'primevue/message';
-import { Form } from '@primevue/forms';
 import GenericTabs from '@/Components/GenericTabs.vue';
 import { useToast } from 'primevue/usetoast';
 import { defineProps } from 'vue';
@@ -449,32 +449,38 @@ const shippingOptions = [
   { label: 'Express (+$25)', value: 25 }
 ];
 
-// Form initial values and resolver (simple required + email)
-const initialValues = {
+// Form data and errors
+const formData = ref({
   name: '',
   email: '',
   notes: '',
   store: '',
   shipping: shippingOptions[0]
-};
+});
 
-const requestResolver = (data) => {
-  const errors = {};
-  console.log("resolver dispatched with data:", data);
-  if(!data.values){
-    return { errors: { name: [{ message: 'Name is required' }], email: [{ message: 'Email is required' }] } };
+const formErrors = ref({
+  name: '',
+  email: ''
+});
+
+const validateForm = () => {
+  formErrors.value = { name: '', email: '' };
+  let isValid = true;
+
+  if (!formData.value.name || formData.value.name.trim().length === 0) {
+    formErrors.value.name = 'Name is required';
+    isValid = false;
   }
-  if (!data.values.name || String(data.values.name).trim().length === 0) {
-    console.log("Name validation failed");
-    errors.name = [{ message: 'Name is required' }];
+
+  if (!formData.value.email || formData.value.email.trim().length === 0) {
+    formErrors.value.email = 'Email is required';
+    isValid = false;
+  } else if (!/^\S+@\S+\.\S+$/.test(formData.value.email)) {
+    formErrors.value.email = 'Invalid email address';
+    isValid = false;
   }
-  if (!data.values.email || String(data.values.email).trim().length === 0) {
-    errors.email = [{ message: 'Email is required' }];
-    console.log("Email validation failed");
-  } else if (!/^\S+@\S+\.\S+$/.test(String(data.values.email))) {
-    errors.email = [{ message: 'Invalid email address' }];
-  }
-  return { errors };
+
+  return isValid;
 };
 
 
@@ -483,14 +489,11 @@ const requestResolver = (data) => {
 
 const searchQuery = ref('');
 const showSelectedItems = ref(false);
-// Ref to access the rendered form element for native extraction
-const requestFormRef = ref(null);
-// Independent shipping refs (decoupled from Form)
-const shippingDropdown = ref(null);
-const shippingValue = ref(shippingOptions[0]);
 const selectedItems = ref([]);
-// IDs of items for the currently selected tab. These are populated by `fetchTabItems`.
-const selectedTabItems = ref<Array<number>>(null);
+// Items for the currently selected tab. If null, show all items from props.
+// If set to an array, show only these items (fetched from backend).
+const selectedTabItems = ref<Array<any>>(null);
+const isLoadingTabItems = ref(false); // Loading state for tab items
 const showFilterModal = ref(false); // For mobile filter modal
 const filters = ref({
   manufacturer: [], // Use array for checkboxes
@@ -513,42 +516,45 @@ const onTabClick = async (payload: { kind: 'static' | 'custom'; tab: any; index:
     selectedTabItems.value = null;
     return;
   }
-  // If a custom tab with an id is clicked, fetch its items and store the ids
+  // If a custom tab with an id is clicked, fetch its complete items from backend
   try {
     if (payload && payload.tab && (payload.tab.id || payload.tab.ID)) {
       const tabId = payload.tab.id ?? payload.tab.ID;
       console.log('Fetching items for tab id:', tabId);
+      isLoadingTabItems.value = true; // Start loading
       try {
-        const ids = await fetchTabItems(tabId);
-        selectedTabItems.value = Array.isArray(ids) ? ids : [];
+        const items = await fetchTabItems(tabId);
+        selectedTabItems.value = Array.isArray(items) ? items : [];
       } catch (err) {
         console.error('Error fetching tab items on tab click', err);
         selectedTabItems.value = [];
+      } finally {
+        isLoadingTabItems.value = false; // Stop loading
       }
     } else {
       // For static tabs or tabs without id, clear the selectedTabItems to show all items
-      selectedTabItems.value = [];
+      selectedTabItems.value = null;
     }
   } catch (e) {
     console.error('onTabClick handler error', e);
+    isLoadingTabItems.value = false; // Ensure loading stops on error
   }
 };
 
 // Models options populated when manufacturers are selected
 const modelsOptions = ref<Array<{ label: string; value: string }>>([]);
 
-// Fetch item IDs for a given tab id (calls route 'items.tabs.items')
+// Fetch complete items for a given tab id (calls route 'items.tabs.items')
 async function fetchTabItems(tabId) {
   if (!tabId) return [];
   try {
     let laravelRoute = route('items.tabs.items', { id: tabId });
     const response = await axios.get(laravelRoute);
-    // Expecting backend to return { item_ids: [...] } or { items: [...] }
-    const ids = response?.data?.item_ids ?? (response?.data?.items ? response.data.items.map(i => i.id) : []);
-    return ids;
+    // Backend now returns complete items instead of just IDs
+    const items = response?.data?.items ?? [];
+    return items;
   } catch (error) {
     console.error('Error fetching tab items:', error);
-    // Let the caller handle the assignment/notification; just return an empty array on error
     return [];
   }
 }
@@ -634,7 +640,9 @@ const uniqueGrades = computed(() => Array.from([...new Set(props.items?.map(item
 
 const filteredItemsBeforeFilters = computed(() => {
   const query = searchQuery.value.toLowerCase();
-  return props.items.filter(item =>
+  // Use selectedTabItems if a tab is active, otherwise use all items from props
+  const itemsToFilter = selectedTabItems.value ?? props.items;
+  return itemsToFilter.filter(item =>
     Object.values(item).some(value =>
       typeof value === 'string' && value.toLowerCase().includes(query)
     )
@@ -644,10 +652,7 @@ const filteredItemsBeforeFilters = computed(() => {
 // apply filters matching
 const filteredItemsWithFilters = computed(() => {
   return filteredItemsBeforeFilters.value.filter(item => {
-    // If tab-based selection exists, only include items whose id is in selectedTabItems
-    if (selectedTabItems.value) {
-      if (!selectedTabItems.value.includes(item.id)) return false;
-    }
+    // Tab filtering is now handled by filteredItemsBeforeFilters
     const manufacturerMatch = filters.value.manufacturer.length === 0 || filters.value.manufacturer.includes(item.manufacturer);
     const gradeMatch = filters.value.grade.length === 0 || filters.value.grade.includes(item.grade);
     const issuesMatch = filters.value.hasIssues === 'all' ||
@@ -683,13 +688,17 @@ const getSelectedItems = () => {
   showSelectedItems.value = true;
 };
 
-const onSubmit = async (data) => {
+const handleFormSubmit = async () => {
+  if (!validateForm()) {
+    return;
+  }
+
   const request = {
-    name: data.states.name.value || '',
-    email: data.states.email.value || '',
-    notes: data.states.notes.value || '',
-    store: data.states.store.value || '',
-    shipping: shippingValue.value,
+    name: formData.value.name,
+    email: formData.value.email,
+    notes: formData.value.notes,
+    store: formData.value.store,
+    shipping: formData.value.shipping,
     items: selectedItems.value.map(item => item.id),
   };
 
@@ -790,8 +799,21 @@ onMounted(async () => {
   font-size: 0.875rem;
 }
 
-
 .cursor {
   cursor: pointer;
+}
+
+/* Loading phone animation */
+.loading-phone {
+  animation: rotate 2s linear infinite;
+}
+
+@keyframes rotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 </style>
