@@ -23,6 +23,7 @@ class TaxController extends Controller
       $currentDate = Carbon::now();
       $firstDayOfMonth = Carbon::now()->startOfMonth();
       $response = [];
+      $grouped = [];
 
       foreach ($taxes as $tax) {
         // include bills either tagged by tax_id or carrying the same percentage explicitly
@@ -49,14 +50,35 @@ class TaxController extends Controller
                 $q->where('tax_id', $tax->id)
                   ->orWhere('tax', $tax->percentage);
             })->sum('total');
-        $i["id"] = $tax->id;
-        $i["name"] = $tax->name;
-        $i["percentage"] = (float)$tax->percentage;
-        $i["collected"] = (float)$collected;
-        $i["paid"] = (float)$paid;
-        $i["total_sales"] = round((float)$total_sales, 2);
-        $i["total_purchases"] = round((float)$total_purchases, 2);
-        $response[] = $i;
+        
+        // Group by name
+        $name = $tax->name;
+        if (!isset($grouped[$name])) {
+          $grouped[$name] = [
+            "id" => $tax->id,
+            "name" => $name,
+            "percentage" => (float)$tax->percentage,
+            "collected" => 0,
+            "paid" => 0,
+            "total_sales" => 0,
+            "total_purchases" => 0,
+          ];
+        }
+        
+        // Accumulate values for same name
+        $grouped[$name]["collected"] += (float)$collected;
+        $grouped[$name]["paid"] += (float)$paid;
+        $grouped[$name]["total_sales"] += (float)$total_sales;
+        $grouped[$name]["total_purchases"] += (float)$total_purchases;
+      }
+
+      // Convert grouped array to indexed array and round values
+      foreach ($grouped as $item) {
+        $item["collected"] = round($item["collected"], 2);
+        $item["paid"] = round($item["paid"], 2);
+        $item["total_sales"] = round($item["total_sales"], 2);
+        $item["total_purchases"] = round($item["total_purchases"], 2);
+        $response[] = $item;
       }
 
       $context = [
