@@ -8,6 +8,7 @@ use App\Models\Bill;
 use App\Models\Sale;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Exception;
 use PhpOffice\PhpSpreadsheet\Style\NumberFormat\Wizard\Percentage;
@@ -23,62 +24,121 @@ class TaxController extends Controller
       $currentDate = Carbon::now();
       $firstDayOfMonth = Carbon::now()->startOfMonth();
       $response = [];
-      $grouped = [];
 
+      // Group tax records by name to avoid double-counting when same percentage appears in multiple tax rows
+      $groups = [];
       foreach ($taxes as $tax) {
-        // include bills either tagged by tax_id or carrying the same percentage explicitly
-        $paid = Bill::where('user_id', $user->id)
-            ->where(function($q) use ($tax) {
-                $q->where('tax_id', $tax->id)
-                  ->orWhere('tax', $tax->percentage);
-            })->sum('flat_tax');
-        // include sales either tagged by tax_id or carrying the same percentage explicitly
-        $collected = Sale::where('user_id', $user->id)
-            ->where(function($q) use ($tax) {
-                $q->where('tax_id', $tax->id)
-                  ->orWhere('tax', $tax->percentage);
-            })->sum('flatTax');
-        $total_sales = round(
-            Sale::where('user_id', $user->id)
-                ->where(function($q) use ($tax) {
-                    $q->where('tax_id', $tax->id)
-                      ->orWhere('tax', $tax->percentage);
-                })->sum('total')
-        );
-        $total_purchases = Bill::where('user_id', $user->id)
-            ->where(function($q) use ($tax) {
-                $q->where('tax_id', $tax->id)
-                  ->orWhere('tax', $tax->percentage);
-            })->sum('total');
-        
-        // Group by name
         $name = $tax->name;
-        if (!isset($grouped[$name])) {
-          $grouped[$name] = [
-            "id" => $tax->id,
-            "name" => $name,
-            "percentage" => (float)$tax->percentage,
-            "collected" => 0,
-            "paid" => 0,
-            "total_sales" => 0,
-            "total_purchases" => 0,
+        if (!isset($groups[$name])) {
+          $groups[$name] = [
+            'ids' => [],
+            'percentages' => [],
+            'id' => $tax->id,
+            'percentage' => (float)$tax->percentage,
           ];
         }
-        
-        // Accumulate values for same name
-        $grouped[$name]["collected"] += (float)$collected;
-        $grouped[$name]["paid"] += (float)$paid;
-        $grouped[$name]["total_sales"] += (float)$total_sales;
-        $grouped[$name]["total_purchases"] += (float)$total_purchases;
+        $groups[$name]['ids'][] = $tax->id;
+        $groups[$name]['percentages'][] = (float)$tax->percentage;
       }
 
-      // Convert grouped array to indexed array and round values
-      foreach ($grouped as $item) {
-        $item["collected"] = round($item["collected"], 2);
-        $item["paid"] = round($item["paid"], 2);
-        $item["total_sales"] = round($item["total_sales"], 2);
-        $item["total_purchases"] = round($item["total_purchases"], 2);
-        $response[] = $item;
+      // Precompute aggregated sums for all bills/sales (no date filters here)
+      $billFlatById = Bill::where('user_id', $user->id)
+        ->select('tax_id', DB::raw('SUM(flat_tax) as sum_flat'))
+        ->groupBy('tax_id')
+        ->pluck('sum_flat', 'tax_id')
+        ->toArray();
+
+      $billTotalById = Bill::where('user_id', $user->id)
+        ->select('tax_id', DB::raw('SUM(total) as sum_total'))
+        ->groupBy('tax_id')
+        ->pluck('sum_total', 'tax_id')
+        ->toArray();
+
+      $saleFlatById = Sale::where('user_id', $user->id)
+        ->select('tax_id', DB::raw('SUM(flatTax) as sum_flat'))
+        ->groupBy('tax_id')
+        ->pluck('sum_flat', 'tax_id')
+        ->toArray();
+
+      $saleTotalById = Sale::where('user_id', $user->id)
+        ->select('tax_id', DB::raw('SUM(total) as sum_total'))
+        ->groupBy('tax_id')
+        ->pluck('sum_total', 'tax_id')
+        ->toArray();
+
+      // Aggregations for tax percentages where tax_id IS NULL
+      $billFlatByPercent = Bill::where('user_id', $user->id)
+        ->whereNull('tax_id')
+        ->select('tax', DB::raw('SUM(flat_tax) as sum_flat'))
+        ->groupBy('tax')
+        ->pluck('sum_flat', 'tax')
+        ->toArray();
+
+      $billTotalByPercent = Bill::where('user_id', $user->id)
+        ->whereNull('tax_id')
+        ->select('tax', DB::raw('SUM(total) as sum_total'))
+        ->groupBy('tax')
+        ->pluck('sum_total', 'tax')
+        ->toArray();
+
+      $saleFlatByPercent = Sale::where('user_id', $user->id)
+        ->whereNull('tax_id')
+        ->select('tax', DB::raw('SUM(flatTax) as sum_flat'))
+        ->groupBy('tax')
+        ->pluck('sum_flat', 'tax')
+        ->toArray();
+
+      $saleTotalByPercent = Sale::where('user_id', $user->id)
+        ->whereNull('tax_id')
+        ->select('tax', DB::raw('SUM(total) as sum_total'))
+        ->groupBy('tax')
+        ->pluck('sum_total', 'tax')
+        ->toArray();
+
+      // Build percentage counts across all taxes to attribute percent-only matches only when unique
+      $percentageCounts = [];
+      foreach ($taxes as $tax) {
+        $k = (string) ((float) $tax->percentage);
+        $percentageCounts[$k] = ($percentageCounts[$k] ?? 0) + 1;
+      }
+
+      foreach ($groups as $name => $group) {
+        $ids = array_values(array_unique($group['ids']));
+        $percentages = array_values(array_unique($group['percentages']));
+        // keep only percentages that are unique across all taxes
+        $percentages = array_values(array_filter($percentages, function($p) use ($percentageCounts) {
+          return ($percentageCounts[(string) ((float) $p)] ?? 0) === 1;
+        }));
+
+        $groupPaid = 0;
+        $groupCollected = 0;
+        $groupTotalSales = 0;
+        $groupTotalPurchases = 0;
+
+        foreach ($ids as $id) {
+          $groupPaid += floatval($billFlatById[$id] ?? 0);
+          $groupTotalPurchases += floatval($billTotalById[$id] ?? 0);
+          $groupCollected += floatval($saleFlatById[$id] ?? 0);
+          $groupTotalSales += floatval($saleTotalById[$id] ?? 0);
+        }
+
+        foreach ($percentages as $p) {
+          $key = (string) ((float) $p);
+          $groupPaid += floatval($billFlatByPercent[$key] ?? 0);
+          $groupTotalPurchases += floatval($billTotalByPercent[$key] ?? 0);
+          $groupCollected += floatval($saleFlatByPercent[$key] ?? 0);
+          $groupTotalSales += floatval($saleTotalByPercent[$key] ?? 0);
+        }
+
+        $response[] = [
+          'id' => $group['id'],
+          'name' => $name,
+          'percentage' => $group['percentage'],
+          'collected' => round($groupCollected, 2),
+          'paid' => round($groupPaid, 2),
+          'total_sales' => round($groupTotalSales, 2),
+          'total_purchases' => round($groupTotalPurchases, 2),
+        ];
       }
 
       $context = [
@@ -242,41 +302,128 @@ class TaxController extends Controller
       
       Log::info("Start date: $start, End date: $end");
 
+      // Build groups by name
+      $groups = [];
       foreach ($taxes as $tax) {
-        $paid = Bill::where('user_id', $user->id)
-            ->whereBetween('date', [$start, $end])
-            ->where(function($q) use ($tax) {
-                $q->where('tax_id', $tax->id)
-                  ->orWhere('tax', $tax->percentage);
-            })->sum('flat_tax');
+        $name = $tax->name;
+        if (!isset($groups[$name])) {
+          $groups[$name] = [
+            'ids' => [],
+            'percentages' => [],
+            'id' => $tax->id,
+            'percentage' => (float)$tax->percentage,
+          ];
+        }
+        $groups[$name]['ids'][] = $tax->id;
+        $groups[$name]['percentages'][] = (float)$tax->percentage;
+      }
 
-        // include sales either by tax_id or explicit tax percentage within date range
-        $collected = Sale::where('user_id', $user->id)
-            ->whereBetween('date', [$start, $end])
-            ->where(function($q) use ($tax) {
-                $q->where('tax_id', $tax->id)
-                  ->orWhere('tax', $tax->percentage);
-            })->sum('flatTax');
-        $total_sales = Sale::where('user_id', $user->id)
-            ->whereBetween('date', [$start, $end])
-            ->where(function($q) use ($tax) {
-                $q->where('tax_id', $tax->id)
-                  ->orWhere('tax', $tax->percentage);
-            })->sum('total');
-        $total_purchases = Bill::where('user_id', $user->id)
-            ->whereBetween('date', [$start, $end])
-            ->where(function($q) use ($tax) {
-                $q->where('tax_id', $tax->id)
-                  ->orWhere('tax', $tax->percentage);
-            })->sum('total');
-        $i["id"] = $tax->id;
-        $i["name"] = $tax->name;
-        $i["percentage"] = (float)$tax->percentage;
-        $i["collected"] = round((float)$collected, 2);
-        $i["paid"] = round((float)$paid, 2);
-        $i["total_sales"] = round((float)$total_sales, 2);
-        $i["total_purchases"] = round((float)$total_purchases, 2);
-        $response[] = $i;
+      // Pre-aggregate sums for the date range to avoid per-group overlapping queries
+      $billFlatById = Bill::where('user_id', $user->id)
+        ->whereBetween('date', [$start, $end])
+        ->select('tax_id', DB::raw('SUM(flat_tax) as sum_flat'))
+        ->groupBy('tax_id')
+        ->pluck('sum_flat', 'tax_id')
+        ->toArray();
+
+      $billTotalById = Bill::where('user_id', $user->id)
+        ->whereBetween('date', [$start, $end])
+        ->select('tax_id', DB::raw('SUM(total) as sum_total'))
+        ->groupBy('tax_id')
+        ->pluck('sum_total', 'tax_id')
+        ->toArray();
+
+      $saleFlatById = Sale::where('user_id', $user->id)
+        ->whereBetween('date', [$start, $end])
+        ->select('tax_id', DB::raw('SUM(flatTax) as sum_flat'))
+        ->groupBy('tax_id')
+        ->pluck('sum_flat', 'tax_id')
+        ->toArray();
+
+      $saleTotalById = Sale::where('user_id', $user->id)
+        ->whereBetween('date', [$start, $end])
+        ->select('tax_id', DB::raw('SUM(total) as sum_total'))
+        ->groupBy('tax_id')
+        ->pluck('sum_total', 'tax_id')
+        ->toArray();
+
+      // Aggregations for tax percentages where tax_id IS NULL
+      $billFlatByPercent = Bill::where('user_id', $user->id)
+        ->whereBetween('date', [$start, $end])
+        ->whereNull('tax_id')
+        ->select('tax', DB::raw('SUM(flat_tax) as sum_flat'))
+        ->groupBy('tax')
+        ->pluck('sum_flat', 'tax')
+        ->toArray();
+
+      $billTotalByPercent = Bill::where('user_id', $user->id)
+        ->whereBetween('date', [$start, $end])
+        ->whereNull('tax_id')
+        ->select('tax', DB::raw('SUM(total) as sum_total'))
+        ->groupBy('tax')
+        ->pluck('sum_total', 'tax')
+        ->toArray();
+
+      $saleFlatByPercent = Sale::where('user_id', $user->id)
+        ->whereBetween('date', [$start, $end])
+        ->whereNull('tax_id')
+        ->select('tax', DB::raw('SUM(flatTax) as sum_flat'))
+        ->groupBy('tax')
+        ->pluck('sum_flat', 'tax')
+        ->toArray();
+
+      $saleTotalByPercent = Sale::where('user_id', $user->id)
+        ->whereBetween('date', [$start, $end])
+        ->whereNull('tax_id')
+        ->select('tax', DB::raw('SUM(total) as sum_total'))
+        ->groupBy('tax')
+        ->pluck('sum_total', 'tax')
+        ->toArray();
+
+      // Build percentage counts across all taxes to attribute percent-only matches only when unique
+      $percentageCounts = [];
+      foreach ($taxes as $tax) {
+        $k = (string) ((float) $tax->percentage);
+        $percentageCounts[$k] = ($percentageCounts[$k] ?? 0) + 1;
+      }
+
+      foreach ($groups as $name => $group) {
+        $ids = array_values(array_unique($group['ids']));
+        $percentages = array_values(array_unique($group['percentages']));
+        // keep only percentages that are unique across all taxes
+        $percentages = array_values(array_filter($percentages, function($p) use ($percentageCounts) {
+          return ($percentageCounts[(string) ((float) $p)] ?? 0) === 1;
+        }));
+
+        $groupPaid = 0;
+        $groupCollected = 0;
+        $groupTotalSales = 0;
+        $groupTotalPurchases = 0;
+
+        foreach ($ids as $id) {
+          $groupPaid += floatval($billFlatById[$id] ?? 0);
+          $groupTotalPurchases += floatval($billTotalById[$id] ?? 0);
+          $groupCollected += floatval($saleFlatById[$id] ?? 0);
+          $groupTotalSales += floatval($saleTotalById[$id] ?? 0);
+        }
+
+        foreach ($percentages as $p) {
+          $key = (string) ((float) $p);
+          $groupPaid += floatval($billFlatByPercent[$key] ?? 0);
+          $groupTotalPurchases += floatval($billTotalByPercent[$key] ?? 0);
+          $groupCollected += floatval($saleFlatByPercent[$key] ?? 0);
+          $groupTotalSales += floatval($saleTotalByPercent[$key] ?? 0);
+        }
+
+        $response[] = [
+          'id' => $group['id'],
+          'name' => $name,
+          'percentage' => $group['percentage'],
+          'collected' => round($groupCollected, 2),
+          'paid' => round($groupPaid, 2),
+          'total_sales' => round($groupTotalSales, 2),
+          'total_purchases' => round($groupTotalPurchases, 2),
+        ];
       }
 
       return response()->json($response, 200);
