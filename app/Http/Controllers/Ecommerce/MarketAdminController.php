@@ -71,6 +71,12 @@ class MarketAdminController extends Controller
             'address' => 'nullable|string|max:500',
             'meta_title' => 'nullable|string|max:255',
             'meta_description' => 'nullable|string|max:500',
+            'custom_domain' => [
+                'nullable',
+                'string',
+                'max:255',
+                Rule::unique('markets', 'custom_domain'),
+            ],
         ]);
 
         // Generate unique slug
@@ -88,6 +94,7 @@ class MarketAdminController extends Controller
             'name' => $validated['name'],
             'slug' => $slug,
             'shop_id' => $validated['shop_id'],
+            'custom_domain' => $validated['custom_domain'] ?? null,
             'description' => $validated['description'],
             'tagline' => $validated['tagline'],
             'currency' => $validated['currency'],
@@ -161,6 +168,12 @@ class MarketAdminController extends Controller
             'address' => 'nullable|string|max:500',
             'meta_title' => 'nullable|string|max:255',
             'meta_description' => 'nullable|string|max:500',
+            'custom_domain' => [
+                'nullable',
+                'string',
+                'max:255',
+                Rule::unique('markets', 'custom_domain')->ignore($market->id),
+            ],
         ]);
 
         // Update slug if name changed
@@ -184,6 +197,11 @@ class MarketAdminController extends Controller
 
         if (empty($validated['meta_description'])) {
             $validated['meta_description'] = 'Browse and shop ' . $validated['name'] . ' collection of quality products.';
+        }
+
+        // validate uniqueness for custom_domain on update (ignore current)
+        if (isset($validated['custom_domain'])) {
+            $validated['custom_domain'] = $validated['custom_domain'] ?: null;
         }
 
         $market->update($validated);

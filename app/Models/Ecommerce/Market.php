@@ -20,6 +20,7 @@ class Market extends Model
     protected $fillable = [
         'shop_id',
         'name',
+        'custom_domain',
         'slug',
         'description',
         'tagline',
@@ -250,6 +251,22 @@ class Market extends Model
     }
 
     /**
+     * Scope: Find market by custom domain
+     */
+    public function scopeByCustomDomain($query, string $host)
+    {
+        return $query->where('custom_domain', $host)->where('is_active', true);
+    }
+
+    /**
+     * Find consumer shop by custom domain
+     */
+    public static function findByCustomDomain(string $host): ?self
+    {
+        return static::where('custom_domain', $host)->where('is_active', true)->first();
+    }
+
+    /**
      * Find consumer shop by slug
      */
     public static function findBySlug(string $slug): ?self
@@ -288,6 +305,7 @@ class Market extends Model
             'address' => $this->address,
             'return_policy' => $this->return_policy,
             'shipping_policy' => $this->shipping_policy,
+            'custom_domain' => $this->custom_domain,
         ];
     }
 }
