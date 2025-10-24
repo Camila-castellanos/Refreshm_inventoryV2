@@ -41,7 +41,7 @@ Route::post('/logout', function (Request $request) {
     return redirect()->back();
 })->name('logout');
 
-Route::get('/', function () {
+Route::get('/', function (Request $request) {
 
     if (Auth::check()) {
         return redirect()->route('dashboard');
@@ -53,7 +53,7 @@ Route::get('/', function () {
         'laravelVersion' => Application::VERSION,
         'phpVersion' => PHP_VERSION,
     ]);
-});
+})->middleware([\App\Http\Middleware\DetectMarketFromHost::class]);
 
 Route::get("invitation", [InvitationController::class, "index"])->name("invitation");
 
@@ -264,6 +264,24 @@ Route::get('/customers/by-name/{name}', [CustomerController::class, 'getByName']
 
     });
 });
+
+// Host-based Ecommerce Routes (Custom domains / white-label)
+// Refactored: Use controller methods and inject Market via middleware for clean route-model-binding
+use App\Http\Controllers\Ecommerce\MarketController;
+Route::domain('{custom_domain}')
+    ->middleware([\App\Http\Middleware\DetectMarketFromHost::class])
+    ->group(function () {
+        Route::get('/', [MarketController::class, 'index'])->name('market.domain.index');
+        Route::get('/products', [MarketController::class, 'products'])->name('market.domain.products');
+        Route::get('/products-list', [MarketController::class, 'productsList'])->name('market.domain.productsList');
+        Route::get('/category/{category}', [MarketController::class, 'category'])->name('market.domain.category');
+        Route::get('/product/{item}', [MarketController::class, 'product'])->name('market.domain.product');
+        Route::get('/search', [MarketController::class, 'search'])->name('market.domain.search');
+        Route::get('/contact', [MarketController::class, 'contact'])->name('market.domain.contact');
+        Route::get('/cart', [MarketController::class, 'cart'])->name('market.domain.cart');
+        // API endpoint for market info on custom domain
+        Route::get('/api/info', [MarketController::class, 'info'])->name('market.domain.api.info');
+    });
 
 // Ecommerce Routes (Public Market - No authentication required)
 Route::prefix('market/{market:slug}')->name('market.')->group(function () {

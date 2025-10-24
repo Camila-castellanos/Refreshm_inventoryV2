@@ -32,6 +32,22 @@
                                 <small v-if="generatedSlug" class="text-gray-500 mt-1">URL Slug: {{ generatedSlug }}</small>
                             </div>
 
+                            <!-- Custom Domain -->
+                            <div class="col-span-2">
+                                <label for="custom_domain" class="block text-sm font-medium text-gray-900 mb-2">
+                                    Custom Domain
+                                </label>
+                                <InputText
+                                    id="custom_domain"
+                                    v-model="form.custom_domain"
+                                    placeholder="e.g., store.example.com (leave empty to use /market/:slug)"
+                                    :class="{ 'p-invalid': form.errors.custom_domain }"
+                                    class="w-full"
+                                />
+                                <small v-if="form.errors.custom_domain" class="p-error">{{ form.errors.custom_domain }}</small>
+                                <small class="text-gray-500 mt-1">If set, your clients will access the market at this custom domain.</small>
+                            </div>
+
                             <!-- Shop Selection -->
                             <div class="col-span-2">
                                 <label for="shop_id" class="block text-sm font-medium text-gray-900 mb-2">
@@ -284,6 +300,7 @@ const currencyOptions = [
 
 const form = useForm({
     name: '',
+    custom_domain: '',
     shop_id: '',
     description: '',
     tagline: '',
@@ -301,6 +318,7 @@ const form = useForm({
 onMounted(() => {
     if (props.market) {
         form.name = props.market.name || '';
+        form.custom_domain = props.market.custom_domain || '';
         form.shop_id = props.market.shop_id || '';
         form.description = props.market.description || '';
         form.tagline = props.market.tagline || '';

@@ -16,6 +16,8 @@ class MarketController extends Controller
      */
     public function index(Request $request, Market $market)
     {
+        Log::debug('MarketController@index: entered', ['host' => $request->getHost(), 'market_id' => $market->id ?? null, 'market_slug' => $market->slug ?? null]);
+
         try {
             // Load the related shop and company for additional info
             $market->load(['shop.company']);
