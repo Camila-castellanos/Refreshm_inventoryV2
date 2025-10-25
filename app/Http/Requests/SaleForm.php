@@ -45,7 +45,7 @@ class SaleForm extends FormRequest
             "items.*.storage_id" => "exists:storages,id|nullable",
             "items.*.selling_price" => "required|numeric",
             "items.*.type" => "required|string",
-            "tax_id" => "required",
+            "tax_id" => "nullable",
             // Campos de crédito
             "credit" => "numeric|nullable",
             "credit_added" => "numeric|nullable",

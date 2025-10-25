@@ -41,7 +41,7 @@ class SaleFormEdit extends FormRequest
             "items.*.sold" => "required|date",
             "items.*.customer" => "sometimes|nullable",
             "credit" => "nullable|numeric",
-            "tax_id" => "required",
+            "tax_id" => "nullable",
             "customer" => "required|string"
         ];
     }

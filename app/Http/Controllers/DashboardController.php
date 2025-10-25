@@ -207,24 +207,36 @@ private function calculateSalesMetrics($userId, $isAdmin = false, $startOfMonth,
         ->selectRaw('
             COALESCE(SUM(
                 CASE 
-                    WHEN sales.tax IS NULL OR sales.tax = 0 
+                    WHEN sales.tax_id IS NULL
                     THEN items.selling_price 
                     ELSE 0 
                 END
             ), 0) as non_taxed_sales,
             COALESCE(SUM(
                 CASE 
-                    WHEN sales.tax > 0 
+                    WHEN sales.tax_id IS NOT NULL 
                     THEN items.selling_price * (1 + sales.tax / 100) 
                     ELSE 0 
                 END
             ), 0) as taxed_sales,
-            COALESCE(SUM(items.selling_price * (1 + COALESCE(sales.tax, 0) / 100)), 0) as total_sold_value,
-            COALESCE(SUM((items.selling_price * (1 + COALESCE(sales.tax, 0) / 100)) - COALESCE(items.cost, 0)), 0) as total_profit,
+            COALESCE(SUM(
+                CASE
+                    WHEN sales.tax_id IS NOT NULL
+                    THEN items.selling_price * (1 + sales.tax / 100)
+                    ELSE items.selling_price
+                END
+            ), 0) as total_sold_value,
+            COALESCE(SUM(
+                (CASE
+                    WHEN sales.tax_id IS NOT NULL
+                    THEN items.selling_price * (1 + sales.tax / 100)
+                    ELSE items.selling_price
+                END) - COALESCE(items.cost, 0)
+            ), 0) as total_profit,
             COALESCE(SUM(COALESCE(items.cost, 0)), 0) as cost_of_goods_sold,
             COALESCE(SUM(
                 CASE 
-                    WHEN sales.tax > 0 
+                    WHEN sales.tax_id IS NOT NULL 
                     THEN COALESCE(items.cost, 0) 
                     ELSE 0 
                 END
