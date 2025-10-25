@@ -259,6 +259,7 @@ private function calculateInventoryMetrics($userId, $isAdmin = false)
     // Agregaciones simples para items en inventario
     $inventoryData = Item::when(!$isAdmin, fn($q) => $q->where('user_id', $userId))
         ->whereNull('sold')
+        ->whereIn('type', ['device', 'accessory'])
         ->selectRaw('
             COALESCE(SUM(cost), 0) as inventory_value,
             COALESCE(SUM(selling_price), 0) as sale_value
@@ -275,9 +276,9 @@ private function calculateDeviceMetrics($userId, $isAdmin = false, $startOfMonth
 {
     // optimized aggregations for device items
     $deviceData = Item::when(!$isAdmin, fn($q) => $q->where('user_id', $userId))
-        ->where('type', 'device')
+        ->whereIn('type', ['device'])
         ->selectRaw('
-            COUNT(CASE WHEN (sold IS NULL AND hold IS NULL) THEN 1 END) as devices_in_inventory,
+            COUNT(CASE WHEN (sold IS NULL) THEN 1 END) as devices_in_inventory,
             COUNT(CASE WHEN date >= ? AND date <= ? THEN 1 END) as trades_this_month,
             COUNT(CASE WHEN sold >= ? AND sold <= ? THEN 1 END) as sold_this_month
         ', [$startOfMonth, $endOfMonth, $startOfMonth, $endOfMonth])
