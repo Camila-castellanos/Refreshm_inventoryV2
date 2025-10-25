@@ -739,15 +739,6 @@ function createDevices(): void {
       });
       return;
     }
-    if (!selectedTax.value) {
-      toast.add({
-        severity: 'error',
-        summary: 'Validation Error',
-        detail: 'A Tax must be selected',
-        life: 3000,
-      });
-      return;
-    }
     callback();
   }
 function editDevices(): void {

@@ -42,6 +42,48 @@ class TaxController extends Controller
         ->selectRaw('COALESCE(SUM(items.selling_price), 0) as s')
         ->value('s');
 
+      // Also compute totals for records where tax_id IS NULL (aggregate across percentages)
+      $saleFlatNullTotal = (float) Sale::where('user_id', $user->id)
+        ->whereNull('tax_id')
+        ->whereBetween('date', [$start, $end])
+        ->sum('flatTax');
+
+      $saleSubtotalNullTotal = (float) Sale::where('user_id', $user->id)
+        ->whereNull('tax_id')
+        ->whereBetween('date', [$start, $end])
+        ->sum('subtotal');
+
+      $billFlatNullTotal = (float) Bill::where('user_id', $user->id)
+        ->whereNull('tax_id')
+        ->whereBetween('date', [$start, $end])
+        ->sum('flat_tax');
+
+      $billSubtotalNullTotal = (float) Bill::where('user_id', $user->id)
+        ->whereNull('tax_id')
+        ->whereBetween('date', [$start, $end])
+        ->sum('subtotal');
+
+      // Also compute totals for records where tax_id IS NULL (aggregate across percentages)
+      $saleFlatNullTotal = (float) Sale::where('user_id', $user->id)
+        ->whereNull('tax_id')
+        ->whereBetween('date', [$start, $end])
+        ->sum('flatTax');
+
+      $saleSubtotalNullTotal = (float) Sale::where('user_id', $user->id)
+        ->whereNull('tax_id')
+        ->whereBetween('date', [$start, $end])
+        ->sum('subtotal');
+
+      $billFlatNullTotal = (float) Bill::where('user_id', $user->id)
+        ->whereNull('tax_id')
+        ->whereBetween('date', [$start, $end])
+        ->sum('flat_tax');
+
+      $billSubtotalNullTotal = (float) Bill::where('user_id', $user->id)
+        ->whereNull('tax_id')
+        ->whereBetween('date', [$start, $end])
+        ->sum('subtotal');
+
 
       // Build percentage counts across all taxes to decide attribution of
       // records with tax_id = NULL. We only attribute percentage-only rows
@@ -144,15 +186,16 @@ class TaxController extends Controller
         ];
       }
 
-      // Add extra row for non-taxed metrics (tax_id = 0, "No Tax")
+      // Add extra row for non-taxed metrics (tax_id = 0, "No Tax").
+      // Also attach collected/paid/total_purchases computed from records with tax_id IS NULL
       $response[] = [
         'id' => 0,
         'name' => 'No Tax',
         'percentage' => 0,
-        'collected' => 0,
-        'paid' => 0,
+        'collected' => round($saleFlatNullTotal, 2),
+        'paid' => round($billFlatNullTotal, 2),
         'total_sales' => round($nonTaxedSales, 2),
-        'total_purchases' => 0,
+        'total_purchases' => round($billSubtotalNullTotal, 2),
       ];
 
       $context = [
@@ -172,7 +215,24 @@ class TaxController extends Controller
       $query->where('name', 'LIKE', '%' . $tax . '%');
       $query->orWhere('percentage', 'LIKE', '%' . $tax . '%');
     })->select('id', 'name', 'percentage')->get();
-    return response()->json($taxes, 200);
+
+    // Convert to array to manipulate and prepend a No Tax option (id => null)
+    $taxesArray = $taxes->toArray();
+
+    // Avoid adding duplicate No Tax entries if backend or other code already provides it
+    $hasNoTax = collect($taxesArray)->contains(function ($t) {
+      return array_key_exists('id', $t) && ($t['id'] === null || $t['id'] === 0);
+    });
+
+    if (! $hasNoTax) {
+      array_unshift($taxesArray, [
+        'id' => null,
+        'name' => 'No Tax',
+        'percentage' => 0,
+      ]);
+    }
+
+    return response()->json($taxesArray, 200);
   }
 
   /**
