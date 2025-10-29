@@ -11,7 +11,7 @@
       <template #content>
         <div class="flex flex-wrap gap-4 mb-4">
           <div v-for="location in storageLocations" :key="location.id"
-            class="flex items-center justify-between py-2 px-5 bg-[var(--bg-item)] rounded-3xl cursor-grab"
+            :class="['storage-item', 'flex items-center justify-between py-2 px-5 bg-[var(--bg-item)] rounded-3xl cursor-grab', { dragging: draggingId === location.id, 'drop-over': dragOverId === location.id }]"
             draggable="true"
             @dragstart="onDragStart($event, location.id)"
             @dragend="onDragEnd($event, location.id)"
@@ -31,6 +31,7 @@
               <Menu :ref="(el) => (menuRefs[location.id] = el)" :id="`overlay_menu_${location.id}`"
                 :model="getMenuItems(location)" :popup="true" />
             </div>
+            <div class="drop-placeholder" aria-hidden="true"></div>
           </div>
         </div>
 
@@ -105,8 +106,8 @@ const toggleMenu = (event: Event, locationId: number) => {
 
 function onDragStart(e: DragEvent, id: number) {
   draggingId.value = id;
-  const target = (e.currentTarget || e.target) as HTMLElement | null;
-  if (target) target.style.opacity = '0.6';
+  // set draggingId so template class binding applies .dragging styles
+  // avoid direct style mutation so CSS transitions take effect
   try {
     if (e.dataTransfer) {
       e.dataTransfer.setData('text/plain', String(id));
@@ -118,8 +119,6 @@ function onDragStart(e: DragEvent, id: number) {
 }
 
 function onDragEnd(e: DragEvent, id: number) {
-  const target = (e.currentTarget || e.target) as HTMLElement | null;
-  if (target) target.style.opacity = '1';
   draggingId.value = null;
   dragOverId.value = null;
 }
@@ -242,5 +241,62 @@ const handleDelete = async (location: Storage) => {
 
 :deep(.p-card .p-card-body) {
   padding: 0;
+}
+
+/* Drag & drop UI improvements */
+.storage-item {
+  transition: transform 180ms ease, box-shadow 180ms ease, opacity 120ms ease, background-color 160ms ease;
+  cursor: grab;
+  will-change: transform, box-shadow, opacity;
+  user-select: none;
+}
+
+.storage-item.dragging {
+  transform: scale(0.985);
+  opacity: 0.85;
+  box-shadow: 0 10px 30px rgba(16, 24, 40, 0.12);
+  cursor: grabbing;
+  z-index: 60;
+}
+
+.storage-item:hover:not(.dragging) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(16,24,40,0.06);
+}
+
+.storage-item.drop-over {
+  background-color: rgba(99, 102, 241, 0.06);
+  outline: 2px dashed rgba(99, 102, 241, 0.28);
+  outline-offset: -6px;
+  transform: translateY(0);
+}
+
+.storage-item .drop-placeholder {
+  display: none;
+  height: 4px;
+  width: 100%;
+  background: linear-gradient(90deg, rgba(99,102,241,0.9), rgba(59,130,246,0.9));
+  border-radius: 4px;
+  margin-top: 6px;
+}
+
+.storage-item.drop-over .drop-placeholder {
+  display: block;
+}
+
+.storage-item:focus {
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
+  outline: none;
+}
+
+:deep(.p-card) {
+  transition: box-shadow .18s ease, transform .18s ease;
+}
+
+@media (max-width: 640px) {
+  .storage-item {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
 }
 </style>
