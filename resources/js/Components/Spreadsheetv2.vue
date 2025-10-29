@@ -621,52 +621,79 @@ function onDeleteRow(e: CustomEvent<{ count: number }>): void {
   renderPositions(rows);
 }
 
-function renderPositions(numOfRows: number): void {
-  const newRowsToAssign = tableData.value.filter(row => !row.location);
-  let rowsAssigned = 0;
-  for (const row of newRowsToAssign) {
-    if (row.location) continue; // Skip if already assigned in a previous iteration
-    console.log("storageList", storagesList.value);
-    for (const storage of storagesList.value) {
-      const dbPositions = storage.items.map((item: Item) => item.position);
-      // include positions reserved by drafts
-      const draftPositions = storage.draft_items?.map((d: any) => d.storage_position) || [];
-      console.log("Draft positions:", draftPositions);
-      console.log("DB positions:", dbPositions);
-      const inTablePositions: number[] = [];
-      tableData.value.forEach((r) => {
-        if (r.location?.startsWith(storage.name) && r !== row) { // Exclude the current row being assigned
-          const parts = r.location.split(" - ")[1]?.split(" / ");
-          if (parts && parts[0]) {
-            inTablePositions.push(parseInt(parts[0]));
-          }
-        }
-      });
+async function renderPositions(numOfRows: number): Promise<void> {
+   // Get rows that need position assignment
+   const newRowsToAssign = tableData.value.filter((row) => !row.location);
 
-      const occupiedPositions = [...dbPositions, ...draftPositions, ...inTablePositions];
-      const availablePositions: number[] = [];
-      for (let i = 1; i <= storage.limit; i++) {
-        if (!occupiedPositions.includes(i)) {
-          availablePositions.push(i);
-        }
-      }
+   if (newRowsToAssign.length === 0) return;
 
-      if (availablePositions.length > 0) {
-        row.location = `${storage.name} - ${availablePositions[0]} / ${storage.limit}`;
-        rowsAssigned++;
-        break; // Move to the next new row
-      }
-    }
+   try {
+     // Get rows that are already assigned (reserved in front)
+     const assignedRows = tableData.value.filter((row) => row.location && row.storage_id && row.position);
+     
+     // Parse assigned rows to extract storage_id and position
+     const assignedInFront = assignedRows.map((row) => {
+       const locParts = row.location?.split(' - ');
+       const positionStr = locParts && locParts[1] ? locParts[1].split('/')[0].trim() : null;
+       return {
+         storage_id: row.storage_id,
+         position: positionStr ? parseInt(positionStr, 10) : null,
+       };
+     }).filter((item) => item.storage_id && item.position);
 
-    if (!row.location) {
-      console.warn("Could not find storage for a new device:", row);
-    }
-  }
+     console.log("Items to assign:", newRowsToAssign);
+     console.log("Already assigned (reserved):", assignedInFront);
 
-  if (rowsAssigned < numOfRows) {
-    toast.add({ severity: "error", summary: "Error", detail: "Not enough combined storage capacity for all new devices.", life: 5000 });
-  }
-}
+     // Call backend to assign positions based on storage priority
+     const response = await axios.post(route('storages.assignPositions'), {
+       items: newRowsToAssign,
+       assigned: assignedInFront,
+     });
+
+     const { items: assignedItems, unassigned_count } = response.data;
+
+     console.log("Backend response:", { assignedItems, unassigned_count });
+
+     // Update tableData with assigned positions
+     assignedItems.forEach((assignedItem: any) => {
+       // Find the corresponding row in tableData by matching manufacturer, model, colour
+       const rowIndex = tableData.value.findIndex((r) =>
+         r.manufacturer === assignedItem.manufacturer &&
+         r.model === assignedItem.model &&
+         r.colour === assignedItem.colour &&
+         !r.location
+       );
+       
+       if (rowIndex !== -1) {
+         const storage = storagesList.value.find((s: any) => s.id === assignedItem.storage_id);
+         if (storage) {
+           tableData.value[rowIndex].location = `${storage.name} - ${assignedItem.position} / ${storage.limit}`;
+           tableData.value[rowIndex].storage_id = assignedItem.storage_id;
+           tableData.value[rowIndex].position = assignedItem.position;
+         }
+       }
+     });
+
+     // Show warning if some items couldn't be assigned
+     if (unassigned_count > 0) {
+       toast.add({
+         severity: "error",
+         summary: "Error",
+         detail: `${unassigned_count} device(s) could not be assigned due to insufficient storage capacity.`,
+         life: 5000
+       });
+       console.warn(`Unassigned rows: ${unassigned_count}`);
+     }
+   } catch (error) {
+     console.error('Error assigning positions:', error);
+     toast.add({
+       severity: "error",
+       summary: "Error",
+       detail: "Failed to assign storage positions",
+       life: 5000
+     });
+   }
+ }
 
 function handleBeforeEdit(e: RevoGridCustomEvent<BeforeSaveDataDetails>): void {
   const { prop, rowIndex } = e.detail;

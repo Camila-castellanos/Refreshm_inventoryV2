@@ -11,7 +11,7 @@ class Storage extends Model
 {
     use HasFactory;
 
-    public $fillable = ['name', 'limit', 'company_id'];
+    public $fillable = ['name', 'limit', 'company_id', 'priority', 'is_default'];
 
     public function items() {
         return $this->hasMany(Item::class);

@@ -11,20 +11,35 @@
       <template #content>
         <div class="flex flex-wrap gap-4 mb-4">
           <div v-for="location in storageLocations" :key="location.id"
-            class="flex items-center justify-between py-2 px-5 bg-[var(--bg-item)] rounded-3xl">
-            <span> {{ location.name }} - ({{ location.items.length }}/{{ location.limit }}) </span>
+            class="flex items-center justify-between py-2 px-5 bg-[var(--bg-item)] rounded-3xl cursor-grab"
+            draggable="true"
+            @dragstart="onDragStart($event, location.id)"
+            @dragend="onDragEnd($event, location.id)"
+            @dragover.prevent="onDragOver($event, location.id)"
+            @drop.prevent="onDrop($event, location.id)">
+            <span>
+              {{ location.name }} - (
+              {{
+                (location.occupied_count ?? ((location.items?.length || 0) + (location.draftItems?.length || 0)))
+              }}/{{ location.limit }})
+            </span>
 
-            <Button type="button" icon="pi pi-ellipsis-v" text class="!p-2"
-              @click="(event) => toggleMenu(event, location.id)" aria-haspopup="true"
-              :aria-controls="`overlay_menu_${location.id}`" />
-            <Menu :ref="(el) => (menuRefs[location.id] = el)" :id="`overlay_menu_${location.id}`"
-              :model="getMenuItems(location)" :popup="true" />
+            <div class="flex items-center space-x-2">
+              <Button type="button" icon="pi pi-ellipsis-v" text class="!p-2"
+                @click="(event) => toggleMenu(event, location.id)" aria-haspopup="true"
+                :aria-controls="`overlay_menu_${location.id}`" />
+              <Menu :ref="(el) => (menuRefs[location.id] = el)" :id="`overlay_menu_${location.id}`"
+                :model="getMenuItems(location)" :popup="true" />
+            </div>
           </div>
         </div>
 
-        <div class="flex justify-end">
+        <div class="flex justify-end mb-4 space-x-2">
+          <Button label="Save Order" icon="pi pi-save" @click="saveOrder" />
           <Button label="Create" icon="pi pi-plus" @click="openCreateDialog" />
         </div>
+
+        <!-- single Create button kept above next to Save Order -->
       </template>
     </Card>
 
@@ -69,6 +84,9 @@ const form = reactive({
   limit: 0,
 });
 
+const draggingId = ref<number|null>(null);
+const dragOverId = ref<number|null>(null);
+
 // Fetch storages on mount
 const fetchStorages = async () => {
   try {
@@ -84,6 +102,64 @@ onMounted(fetchStorages);
 const toggleMenu = (event: Event, locationId: number) => {
   menuRefs[locationId]?.toggle(event);
 };
+
+function onDragStart(e: DragEvent, id: number) {
+  draggingId.value = id;
+  const target = (e.currentTarget || e.target) as HTMLElement | null;
+  if (target) target.style.opacity = '0.6';
+  try {
+    if (e.dataTransfer) {
+      e.dataTransfer.setData('text/plain', String(id));
+      e.dataTransfer.effectAllowed = 'move';
+    }
+  } catch (err) {
+    // ignore dataTransfer errors in some browsers
+  }
+}
+
+function onDragEnd(e: DragEvent, id: number) {
+  const target = (e.currentTarget || e.target) as HTMLElement | null;
+  if (target) target.style.opacity = '1';
+  draggingId.value = null;
+  dragOverId.value = null;
+}
+
+function onDragOver(e: DragEvent, id: number) {
+  dragOverId.value = id;
+}
+
+function onDrop(e: DragEvent, id: number) {
+  const fromId = draggingId.value;
+  const toId = id;
+  if (!fromId || !toId || fromId === toId) return;
+
+  const arr = [...storageLocations.value];
+  const fromIndex = arr.findIndex(s => s.id === fromId);
+  const toIndex = arr.findIndex(s => s.id === toId);
+  if (fromIndex === -1 || toIndex === -1) return;
+
+  const [moved] = arr.splice(fromIndex, 1);
+  arr.splice(toIndex, 0, moved);
+
+  // reassign local priorities for immediate feedback
+  storageLocations.value = arr.map((s, idx) => ({ ...s, priority: idx + 1 }));
+
+  draggingId.value = null;
+  dragOverId.value = null;
+}
+
+async function saveOrder() {
+  try {
+    const order = storageLocations.value.map(s => s.id);
+    await axios.post('/storages/reorder', { order });
+    toast.add({ severity: 'success', summary: 'Saved', detail: 'Order saved', life: 3000 });
+    // refresh to get server canonical state
+    fetchStorages();
+  } catch (err) {
+    console.error('Failed to save order', err);
+    toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to save order', life: 3000 });
+  }
+}
 
 const getMenuItems = (location: Storage) => [
   {

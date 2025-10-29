@@ -59,6 +59,7 @@ Route::get("invitation", [InvitationController::class, "index"])->name("invitati
 
 Route::resource('storages', StorageController::class);
 Route::post('/storages/destroy', [StorageController::class, 'destroy']);
+Route::post('/storages/reorder', [StorageController::class, 'reorder']);
 
 
 
@@ -113,6 +114,9 @@ Route::middleware([
         Route::get("report", [SaleController::class, "showReport"])->name("sales.report");
         Route::post("report", [SaleController::class, "generateReport"])->name("sales.generate_report");
     });
+
+    Route::post('/storages/assign-positions', [StorageController::class, 'assignPositions'])->name('storages.assignPositions');
+
 
     Route::resource('prospects', ProspectController::class);
 
