@@ -198,7 +198,7 @@
         // Total credit is returned items + sale credit
         $total_credit = $credit + $sale_credit;
         // Final total after credit
-        $final_total = $total - $total_credit;
+        $final_total = $total;
     @endphp
     @php
         // Precompute a display-friendly sales total used in the header due-card
