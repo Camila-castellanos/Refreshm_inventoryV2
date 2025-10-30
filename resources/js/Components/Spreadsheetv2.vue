@@ -1093,8 +1093,16 @@ function handleTaxCreated(tax: { id: number; name: string; percentage: number })
 }
 // function to calculate row total
 function calculateTotal(cost: number|null, taxPerc: number|null): number|null {
-  if (cost == null || taxPerc == null) return null;
-  return parseFloat((cost * (1 + taxPerc / 100)).toFixed(2));
+  // If there is no cost/subtotal, don't calculate
+  if (cost == null) return null;
+
+  // If no tax is selected, return the subtotal as the cost (preserve 2 decimals)
+  if (taxPerc == null) {
+    return parseFloat(Number(cost).toFixed(2));
+  }
+
+  // Otherwise apply tax percentage
+  return parseFloat((Number(cost) * (1 + taxPerc / 100)).toFixed(2));
 }
 function getTaxPercentageById(id: number | string): number | null {
   const option = taxOptions.value.find(opt => opt.value === id)
@@ -1120,6 +1128,7 @@ function updateTotals() {
 
 // recalculate totals when tax changes or costs change
 watch(selectedTax, () => {
+  console.log("cambio el tax")
   updateTotals();
 });
 

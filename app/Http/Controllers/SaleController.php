@@ -44,6 +44,37 @@ class SaleController extends Controller
         $paymentDateTime = Carbon::createFromFormat('Y-m-d', $request->payment_date)
             ->setTimeFromTimeString(Carbon::now()->toTimeString());
         $form["date"] = $paymentDateTime->format('Y-m-d H:i:s');
+        
+        // NUEVA LÓGICA: Calcular total en el backend antes de crear la venta
+        // Fórmula:
+        // 1. Tax = (subtotal - crédito) * porcentaje / 100
+        // 2. Total = subtotal - (crédito - tax)
+        $subtotal = (float) $form["subtotal"];
+        $credit = max(0.0, (float) ($form["credit"] ?? 0));
+        $taxPercentage = (float) $form["tax"];
+        
+        // Calcular tax: (subtotal - crédito) * porcentaje / 100
+        $subtotalAfterCredit = max(0.0, $subtotal - $credit);
+        $calculatedTax = ($subtotalAfterCredit * $taxPercentage) / 100;
+        
+        // Total final: subtotal - (crédito - tax), si es negativo queda en 0
+        $creditMinusTax = $credit - $calculatedTax;
+        $calculatedTotal = max(0.0, $subtotal - $creditMinusTax);
+        
+        // Actualizar el form con los valores calculados
+        $form["flatTax"] = round($calculatedTax, 2);
+        $form["total"] = round($calculatedTotal, 2);
+        
+        Log::info("Total calculation in store", [
+            'subtotal' => $subtotal,
+            'credit' => $credit,
+            'tax_percentage' => $taxPercentage,
+            'subtotal_after_credit' => $subtotalAfterCredit,
+            'calculated_tax' => $calculatedTax,
+            'credit_minus_tax' => $creditMinusTax,
+            'calculated_total' => $calculatedTotal,
+        ]);
+        
         // Crear la venta con datetime completo
         $sale = Sale::create($form);
 
@@ -288,8 +319,31 @@ class SaleController extends Controller
                 }
             }
 
-            // Calcular removed_credit (por ahora 0, puedes implementar lógica adicional si es necesario)
-            $removedCredit = 0;
+            // NUEVA LÓGICA: Calcular total en el backend
+            // Fórmula:
+            // 1. Tax = (subtotal - crédito) * porcentaje / 100
+            // 2. Total = subtotal - (crédito - tax)
+            $subtotal = (float) $request->subtotal;
+            $credit = max(0.0, (float) $finalCredit);
+            $taxPercentage = (float) $request->tax;
+            
+            // Calcular tax: (subtotal - crédito) * porcentaje / 100
+            $subtotalAfterCredit = max(0.0, $subtotal - $credit);
+            $calculatedTax = ($subtotalAfterCredit * $taxPercentage) / 100;
+            
+            // Total final: subtotal - (crédito - tax), si es negativo queda en 0
+            $creditMinusTax = $credit - $calculatedTax;
+            $calculatedTotal = max(0.0, $subtotal - $creditMinusTax);
+            
+            Log::info("Total calculation in backend", [
+                'subtotal' => $subtotal,
+                'credit' => $credit,
+                'tax_percentage' => $taxPercentage,
+                'subtotal_after_credit' => $subtotalAfterCredit,
+                'calculated_tax' => $calculatedTax,
+                'credit_minus_tax' => $creditMinusTax,
+                'calculated_total' => $calculatedTotal,
+            ]);
 
             $paid = 0;
             $balance = $request->balance_remaining;
@@ -305,11 +359,11 @@ class SaleController extends Controller
             $finalCredit = max(0.0, (float) $finalCredit);
 
             $sale->update([
-                'subtotal' => $request->subtotal,
+                'subtotal' => $subtotal,
                 'discount' => $request->discount,
-                'tax' => $request->tax,
-                'flatTax' => $request->flatTax,
-                'total' => $request->total,
+                'tax' => $taxPercentage,
+                'flatTax' => round($calculatedTax, 2),
+                'total' => round($calculatedTotal, 2),
                 'amount_paid' => $request->amount_paid,
                 'balance_remaining' => $balance,
                 'payment_method' => $request->payment_method,
