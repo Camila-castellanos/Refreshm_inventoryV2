@@ -207,24 +207,36 @@ private function calculateSalesMetrics($userId, $isAdmin = false, $startOfMonth,
         ->selectRaw('
             COALESCE(SUM(
                 CASE 
-                    WHEN sales.tax IS NULL OR sales.tax = 0 
+                    WHEN sales.tax_id IS NULL
                     THEN items.selling_price 
                     ELSE 0 
                 END
             ), 0) as non_taxed_sales,
             COALESCE(SUM(
                 CASE 
-                    WHEN sales.tax > 0 
+                    WHEN sales.tax_id IS NOT NULL 
                     THEN items.selling_price * (1 + sales.tax / 100) 
                     ELSE 0 
                 END
             ), 0) as taxed_sales,
-            COALESCE(SUM(items.selling_price * (1 + COALESCE(sales.tax, 0) / 100)), 0) as total_sold_value,
-            COALESCE(SUM((items.selling_price * (1 + COALESCE(sales.tax, 0) / 100)) - COALESCE(items.cost, 0)), 0) as total_profit,
+            COALESCE(SUM(
+                CASE
+                    WHEN sales.tax_id IS NOT NULL
+                    THEN items.selling_price * (1 + sales.tax / 100)
+                    ELSE items.selling_price
+                END
+            ), 0) as total_sold_value,
+            COALESCE(SUM(
+                (CASE
+                    WHEN sales.tax_id IS NOT NULL
+                    THEN items.selling_price * (1 + sales.tax / 100)
+                    ELSE items.selling_price
+                END) - COALESCE(items.cost, 0)
+            ), 0) as total_profit,
             COALESCE(SUM(COALESCE(items.cost, 0)), 0) as cost_of_goods_sold,
             COALESCE(SUM(
                 CASE 
-                    WHEN sales.tax > 0 
+                    WHEN sales.tax_id IS NOT NULL 
                     THEN COALESCE(items.cost, 0) 
                     ELSE 0 
                 END
@@ -247,6 +259,7 @@ private function calculateInventoryMetrics($userId, $isAdmin = false)
     // Agregaciones simples para items en inventario
     $inventoryData = Item::when(!$isAdmin, fn($q) => $q->where('user_id', $userId))
         ->whereNull('sold')
+        ->whereIn('type', ['device', 'accessory'])
         ->selectRaw('
             COALESCE(SUM(cost), 0) as inventory_value,
             COALESCE(SUM(selling_price), 0) as sale_value
@@ -263,9 +276,9 @@ private function calculateDeviceMetrics($userId, $isAdmin = false, $startOfMonth
 {
     // optimized aggregations for device items
     $deviceData = Item::when(!$isAdmin, fn($q) => $q->where('user_id', $userId))
-        ->where('type', 'device')
+        ->whereIn('type', ['device'])
         ->selectRaw('
-            COUNT(CASE WHEN (sold IS NULL AND hold IS NULL) THEN 1 END) as devices_in_inventory,
+            COUNT(CASE WHEN (sold IS NULL) THEN 1 END) as devices_in_inventory,
             COUNT(CASE WHEN date >= ? AND date <= ? THEN 1 END) as trades_this_month,
             COUNT(CASE WHEN sold >= ? AND sold <= ? THEN 1 END) as sold_this_month
         ', [$startOfMonth, $endOfMonth, $startOfMonth, $endOfMonth])

@@ -31,7 +31,7 @@ class ExpenseForm extends FormRequest
       "items.*.subtotal" => "sometimes",
       "items.*.total" => "sometimes",
       "items.*.tax" => "sometimes",
-      "items.*.tax_id" => "required",
+      "items.*.tax_id" => "nullable",
     ];
   }
 

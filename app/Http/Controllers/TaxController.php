@@ -8,6 +8,7 @@ use App\Models\Bill;
 use App\Models\Sale;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Exception;
 use PhpOffice\PhpSpreadsheet\Style\NumberFormat\Wizard\Percentage;
@@ -21,43 +22,150 @@ class TaxController extends Controller
       $user = Auth::user();
       $taxes = Tax::where('user_id', $user->id)->get();
       $currentDate = Carbon::now();
-      $firstDayOfMonth = Carbon::now()->startOfMonth();
+      // Default range: last calendar month (start = first day of previous month, end = last day of previous month)
+      $start = Carbon::now()->startOfMonth()->startOfDay()->toDateTimeString();
+      $end = Carbon::now()->endOfMonth()->endOfDay()->toDateTimeString();
       $response = [];
 
+      // Non-taxed sales: use tax_id as the source of truth (tax_id IS NULL)
+      $nonTaxedSales = DB::table('items')
+        ->leftJoin('sales', 'items.sale_id', '=', 'sales.id')
+        ->where('items.user_id', $user->id)
+        ->when($start, function($q) use ($start, $end) {
+          $q->whereBetween('items.sold', [$start, $end]);
+        })
+        ->whereNull('sales.tax_id')
+        ->selectRaw('COALESCE(SUM(items.selling_price), 0) as s')
+        ->value('s');
+
+      // Also compute totals for records where tax_id IS NULL (aggregate across percentages)
+      $saleFlatNullTotal = (float) Sale::where('user_id', $user->id)
+        ->whereNull('tax_id')
+        ->when($start, function($q) use ($start, $end) {
+          $q->whereBetween('date', [$start, $end]);
+        })
+        ->sum('flatTax');
+
+      $saleSubtotalNullTotal = (float) Sale::where('user_id', $user->id)
+        ->whereNull('tax_id')
+        ->when($start, function($q) use ($start, $end) {
+          $q->whereBetween('date', [$start, $end]);
+        })
+        ->sum('subtotal');
+
+      $billFlatNullTotal = (float) Bill::where('user_id', $user->id)
+        ->whereNull('tax_id')
+        ->when($start, function($q) use ($start, $end) {
+          $q->whereBetween('date', [$start, $end]);
+        })
+        ->sum('flat_tax');
+
+      $billSubtotalNullTotal = (float) Bill::where('user_id', $user->id)
+        ->whereNull('tax_id')
+        ->when($start, function($q) use ($start, $end) {
+          $q->whereBetween('date', [$start, $end]);
+        })
+        ->sum('subtotal');
+
+      // Also compute totals for records where tax_id IS NULL (aggregate across percentages)
+      $saleFlatNullTotal = (float) Sale::where('user_id', $user->id)
+        ->whereNull('tax_id')
+        ->when($start, function($q) use ($start, $end) {
+          $q->whereBetween('date', [$start, $end]);
+        })
+        ->sum('flatTax');
+
+      $saleSubtotalNullTotal = (float) Sale::where('user_id', $user->id)
+        ->whereNull('tax_id')
+        ->when($start, function($q) use ($start, $end) {
+          $q->whereBetween('date', [$start, $end]);
+        })
+        ->sum('subtotal');
+
+      $billFlatNullTotal = (float) Bill::where('user_id', $user->id)
+        ->whereNull('tax_id')
+        ->when($start, function($q) use ($start, $end) {
+          $q->whereBetween('date', [$start, $end]);
+        })
+        ->sum('flat_tax');
+
+      $billSubtotalNullTotal = (float) Bill::where('user_id', $user->id)
+        ->whereNull('tax_id')
+        ->when($start, function($q) use ($start, $end) {
+          $q->whereBetween('date', [$start, $end]);
+        })
+        ->sum('subtotal');
+
+
+      // Note: tax_id is the source of truth. Do not attempt to attribute
+      // rows with tax_id = NULL to taxes by matching percentage. All
+      // records with tax_id NULL will be reported under "No Tax".
+
+      // For each tax, compute sums using tax_id first; if percentage is unique
+      // then add percent-based sums from NULL-tax_id rows.
       foreach ($taxes as $tax) {
-        // include bills either tagged by tax_id or carrying the same percentage explicitly
-        $paid = Bill::where('user_id', $user->id)
-            ->where(function($q) use ($tax) {
-                $q->where('tax_id', $tax->id)
-                  ->orWhere('tax', $tax->percentage);
-            })->sum('flat_tax');
-        // include sales either tagged by tax_id or carrying the same percentage explicitly
-        $collected = Sale::where('user_id', $user->id)
-            ->where(function($q) use ($tax) {
-                $q->where('tax_id', $tax->id)
-                  ->orWhere('tax', $tax->percentage);
-            })->sum('flatTax');
-        $total_sales = round(
-            Sale::where('user_id', $user->id)
-                ->where(function($q) use ($tax) {
-                    $q->where('tax_id', $tax->id)
-                      ->orWhere('tax', $tax->percentage);
-                })->sum('total')
-        );
-        $total_purchases = Bill::where('user_id', $user->id)
-            ->where(function($q) use ($tax) {
-                $q->where('tax_id', $tax->id)
-                  ->orWhere('tax', $tax->percentage);
-            })->sum('total');
-        $i["id"] = $tax->id;
-        $i["name"] = $tax->name;
-        $i["percentage"] = (float)$tax->percentage;
-        $i["collected"] = (float)$collected;
-        $i["paid"] = (float)$paid;
-        $i["total_sales"] = round((float)$total_sales, 2);
-        $i["total_purchases"] = round((float)$total_purchases, 2);
-        $response[] = $i;
+        $taxId = $tax->id;
+        $percentage = (float) $tax->percentage;
+        $pkey = (string) $percentage;
+
+        // Sales/bills where tax_id explicitly references this tax
+        $saleFlatById = (float) Sale::where('user_id', $user->id)
+          ->where('tax_id', $taxId)
+          ->when($start, function($q) use ($start, $end) {
+            $q->whereBetween('date', [$start, $end]);
+          })
+          ->sum('flatTax');
+
+        $saleSubtotalById = (float) Sale::where('user_id', $user->id)
+          ->where('tax_id', $taxId)
+          ->when($start, function($q) use ($start, $end) {
+            $q->whereBetween('date', [$start, $end]);
+          })
+          ->sum('subtotal');
+
+        $billFlatById = (float) Bill::where('user_id', $user->id)
+          ->where('tax_id', $taxId)
+          ->when($start, function($q) use ($start, $end) {
+            $q->whereBetween('date', [$start, $end]);
+          })
+          ->sum('flat_tax');
+
+        $billSubtotalById = (float) Bill::where('user_id', $user->id)
+          ->where('tax_id', $taxId)
+          ->when($start, function($q) use ($start, $end) {
+            $q->whereBetween('date', [$start, $end]);
+          })
+          ->sum('subtotal');
+
+        // Do not include percent-attributed rows; only use explicit tax_id
+        $groupCollected = $saleFlatById;
+        $groupTotalSales = $saleSubtotalById;
+
+        $groupPaid = $billFlatById;
+        $groupTotalPurchases = $billSubtotalById;
+
+        $response[] = [
+          'id' => $taxId,
+          'name' => $tax->name,
+          'percentage' => $percentage,
+          'collected' => round($groupCollected, 2),
+          'paid' => round($groupPaid, 2),
+          'total_sales' => round($groupTotalSales, 2),
+          'total_purchases' => round($groupTotalPurchases, 2),
+        ];
       }
+
+      // Add extra row for non-taxed metrics (tax_id = 0, "No Tax").
+      // Also attach collected/paid/total_purchases computed from records with tax_id IS NULL
+      $response[] = [
+        'id' => 0,
+        'name' => 'No Tax',
+        'percentage' => 0,
+        'collected' => round($saleFlatNullTotal, 2),
+        'paid' => round($billFlatNullTotal, 2),
+        'total_sales' => round($nonTaxedSales, 2),
+        'total_purchases' => round($billSubtotalNullTotal, 2),
+      ];
 
       $context = [
         'items' => $response,
@@ -76,7 +184,24 @@ class TaxController extends Controller
       $query->where('name', 'LIKE', '%' . $tax . '%');
       $query->orWhere('percentage', 'LIKE', '%' . $tax . '%');
     })->select('id', 'name', 'percentage')->get();
-    return response()->json($taxes, 200);
+
+    // Convert to array to manipulate and prepend a No Tax option (id => null)
+    $taxesArray = $taxes->toArray();
+
+    // Avoid adding duplicate No Tax entries if backend or other code already provides it
+    $hasNoTax = collect($taxesArray)->contains(function ($t) {
+      return array_key_exists('id', $t) && ($t['id'] === null || $t['id'] === 0);
+    });
+
+    if (! $hasNoTax) {
+      array_unshift($taxesArray, [
+        'id' => null,
+        'name' => 'No Tax',
+        'percentage' => 0,
+      ]);
+    }
+
+    return response()->json($taxesArray, 200);
   }
 
   /**
@@ -220,42 +345,75 @@ class TaxController extends Controller
       
       Log::info("Start date: $start, End date: $end");
 
-      foreach ($taxes as $tax) {
-        $paid = Bill::where('user_id', $user->id)
-            ->whereBetween('date', [$start, $end])
-            ->where(function($q) use ($tax) {
-                $q->where('tax_id', $tax->id)
-                  ->orWhere('tax', $tax->percentage);
-            })->sum('flat_tax');
+      // Non-taxed sales: tax_id is the source of truth
+      $nonTaxedSales = DB::table('items')
+        ->leftJoin('sales', 'items.sale_id', '=', 'sales.id')
+        ->where('items.user_id', $user->id)
+        ->whereBetween('items.sold', [$start, $end])
+        ->whereNull('sales.tax_id')
+        ->selectRaw('COALESCE(SUM(items.selling_price), 0) as s')
+        ->value('s');
 
-        // include sales either by tax_id or explicit tax percentage within date range
-        $collected = Sale::where('user_id', $user->id)
-            ->whereBetween('date', [$start, $end])
-            ->where(function($q) use ($tax) {
-                $q->where('tax_id', $tax->id)
-                  ->orWhere('tax', $tax->percentage);
-            })->sum('flatTax');
-        $total_sales = Sale::where('user_id', $user->id)
-            ->whereBetween('date', [$start, $end])
-            ->where(function($q) use ($tax) {
-                $q->where('tax_id', $tax->id)
-                  ->orWhere('tax', $tax->percentage);
-            })->sum('total');
-        $total_purchases = Bill::where('user_id', $user->id)
-            ->whereBetween('date', [$start, $end])
-            ->where(function($q) use ($tax) {
-                $q->where('tax_id', $tax->id)
-                  ->orWhere('tax', $tax->percentage);
-            })->sum('total');
-        $i["id"] = $tax->id;
-        $i["name"] = $tax->name;
-        $i["percentage"] = (float)$tax->percentage;
-        $i["collected"] = round((float)$collected, 2);
-        $i["paid"] = round((float)$paid, 2);
-        $i["total_sales"] = round((float)$total_sales, 2);
-        $i["total_purchases"] = round((float)$total_purchases, 2);
-        $response[] = $i;
+      // For each tax, compute sums for the given date range. Use only explicit tax_id matches.
+      foreach ($taxes as $tax) {
+        $taxId = $tax->id;
+        $percentage = (float) $tax->percentage;
+
+        // Sales with explicit tax_id
+        $saleFlatById = (float) Sale::where('user_id', $user->id)
+          ->where('tax_id', $taxId)
+          ->whereBetween('date', [$start, $end])
+          ->sum('flatTax');
+
+        $saleSubtotalById = (float) Sale::where('user_id', $user->id)
+          ->where('tax_id', $taxId)
+          ->whereBetween('date', [$start, $end])
+          ->sum('subtotal');
+
+        // Do not attribute null-tax_id rows by percentage. Keep percent-based sums at 0.
+        $saleFlatByPercent = 0;
+        $saleSubtotalByPercent = 0;
+
+        // Bills with explicit tax_id
+        $billFlatById = (float) Bill::where('user_id', $user->id)
+          ->where('tax_id', $taxId)
+          ->whereBetween('date', [$start, $end])
+          ->sum('flat_tax');
+
+        $billSubtotalById = (float) Bill::where('user_id', $user->id)
+          ->where('tax_id', $taxId)
+          ->whereBetween('date', [$start, $end])
+          ->sum('subtotal');
+
+        $billFlatByPercent = 0;
+        $billSubtotalByPercent = 0;
+        $groupCollected = $saleFlatById;
+        $groupTotalSales = $saleSubtotalById;
+
+        $groupPaid = $billFlatById;
+        $groupTotalPurchases = $billSubtotalById;
+
+        $response[] = [
+          'id' => $taxId,
+          'name' => $tax->name,
+          'percentage' => $percentage,
+          'collected' => round($groupCollected, 2),
+          'paid' => round($groupPaid, 2),
+          'total_sales' => round($groupTotalSales, 2),
+          'total_purchases' => round($groupTotalPurchases, 2),
+        ];
       }
+
+      // Add extra row for non-taxed metrics (tax_id = 0, "No Tax")
+      $response[] = [
+        'id' => 0,
+        'name' => 'No Tax',
+        'percentage' => 0,
+        'collected' => 0,
+        'paid' => 0,
+        'total_sales' => round($nonTaxedSales, 2),
+        'total_purchases' => 0,
+      ];
 
       return response()->json($response, 200);
     } catch (Exception $e) {

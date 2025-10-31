@@ -240,7 +240,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, inject, computed, Ref } from "vue";
+import { ref, onMounted, inject, computed, Ref, watch } from "vue";
 import axios from "axios";
 import { useToast } from "primevue/usetoast";
 import { Button, Column, ConfirmDialog, DataTable, DatePicker, InputNumber, Select, Textarea, useConfirm, useDialog, InputText, Dialog } from "primevue";
@@ -433,51 +433,46 @@ const addItem = () => {
 };
 
 const onEdit = async () => {
-  let subTotal = subtotal.value;
-  let flatTax = taxAmount.value;
-  let totalAmount = total.value;
+   let subTotal = subtotal.value;
 
-  const sale = {
-    id: saleId.value,
-    date: format(form.value.date, "yyyy-MM-dd"),
-    discount: 0,
-    customer: form.value.customer.customer,
-    payment_method: form.value.payment_method,
-    payment_account: form.value.payment_account,
-    notes: form.value.memo_notes,
-    items: tableData.value.filter(item => !item.isNew),
-    newItems: tableData.value.filter(item => item.isNew),
-    subtotal: subTotal,
-    tax: form.value.tax.percentage,
-    flatTax: flatTax.toFixed(2),
-    total: totalAmount.toFixed(2),
-    paid: payment.value.status === "paid" ? 1 : 0,
-    amount_paid: parseFloat(String(amount_paid.value)).toFixed(2),
-    balance_remaining: balance_remaining.value,
-    // Enviar el crédito SIN IVA - el backend aplicará el IVA cuando sea necesario
-    credit: parseFloat(final_credit.value).toFixed(2),
-    credit_added: creditAdded.value.toFixed(2),
-    tax_id: form.value.tax?.id || null,
-  };
+   const sale = {
+     id: saleId.value,
+     date: format(form.value.date, "yyyy-MM-dd"),
+     discount: 0,
+     customer: form.value.customer.customer,
+     payment_method: form.value.payment_method,
+     payment_account: form.value.payment_account,
+     notes: form.value.memo_notes,
+     items: tableData.value.filter(item => !item.isNew),
+     newItems: tableData.value.filter(item => item.isNew),
+     subtotal: subTotal,
+     tax: form.value.tax.percentage,
+     // El backend calculará flatTax y total basado en subtotal, crédito y tax
+     paid: payment.value.status === "paid" ? 1 : 0,
+     amount_paid: parseFloat(String(amount_paid.value)).toFixed(2),
+     balance_remaining: balance_remaining.value,
+     // Enviar el crédito SIN IVA - el backend aplicará la lógica de cálculo
+     credit: parseFloat(final_credit.value).toFixed(2),
+     credit_added: creditAdded.value.toFixed(2),
+     tax_id: form.value.tax?.id || null,
+   };
 
-  try {
-    console.log("Sale data to update:", sale);
-    console.log("Credit added:", creditAdded.value);
-    const response = await axios.post(route("sales.update"), sale);
-    if (response.status >= 200 && response.status < 400) {
-      toast.add({
-        severity: "success",
-        summary: "Sale Updated",
-        detail: "The sale has been updated successfully.",
-        life: 3000,
-      });
-      dialogRef.value.close();
-    }
-  } catch (error: any) {
-    console.error("Error updating sale:", error);
-    toast.add({ severity: "error", summary: "Error", detail: error.response?.data || error.message, life: 4000 });
-  }
-};
+   try {
+     const response = await axios.post(route("sales.update"), sale);
+     if (response.status >= 200 && response.status < 400) {
+       toast.add({
+         severity: "success",
+         summary: "Sale Updated",
+         detail: "The sale has been updated successfully.",
+         life: 3000,
+       });
+       dialogRef.value.close();
+     }
+   } catch (error: any) {
+     console.error("Error updating sale:", error);
+     toast.add({ severity: "error", summary: "Error", detail: error.response?.data || error.message, life: 4000 });
+   }
+ };
 
 const refundItem = async (item: Item) => {
   confirm.require({
@@ -508,10 +503,10 @@ const subtotal = computed(() => {
 });
 
 const taxAmount = computed(() => {
-  return round(form.value.tax?.percentage ? (subtotal.value * form.value.tax.percentage) / 100 : 0);
+   return round(form.value.tax?.percentage ? ((subtotal.value - parseFloat(final_credit.value)) * form.value.tax.percentage) / 100 : 0);
 });
 
-const total = computed(() => round(subtotal.value + taxAmount.value));
+const total = computed(() => round(subtotal.value - (parseFloat(final_credit.value) - taxAmount.value)));
 
 const final_credit = computed(() => {
   // Solo devolver el crédito sin IVA para evitar doble aplicación
@@ -552,6 +547,19 @@ const balance_remaining = computed(() => {
   const finalResult = isNaN(result) ? 0 : result;
   
   return finalResult;
+});
+
+// Simple watcher para imprimir los valores solicitados
+watch([subtotal, final_credit, taxAmount, total], ([s, fc, t, tot]) => {
+  try {
+    console.log("subtotal:", s);
+    console.log("credit applied:", fc);
+    console.log("tax amount:", t);
+    console.log("resta de credito menos tax amount:", round((parseFloat(fc as unknown as string) || 0) - t));
+    console.log("total:", tot);
+  } catch (e) {
+    console.warn('[SaleEdit] watch simple logging error', e);
+  }
 });
 
 const creditDialogVisible = ref(false);
