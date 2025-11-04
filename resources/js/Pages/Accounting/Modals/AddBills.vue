@@ -142,6 +142,7 @@ const submitForm = async () => {
       ...bill,
       date: format(bill.date, "yyyy-MM-dd"),
       tax: Number(bill.tax.percentage),
+      tax_id: bill.tax.id,
       vendor: bill.vendor.vendor,
       vendor_id: bill.vendor.id,
       status: bill.status === "Paid" ? 1 : 0,

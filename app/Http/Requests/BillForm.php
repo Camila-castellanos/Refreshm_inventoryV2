@@ -31,6 +31,7 @@ class BillForm extends FormRequest
       "items.*.vendor_id" => "sometimes",
       "items.*.subtotal" => "sometimes",
       "items.*.tax" => "sometimes",
+      "items.*.tax_id" => "sometimes",
       "items.*.total" => "sometimes",
       "items.*.invoice" => "sometimes",
     ];
