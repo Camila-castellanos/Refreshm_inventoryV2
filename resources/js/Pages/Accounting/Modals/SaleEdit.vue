@@ -537,11 +537,7 @@ const balance_remaining = computed(() => {
   const totalValue = isNaN(total.value) ? 0 : total.value;
   const amountPaidValue = isNaN(amount_paid.value) ? 0 : amount_paid.value;
   
-  // Usar el crédito SIN IVA para el cálculo del balance
-  const finalCreditValue = isNaN(parseFloat(final_credit.value)) ? 0 : parseFloat(final_credit.value);
-  
   let balance = totalValue - amountPaidValue;
-  balance -= finalCreditValue;
   
   const result = round(balance);
   const finalResult = isNaN(result) ? 0 : result;
