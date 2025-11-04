@@ -271,6 +271,71 @@ class StorageController extends Controller
     }
 
     /**
+     * Find the first available position across all storages (ordered by priority).
+     * Returns: { storage_id, position } or null if no space available
+     *
+     * @param array $occupiedPositions Array of ['storage_id' => X, 'position' => Y] already occupied
+     * @return array|null
+     */
+    public static function findFirstAvailablePosition($occupiedPositions = [])
+    {
+        // Get all storages ordered by priority (ascending = higher priority first)
+        $storages = Storage::orderBy('priority', 'asc')->get();
+
+        if ($storages->isEmpty()) {
+            return null;
+        }
+
+        // Build a map of occupied positions by storage
+        $occupiedByStorage = [];
+        foreach ($occupiedPositions as $occupied) {
+            $storageId = $occupied['storage_id'] ?? null;
+            $position = $occupied['position'] ?? null;
+            if ($storageId && $position) {
+                if (!isset($occupiedByStorage[$storageId])) {
+                    $occupiedByStorage[$storageId] = [];
+                }
+                $occupiedByStorage[$storageId][] = $position;
+            }
+        }
+
+        // Try each storage in priority order
+        foreach ($storages as $storage) {
+            // Get occupied positions from DB items (not sold)
+            $dbPositions = \App\Models\Item::where('storage_id', $storage->id)
+                ->whereNull('sold')
+                ->whereNotNull('position')
+                ->pluck('position')
+                ->toArray();
+
+            // Get occupied positions from draft items
+            $draftPositions = \App\Models\DraftItem::where('storage_id', $storage->id)
+                ->whereNotNull('storage_position')
+                ->pluck('storage_position')
+                ->toArray();
+
+            // Get occupied positions from the provided array
+            $providedOccupied = $occupiedByStorage[$storage->id] ?? [];
+
+            // Merge all occupied positions
+            $occupied = array_unique(array_merge($dbPositions, $draftPositions, $providedOccupied));
+
+            // Find first available position in this storage
+            for ($i = 1; $i <= (int)$storage->limit; $i++) {
+                if (!in_array($i, $occupied)) {
+                    return [
+                        'storage_id' => $storage->id,
+                        'position' => $i,
+                    ];
+                }
+            }
+        }
+
+        // No available position found
+        return null;
+    }
+
+    /**
      * Assign storage positions to items based on priority and available space.
      * Expects: { 
      *   items: [ { id?, manufacturer?, model?, ... } ],  // items sin posición asignada
