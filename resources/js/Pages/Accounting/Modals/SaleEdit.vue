@@ -456,7 +456,7 @@ const onEdit = async () => {
      credit_added: creditAdded.value.toFixed(2),
      tax_id: form.value.tax?.id || null,
    };
-
+   console.log("Submitting sale update:", sale);
    try {
      const response = await axios.post(route("sales.update"), sale);
      if (response.status >= 200 && response.status < 400) {

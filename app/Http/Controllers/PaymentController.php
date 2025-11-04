@@ -738,7 +738,7 @@ private function getPaymentsData($userId, $dataStatus,$startDate=null, $endDate=
         
         // Calculate the correct balance_remaining considering credit and verify data integrity
         $sale_credit = (float) ($sale->credit ?? 0);
-        $calculated_balance = max(0, $sale->total - $sale->amount_paid - $sale_credit);
+        $calculated_balance = max(0, $sale->total - $sale->amount_paid);
         $current_balance = max(0, $sale->balance_remaining);
         
         // If calculated balance differs from stored balance, update the sale
@@ -751,8 +751,6 @@ private function getPaymentsData($userId, $dataStatus,$startDate=null, $endDate=
                 'updated_at' => now(),
             ]);
             
-            // Log the correction for debugging
-            Log::info("Balance corrected for sale {$sale->id}: from {$current_balance} to {$calculated_balance} (including credit: {$sale_credit})");
             
             // Use the corrected values in response
             $final_balance = $calculated_balance;
