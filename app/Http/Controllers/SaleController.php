@@ -65,6 +65,13 @@ class SaleController extends Controller
         $form["flatTax"] = round($calculatedTax, 2);
         $form["total"] = round($calculatedTotal, 2);
         
+        // Calculate balance_remaining based on calculated total and amount paid
+        $amountPaidStore = max(0.0, (float) ($request->amount_paid ?? 0));
+        $form["balance_remaining"] = round($calculatedTotal - $amountPaidStore, 2);
+        if ($form["balance_remaining"] < 0) {
+            $form["balance_remaining"] = 0;
+        }
+        
         Log::info("Total calculation in store", [
             'subtotal' => $subtotal,
             'credit' => $credit,
@@ -343,15 +350,20 @@ class SaleController extends Controller
                 'calculated_tax' => $calculatedTax,
                 'credit_minus_tax' => $creditMinusTax,
                 'calculated_total' => $calculatedTotal,
+                'balance_remaining' => $balance,
             ]);
 
-            $paid = 0;
-            $balance = $request->balance_remaining;
-
+            // Calculate balance_remaining based on calculated total and amount paid
+            // Formula: balance_remaining = total - amount_paid
+            $amountPaidUpdate = max(0.0, (float) ($request->amount_paid ?? 0));
+            Log::info(["Amount paid for balance calculation: " . $amountPaidUpdate . " calculatedTotal: " . $calculatedTotal]);
+            $balance = round($calculatedTotal - $amountPaidUpdate, 2);
             if ($balance < 0) {
                 $balance = 0;
-                $paid = 1;
-            } else if ($balance == 0) {
+            }
+            
+            $paid = 0;
+            if ($balance == 0) {
                 $paid = 1;
             }
 
