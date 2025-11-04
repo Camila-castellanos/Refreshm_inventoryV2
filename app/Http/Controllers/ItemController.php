@@ -555,6 +555,8 @@ class ItemController extends Controller
 
         // Validate storage positions before attempting to create items
         $conflicts = [];
+        $occupiedPositions = [];
+        
         foreach ($items["items"] as $idx => $item) {
             if (!empty($item['storage_id']) && !empty($item['position'])) {
                 // Check if this (storage_id, position) already exists in DB
@@ -564,29 +566,25 @@ class ItemController extends Controller
                     ->first();
                 
                 if ($existingItem) {
-                    // Find the first available position in this storage
-                    $storage = Storage::find($item['storage_id']);
-                    if ($storage) {
-                        $suggestedPosition = null;
-                        for ($i = 1; $i <= (int)$storage->limit; $i++) {
-                            $occupied = Item::where('storage_id', $item['storage_id'])
-                                ->where('position', $i)
-                                ->whereNull('sold')
-                                ->exists();
-                            if (!$occupied) {
-                                $suggestedPosition = $i;
-                                break;
-                            }
-                        }
-                        
+                    // Find the first available position using the helper method
+                    $suggested = StorageController::findFirstAvailablePosition($occupiedPositions);
+                    
+                    if ($suggested) {
+                        $suggestedStorage = Storage::find($suggested['storage_id']);
                         $conflicts[] = [
                             'item_index' => $idx,
-                            'storage_id' => $item['storage_id'],
+                            'storage_id' => $suggested['storage_id'],
                             'requested_position' => $item['position'],
-                            'suggested_position' => $suggestedPosition,
-                            'message' => "Position {$item['position']} in storage {$storage->name} is already occupied. Suggested position: {$suggestedPosition}"
+                            'suggested_position' => $suggested['position'],
+                            'message' => "Position {$item['position']} in storage {$item['storage_id']} is already occupied. Suggested: {$suggestedStorage->name} position {$suggested['position']}"
                         ];
                     }
+                } else {
+                    // Track this position as occupied for subsequent conflict checks
+                    $occupiedPositions[] = [
+                        'storage_id' => $item['storage_id'],
+                        'position' => $item['position']
+                    ];
                 }
             }
         }
@@ -637,6 +635,8 @@ class ItemController extends Controller
         
         // Validate storage positions before attempting to create items
         $conflicts = [];
+        $occupiedPositions = [];
+        
         foreach ($itemsData as $idx => $item) {
             if (!empty($item['storage_id']) && !empty($item['position'])) {
                 // Check if this (storage_id, position) already exists in DB
@@ -646,29 +646,25 @@ class ItemController extends Controller
                     ->first();
                 
                 if ($existingItem) {
-                    // Find the first available position in this storage
-                    $storage = Storage::find($item['storage_id']);
-                    if ($storage) {
-                        $suggestedPosition = null;
-                        for ($i = 1; $i <= (int)$storage->limit; $i++) {
-                            $occupied = Item::where('storage_id', $item['storage_id'])
-                                ->where('position', $i)
-                                ->whereNull('sold')
-                                ->exists();
-                            if (!$occupied) {
-                                $suggestedPosition = $i;
-                                break;
-                            }
-                        }
-                        
+                    // Find the first available position using the helper method
+                    $suggested = StorageController::findFirstAvailablePosition($occupiedPositions);
+                    
+                    if ($suggested) {
+                        $suggestedStorage = Storage::find($suggested['storage_id']);
                         $conflicts[] = [
                             'item_index' => $idx,
-                            'storage_id' => $item['storage_id'],
+                            'storage_id' => $suggested['storage_id'],
                             'requested_position' => $item['position'],
-                            'suggested_position' => $suggestedPosition,
-                            'message' => "Position {$item['position']} in storage {$storage->name} is already occupied. Suggested position: {$suggestedPosition}"
+                            'suggested_position' => $suggested['position'],
+                            'message' => "Position {$item['position']} in storage {$item['storage_id']} is already occupied. Suggested: {$suggestedStorage->name} position {$suggested['position']}"
                         ];
                     }
+                } else {
+                    // Track this position as occupied for subsequent conflict checks
+                    $occupiedPositions[] = [
+                        'storage_id' => $item['storage_id'],
+                        'position' => $item['position']
+                    ];
                 }
             }
         }
