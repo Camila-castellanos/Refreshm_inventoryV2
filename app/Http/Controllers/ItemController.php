@@ -545,7 +545,7 @@ class ItemController extends Controller
     {
         $items = $request->validated();
 
-        $user = $request->user(); 
+        $user = $request->user();
         $company = $user->company;
         $shops = $company?->shops;
 
@@ -553,19 +553,80 @@ class ItemController extends Controller
 
         $shopId = $firstShop ? $firstShop->id : null;
 
+        // Validate storage positions before attempting to create items
+        $conflicts = [];
+        foreach ($items["items"] as $idx => $item) {
+            if (!empty($item['storage_id']) && !empty($item['position'])) {
+                // Check if this (storage_id, position) already exists in DB
+                $existingItem = Item::where('storage_id', $item['storage_id'])
+                    ->where('position', $item['position'])
+                    ->whereNull('sold')
+                    ->first();
+                
+                if ($existingItem) {
+                    // Find the first available position in this storage
+                    $storage = Storage::find($item['storage_id']);
+                    if ($storage) {
+                        $suggestedPosition = null;
+                        for ($i = 1; $i <= (int)$storage->limit; $i++) {
+                            $occupied = Item::where('storage_id', $item['storage_id'])
+                                ->where('position', $i)
+                                ->whereNull('sold')
+                                ->exists();
+                            if (!$occupied) {
+                                $suggestedPosition = $i;
+                                break;
+                            }
+                        }
+                        
+                        $conflicts[] = [
+                            'item_index' => $idx,
+                            'storage_id' => $item['storage_id'],
+                            'requested_position' => $item['position'],
+                            'suggested_position' => $suggestedPosition,
+                            'message' => "Position {$item['position']} in storage {$storage->name} is already occupied. Suggested position: {$suggestedPosition}"
+                        ];
+                    }
+                }
+            }
+        }
+
+        // If there are conflicts, return error with suggestions
+        if (!empty($conflicts)) {
+            return response()->json([
+                'message' => 'Storage position conflicts detected',
+                'conflicts' => $conflicts,
+            ], 422);
+        }
+
         $created = [];
         Log::info("Creating items", ['items' => $items["items"]]);
-        foreach ($items["items"] as $item) {
-            $item['user_id'] = Auth::user()->id;
-            $item['shop_id'] = $shopId;
-            // Si la fecha viene solo en Y-m-d, anexar hora actual
-            if (!empty($item['date'])) {
-                $item['date'] = Carbon::createFromFormat('Y-m-d', $item['date'])
-                    ->setTimeFromTimeString(Carbon::now()->toTimeString())
-                    ->format('Y-m-d H:i:s');
+        
+        try {
+            DB::beginTransaction();
+            
+            foreach ($items["items"] as $item) {
+                $item['user_id'] = Auth::user()->id;
+                $item['shop_id'] = $shopId;
+                // Si la fecha viene solo en Y-m-d, anexar hora actual
+                if (!empty($item['date'])) {
+                    $item['date'] = Carbon::createFromFormat('Y-m-d', $item['date'])
+                        ->setTimeFromTimeString(Carbon::now()->toTimeString())
+                        ->format('Y-m-d H:i:s');
+                }
+                $created[] = Item::create($item);
             }
-            $created[] = Item::create($item);
+            
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error("Error creating items", ['error' => $e->getMessage()]);
+            return response()->json([
+                'message' => 'Error creating items',
+                'error' => $e->getMessage(),
+            ], 500);
         }
+        
         return response()->json($created, 201);
     }
 
@@ -573,6 +634,52 @@ class ItemController extends Controller
     {
         // validate and extract items data and bill data
         ['bill' => $billData, 'items' => $itemsData] = $request->validated();
+        
+        // Validate storage positions before attempting to create items
+        $conflicts = [];
+        foreach ($itemsData as $idx => $item) {
+            if (!empty($item['storage_id']) && !empty($item['position'])) {
+                // Check if this (storage_id, position) already exists in DB
+                $existingItem = Item::where('storage_id', $item['storage_id'])
+                    ->where('position', $item['position'])
+                    ->whereNull('sold')
+                    ->first();
+                
+                if ($existingItem) {
+                    // Find the first available position in this storage
+                    $storage = Storage::find($item['storage_id']);
+                    if ($storage) {
+                        $suggestedPosition = null;
+                        for ($i = 1; $i <= (int)$storage->limit; $i++) {
+                            $occupied = Item::where('storage_id', $item['storage_id'])
+                                ->where('position', $i)
+                                ->whereNull('sold')
+                                ->exists();
+                            if (!$occupied) {
+                                $suggestedPosition = $i;
+                                break;
+                            }
+                        }
+                        
+                        $conflicts[] = [
+                            'item_index' => $idx,
+                            'storage_id' => $item['storage_id'],
+                            'requested_position' => $item['position'],
+                            'suggested_position' => $suggestedPosition,
+                            'message' => "Position {$item['position']} in storage {$storage->name} is already occupied. Suggested position: {$suggestedPosition}"
+                        ];
+                    }
+                }
+            }
+        }
+
+        // If there are conflicts, return error with suggestions
+        if (!empty($conflicts)) {
+            return response()->json([
+                'message' => 'Storage position conflicts detected',
+                'conflicts' => $conflicts,
+            ], 422);
+        }
         
          // sum subtotals of items
         $sumSubtotals = collect($itemsData)->sum(fn($i) => $i['subtotal'] ?? 0);

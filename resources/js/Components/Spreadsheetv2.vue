@@ -852,7 +852,7 @@ async function submitSpreadsheet(body: any[]): Promise<void> {
   console.log("Submitting data to endpoint:", endpoint, "with payload:", payload);
   try {
     isLoading.value = true;
-    await axios.post(route(endpoint), payload, { responseType: "blob" });
+    await axios.post(route(endpoint), payload);
     isLoading.value = false;
     toast.add({ severity: "success", summary: "Success", detail: "Devices created successfully", life: 3000 });
     // Delete current draft from database
@@ -868,8 +868,58 @@ async function submitSpreadsheet(body: any[]): Promise<void> {
     // Clear local storage and navigate
     clearLocalDraft();
     router.visit("/inventory/items", { only: ["items", "tabs"] });
-  } catch (err) {
-    toast.add({ severity: "error", summary: "Error", detail: "Something went wrong", life: 3000 });
+  } catch (err: any) {
+    isLoading.value = false;
+    
+    console.error('Full error object:', err);
+    console.error('Error response:', err.response);
+    console.error('Error response data:', err.response?.data);
+    
+    // Handle storage position conflicts (422 error)
+    if (err.response?.status === 422 && err.response?.data?.conflicts) {
+      handleConflicts(err.response.data);
+    } else {
+      // Generic error handling
+      toast.add({ severity: "error", summary: "Error", detail: "Something went wrong", life: 3000 });
+    }
+    
+    console.error('Error submitting spreadsheet:', err);
+  }
+  
+  // Helper function to handle conflicts
+  function handleConflicts(responseData: any) {
+    const conflicts = responseData.conflicts || [];
+    console.error('Storage position conflicts detected:', conflicts);
+    
+    // Show detailed error message for each conflict
+    conflicts.forEach((conflict: any) => {
+      toast.add({
+        severity: "warn",
+        summary: "Position Conflict",
+        detail: conflict.message,
+        life: 15000
+      });
+      
+      // Update the row with suggested position if available
+      if (conflict.suggested_position && conflict.item_index !== undefined) {
+        const rowIndex = conflict.item_index;
+        if (rowIndex >= 0 && rowIndex < tableData.value.length) {
+          const storage = storagesList.value.find((s: any) => s.id === conflict.storage_id);
+          if (storage) {
+            tableData.value[rowIndex].position = conflict.suggested_position;
+            tableData.value[rowIndex].location = `${storage.name} - ${conflict.suggested_position} / ${storage.limit}`;
+            console.log(`Updated row ${rowIndex} with suggested position ${conflict.suggested_position}`);
+          }
+        }
+      }
+    });
+    
+    toast.add({
+      severity: "error",
+      summary: "Storage Conflicts Detected",
+      detail: `${conflicts.length} position(s) were already occupied. Suggested positions have been applied. Please review and try again.`,
+      life: 15000
+    });
   }
 }
 // adjust column sizes to screen size
