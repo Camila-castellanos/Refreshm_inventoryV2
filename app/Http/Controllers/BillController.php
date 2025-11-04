@@ -90,6 +90,9 @@ class BillController extends Controller
       $item['amount_paid'] = 0;
       $item['balance_remaining'] = $item['total'];
       $item['flat_tax'] = $item['subtotal'] * ($item['tax'] / 100);
+      if (isset($item['tax_id'])) {
+        $item['tax_id'] = $item['tax_id'];
+      }
       $item['status'] = 0;
       if ($item['status'] == 1) {
         $item['amount_paid'] = $item['total'];
@@ -141,6 +144,9 @@ class BillController extends Controller
       $item['amount_paid'] = 0;
       $item['balance_remaining'] = $item['total'];
       $item['flat_tax'] = $item['subtotal'] * ($item['tax'] / 100);
+      if (isset($item['tax_id'])) {
+        $item['tax_id'] = $item['tax_id'];
+      }
       if ($item['status'] == 1) {
         $item['amount_paid'] = $item['total'];
         $item['balance_remaining'] = 0;
