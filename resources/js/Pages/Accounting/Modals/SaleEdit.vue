@@ -158,14 +158,14 @@
           <span class="mt-1">
             <div>Subtotal: $ {{ subtotal.toFixed(2) }}</div>
           </span>
+          <span v-if="form.credit > 0" class="mt-1">
+            <div>Credit: $ -{{ parseFloat(final_credit).toFixed(2) }}</div>
+          </span>
           <span class="mt-1">
             <div>Tax: $ {{ taxAmount.toFixed(2) }}</div>
           </span>
           <span class="mt-1">
             <div>Total: $ {{ total.toFixed(2) }}</div>
-          </span>
-          <span v-if="form.credit > 0" class="mt-1">
-            <div>Credit: $ {{ parseFloat(final_credit).toFixed(2) }}</div>
           </span>
           <span class="mt-1">
             <div>Amount Paid: $ {{ amount_paid.toFixed(2) }}</div>
