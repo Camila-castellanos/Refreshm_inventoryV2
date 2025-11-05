@@ -289,11 +289,11 @@
                                 @if(in_array('subtotal', $userActiveFields))
                                     <div class="line"><span class="label">Subtotal</span><span class="value">$ {{ number_format($subtotal,2) }}</span></div>
                                 @endif
+                                @if($total_credit > 0)
+                                    <div class="line"><span class="label">Credit</span><span class="value">-$ {{ number_format($total_credit,2) }}</span></div>
+                                @endif
                                 @if(in_array('tax', $userActiveFields))
                                     <div class="line"><span class="label">Tax</span><span class="value">$ {{ number_format($flatTax,2) }}</span></div>
-                                @endif
-                                @if($total_credit > 0)
-                                    <div class="line"><span class="label">Credit Applied</span><span class="value">-$ {{ number_format($total_credit,2) }}</span></div>
                                 @endif
                                 @if(in_array('total', $userActiveFields))
                                     <div class="line"><span class="label">Total</span><span class="value">$ {{ number_format($final_total,2) }}</span></div>
