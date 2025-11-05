@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class Market extends Model
@@ -174,6 +175,134 @@ class Market extends Model
             ->whereNull('hold')
             ->whereNotNull('selling_price')
             ->where('selling_price', '>', 0);
+    }
+
+    /**
+     * Get items grouped by model with variant counts
+     * Returns ONE item per model with aggregated data
+     * Supports filtering by category, brand, search, and sorting
+     */
+    public function getGroupedModels(string $search = null, int $perPage = 20, string $category = null, string $brand = null, string $sort = 'latest')
+    {
+        $query = Item::where('shop_id', $this->shop_id)
+            ->whereNull('sold')
+            ->whereNull('hold')
+            ->whereNotNull('selling_price')
+            ->where('selling_price', '>', 0);
+
+        // Apply search filter
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('model', 'like', '%' . $search . '%')
+                  ->orWhere('manufacturer', 'like', '%' . $search . '%')
+                  ->orWhere('type', 'like', '%' . $search . '%');
+            });
+        }
+
+        // Apply category filter (type field)
+        if ($category) {
+            $query->where('type', $category);
+        }
+
+        // Apply brand filter (manufacturer field)
+        if ($brand) {
+            $query->where('manufacturer', $brand);
+        }
+
+        // Get grouped data with aggregations
+        $grouped = $query->select(
+                'model',
+                'manufacturer',
+                'type',
+                DB::raw('COUNT(*) as total_stock'),
+                DB::raw('COUNT(DISTINCT colour) as color_options'),
+                DB::raw('COUNT(DISTINCT grade) as grade_options'),
+                DB::raw('MIN(selling_price) as min_price'),
+                DB::raw('MAX(selling_price) as max_price'),
+                DB::raw('AVG(selling_price) as avg_price'),
+                DB::raw('MIN(id) as sample_item_id')
+            )
+            ->groupBy('model', 'manufacturer', 'type');
+
+        // Apply sorting
+        switch ($sort) {
+            case 'price_low':
+                $grouped->orderBy(DB::raw('MIN(selling_price)'), 'asc');
+                break;
+            case 'price_high':
+                $grouped->orderBy(DB::raw('MAX(selling_price)'), 'desc');
+                break;
+            case 'name':
+                $grouped->orderBy('model', 'asc');
+                break;
+            case 'latest':
+            default:
+                $grouped->orderByRaw('MIN(id) DESC'); // Most recent items first
+                break;
+        }
+
+        $grouped = $grouped->paginate($perPage)->withQueryString();
+
+        // Enhance each grouped result with media
+        $grouped->setCollection($grouped->getCollection()->map(function ($model) {
+            $item = Item::find($model->sample_item_id);
+            $model->photo = $item ? $item->getFirstMediaUrl('item-photos', 'thumb') : null;
+            $model->id = $model->sample_item_id; // Use sample item ID as the group ID
+            return $model;
+        }));
+
+        return $grouped;
+    }
+
+    /**
+     * Get all variants for a specific model
+     * Groups by colour -> grade -> battery -> issues
+     */
+    public function getModelVariants(string $model)
+    {
+        $items = Item::where('shop_id', $this->shop_id)
+            ->where('model', urldecode($model))
+            ->whereNull('sold')
+            ->whereNull('hold')
+            ->whereNotNull('selling_price')
+            ->where('selling_price', '>', 0)
+            ->with('media')
+            ->get();
+
+        if ($items->isEmpty()) {
+            return null;
+        }
+
+        // Group by colour
+        $variants = $items->groupBy('colour')->map(function ($colorGroup) {
+            return [
+                'colour' => $colorGroup->first()->colour,
+                'total' => $colorGroup->count(),
+                'photo' => $colorGroup->first()->getFirstMediaUrl('item-photos', 'thumb'),
+                'grades' => $colorGroup->groupBy('grade')->map(function ($gradeGroup) {
+                    return [
+                        'grade' => $gradeGroup->first()->grade,
+                        'count' => $gradeGroup->count(),
+                        'battery_options' => $gradeGroup->pluck('battery')->unique()->values(),
+                        'issues' => $gradeGroup->map(function ($item) {
+                            return [
+                                'id' => $item->id,
+                                'issues' => $item->issues,
+                                'count' => 1,
+                            ];
+                        })->unique('issues'),
+                    ];
+                })->values(),
+            ];
+        })->values();
+
+        return [
+            'model' => $items->first()->model,
+            'manufacturer' => $items->first()->manufacturer,
+            'type' => $items->first()->type,
+            'total_stock' => $items->count(),
+            'variants' => $variants,
+        ];
     }
 
     /**

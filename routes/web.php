@@ -260,6 +260,7 @@ Route::get('/customers/by-name/{name}', [CustomerController::class, 'getByName']
     // Ecommerce Item Management Routes (Authenticated and company-specific)
     Route::prefix('ecommerce/items')->name('ecommerce.items.')->group(function () {
         Route::get('/{market:id}', [App\Http\Controllers\Ecommerce\MarketItemController::class, 'index'])->name('index');
+        Route::get('/{market:id}/model/{model}/details', [App\Http\Controllers\Ecommerce\MarketItemController::class, 'modelDetails'])->name('model-details');
         Route::get('/{market:id}/item/{item:id}/photos', [App\Http\Controllers\Ecommerce\MarketItemController::class, 'edit'])->name('edit');
         Route::post('/{market:id}/item/{item:id}/photos', [App\Http\Controllers\Ecommerce\MarketItemController::class, 'upload'])->name('upload');
         Route::delete('/{market:id}/item/{item:id}/photos/{media}', [App\Http\Controllers\Ecommerce\MarketItemController::class, 'delete'])->name('delete');
@@ -291,6 +292,7 @@ Route::domain('{custom_domain}')
 Route::prefix('market/{market:slug}')->name('market.')->group(function () {
     Route::get('/', [App\Http\Controllers\Ecommerce\MarketController::class, 'index'])->name('index');
     Route::get('/products', [App\Http\Controllers\Ecommerce\MarketController::class, 'products'])->name('products');
+    Route::get('/model/{model}/variants', [App\Http\Controllers\Ecommerce\MarketController::class, 'modelVariants'])->name('model-variants');
     Route::get('/products-list', [App\Http\Controllers\Ecommerce\MarketController::class, 'productsList'])->name('products-list');
     Route::get('/category/{category}', [App\Http\Controllers\Ecommerce\MarketController::class, 'category'])->name('category');
     Route::get('/product/{item}', [App\Http\Controllers\Ecommerce\MarketController::class, 'product'])->name('product');

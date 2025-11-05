@@ -27,8 +27,10 @@ class MarketController extends Controller
                 abort(503, 'This market is temporarily unavailable');
             }
 
-            // Get only 8 featured items for the homepage
-            $featuredItems = $market->featuredItems(8)->get();
+            // Get featured items grouped by model (take 8 models)
+            $groupedModels = $market->getGroupedModels(null, 8);
+            // Extract items from paginator
+            $featuredItems = $groupedModels->items();
 
             // Get total available items count
             $totalItemsCount = $market->publishedItems()->count();
@@ -44,7 +46,7 @@ class MarketController extends Controller
 
             return Inertia::render('Ecommerce/PublicMarket/Home', [
                 'market' => $safeMarketData,
-                'initialItems' => $featuredItems, // Only 8 featured items for homepage
+                'initialItems' => $featuredItems, // Featured models grouped
                 'categories' => $categories->values(), // Reset array keys
                 'stats' => $stats,
                 'totalItems' => $totalItemsCount
@@ -62,7 +64,7 @@ class MarketController extends Controller
     }
 
     /**
-     * API endpoint for infinite scroll - Load more products
+     * API endpoint for infinite scroll - Load more products grouped by model
      */
     public function products(Request $request, Market $market)
     {
@@ -76,11 +78,28 @@ class MarketController extends Controller
 
             $perPage = 12;
             $page = $request->get('page', 1);
+            $search = $request->get('search');
             $category = $request->get('category');
             $brand = $request->get('brand');
             $sort = $request->get('sort', 'latest');
-            $search = $request->get('search'); // Search query
+            $groupByModel = $request->get('group_by_model', false);
 
+            // If grouping by model
+            if ($groupByModel) {
+                $models = $market->getGroupedModels($search, $perPage, $category, $brand, $sort);
+
+                return response()->json([
+                    'data' => $models->items(),
+                    'current_page' => $models->currentPage(),
+                    'last_page' => $models->lastPage(),
+                    'per_page' => $models->perPage(),
+                    'total' => $models->total(),
+                    'has_more_pages' => $models->hasMorePages(),
+                    'grouped_by_model' => true
+                ]);
+            }
+
+            // Original item-by-item pagination
             // Build query
             $query = $market->publishedItems();
 
@@ -130,7 +149,8 @@ class MarketController extends Controller
                 'last_page' => $items->lastPage(),
                 'per_page' => $items->perPage(),
                 'total' => $items->total(),
-                'has_more_pages' => $items->hasMorePages()
+                'has_more_pages' => $items->hasMorePages(),
+                'grouped_by_model' => false
             ]);
 
         } catch (\Exception $e) {
@@ -144,6 +164,37 @@ class MarketController extends Controller
             ]);
 
             return response()->json(['error' => 'Unable to load products'], 500);
+        }
+    }
+
+    /**
+     * Get model variants - API endpoint for getting details of grouped model
+     */
+    public function modelVariants(Request $request, Market $market, $model)
+    {
+        try {
+            $market->load(['shop']);
+
+            // Verify shop accessibility
+            if (!$market->shop) {
+                return response()->json(['error' => 'Market unavailable'], 503);
+            }
+
+            $variants = $market->getModelVariants($model);
+
+            if (!$variants) {
+                return response()->json(['error' => 'Model not found'], 404);
+            }
+
+            return response()->json($variants);
+
+        } catch (\Exception $e) {
+            Log::error('Market model variants error: ' . $e->getMessage(), [
+                'market_id' => $market->id ?? null,
+                'model' => $model,
+            ]);
+
+            return response()->json(['error' => 'Unable to load variants'], 500);
         }
     }
 
@@ -165,49 +216,8 @@ class MarketController extends Controller
             $brand = $request->get('brand');
             $sort = $request->get('sort', 'latest'); // latest, price_low, price_high, name
             $search = $request->get('search'); // Search query
-
-            // Build query
-            $query = $market->publishedItems();
-
-            // Filter by search query if provided
-            if ($search) {
-                $query->where(function ($q) use ($search) {
-                    $q->where('model', 'like', "%{$search}%")
-                      ->orWhere('manufacturer', 'like', "%{$search}%")
-                      ->orWhere('type', 'like', "%{$search}%")
-                      ->orWhere('imei', 'like', "%{$search}%");
-                });
-            }
-
-            // Filter by category if provided
-            if ($category) {
-                $query->where('type', $category);
-            }
-
-            // Filter by brand if provided
-            if ($brand) {
-                $query->where('manufacturer', $brand);
-            }
-
-            // Apply sorting
-            switch ($sort) {
-                case 'price_low':
-                    $query->orderBy('selling_price', 'asc');
-                    break;
-                case 'price_high':
-                    $query->orderBy('selling_price', 'desc');
-                    break;
-                case 'name':
-                    $query->orderBy('model', 'asc');
-                    break;
-                case 'latest':
-                default:
-                    $query->latest();
-                    break;
-            }
-
-            // Get initial items for infinite scroll (first page only)
-            $initialItems = $query->take($perPage)->get();
+            // Default to grouped view mode
+            $groupByModel = $request->get('group_by_model', true);
 
             // Get available categories for filtering
             $categories = $market->getAvailableCategories();
@@ -218,9 +228,57 @@ class MarketController extends Controller
             // Get safe market data
             $safeMarketData = $market->getSafeData();
 
+            // If grouping by model (default behavior)
+            if ($groupByModel) {
+                $initialItems = $market->getGroupedModels($search, $perPage, $category, $brand, $sort)->items();
+            } else {
+                // Build query for individual items
+                $query = $market->publishedItems();
+
+                // Filter by search query if provided
+                if ($search) {
+                    $query->where(function ($q) use ($search) {
+                        $q->where('model', 'like', "%{$search}%")
+                          ->orWhere('manufacturer', 'like', "%{$search}%")
+                          ->orWhere('type', 'like', "%{$search}%")
+                          ->orWhere('imei', 'like', "%{$search}%");
+                    });
+                }
+
+                // Filter by category if provided
+                if ($category) {
+                    $query->where('type', $category);
+                }
+
+                // Filter by brand if provided
+                if ($brand) {
+                    $query->where('manufacturer', $brand);
+                }
+
+                // Apply sorting
+                switch ($sort) {
+                    case 'price_low':
+                        $query->orderBy('selling_price', 'asc');
+                        break;
+                    case 'price_high':
+                        $query->orderBy('selling_price', 'desc');
+                        break;
+                    case 'name':
+                        $query->orderBy('model', 'asc');
+                        break;
+                    case 'latest':
+                    default:
+                        $query->latest();
+                        break;
+                }
+
+                // Get initial items for infinite scroll (first page only)
+                $initialItems = $query->take($perPage)->get();
+            }
+
             return Inertia::render('Ecommerce/PublicMarket/ProductsList', [
                 'market' => $safeMarketData,
-                'initialItems' => $initialItems, // Changed from items to initialItems
+                'initialItems' => $initialItems,
                 'categories' => $categories->values(),
                 'stats' => $stats,
                 'currentCategory' => $category,
@@ -237,9 +295,9 @@ class MarketController extends Controller
         } catch (\Exception $e) {
             Log::error('Market products list error: ' . $e->getMessage(), [
                 'market_id' => $market->id ?? null,
-                'category' => $category,
-                'brand' => $brand,
-                'sort' => $sort,
+                'category' => $category ?? null,
+                'brand' => $brand ?? null,
+                'sort' => $sort ?? null,
                 'search' => $search ?? null,
             ]);
 

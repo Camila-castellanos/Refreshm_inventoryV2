@@ -13,7 +13,7 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
 class MarketItemController extends Controller
 {
     /**
-     * Show the items list for photo management
+     * Show the items list grouped by model
      */
     public function index(Request $request, Market $market)
     {
@@ -22,32 +22,37 @@ class MarketItemController extends Controller
             abort(403, 'Unauthorized access to this market.');
         }
 
-        // Get search query
         $search = $request->input('search');
 
-        // Get all items from the market's shop with photo counts
-        $items = Item::where('shop_id', $market->shop_id)
-            ->when($search, function ($query, $search) {
-                $query->where(function ($q) use ($search) {
-                    $q->where('model', 'like', '%' . $search . '%')
-                      ->orWhere('manufacturer', 'like', '%' . $search . '%')
-                      ->orWhere('imei', 'like', '%' . $search . '%')
-                      ->orWhere('type', 'like', '%' . $search . '%')
-                      ->orWhere('colour', 'like', '%' . $search . '%');
-                });
-            })
-            ->withCount('media')
-            ->orderBy('model')
-            ->paginate(20)
-            ->withQueryString();
+        // Get grouped models from market
+        $models = $market->getGroupedModels($search, 20);
 
         return Inertia::render('Ecommerce/MarketItemsEdit', [
             'market' => $market,
-            'items' => $items,
+            'models' => $models,
             'filters' => [
                 'search' => $search,
             ],
         ]);
+    }
+
+    /**
+     * Get detailed variants for a specific model
+     */
+    public function modelDetails(Request $request, Market $market, $model)
+    {
+        // Ensure the market belongs to the current user's company
+        if ($market->shop->company_id !== Auth::user()->company_id) {
+            abort(403, 'Unauthorized access to this market.');
+        }
+
+        $variants = $market->getModelVariants($model);
+
+        if (!$variants) {
+            return response()->json(['error' => 'Model not found'], 404);
+        }
+
+        return response()->json($variants);
     }
 
     /**
