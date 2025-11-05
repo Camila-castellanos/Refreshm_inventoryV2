@@ -49,15 +49,33 @@
 
             <!-- Price and Stock -->
             <div class="flex items-center justify-between" :class="compact ? 'mb-3' : 'mb-4'">
-                <div 
-                    class="font-bold text-gray-800"
-                    :class="compact ? 'text-lg' : 'text-2xl'"
-                >
-                    {{ market.currency }}{{ formatPrice(item.selling_price) }}
+                <div class="flex flex-col">
+                    <!-- Show price range for grouped models (with min_price/max_price) -->
+                    <div v-if="isGroupedModel" 
+                         class="font-bold text-gray-800"
+                         :class="compact ? 'text-lg' : 'text-2xl'"
+                    >
+                        {{ market.currency }}{{ formatPrice(item.min_price) }} 
+                        <span class="text-gray-500">—</span>
+                        {{ market.currency }}{{ formatPrice(item.max_price) }}
+                    </div>
+                    
+                    <!-- Show single price for individual items -->
+                    <div v-else 
+                         class="font-bold text-gray-800"
+                         :class="compact ? 'text-lg' : 'text-2xl'"
+                    >
+                        {{ market.currency }}{{ formatPrice(item.selling_price) }}
+                    </div>
+
+                    <!-- Show color and grade options for grouped models -->
+                    <div v-if="isGroupedModel" class="text-xs text-gray-600 mt-1">
+                        {{ item.color_options }} color(s) • {{ item.grade_options }} grade(s)
+                    </div>
                 </div>
                 
                 <span v-if="market.show_inventory_count && !compact" class="text-sm text-green-600 font-medium">
-                    In Stock
+                    {{ isGroupedModel ? `${item.total_stock} in stock` : 'In Stock' }}
                 </span>
             </div>
 
@@ -79,12 +97,12 @@
                             ? 'bg-red-50 text-red-700 hover:text-red-900 border-red-200 hover:border-red-300' 
                             : 'bg-slate-100 text-gray-700 hover:text-gray-900 border-gray-200 hover:border-gray-300'
                     ]"
-                    :title="isInCart ? 'Remove from Cart' : 'Add to Cart'"
+                    :title="isGroupedModel ? 'Select Variant' : isInCart ? 'Remove from Cart' : 'Add to Cart'"
                 >
                     <i v-if="isAddingToCart" class="pi pi-spin pi-spinner text-xs mr-1"></i>
-                    <i v-else-if="isInCart" class="pi pi-trash text-xs mr-1"></i>
+                    <i v-else-if="isInCart && !isGroupedModel" class="pi pi-trash text-xs mr-1"></i>
                     <i v-else class="pi pi-shopping-cart text-xs mr-1"></i>
-                    {{ isInCart ? 'Remove' : 'Add' }}
+                    {{ isGroupedModel ? 'Select' : isInCart ? 'Remove' : 'Add' }}
                 </button>
             </div>
             
@@ -106,10 +124,10 @@
                             ? 'bg-red-50 text-red-700 hover:text-red-900 border-red-200 hover:border-red-300' 
                             : 'bg-slate-100 text-gray-700 hover:text-gray-900 border-gray-200 hover:border-gray-300'
                     ]"
-                    :title="isInCart ? 'Remove from Cart' : 'Add to Cart'"
+                    :title="isGroupedModel ? 'Select Variant' : isInCart ? 'Remove from Cart' : 'Add to Cart'"
                 >
                     <i v-if="isAddingToCart" class="pi pi-spin pi-spinner text-xs"></i>
-                    <i v-else-if="isInCart" class="pi pi-trash text-xs"></i>
+                    <i v-else-if="isInCart && !isGroupedModel" class="pi pi-trash text-xs"></i>
                     <i v-else class="pi pi-shopping-cart text-xs"></i>
                 </button>
             </div>
@@ -154,6 +172,11 @@ const { addItem, removeItem, hasItem, items } = useCart()
 const isAddingToCart = ref(false)
 const isInCart = ref(false)
 
+// Detect if this is a grouped model (has min_price/max_price) or individual item (has selling_price)
+const isGroupedModel = computed(() => {
+    return props.item.min_price !== undefined && props.item.max_price !== undefined
+})
+
 // Watch items changes and update isInCart state
 watchEffect(() => {
     // This will automatically re-run whenever items.value changes
@@ -177,11 +200,20 @@ const maskIMEI = (imei) => {
 }
 
 const handleViewProduct = () => {
-    emit('view-product', props.item.id)
+    // If it's a grouped model, we might want to show variants instead
+    // For now, we'll emit the view-product event and let the parent handle it
+    emit('view-product', props.item.id || props.item.sample_item_id)
 }
 
 const handleAddToCart = async () => {
     if (isAddingToCart.value) return
+    
+    // If it's a grouped model, we need to navigate to variants page instead
+    if (isGroupedModel.value) {
+        // Navigate to view the model variants
+        window.location.href = `/market/${props.market.slug}/model/${encodeURIComponent(props.item.model)}/variants`
+        return
+    }
     
     isAddingToCart.value = true
     
