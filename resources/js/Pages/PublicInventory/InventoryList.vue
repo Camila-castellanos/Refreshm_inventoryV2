@@ -586,8 +586,8 @@ async function fetchModelsByManufacturers() {
     // Build payload expected by the backend route
     const payload = { manufacturers: filters.value.manufacturer };
 
-    // Build the Laravel route using the `route` helper.
-    const laravelRoute = route('Items.getUniqueModelsByManufacturer')
+    // Build the Laravel route using the `route` helper - now using public route
+    const laravelRoute = route('public.items.getUniqueModelsByManufacturer')
 
     const response = await axios.post(laravelRoute, payload);
 

@@ -96,6 +96,37 @@ class ItemController extends Controller
     }
 
     /**
+     * Get specific items by their IDs to check their current status (e.g., if they're sold)
+     * Expects payload: { ids: [1, 2, 3, ...] }
+     * Returns items with all their data including sold status
+     * 
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function getSpecificItems(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'integer',
+        ]);
+
+        $ids = $data['ids'];
+
+        if (empty($ids)) {
+            return response()->json([]);
+        }
+
+        $items = Item::with(['storage' => function ($query) {
+            $query->select('id', 'name', 'limit')
+            ->withCount('items');
+        }, 'vendor:id,vendor'])
+        ->whereIn('id', $ids)
+        ->get();
+
+        return response()->json($items);
+    }
+
+    /**
      * Return unique normalized models for given manufacturers.
      * Expects payload: { manufacturers: ["Apple", "Samsung"] }
      * Normalizes manufacturer matching (case-insensitive) and model normalization

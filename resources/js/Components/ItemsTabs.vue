@@ -9,12 +9,13 @@
             <span>{{ tab.name }}</span>
           </Tab>
 
-          <!-- Custom tabs con drag nativo -->
+          <!-- Custom tabs con drag nativo y menú contextual -->
           <Tab
             v-for="(tab, index) in customTabsDraggable"
             :key="'custom-' + tab.id"
             :value="staticTabs.length + index"
             @click="redirectToTab(tab)"
+            @contextmenu.prevent="openTabMenu($event, tab, index)"
             class="!relative"
             draggable="true"
             @dragstart="onDragStartTab(tab, index)"
@@ -58,18 +59,35 @@
       </div>
     </div>
   </Dialog>
+
+  <!-- Dialog editar nombre de tab -->
+  <Dialog v-model:visible="editTabDialog" header="Edit Tab Name" modal>
+    <div class="p-fluid">
+      <div class="flex flex-col py-3">
+        <label for="editTabTitle">Tab Title</label>
+        <InputText id="editTabTitle" v-model="editTab.name" @keyup.enter="saveTabName" />
+      </div>
+      <div class="flex gap-2 w-full mt-5">
+        <Button label="Cancel" @click="editTabDialog = false" class="flex-1" severity="secondary" />
+        <Button label="Save" @click="saveTabName" class="flex-1" />
+      </div>
+    </div>
+  </Dialog>
+
+  <!-- Context Menu para tabs -->
+  <ContextMenu ref="tabContextMenu" :model="tabContextMenuItems" />
 </template>
 
 <script setup lang="ts">
 import { Tab as ITab } from "@/Lib/types";
 import { router } from "@inertiajs/vue3";
 import axios from "axios";
-import { Button, Dialog, Toast, useConfirm, useToast } from "primevue";
+import { Button, Dialog, Toast, useConfirm, useToast, ContextMenu } from "primevue";
 import InputText from "primevue/inputtext";
 import Tab from "primevue/tab";
 import TabList from "primevue/tablist";
 import Tabs from "primevue/tabs";
-import { defineProps, onMounted, reactive, ref, Ref, watch,nextTick } from "vue";
+import { defineProps, onMounted, reactive, ref, Ref, watch, nextTick } from "vue";
 
 const props = defineProps({
   customTabs: {
@@ -93,8 +111,25 @@ const toast = useToast();
 const dragging = ref(false);
 const dropZoneActive = ref(false);
 const shakeDropZone = ref(false);
+const tabContextMenu = ref();
+const editTabDialog = ref(false);
+const editTab = reactive<ITab & { tempName?: string }>({ name: "", order: 0 });
+const tabContextMenuItems = ref([
+  {
+    label: 'Edit Name',
+    icon: 'pi pi-pen-to-square',
+    command: () => openEditDialog()
+  },
+  {
+    label: 'Delete',
+    icon: 'pi pi-trash',
+    command: () => deleteContextTab()
+  }
+]);
+
 let draggedTab: ITab | null = null;
 let draggedIndex: number | null = null;
+let selectedContextTab: ITab | null = null;
 
 onMounted(async () => {
   props.customTabs
@@ -141,6 +176,52 @@ function addNewTab() {
       addTabDialog.value = false;
       toast.add({ severity: "success", summary: "Tab Added", detail: "The new tab was created.", life: 3000 });
       location.reload();
+    });
+  }
+}
+
+function openTabMenu(event: MouseEvent, tab: ITab, index: number) {
+  selectedContextTab = tab;
+  tabContextMenu.value.show(event);
+}
+
+function openEditDialog() {
+  if (selectedContextTab) {
+    editTab.name = selectedContextTab.name;
+    editTab.id = selectedContextTab.id;
+    editTabDialog.value = true;
+  }
+}
+
+function saveTabName() {
+  if (editTab.name.trim() !== "" && editTab.id) {
+    axios.post(route("user.updateTabName"), {
+      tab_id: editTab.id,
+      name: editTab.name
+    }).then(() => {
+      // Update the local array
+      const tabIndex = customTabsDraggable.value.findIndex(t => t.id === editTab.id);
+      if (tabIndex !== -1) {
+        customTabsDraggable.value[tabIndex].name = editTab.name;
+      }
+      editTabDialog.value = false;
+      toast.add({ severity: "success", summary: "Tab Updated", detail: "The tab name was updated.", life: 3000 });
+    }).catch(() => {
+      toast.add({ severity: "error", summary: "Error", detail: "Could not update tab name.", life: 3000 });
+    });
+  }
+}
+
+function deleteContextTab() {
+  if (selectedContextTab) {
+    confirm.require({
+      message: `Are you sure you want to delete "${selectedContextTab.name}"?`,
+      header: "Confirm Delete",
+      icon: "pi pi-exclamation-triangle",
+      acceptClass: "p-button-danger",
+      accept: () => {
+        removeTab(selectedContextTab);
+      },
     });
   }
 }
@@ -272,7 +353,8 @@ function reorderTabs() {
   });
 }
 
-function removeTab(tab: ITab) {
+function removeTab(tab: ITab | null) {
+  if (!tab) return;
   axios.post(route("tab.remove"), { id: tab.id }).then(() => {
     toast.add({ severity: "info", summary: "Tab Deleted", detail: `Tab "${tab.name}" was deleted.`, life: 3000 });
     router.reload({ only: ["tabs"] });

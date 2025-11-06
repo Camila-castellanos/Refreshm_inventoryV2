@@ -31,6 +31,7 @@ use Inertia\Inertia;
 
 Route::get('/publicstore/{shopSlug}', [InventoryPublicController::class, "index"])->name('public.inventory.shop.index');
 Route::get('/publicstore', function () {abort(404);});
+Route::post('/publicstore/get-unique-models', [InventoryPublicController::class, "getUniqueModelsByManufacturer"])->name('public.items.getUniqueModelsByManufacturer');
 Route::get("items/tabs/{id}/items", [ItemController::class, "getTabItems"])->name("items.tabs.items");
 Route::post("publicInventory/request", [ItemController::class, "request"])->name("items.request");
 
@@ -93,6 +94,7 @@ Route::middleware([
         Route::post("items/storeWithBill", [ItemController::class, "storeWithBill"])->name("items.storeWithBill");
     Route::post("items/get_unique_models_by_manufacturer", [ItemController::class, "getUniqueModelsByManufacturer"])->name("Items.getUniqueModelsByManufacturer");
         Route::get("items/getItems", [ItemController::class, "getItems"])->name("items.getItems");
+    Route::post("items/get-specific-items", [ItemController::class, "getSpecificItems"])->name("items.getSpecificItems");
     Route::get("items/incoming-requests", [ItemController::class, "incomingRequests"])->name("items.incomingRequests");
     Route::post("items/incoming-requests/{id}/create-invoice", [ItemController::class, "createInvoiceFromRequest"])->name("items.incomingRequests.createInvoice");
     Route::delete("items/incoming-requests/items/{id}", [ItemController::class, "deleteIncomingRequestItem"])->name("items.incomingRequests.deleteItem");
@@ -139,6 +141,7 @@ Route::get('/customers/by-name/{name}', [CustomerController::class, 'getByName']
     // Fetch and update user timezone
     Route::get("user/timezone", [UserController::class, "getTimezone"])->name('user.timezone.fetch');
     Route::get('user/tabs', [\App\Http\Controllers\UserController::class, 'userTabs'])->name('tabs.user');
+    Route::post('user/tab-name', [UserController::class, 'updateTabName'])->name('user.updateTabName');
     Route::put("user/timezone", [UserController::class, "updateTimezone"])->name('user.timezone.update');
     Route::get('user/printable-tag-fields',[UserController::class, 'getPrintableTagFields'])->name('user.printableTagFields');
     Route::put('user/printable-tag-fields',[UserController::class, 'updatePrintableTagFields'])->name('user.updatePrintableTagFields');
