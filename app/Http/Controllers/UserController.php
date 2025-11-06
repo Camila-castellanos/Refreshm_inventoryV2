@@ -331,4 +331,40 @@ class UserController extends Controller
             return response()->json(['error' => 'Could not retrieve tabs'], 500);
         }
     }
+
+    /**
+     * Update a custom tab name.
+     *
+     * @param \Illuminate\Http\Request $request
+     * @return \Illuminate\Http\Response
+     */
+    public function updateTabName(Request $request)
+    {
+        try {
+            $user = Auth::user();
+            
+            $data = $request->validate([
+                'tab_id' => 'required|exists:tabs,id',
+                'name' => 'required|string|max:255',
+            ]);
+
+            $tab = Tab::where('id', $data['tab_id'])
+                ->where('user_id', $user->id)
+                ->first();
+
+            if (!$tab) {
+                return response()->json(['error' => 'Tab not found'], 404);
+            }
+
+            $tab->update(['name' => $data['name']]);
+
+            return response()->json([
+                'success' => true,
+                'tab' => $tab
+            ], 200);
+        } catch (Exception $e) {
+            Log::error('UserController@updateTabName error: ' . $e->getMessage());
+            return response()->json(['error' => 'Could not update tab name'], 500);
+        }
+    }
 }
