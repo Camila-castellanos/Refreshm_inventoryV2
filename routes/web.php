@@ -139,6 +139,7 @@ Route::get('/customers/by-name/{name}', [CustomerController::class, 'getByName']
     // Fetch and update user timezone
     Route::get("user/timezone", [UserController::class, "getTimezone"])->name('user.timezone.fetch');
     Route::get('user/tabs', [\App\Http\Controllers\UserController::class, 'userTabs'])->name('tabs.user');
+    Route::post('user/tab-name', [UserController::class, 'updateTabName'])->name('user.updateTabName');
     Route::put("user/timezone", [UserController::class, "updateTimezone"])->name('user.timezone.update');
     Route::get('user/printable-tag-fields',[UserController::class, 'getPrintableTagFields'])->name('user.printableTagFields');
     Route::put('user/printable-tag-fields',[UserController::class, 'updatePrintableTagFields'])->name('user.updatePrintableTagFields');
