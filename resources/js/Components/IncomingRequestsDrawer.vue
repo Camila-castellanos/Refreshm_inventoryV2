@@ -116,57 +116,114 @@ watch(activeRequest, (newVal) => {
 
 async function createInvoice(req: any) {
   if (!req) return;
-  // Map items: use original_item_id as id when available
-  const mappedItems = (req.items || []).map((it: any) => ({
-    ...it,
-    id: it.original_item_id ?? it.id,
-  }));
-
-  // If the request includes shipping and it's NOT "Standard (Free)", add a synthetic item for the shipping fee
-  if (req.shipping && req.shipping.label !== 'Standard (Free)') {
-    try {
-      mappedItems.push({
-        id: null,
-        original_item_id: null,
-        model: req.shipping.label || 'Shipping',
-        type: ItemType.SHIPPING_FEE,
-        selling_price: Number(req.shipping.value) || 0,
-        isNew: true,
-      });
-    } catch (err) {
-      console.error('Error mapping shipping to item', err);
-    }
-  }
-
-  // Open ItemsSell modal with the mapped request items
-  console.log('Opening ItemsSell dialog with items:', mappedItems);
-  dialog.open(ItemsSell, {
-    data: {
-      // ItemsSell expects items as an array/ref similar to Index; pass the mapped items
-      items: mappedItems,
-      customers: [],
-    },
-    props: {
-      modal: true,
-    },
-    onClose: async (result: any) => {
-      if (result?.data?.sold) {
-        // If the sale was successful, delete the originating incoming request first
-        try {
-          await axios.delete(route('items.incomingRequests.delete', req.id));
-          toast.add({ severity: 'success', summary: 'Request removed', detail: 'Incoming request successfully processed and deleted', life: 2500 });
-        } catch (e) {
-          console.error('Failed to delete incoming request after sale', e);
-          toast.add({ severity: 'warn', summary: 'Warning', detail: 'Sale created but failed to delete request', life: 4000 });
-        }
-
-        // refresh requests list and close dialog
-        await fetchRequests(false);
-        dialogVisible.value = false;
-        toast.add({ severity: 'success', summary: 'Sold', detail: 'Items sold successfully', life: 3000 });
+  
+  try {
+    // Fetch current item status to check if they're already sold
+    const itemIds = (req.items || []).map((it: any) => it.original_item_id ?? it.id);
+    const itemsResponse = await axios.post(route('items.getSpecificItems'), { ids: itemIds });
+    const currentItems = itemsResponse.data || [];
+    
+    // Create a map of item IDs to their current status
+    const currentItemsMap = new Map(currentItems.map((it: any) => [it.id, it]));
+    
+    // Separate sold and available items
+    const availableItems: any[] = [];
+    const soldItems: any[] = [];
+    
+    (req.items || []).forEach((it: any) => {
+      const itemId = it.original_item_id ?? it.id;
+      const currentItem = currentItemsMap.get(itemId);
+      
+      // Check if item is sold (has a sold date/value)
+      if (currentItem && currentItem.sold) {
+        soldItems.push(it);
+      } else {
+        availableItems.push(it);
       }
-    },
-  });
+    });
+    
+    // Notify user about sold items that were removed
+    if (soldItems.length > 0) {
+      const soldModels = soldItems.map((it: any) => it.model || it.type || 'Item').join(', ');
+      toast.add({ 
+        severity: 'warn', 
+        summary: 'Items Removed', 
+        detail: `The following items have already been sold and were removed: ${soldModels}`, 
+        life: 5000 
+      });
+    }
+    
+    // If no available items, don't open modal
+    if (availableItems.length === 0) {
+      toast.add({ 
+        severity: 'info', 
+        summary: 'No Items Available', 
+        detail: 'All items in the current request have already been sold.', 
+        life: 4000 
+      });
+      return;
+    }
+    
+    // Map available items: use original_item_id as id when available
+    const mappedItems = availableItems.map((it: any) => ({
+      ...it,
+      id: it.original_item_id ?? it.id,
+    }));
+
+    // If the request includes shipping and it's NOT "Standard (Free)", add a synthetic item for the shipping fee
+    if (req.shipping && req.shipping.label !== 'Standard (Free)') {
+      try {
+        mappedItems.push({
+          id: null,
+          original_item_id: null,
+          model: req.shipping.label || 'Shipping',
+          type: ItemType.SHIPPING_FEE,
+          selling_price: Number(req.shipping.value) || 0,
+          isNew: true,
+        });
+      } catch (err) {
+        console.error('Error mapping shipping to item', err);
+      }
+    }
+
+    // Open ItemsSell modal with the mapped request items
+    console.log('Opening ItemsSell dialog with items:', mappedItems);
+    dialog.open(ItemsSell, {
+      data: {
+        // ItemsSell expects items as an array/ref similar to Index; pass the mapped items
+        items: mappedItems,
+        customers: [],
+      },
+      props: {
+        modal: true,
+      },
+      onClose: async (result: any) => {
+        if (result?.data?.sold) {
+          // If the sale was successful, delete the originating incoming request first
+          try {
+            await axios.delete(route('items.incomingRequests.delete', req.id));
+            toast.add({ severity: 'success', summary: 'Request removed', detail: 'Incoming request successfully processed and deleted', life: 2500 });
+          } catch (e) {
+            console.error('Failed to delete incoming request after sale', e);
+            toast.add({ severity: 'warn', summary: 'Warning', detail: 'Sale created but failed to delete request', life: 4000 });
+          }
+
+          // refresh requests list and close dialog
+          await fetchRequests(false);
+          dialogVisible.value = false;
+          toast.add({ severity: 'success', summary: 'Sold', detail: 'Items sold successfully', life: 3000 });
+        }
+      },
+    });
+  } catch (e) {
+    console.error('Error validating items:', e);
+    toast.add({ 
+      severity: 'error', 
+      summary: 'Error', 
+      detail: 'Failed to validate items. Please try again.', 
+      life: 4000 
+    });
+  }
 }
 
 async function deleteItem(it: any) {
