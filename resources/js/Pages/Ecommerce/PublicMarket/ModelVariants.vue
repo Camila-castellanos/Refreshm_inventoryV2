@@ -61,7 +61,7 @@
                             <select v-model="filters.grade" class="w-full px-4 py-3 border border-gray-300 rounded-lg text-base focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-400 transition-colors">
                                 <option value="">All Grades</option>
                                 <option v-for="grade in availableGrades" :key="grade" :value="grade">
-                                    {{ formatGradeName(grade) }}
+                                    {{ grade }}
                                 </option>
                             </select>
                         </div>
@@ -145,9 +145,18 @@
                                                 <span class="text-gray-600 font-medium">Color:</span>
                                                 <span class="font-semibold text-gray-900">{{ formatColorName(item.colour) }}</span>
                                             </div>
-                                            <div v-if="item.grade" class="flex justify-between items-center pb-3 border-b border-gray-100">
-                                                <span class="text-gray-600 font-medium">Grade:</span>
-                                                <span class="font-semibold text-gray-900">{{ formatGradeName(item.grade) }}</span>
+                                            <div v-if="item.grade" class="flex justify-between items-center pb-3 border-b border-gray-100 group">
+                                                <div class="flex items-center gap-2">
+                                                    <span class="text-gray-600 font-medium">Grade:</span>
+                                                    <span class="font-semibold text-gray-900">{{ item.grade }}</span>
+                                                </div>
+                                                <button @click="toggleGradeDetail(item.id)" class="text-xs px-2 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors">
+                                                    <i class="pi pi-info-circle text-xs"></i>
+                                                </button>
+                                            </div>
+                                            <!-- Grade Detail (Hidden by default) -->
+                                            <div v-if="expandedGrades[item.id]" class="pb-3 border-b border-blue-100 bg-blue-50 px-3 py-2 rounded">
+                                                <p class="text-xs text-blue-600">Specific condition: <span class="font-semibold">{{ item.gradeRaw }}</span></p>
                                             </div>
                                             <div v-if="item.battery" class="flex justify-between items-center pb-3 border-b border-gray-100">
                                                 <span class="text-gray-600 font-medium">Battery:</span>
@@ -224,6 +233,20 @@ const props = defineProps({
 const router = useRouter()
 const { addItem } = useCart()
 
+// Simplify grade categories
+const simplifyGrade = (grade) => {
+    if (!grade) return grade
+    const gradeUpper = grade.toUpperCase()
+    // New
+    if (gradeUpper === 'BRAND NEW SEALED') return 'New'
+    // Excellent: A-, A, A+
+    if (['A-', 'A', 'A+'].includes(gradeUpper)) return 'Excellent'
+    // Good: B+
+    if (gradeUpper === 'B+') return 'Good'
+    // Fair: B, C, D, and others
+    return 'Fair'
+}
+
 // Local state
 const filters = ref({
     storage: '',
@@ -234,6 +257,9 @@ const filters = ref({
 })
 
 const isAddingToCart = ref(null)
+
+// Track expanded grade details
+const expandedGrades = ref({})
 
 // Get all items from variants structure (now nested with storage)
 const allItems = computed(() => {
@@ -250,7 +276,8 @@ const allItems = computed(() => {
                             type: props.modelData.type,
                             storage: storageGroup.storage,
                             colour: colorGroup.colour,
-                            grade: gradeGroup.grade,
+                            grade: simplifyGrade(gradeGroup.grade), // Use simplified grade
+                            gradeRaw: gradeGroup.grade, // Keep original for reference
                             battery: Number(battery), // Ensure battery is always a number
                             issues: issueItem.issues,
                             photo: colorGroup.photo,
@@ -288,7 +315,11 @@ const availableGrades = computed(() => {
         if (filters.value.issues && item.issues !== filters.value.issues) return false
         return true
     })
-    return [...new Set(filtered.map(v => v.grade))].filter(Boolean)
+    // Return unique simplified grades with proper order
+    return [...new Set(filtered.map(v => v.grade))].filter(Boolean).sort((a, b) => {
+        const order = { 'New': 0, 'Excellent': 1, 'Good': 2, 'Fair': 3 }
+        return (order[a] || 4) - (order[b] || 4)
+    })
 })
 
 const availableBattery = computed(() => {
@@ -332,10 +363,10 @@ const formatColorName = (color) => {
 
 const formatGradeName = (grade) => {
     const gradeMap = {
-        'A': 'Grade A (Excellent)',
-        'B': 'Grade B (Good)',
-        'C': 'Grade C (Fair)',
-        'D': 'Grade D (Poor)'
+        'New': 'New (Brand New Sealed)',
+        'Excellent': 'Excellent (A-, A, A+)',
+        'Good': 'Good (B+)',
+        'Fair': 'Fair (B, C, D...)'
     }
     return gradeMap[grade] || grade
 }
@@ -372,6 +403,10 @@ const addToCart = async (item) => {
     } finally {
         isAddingToCart.value = null
     }
+}
+
+const toggleGradeDetail = (itemId) => {
+    expandedGrades.value[itemId] = !expandedGrades.value[itemId]
 }
 
 </script>
