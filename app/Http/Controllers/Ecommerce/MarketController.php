@@ -199,6 +199,43 @@ class MarketController extends Controller
     }
 
     /**
+     * Display model variants page with dropdowns for filtering
+     */
+    public function showModelVariants(Request $request, Market $market, $model)
+    {
+        try {
+            $market->load(['shop']);
+
+            // Verify shop accessibility
+            if (!$market->shop) {
+                abort(503, 'This market is temporarily unavailable');
+            }
+
+            $variants = $market->getModelVariants($model);
+
+            if (!$variants) {
+                abort(404, 'Model not found');
+            }
+
+            // Get safe market data
+            $safeMarketData = $market->getSafeData();
+
+            return Inertia::render('Ecommerce/PublicMarket/ModelVariants', [
+                'market' => $safeMarketData,
+                'modelData' => $variants,
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Market show model variants error: ' . $e->getMessage(), [
+                'market_id' => $market->id ?? null,
+                'model' => $model,
+            ]);
+
+            abort(503, 'Unable to load model details. Please try again later.');
+        }
+    }
+
+    /**
      * Display a detailed products list page
      */
     public function productsList(Request $request, Market $market)
