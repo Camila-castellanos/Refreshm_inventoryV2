@@ -31,6 +31,7 @@ use Inertia\Inertia;
 
 Route::get('/publicstore/{shopSlug}', [InventoryPublicController::class, "index"])->name('public.inventory.shop.index');
 Route::get('/publicstore', function () {abort(404);});
+Route::post('/publicstore/get-unique-models', [InventoryPublicController::class, "getUniqueModelsByManufacturer"])->name('public.items.getUniqueModelsByManufacturer');
 Route::get("items/tabs/{id}/items", [ItemController::class, "getTabItems"])->name("items.tabs.items");
 Route::post("publicInventory/request", [ItemController::class, "request"])->name("items.request");
 
