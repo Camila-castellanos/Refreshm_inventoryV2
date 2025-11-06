@@ -59,6 +59,7 @@ class InventoryPublicController extends Controller
             ->whereNull("sold")
             ->whereNull("hold")
             ->whereNotNull('model')
+            ->whereNotIn('id', \App\Models\TabItem::pluck('item_id')) // Exclude items in tabs
             ->get();
 
 
