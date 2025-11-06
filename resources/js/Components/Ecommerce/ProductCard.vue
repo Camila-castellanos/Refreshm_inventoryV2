@@ -200,8 +200,13 @@ const maskIMEI = (imei) => {
 }
 
 const handleViewProduct = () => {
-    // If it's a grouped model, we might want to show variants instead
-    // For now, we'll emit the view-product event and let the parent handle it
+    // If it's a grouped model, navigate to the model variants page
+    if (isGroupedModel.value) {
+        window.location.href = `/market/${props.market.slug}/model/${encodeURIComponent(props.item.model)}/variants`
+        return
+    }
+    
+    // Otherwise, navigate to the individual product detail page
     emit('view-product', props.item.id || props.item.sample_item_id)
 }
 

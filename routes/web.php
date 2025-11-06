@@ -295,7 +295,7 @@ Route::domain('{custom_domain}')
 Route::prefix('market/{market:slug}')->name('market.')->group(function () {
     Route::get('/', [App\Http\Controllers\Ecommerce\MarketController::class, 'index'])->name('index');
     Route::get('/products', [App\Http\Controllers\Ecommerce\MarketController::class, 'products'])->name('products');
-    Route::get('/model/{model}/variants', [App\Http\Controllers\Ecommerce\MarketController::class, 'modelVariants'])->name('model-variants');
+    Route::get('/model/{model}/variants', [App\Http\Controllers\Ecommerce\MarketController::class, 'showModelVariants'])->name('model-variants');
     Route::get('/products-list', [App\Http\Controllers\Ecommerce\MarketController::class, 'productsList'])->name('products-list');
     Route::get('/category/{category}', [App\Http\Controllers\Ecommerce\MarketController::class, 'category'])->name('category');
     Route::get('/product/{item}', [App\Http\Controllers\Ecommerce\MarketController::class, 'product'])->name('product');
@@ -307,4 +307,5 @@ Route::prefix('market/{market:slug}')->name('market.')->group(function () {
 // Ecommerce API Routes (Public - for AJAX calls)
 Route::prefix('api/market/{market:slug}')->name('market.api.')->group(function () {
     Route::get('/info', [App\Http\Controllers\Ecommerce\MarketController::class, 'info'])->name('info');
+    Route::get('/model/{model}/variants', [App\Http\Controllers\Ecommerce\MarketController::class, 'modelVariants'])->name('model-variants');
 });

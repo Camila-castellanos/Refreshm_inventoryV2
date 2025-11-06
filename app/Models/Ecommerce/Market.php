@@ -178,7 +178,32 @@ class Market extends Model
     }
 
     /**
+     * Parse model name to extract base model and storage capacity
+     * Examples: "iPad 7 32GB" -> ['model' => 'iPad 7', 'storage' => '32GB']
+     *           "iPhone 15 Pro Max 256GB" -> ['model' => 'iPhone 15 Pro Max', 'storage' => '256GB']
+     *           "Galaxy S22 Ultra" -> ['model' => 'Galaxy S22 Ultra', 'storage' => null]
+     */
+    public function parseModelStorage(string $model): array
+    {
+        // Match patterns like: 32GB, 64GB, 128GB, 256GB, 512GB, 1TB, 2TB, etc.
+        // This regex captures everything before the storage capacity as the model name
+        if (preg_match('/^(.+?)\s+([\d]+(?:GB|TB))$/i', trim($model), $matches)) {
+            return [
+                'model' => trim($matches[1]),
+                'storage' => strtoupper($matches[2])
+            ];
+        }
+        
+        // If no storage found, return the full model name
+        return [
+            'model' => trim($model),
+            'storage' => null
+        ];
+    }
+
+    /**
      * Get items grouped by model with variant counts
+     * Groups by parsed model (without storage) + manufacturer + type
      * Returns ONE item per model with aggregated data
      * Supports filtering by category, brand, search, and sorting
      */
@@ -209,59 +234,75 @@ class Market extends Model
             $query->where('manufacturer', $brand);
         }
 
-        // Get grouped data with aggregations
-        $grouped = $query->select(
-                'model',
-                'manufacturer',
-                'type',
-                DB::raw('COUNT(*) as total_stock'),
-                DB::raw('COUNT(DISTINCT colour) as color_options'),
-                DB::raw('COUNT(DISTINCT grade) as grade_options'),
-                DB::raw('MIN(selling_price) as min_price'),
-                DB::raw('MAX(selling_price) as max_price'),
-                DB::raw('AVG(selling_price) as avg_price'),
-                DB::raw('MIN(id) as sample_item_id')
-            )
-            ->groupBy('model', 'manufacturer', 'type');
+        // Get all items first to parse models and extract storage
+        $items = $query->get();
+        
+        // Group by parsed model (without storage) + manufacturer + type
+        $grouped = $items->groupBy(function ($item) {
+            $parsed = $this->parseModelStorage($item->model);
+            return $parsed['model'] . '|' . $item->manufacturer . '|' . $item->type;
+        })->map(function ($group) {
+            $firstItem = $group->first();
+            $parsed = $this->parseModelStorage($firstItem->model);
+            
+            // Count unique storage options
+            $storageOptions = $group->pluck('model')
+                ->map(fn($m) => $this->parseModelStorage($m)['storage'])
+                ->filter()
+                ->unique()
+                ->count();
+            
+            return (object)[
+                'model' => $parsed['model'],
+                'manufacturer' => $firstItem->manufacturer,
+                'type' => $firstItem->type,
+                'total_stock' => $group->count(),
+                'color_options' => $group->pluck('colour')->unique()->count(),
+                'grade_options' => $group->pluck('grade')->unique()->count(),
+                'storage_options' => $storageOptions,
+                'min_price' => $group->min('selling_price'),
+                'max_price' => $group->max('selling_price'),
+                'avg_price' => $group->avg('selling_price'),
+                'sample_item_id' => $group->min('id'),
+                'photo' => $firstItem->getFirstMediaUrl('item-photos', 'thumb'),
+                'id' => $group->min('id'),
+            ];
+        })->values();
 
-        // Apply sorting
-        switch ($sort) {
-            case 'price_low':
-                $grouped->orderBy(DB::raw('MIN(selling_price)'), 'asc');
-                break;
-            case 'price_high':
-                $grouped->orderBy(DB::raw('MAX(selling_price)'), 'desc');
-                break;
-            case 'name':
-                $grouped->orderBy('model', 'asc');
-                break;
-            case 'latest':
-            default:
-                $grouped->orderByRaw('MIN(id) DESC'); // Most recent items first
-                break;
-        }
+        // Apply sorting to the grouped collection
+        $sorted = match($sort) {
+            'price_low' => $grouped->sortBy('min_price'),
+            'price_high' => $grouped->sortByDesc('max_price'),
+            'name' => $grouped->sortBy('model'),
+            default => $grouped->reverse(), // latest first
+        };
 
-        $grouped = $grouped->paginate($perPage)->withQueryString();
-
-        // Enhance each grouped result with media
-        $grouped->setCollection($grouped->getCollection()->map(function ($model) {
-            $item = Item::find($model->sample_item_id);
-            $model->photo = $item ? $item->getFirstMediaUrl('item-photos', 'thumb') : null;
-            $model->id = $model->sample_item_id; // Use sample item ID as the group ID
-            return $model;
-        }));
-
-        return $grouped;
+        // Create pagination manually
+        $page = request()->get('page', 1);
+        $items = $sorted->slice(($page - 1) * $perPage, $perPage)->values();
+        
+        $paginated = new \Illuminate\Pagination\Paginator(
+            $items,
+            $perPage,
+            $page,
+            [
+                'path' => request()->url(),
+                'query' => request()->query(),
+            ]
+        );
+        
+        return $paginated;
     }
 
     /**
      * Get all variants for a specific model
-     * Groups by colour -> grade -> battery -> issues
+     * Groups by storage -> colour -> grade -> battery -> issues
+     * Storage is now a selectable characteristic
      */
     public function getModelVariants(string $model)
     {
-        $items = Item::where('shop_id', $this->shop_id)
-            ->where('model', urldecode($model))
+        // First, get all items that match the parsed model name (without storage)
+        $allItems = Item::where('shop_id', $this->shop_id)
             ->whereNull('sold')
             ->whereNull('hold')
             ->whereNotNull('selling_price')
@@ -269,37 +310,58 @@ class Market extends Model
             ->with('media')
             ->get();
 
+        // Filter items by matching the parsed model name
+        $items = $allItems->filter(function ($item) use ($model) {
+            $parsed = $this->parseModelStorage($item->model);
+            return $parsed['model'] === urldecode($model);
+        });
+
         if ($items->isEmpty()) {
             return null;
         }
 
-        // Group by colour
-        $variants = $items->groupBy('colour')->map(function ($colorGroup) {
+        // Group by storage (parsed from model name)
+        $variants = $items->groupBy(function ($item) {
+            $parsed = $this->parseModelStorage($item->model);
+            return $parsed['storage'] ?? 'No Storage Info';
+        })->map(function ($storageGroup) {
+            // Then group by colour within each storage
             return [
-                'colour' => $colorGroup->first()->colour,
-                'total' => $colorGroup->count(),
-                'photo' => $colorGroup->first()->getFirstMediaUrl('item-photos', 'thumb'),
-                'grades' => $colorGroup->groupBy('grade')->map(function ($gradeGroup) {
+                'storage' => $storageGroup->first() ? ($this->parseModelStorage($storageGroup->first()->model)['storage'] ?? 'No Storage Info') : null,
+                'total' => $storageGroup->count(),
+                'photo' => $storageGroup->first()->getFirstMediaUrl('item-photos', 'thumb'),
+                'colours' => $storageGroup->groupBy('colour')->map(function ($colorGroup) {
+                    // Then group by grade within each colour
                     return [
-                        'grade' => $gradeGroup->first()->grade,
-                        'count' => $gradeGroup->count(),
-                        'battery_options' => $gradeGroup->pluck('battery')->unique()->values(),
-                        'issues' => $gradeGroup->map(function ($item) {
+                        'colour' => $colorGroup->first()->colour,
+                        'count' => $colorGroup->count(),
+                        'grades' => $colorGroup->groupBy('grade')->map(function ($gradeGroup) {
                             return [
-                                'id' => $item->id,
-                                'issues' => $item->issues,
-                                'count' => 1,
+                                'grade' => $gradeGroup->first()->grade,
+                                'count' => $gradeGroup->count(),
+                                'battery_options' => $gradeGroup->pluck('battery')->unique()->values(),
+                                'issues' => $gradeGroup->map(function ($item) {
+                                    return [
+                                        'id' => $item->id,
+                                        'issues' => $item->issues,
+                                        'selling_price' => $item->selling_price,
+                                        'count' => 1,
+                                    ];
+                                })->unique('issues'),
                             ];
-                        })->unique('issues'),
+                        })->values(),
                     ];
                 })->values(),
             ];
         })->values();
 
+        $firstItem = $items->first();
+        $parsed = $this->parseModelStorage($firstItem->model);
+
         return [
-            'model' => $items->first()->model,
-            'manufacturer' => $items->first()->manufacturer,
-            'type' => $items->first()->type,
+            'model' => $parsed['model'],
+            'manufacturer' => $firstItem->manufacturer,
+            'type' => $firstItem->type,
             'total_stock' => $items->count(),
             'variants' => $variants,
         ];
