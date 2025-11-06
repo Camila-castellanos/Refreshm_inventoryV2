@@ -94,6 +94,7 @@ Route::middleware([
         Route::post("items/storeWithBill", [ItemController::class, "storeWithBill"])->name("items.storeWithBill");
     Route::post("items/get_unique_models_by_manufacturer", [ItemController::class, "getUniqueModelsByManufacturer"])->name("Items.getUniqueModelsByManufacturer");
         Route::get("items/getItems", [ItemController::class, "getItems"])->name("items.getItems");
+    Route::post("items/get-specific-items", [ItemController::class, "getSpecificItems"])->name("items.getSpecificItems");
     Route::get("items/incoming-requests", [ItemController::class, "incomingRequests"])->name("items.incomingRequests");
     Route::post("items/incoming-requests/{id}/create-invoice", [ItemController::class, "createInvoiceFromRequest"])->name("items.incomingRequests.createInvoice");
     Route::delete("items/incoming-requests/items/{id}", [ItemController::class, "deleteIncomingRequestItem"])->name("items.incomingRequests.deleteItem");
