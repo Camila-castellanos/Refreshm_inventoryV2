@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\ItemController;
+use App\Http\Controllers\ExchangeRateController;
 use App\Http\Middleware\ApiAuth;
 use App\Http\Controllers\Api\DocsController;
 
@@ -18,6 +19,14 @@ Route::get('/csrf-token', function () {
 
 Route::get('health', [\App\Http\Controllers\Api\HealthController::class, 'index']);
 Route::get('/', [DocsController::class, 'index']);
+
+// Exchange rate endpoints
+Route::prefix('exchange-rate')->group(function () {
+    Route::get('/', [ExchangeRateController::class, 'getExchangeRate'])->name('exchange-rate.get');
+    Route::post('/refresh', [ExchangeRateController::class, 'refreshExchangeRate'])->name('exchange-rate.refresh');
+    Route::delete('/cache', [ExchangeRateController::class, 'clearCache'])->name('exchange-rate.clear-cache');
+});
+
 Route::get('login', function (Request $request) {
     return response()->json([
         'error'   => 'Method not allowed',
