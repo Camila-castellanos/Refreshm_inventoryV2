@@ -247,6 +247,7 @@ Route::get('/customers/by-name/{name}', [CustomerController::class, 'getByName']
     // Shop endpoints used by front-end modals
     Route::get('shops/{shop}', [ShopController::class, 'show'])->name('shops.show');
     Route::put('shops/{shop}', [ShopController::class, 'update'])->name('shops.update');
+    Route::get('shops/{shop}/tabs', [ShopController::class, 'getShopTabs'])->name('shops.tabs');
 
     });
 });

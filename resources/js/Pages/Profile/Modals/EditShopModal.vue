@@ -14,6 +14,28 @@
       <small class="text-xs text-gray-500 w-full sm:w-3/4 text-center">
         Leave slug empty to auto-generate from shop name
       </small>
+
+      <!-- Public Tabs Checkboxes -->
+      <div class="w-full sm:w-3/4 border rounded-lg p-4 bg-gray-50">
+        <label class="block text-sm font-semibold text-gray-700 mb-3">Public Tabs</label>
+        <div v-if="tabs.length > 0" class="space-y-2">
+          <div v-for="tab in tabs" :key="tab.id" class="flex items-center">
+            <input 
+              type="checkbox" 
+              :id="`tab-${tab.id}`" 
+              :value="tab.id"
+              v-model="publicTabIds"
+              class="rounded border-gray-300"
+            />
+            <label :for="`tab-${tab.id}`" class="ml-2 text-sm text-gray-600 cursor-pointer">
+              {{ tab.name }}
+            </label>
+          </div>
+        </div>
+        <div v-else class="text-sm text-gray-500 italic">
+          No tabs available
+        </div>
+      </div>
     </div>
 
     <div class="flex justify-end gap-2 mt-4">
@@ -26,7 +48,7 @@
 <script setup>
 import { ref, watch, onMounted } from 'vue'
 import axios from 'axios'
-import { useToast, Dialog, Button, InputText} from 'primevue'
+import { useToast, Dialog, Button, InputText } from 'primevue'
 import FloatLabel from 'primevue/floatlabel';
 const props = defineProps({
   shopId: {
@@ -51,6 +73,8 @@ const name = ref('')
 const slug = ref('')
 const saving = ref(false)
 const toast = useToast()
+const tabs = ref([])
+const publicTabIds = ref([])
 
 watch(() => props.modelValue, (v) => (visible.value = v))
 watch(visible, (v) => emit('update:modelValue', v))
@@ -60,13 +84,20 @@ const loadShop = async () => {
   // if initialName provided, prefer it (no fetch) to avoid extra roundtrip
   if (props.initialName && props.initialName.length > 0) {
     name.value = props.initialName
-    return
   }
 
   try {
     const res = await axios.get(`/shops/${props.shopId}`)
     name.value = res.data.name || ''
     slug.value = res.data.slug || ''
+    
+    // Load tabs for this shop
+    const tabsRes = await axios.get(`/shops/${props.shopId}/tabs`)
+    tabs.value = tabsRes.data.tabs || []
+    publicTabIds.value = tabs.value
+      .filter(tab => tab.is_public)
+      .map(tab => tab.id)
+    console.log('Loaded shop tabs', tabs.value, publicTabIds.value)  
   } catch (e) {
     console.error('Could not load shop', e)
     toast.add({ severity: 'error', summary: 'Error', detail: 'Could not load shop details', life: 3000 })
@@ -79,6 +110,7 @@ watch(() => [props.shopId, props.initialName, props.modelValue], () => {
 
 onMounted(() => {
   if (visible.value) loadShop()
+
 })
 
 const save = async () => {
@@ -89,7 +121,10 @@ const save = async () => {
   saving.value = true
   try {
     // send update request
-    const payload = { name: name.value.trim() }
+    const payload = { 
+      name: name.value.trim(),
+      public_tabs: publicTabIds.value
+    }
     if (slug.value && slug.value.trim()) {
       payload.slug = slug.value.trim()
     }
@@ -98,12 +133,13 @@ const save = async () => {
     emit('saved', { 
       id: props.shopId, 
       name: name.value.trim(), 
-      slug: response.data.slug 
+      slug: response.data.slug,
+      public_tabs: publicTabIds.value
     })
     visible.value = false
   } catch (e) {
     console.error('Save failed', e)
-    const error_message = e.response.data.message || null
+    const error_message = e.response?.data?.message || null
     toast.add({ severity: 'error', summary: 'Save Failed', detail: `Could not save shop: ${error_message || 'Unknown error'}`, life: 3000 })
   } finally {
     saving.value = false
