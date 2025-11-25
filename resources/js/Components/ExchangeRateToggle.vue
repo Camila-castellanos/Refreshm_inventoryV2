@@ -57,7 +57,7 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const emit = defineEmits<{
-  exchangeToggled: [value: boolean];
+  exchangeToggled: [value: boolean, exchangeRate: number | null, currency: string];
 }>();
 
 const country = ref("CA");
@@ -109,7 +109,9 @@ watch(exchangeActive, (newValue) => {
     });
   }
 
-  emit('exchangeToggled', newValue);
+  const currency = newValue ? 'USD' : 'CAD';
+  const rate = newValue ? exchangeRate.value : null;
+  emit('exchangeToggled', newValue, rate, currency);
 });
 
 // Fetch exchange rate from server API

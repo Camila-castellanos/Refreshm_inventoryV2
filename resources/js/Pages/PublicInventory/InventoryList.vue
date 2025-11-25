@@ -386,9 +386,15 @@ const toast = useToast();
 const currentShopName = ref(props.shopName || '');
 const currentShopSlug = ref(props.shopSlug || '');
 
-const handleExchangeToggled = (isActive: boolean) => {
-  // This handler can be used for additional logic if needed
-  console.log('Exchange rate toggled:', isActive);
+// State to track current exchange rate and currency
+const currentExchangeRate = ref<number | null>(null);
+const currentCurrency = ref<string>('CAD');
+
+const handleExchangeToggled = (isActive: boolean, exchangeRate: number | null = null, currency: string = 'CAD') => {
+  // Update exchange rate and currency when toggle changes
+  currentExchangeRate.value = exchangeRate;
+  currentCurrency.value = currency;
+  console.log('Exchange rate toggled:', isActive, 'Rate:', exchangeRate, 'Currency:', currency);
 };
 
 
@@ -641,16 +647,24 @@ const handleFormSubmit = async () => {
     return;
   }
 
+  // Map items with their converted prices and currency
+  const itemsWithPrices = selectedItems.value.map(item => ({
+    id: item.id,
+    selling_price: item.selling_price,
+    currency: currentCurrency.value
+  }));
+
   const request = {
     name: formData.value.name,
     email: formData.value.email,
     notes: formData.value.notes,
     store: formData.value.store,
     shipping: formData.value.shipping,
-    items: selectedItems.value.map(item => item.id),
+    items: itemsWithPrices,
   };
 
   console.log('Submitting request with data:', request);
+
 
   try {
     const laravelRoute = route("items.request");

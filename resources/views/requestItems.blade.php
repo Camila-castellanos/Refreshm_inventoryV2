@@ -19,18 +19,20 @@
         <th>IMEI</th>
         <th>Grade</th>
         <th>Price</th>
+        <th>Currency</th>
     </tr>
     @foreach ($items as $item)
     <tr>
         <td>#{{$item['id']}}</td>
-        <td>{{$item['date']}}</td>
-        <td>{{$item['manufacturer']}}</td>
-        <td>{{$item['model']}}</td>
-        <td>{{$item['colour']}}</td>
-        <td>{{$item['issues']}}</td>
-        <td>{{$item['imei']}}</td>
-        <td>{{$item['grade']}}</td>
-        <td>{{$item['selling_price']}}</td>
+        <td>{{$item['date'] ?? 'N/A'}}</td>
+        <td>{{$item['manufacturer'] ?? 'N/A'}}</td>
+        <td>{{$item['model'] ?? 'N/A'}}</td>
+        <td>{{$item['colour'] ?? 'N/A'}}</td>
+        <td>{{$item['issues'] ?? 'N/A'}}</td>
+        <td>{{$item['imei'] ?? 'N/A'}}</td>
+        <td>{{$item['grade'] ?? 'N/A'}}</td>
+        <td>{{$item['selling_price'] ?? 'N/A'}}</td>
+        <td>{{$item['currency'] ?? 'CAD'}}</td>
     </tr>
     @endforeach 
 </table>
