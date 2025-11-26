@@ -49,7 +49,27 @@ class CustomerController extends Controller
                     'customers.last_name', 
                     'customers.email', 
                     'customers.phone', 
-                    'customers.credit'
+                    'customers.phone_optional',
+                    'customers.credit',
+                    'customers.account_number',
+                    'customers.website',
+                    'customers.notes',
+                    'customers.currency',
+                    'customers.billing_address',
+                    'customers.billing_address_optional',
+                    'customers.billing_address_country',
+                    'customers.billing_address_state',
+                    'customers.billing_address_city',
+                    'customers.billing_address_postal',
+                    'customers.ship_name',
+                    'customers.shipping_address',
+                    'customers.shipping_address_optional',
+                    'customers.shipping_address_country',
+                    'customers.shipping_address_state',
+                    'customers.shipping_address_city',
+                    'customers.shipping_address_postal',
+                    'customers.shipping_phone',
+                    'customers.delivery_instructions'
                 ])
                 ->selectSub(function($query) use ($startDate, $endDate) {
                     $query->selectRaw('COALESCE(SUM(items.selling_price + (items.selling_price * COALESCE(sales.tax, 0) / 100)), 0)')
@@ -145,8 +165,14 @@ class CustomerController extends Controller
     public function store(CustomerForm $request)
     {
         $form = $request->validated();
+        
+        // Log the incoming data
+        \Log::info('Customer Store - Incoming Request Data:', [
+            'form' => $form,
+            'all_request' => $request->all()
+        ]);
 
-        $personal_phone_optional = $request->personal_phone_optional;
+        $personal_phone_optional = $form["personal_phone_optional"] ?? [];
         foreach ($personal_phone_optional as $key => $value) {
             if ($value == null) {
                 $personal_phone_optional[$key] = [];
@@ -156,32 +182,39 @@ class CustomerController extends Controller
         $customer->customer = $form["customer_name"];
         $customer->user_id = Auth::id();
         $customer->company_id = Auth::user()->company_id;
-        $customer->first_name = $form["first_name"];
-        $customer->last_name = $form["last_name"];
-        $customer->email = $form["email"];
-        $customer->phone = $form["personal_phone"];
+        $customer->first_name = $form["first_name"] ?? null;
+        $customer->last_name = $form["last_name"] ?? null;
+        $customer->email = $form["email"] ?? null;
+        $customer->phone = $form["personal_phone"] ?? null;
         $customer->phone_optional = $personal_phone_optional;
-        $customer->account_number = $request->accnumber;
-        $customer->website = $request->website;
-        $customer->notes = $request->note;
-        $customer->currency = $request->billing_currency;
-        $customer->billing_address = $request->billing_address;
-        $customer->billing_address_optional = $request->billing_address_optional;
-        $customer->billing_address_country = $request->billing_country;
-        $customer->billing_address_state = $request->billing_state;
-        $customer->billing_address_city = $request->billing_city;
-        $customer->billing_address_postal = $request->billing_postal_code;
-        $customer->ship_name = $request->shipto;
-        $customer->shipping_address = $request->shipping_address;
-        $customer->shipping_address_optional = $request->shipping_address_optional;
-        $customer->shipping_address_country = $request->shipping_country;
-        $customer->shipping_address_state = $request->shipping_state;
-        $customer->shipping_address_city = $request->shipping_city;
-        $customer->shipping_address_postal = $request->shipping_postal_code;
-        $customer->shipping_phone = $request->shipping_phone;
-        $customer->delivery_instructions = $request->shipping_delivery_instructions;
-        $customer->credit = $request->credit;
+        $customer->account_number = $form["accnumber"] ?? null;
+        $customer->website = $form["website"] ?? null;
+        $customer->notes = $form["note"] ?? null;
+        $customer->currency = $form["billing_currency"] ?? 'CAD';
+        $customer->billing_address = $form["billing_address"] ?? null;
+        $customer->billing_address_optional = $form["billing_address_optional"] ?? [];
+        $customer->billing_address_country = $form["billing_country"] ?? null;
+        $customer->billing_address_state = $form["billing_state"] ?? null;
+        $customer->billing_address_city = $form["billing_city"] ?? null;
+        $customer->billing_address_postal = $form["billing_postal_code"] ?? null;
+        $customer->ship_name = $form["shipto"] ?? null;
+        $customer->shipping_address = $form["shipping_address"] ?? null;
+        $customer->shipping_address_optional = $form["shipping_address_optional"] ?? [];
+        $customer->shipping_address_country = $form["shipping_country"] ?? null;
+        $customer->shipping_address_state = $form["shipping_state"] ?? null;
+        $customer->shipping_address_city = $form["shipping_city"] ?? null;
+        $customer->shipping_address_postal = $form["shipping_postal_code"] ?? null;
+        $customer->shipping_phone = $form["shipping_phone"] ?? null;
+        $customer->delivery_instructions = $form["shipping_delivery_instructions"] ?? null;
+        $customer->credit = $form["credit"] ?? 0;
+        
+        // Log before saving
+        \Log::info('Customer Before Save:', $customer->toArray());
+        
         $customer->save();
+        
+        // Log after saving
+        \Log::info('Customer After Save:', $customer->toArray());
 
         if (is_array($customer->email) && count($customer->email) > 0) {
             $contact = new Contact();
@@ -192,10 +225,6 @@ class CustomerController extends Controller
             $contact->customer_id = $customer->id;
             $contact->save();
         }
-
-        // Invalidar cache de customers
-        $user = Auth::user();
-        Cache::forget("customers_index_user_{$user->id}");
 
         return response()->json($customer, 201);
     }
@@ -235,7 +264,14 @@ class CustomerController extends Controller
     {
         try {
             $form = $request->validated();
-            $personal_phone_optional = $request->personal_phone_optional;
+            
+            // Log incoming data
+            \Log::info('Customer Update - Incoming Request Data:', [
+                'form' => $form,
+                'all_request' => $request->all()
+            ]);
+            
+            $personal_phone_optional = $form["personal_phone_optional"] ?? [];
             foreach ($personal_phone_optional as $key => $value) {
                 if ($value == null) {
                     $personal_phone_optional[$key] = [];
@@ -245,43 +281,51 @@ class CustomerController extends Controller
                 'customer' => $form["customer_name"],
                 'user_id' => Auth::id(),
                 'company_id' => Auth::user()->company_id,
-                'first_name' => $form["first_name"],
-                'last_name' => $form["last_name"],
-                'email' => $form["email"],
-                'phone' => $form["personal_phone"],
+                'first_name' => $form["first_name"] ?? null,
+                'last_name' => $form["last_name"] ?? null,
+                'email' => $form["email"] ?? null,
+                'phone' => $form["personal_phone"] ?? null,
                 'phone_optional' => $personal_phone_optional,
-                'account_number' => $request->accnumber,
-                'website' => $request->website,
-                'notes' => $request->note,
-                'currency' => $request->billing_currency,
-                'credit' => $form["credit"],
-                'billing_address' => $request->billing_address,
-                'billing_address_optional' => $request->billing_address_optional,
-                'billing_address_country' => $request->billing_country,
-                'billing_address_state' => $request->billing_state,
-                'billing_address_city' => $request->billing_city,
-                'billing_address_postal' => $request->billing_postal_code,
-                'ship_name' => $request->shipto,
-                'shipping_address' => $request->shipping_address,
-                'shipping_address_optional' => $request->shipping_address_optional,
-                'shipping_address_country' => $request->shipping_country,
-                'shipping_address_state' => $request->shipping_state,
-                'shipping_address_city' => $request->shipping_city,
-                'shipping_address_postal' => $request->shipping_postal_code,
-                'shipping_phone' => $request->shipping_phone,
-                'delivery_instructions' => $request->shipping_delivery_instructions
+                'account_number' => $form["accnumber"] ?? null,
+                'website' => $form["website"] ?? null,
+                'notes' => $form["note"] ?? null,
+                'currency' => $form["billing_currency"] ?? 'CAD',
+                'credit' => $form["credit"] ?? 0,
+                'billing_address' => $form["billing_address"] ?? null,
+                'billing_address_optional' => $form["billing_address_optional"] ?? [],
+                'billing_address_country' => $form["billing_country"] ?? null,
+                'billing_address_state' => $form["billing_state"] ?? null,
+                'billing_address_city' => $form["billing_city"] ?? null,
+                'billing_address_postal' => $form["billing_postal_code"] ?? null,
+                'ship_name' => $form["shipto"] ?? null,
+                'shipping_address' => $form["shipping_address"] ?? null,
+                'shipping_address_optional' => $form["shipping_address_optional"] ?? [],
+                'shipping_address_country' => $form["shipping_country"] ?? null,
+                'shipping_address_state' => $form["shipping_state"] ?? null,
+                'shipping_address_city' => $form["shipping_city"] ?? null,
+                'shipping_address_postal' => $form["shipping_postal_code"] ?? null,
+                'shipping_phone' => $form["shipping_phone"] ?? null,
+                'delivery_instructions' => $form["shipping_delivery_instructions"] ?? null
             );
+            
+            // Log the data array before update
+            \Log::info('Customer Update - Data to Update:', $customer_data);
 
             if ($customer->update($customer_data)) {
+                // Log after update
+                \Log::info('Customer After Update:', $customer->fresh()->toArray());
+                
                 // Invalidar cache de customers
                 $user = Auth::user();
                 Cache::forget("customers_index_user_{$user->id}");
                 
                 return response()->json($customer, 200);
             } else {
+                \Log::error('Customer Update Failed - No rows updated');
                 return response()->json('', 500);
             }
         } catch (Exception $e) {
+            \Log::error('Customer Update Error:', ['message' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
             return response()->json($e->getMessage(), 500);
         }
     }
@@ -340,7 +384,27 @@ class CustomerController extends Controller
                     'customers.last_name', 
                     'customers.email', 
                     'customers.phone', 
-                    'customers.credit'
+                    'customers.phone_optional',
+                    'customers.credit',
+                    'customers.account_number',
+                    'customers.website',
+                    'customers.notes',
+                    'customers.currency',
+                    'customers.billing_address',
+                    'customers.billing_address_optional',
+                    'customers.billing_address_country',
+                    'customers.billing_address_state',
+                    'customers.billing_address_city',
+                    'customers.billing_address_postal',
+                    'customers.ship_name',
+                    'customers.shipping_address',
+                    'customers.shipping_address_optional',
+                    'customers.shipping_address_country',
+                    'customers.shipping_address_state',
+                    'customers.shipping_address_city',
+                    'customers.shipping_address_postal',
+                    'customers.shipping_phone',
+                    'customers.delivery_instructions'
                 ])
                 ->selectSub(function($query) use ($start, $end) {
                     $query->selectRaw('COALESCE(SUM(items.selling_price + (items.selling_price * COALESCE(sales.tax, 0) / 100)), 0)')

@@ -194,5 +194,9 @@ onMounted(() => {
   parseItemsData();
 });
 
+watch(() => props.customers, () => {
+  parseItemsData();
+});
+
 defineOptions({ layout: AppLayout });
 </script>
