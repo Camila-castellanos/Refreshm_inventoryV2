@@ -42,12 +42,25 @@ class InventoryPublicController extends Controller
                 abort(404);
             }
 
-            // Get the owner's tabs if available
+            // Get the owner's tabs with public status
             if ($shop->company && $shop->company->owner) {
                 // Get the owner's tabs ordered by their order field
-                $userTabs = Tab::where('user_id', $shop->company->owner->id)
+                $allTabs = Tab::where('user_id', $shop->company->owner->id)
                     ->orderBy('order', 'asc')
-                    ->get(['id', 'name', 'order'])
+                    ->get(['id', 'name', 'order']);
+
+                // Get the public_tabs IDs from the shop (already cast to array by model)
+                $publicTabIds = $shop->public_tabs ?? [];
+
+                // If no configuration exists, default to all user tabs being public
+                if (empty($publicTabIds) && $allTabs->count() > 0) {
+                    $publicTabIds = $allTabs->pluck('id')->toArray();
+                }
+
+                // Filter to only include public tabs
+                $userTabs = $allTabs
+                    ->whereIn('id', $publicTabIds)
+                    ->values()
                     ->toArray();
             }
 

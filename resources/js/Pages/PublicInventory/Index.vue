@@ -30,7 +30,6 @@ interface Props {
 const props = defineProps<Props>();
 
 onMounted(() => {
-  console.log('Received props:', props);
 });
 
 </script>

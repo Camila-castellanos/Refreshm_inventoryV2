@@ -24,6 +24,7 @@ class Shop extends Model
         'slug',
         'company_id',
         'address',
+        'public_tabs',
         // Add other shop fields here if mass assignable
     ];
 
@@ -34,6 +35,15 @@ class Shop extends Model
      */
     protected $attributes = [
         //
+    ];
+
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array
+     */
+    protected $casts = [
+        'public_tabs' => 'array',
     ];
 
     /**
