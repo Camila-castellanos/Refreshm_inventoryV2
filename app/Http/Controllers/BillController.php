@@ -322,4 +322,20 @@ class BillController extends Controller
 
     return response()->json($delete);
   }
+
+  /**
+   * Delete a bill from storage.
+   *
+   * @param Bill $bill
+   * @return \Illuminate\Http\JsonResponse
+   */
+  public function destroy(Bill $bill): \Illuminate\Http\JsonResponse
+  {
+    try {
+      $bill->delete();
+      return response()->json(['message' => 'Bill deleted successfully'], 200);
+    } catch (\Exception $e) {
+      return response()->json(['error' => 'Error deleting bill: ' . $e->getMessage()], 500);
+    }
+  }
 }
