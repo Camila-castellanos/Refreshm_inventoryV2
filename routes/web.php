@@ -208,7 +208,8 @@ Route::get('/customers/by-name/{name}', [CustomerController::class, 'getByName']
         Route::get("accounting/bills", [BillController::class, "show"])->name("reports.bills.show");
         Route::delete("bills/obliterate", [BillController::class, "obliterate"])->name("bills.obliterate");
         Route::resource("bills", BillController::class)
-            ->except(["show", "update"]);
+            ->except(["show", "update"])
+            ->only(["index", "create", "store", "destroy", "edit"]);
         Route::post("bills/update", [BillController::class, "update"])->name("bills.update");
         Route::post("bills/recordPayment", [BillController::class, "recordPayment"])->name("bills.record.payment");
         Route::post("bills/removePayment", [BillController::class, "removePayment"])->name("bills.remove.payment");

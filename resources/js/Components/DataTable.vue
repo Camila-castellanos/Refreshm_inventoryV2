@@ -127,6 +127,7 @@ const props = defineProps<{
   inventory?: boolean;
   sortField?: string;
   sortOrder?: number;
+  selected?: any[];
 }>();
 
 const emit = defineEmits<{
@@ -137,10 +138,16 @@ const emit = defineEmits<{
 const selectionMode = ref(props?.selectionMode ?? "multiple");
 
 const dt = ref();
-const selectedItems = ref<any[]>([]);
+const selectedItems = ref<any[]>(props.selected || []);
 const menuRefs: Ref<any[]> = ref([]);
 const tableWrapper = ref<HTMLElement|null>(null)
 const hasOverflow    = ref(false)
+
+watch(() => props.selected, (newVal) => {
+  if (newVal !== undefined) {
+    selectedItems.value = newVal;
+  }
+});
 
 const exportCSV = () => {
   if (selectedItems.value.length === 0) {
