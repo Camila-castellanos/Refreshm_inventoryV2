@@ -61,7 +61,12 @@
                 <div v-if="it.issues" class="text-xs text-red-600 mt-1">Issues: {{ it.issues }}</div>
               </div>
               <div class="flex flex-col items-end gap-2">
-                <div class="text-sm text-gray-600">Price: {{ it.selling_price ?? it.cost ?? '-' }}</div>
+                <div class="text-sm text-gray-600">
+                  Price: <span class="font-medium">{{ it.selling_price ?? it.cost ?? '-' }}</span>
+                  <span class="ml-1 font-semibold text-gray-500">
+                    {{ it.currency ?? 'CAD' }}
+                  </span>
+                </div>
                 <Button icon="pi pi-trash" class="p-button-text p-button-sm p-button-danger" @click.stop="deleteItem(it)" />
               </div>
             </li>
@@ -71,7 +76,12 @@
         <div class="mt-3 pt-2 border-t">
           <div class="flex justify-between items-center">
             <div class="text-sm text-gray-600">Subtotal (items)</div>
-            <div class="text-sm font-medium text-gray-800">${{ ((activeRequest?.items || []).reduce((acc, it) => acc + (Number(it.selling_price) || Number(it.cost) || 0), 0)).toFixed(2) }}</div>
+            <div class="text-sm font-medium text-gray-800">
+              ${{ ((activeRequest?.items || []).reduce((acc, it) => acc + (Number(it.selling_price) || Number(it.cost) || 0), 0)).toFixed(2) }}
+              <span class="ml-1 text-xs text-gray-500">
+                {{ getItemsCurrency() }}
+              </span>
+            </div>
           </div>
           <div class="flex justify-between items-center mt-1">
             <div class="text-sm text-gray-600">{{ activeRequest?.shipping?.label || 'Shipping' }}</div>
@@ -113,6 +123,24 @@ const dialog = useDialog();
 watch(activeRequest, (newVal) => {
   console.log('Active request changed:', newVal);
 });
+
+// Get the dominant currency from items (handles mixed currencies)
+function getItemsCurrency() {
+  if (!activeRequest.value?.items || activeRequest.value.items.length === 0) {
+    return 'CAD';
+  }
+  
+  const currencies = activeRequest.value.items.map((it: any) => it.currency || 'CAD');
+  const usdCount = currencies.filter((c: string) => c === 'USD').length;
+  const cadCount = currencies.filter((c: string) => c === 'CAD').length;
+  
+  // If mixed currencies, show both
+  if (usdCount > 0 && cadCount > 0) {
+    return `Mixed (${usdCount} USD, ${cadCount} CAD)`;
+  }
+  
+  return usdCount > 0 ? 'USD' : 'CAD';
+}
 
 async function createInvoice(req: any) {
   if (!req) return;

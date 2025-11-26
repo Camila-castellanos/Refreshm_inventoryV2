@@ -29,6 +29,9 @@ class RequestItemsForm extends FormRequest
       "store" => "nullable|string",
       "notes" => "string|nullable",
       "items" => "required|array|min:1",
+      "items.*.id" => "required|integer",
+      "items.*.selling_price" => "required|numeric",
+      "items.*.currency" => "required|string",
       "shipping" => "nullable|array"
     ];
   }

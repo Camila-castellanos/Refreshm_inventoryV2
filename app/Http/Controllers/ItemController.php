@@ -330,18 +330,27 @@ class ItemController extends Controller
         $store = $data['store'] ?? null;
         $notes = $data['notes'] ?? null;
         $itemsInput = $data['items'] ?? [];
+        
+        // Normalize items - merge with full item data from database
         $itemsNormalized = collect($itemsInput)->map(function ($it) {
-            if (is_array($it)) {
-                return $it;
-            }
+            // Convert to array if needed
             if (is_object($it)) {
-                return (array) $it;
+                $it = (array) $it;
             }
-            if (is_numeric($it)) {
-                $model = Item::find((int) $it);
-                return $model ? $model->toArray() : null;
+            
+            // If item has an id, fetch the full item data from DB
+            if (isset($it['id']) && is_numeric($it['id'])) {
+                $dbItem = Item::find((int) $it['id']);
+                if ($dbItem) {
+                    $fullItem = $dbItem->toArray();
+                    // Override with the frontend data (selling_price and currency)
+                    $fullItem['selling_price'] = $it['selling_price'] ?? $fullItem['selling_price'];
+                    $fullItem['currency'] = $it['currency'] ?? 'CAD';
+                    return $fullItem;
+                }
             }
-            return null;
+            
+            return is_array($it) ? $it : null;
         })->filter()->values();
 
         $uniqueItems = $itemsNormalized->unique('id')->values()->all();
@@ -384,6 +393,7 @@ class ItemController extends Controller
                 'cost' => $it['cost'] ?? null,
                 'imei' => $it['imei'] ?? null,
                 'selling_price' => $it['selling_price'] ?? null,
+                'currency' => $it['currency'] ?? 'CAD',
                 'customer' => $it['customer'] ?? null,
                 'user_id' => $it['user_id'] ?? Auth::id(),
                 'vendor_id' => $it['vendor_id'] ?? null,

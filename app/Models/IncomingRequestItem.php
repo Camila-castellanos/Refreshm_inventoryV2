@@ -14,7 +14,7 @@ class IncomingRequestItem extends Model
     protected $fillable = [
         'incoming_request_id', 'original_item_id', 'date', 'supplier', 'manufacturer',
         'storage_id', 'position', 'model', 'colour', 'battery', 'grade', 'issues', 'cost', 'imei',
-        'selling_price', 'customer', 'user_id', 'vendor_id', 'shop_id', 'type'
+        'selling_price', 'customer', 'user_id', 'vendor_id', 'shop_id', 'type', 'currency'
     ];
 
     protected $casts = [

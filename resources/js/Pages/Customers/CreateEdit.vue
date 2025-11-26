@@ -470,6 +470,9 @@ async function onFormSubmit(event) {
       cleanForm();
       toast.add({ severity: "success", summary: "Success", detail: "Customer created succesfully!", life: 3000 });
       dialogRef.value.close(newCustomer);
+      
+      // Reload the customers list after update
+        router.reload();
     }
   } catch (error) {
     console.error(error);

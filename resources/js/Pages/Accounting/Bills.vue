@@ -11,7 +11,7 @@
             </TabList>
           </Tabs>
         </div>
-        <DataTable title="Bills" :items="tableData" :headers="billHeaders" :actions="actions" @update:selected="handleSelection"
+        <DataTable title="Bills" :items="tableData" :headers="billHeaders" :actions="actions" :selected="selectedItems" @update:selected="handleSelection"
         ></DataTable>
       </AccountingTabs>
     </section>
@@ -23,15 +23,19 @@ import AccountingTabs from "@/Components/AccountingTabs.vue";
 import DataTable, { ITableActions } from "@/Components/DataTable.vue";
 import AppLayout from "@/Layouts/AppLayout.vue";
 import { Bill, Expense } from "@/Lib/types";
-import { Tab, TabList, Tabs, useDialog } from "primevue";
+import { Tab, TabList, Tabs, useDialog, useConfirm } from "primevue";
 import { onMounted, ref, Ref, watch } from "vue";
 import { billHeaders } from "./data";
 import AddBills from "./Modals/AddBills.vue";
 import ShowPayments from "./Modals/ShowPayments.vue";
 import { router } from "@inertiajs/vue3";
 import ShowBillPayments from "./Modals/ShowBillPayments.vue";
+import axios from "axios";
+import { useToast } from "primevue";
 
 const dialog = useDialog();
+const confirm = useConfirm();
+const toast = useToast();
 const props = defineProps({
   items: Array<Bill>,
   data_status: String,
@@ -57,6 +61,7 @@ watch(
 onMounted(() => {
   currentTab.value = `/bills${props.data_status !== "all" ? `?status=${props.data_status}` : ""}`;
   console.log("bills mounted", props.items);
+  selectedItems.value = [];
   tableData.value = props?.items?.map((item) => ({
     ...item,
     actions: getItemActions(item),
@@ -85,7 +90,9 @@ const actions: ITableActions[] = [
     icon: "pi pi-trash",
     severity: "danger",
     disable: (selectedItems) => selectedItems.length === 0,
-    action: () => {},
+    action: () => {
+      deleteBills();
+    },
   },
 ];
 
@@ -95,6 +102,55 @@ const filterBills = () => {
 
 const handleSelection = (items: Bill[]) => {
   selectedItems.value = items;
+};
+
+const deleteBills = () => {
+  confirm.require({
+    message: `Are you sure you want to delete ${selectedItems.value.length} bill(s)?`,
+    header: "Confirmation",
+    icon: "pi pi-exclamation-triangle",
+    rejectProps: {
+      label: "Cancel",
+      severity: "secondary",
+      outlined: true,
+    },
+    acceptProps: {
+      label: "Delete",
+    },
+    accept: async () => {
+      try {
+        const billIds = selectedItems.value.map(bill => bill.id);
+        
+        // Delete each bill
+        for (const billId of billIds) {
+          await axios.delete(route("bills.destroy", billId));
+        }
+        
+        // Show success toast
+        toast.add({ 
+          severity: "success", 
+          summary: "Success", 
+          detail: `${billIds.length} bill(s) deleted successfully`, 
+          life: 3000 
+        });
+        
+        // Clear selected items
+        selectedItems.value = [];
+        
+        // Reload the page
+        router.reload({ only: ["items"] });
+      } catch (error) {
+        console.error("Error deleting bills:", error);
+        toast.add({ 
+          severity: "error", 
+          summary: "Error", 
+          detail: "Failed to delete bill(s)", 
+          life: 3000 
+        });
+      }
+    },
+    reject: () => {},
+  });
 };
 
 const getItemActions = (item: Bill) => {
