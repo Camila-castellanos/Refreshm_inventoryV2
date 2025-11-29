@@ -462,10 +462,31 @@ class ItemController extends Controller
     {
         $processedParam = $request->query('processed', false);
 
-        $requests = IncomingRequest::with('items')
+        $requests = IncomingRequest::with(['items.originalItem'])
             ->where('processed', $processedParam)
             ->orderBy('created_at', 'desc')
             ->get();
+
+        // Fallback logic: if specific fields are null in IncomingRequestItem,
+        // try to pull them from the related originalItem.
+        $requests->each(function ($req) {
+            $req->items->each(function ($item) {
+                if ($item->originalItem) {
+                    $item->supplier = $item->supplier ?? $item->originalItem->supplier;
+                    $item->manufacturer = $item->manufacturer ?? $item->originalItem->manufacturer;
+                    $item->storage_id = $item->storage_id ?? $item->originalItem->storage_id;
+                    $item->position = $item->position ?? $item->originalItem->position;
+                    $item->model = $item->model ?? $item->originalItem->model;
+                    $item->colour = $item->colour ?? $item->originalItem->colour;
+                    $item->battery = $item->battery ?? $item->originalItem->battery;
+                    $item->grade = $item->grade ?? $item->originalItem->grade;
+                    $item->issues = $item->issues ?? $item->originalItem->issues;
+                    $item->cost = $item->cost ?? $item->originalItem->cost;
+                    $item->imei = $item->imei ?? $item->originalItem->imei;
+                    $item->type = $item->type ?? $item->originalItem->type;
+                }
+            });
+        });
 
         return response()->json($requests);
     }

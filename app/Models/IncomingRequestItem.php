@@ -25,4 +25,9 @@ class IncomingRequestItem extends Model
     {
         return $this->belongsTo(IncomingRequest::class, 'incoming_request_id');
     }
+
+    public function originalItem()
+    {
+        return $this->belongsTo(Item::class, 'original_item_id');
+    }
 }
