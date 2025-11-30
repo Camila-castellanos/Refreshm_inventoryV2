@@ -7,6 +7,7 @@ use App\Models\Ecommerce\Market;
 use App\Models\Item;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
@@ -53,6 +54,96 @@ class MarketItemController extends Controller
         }
 
         return response()->json($variants);
+    }
+
+    /**
+     * Get all items for a specific model with market-specific pricing
+     */
+    public function byModel(Request $request, Market $market, Item $item)
+    {
+        // Ensure the market belongs to the current user's company
+        if ($market->shop->company_id !== Auth::user()->company_id) {
+            abort(403, 'Unauthorized access to this market.');
+        }
+
+        // Ensure the item belongs to the market's shop
+        if ($item->shop_id !== $market->shop_id) {
+            abort(404, 'Item not found in this market.');
+        }
+
+        // Get all items with the same model - excluding sold items
+        $items = Item::where('shop_id', $market->shop_id)
+            ->where('model', $item->model)
+            ->whereNull('sold')
+            ->with('media')
+            ->get();
+
+        // Load custom prices for this market
+        $customPrices = DB::table('market_item_prices')
+            ->where('market_id', $market->id)
+            ->pluck('custom_price', 'item_id');
+
+        $mappedItems = $items->map(function ($modelItem) use ($customPrices, $market) {
+            // Use custom price from market_item_prices, or fallback to selling_price
+            $price = $customPrices[$modelItem->id] ?? $modelItem->selling_price;
+            
+            return [
+                'id' => $modelItem->id,
+                'model' => $modelItem->model,
+                'manufacturer' => $modelItem->manufacturer,
+                'imei' => $modelItem->imei,
+                'type' => $modelItem->type,
+                'colour' => $modelItem->colour,
+                'condition' => $modelItem->grade,
+                'status' => $modelItem->sold ? 'sold' : ($modelItem->hold ? 'hold' : 'available'),
+                'buying_price' => $modelItem->buying_price,
+                'selling_price' => $modelItem->selling_price,
+                'market_price' => $price,
+                'has_custom_price' => isset($customPrices[$modelItem->id]),
+                'photo_count' => $modelItem->media->count(),
+                'main_photo_thumb' => $modelItem->getFirstMediaUrl('item-photos', 'thumb'),
+                'main_photo_url' => $modelItem->getFirstMediaUrl('item-photos'),
+            ];
+        });
+
+        return response()->json([
+            'market' => $market,
+            'model' => [
+                'id' => $item->id,
+                'model' => $item->model,
+                'manufacturer' => $item->manufacturer,
+            ],
+            'items' => $mappedItems,
+        ]);
+    }
+
+    /**
+     * Update the market price for an item
+     */
+    public function updatePrice(Request $request, Market $market, Item $item)
+    {
+        // Ensure the market belongs to the current user's company
+        if ($market->shop->company_id !== Auth::user()->company_id) {
+            abort(403, 'Unauthorized access to this market.');
+        }
+
+        // Ensure the item belongs to the market's shop
+        if ($item->shop_id !== $market->shop_id) {
+            abort(404, 'Item not found in this market.');
+        }
+
+        $request->validate([
+            'price' => 'required|numeric|min:0',
+        ]);
+
+        // Update or create custom price for this market
+        $market->setItemPrice($item->id, $request->price);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Price updated successfully',
+            'price' => $request->price,
+        ]);
     }
 
     /**
