@@ -78,16 +78,27 @@
                                     </div>
                                 </div>
 
-                                <!-- Manage Photos Button -->
-                                <Button
-                                    @click="openPhotoModal(item)"
-                                    label="Manage Photos"
-                                    icon="pi pi-images"
-                                    class="w-full"
-                                    size="small"
-                                    severity="secondary"
-                                    outlined
-                                />
+                                <!-- Buttons -->
+                                <div class="space-y-2">
+                                    <Button
+                                        @click="openPhotoModal(item)"
+                                        label="Manage Photos"
+                                        icon="pi pi-images"
+                                        class="w-full"
+                                        size="small"
+                                        severity="secondary"
+                                        outlined
+                                    />
+                                    <Button
+                                        @click="openModelItemsModal(item)"
+                                        label="View All Items"
+                                        icon="pi pi-th"
+                                        class="w-full"
+                                        size="small"
+                                        severity="info"
+                                        outlined
+                                    />
+                                </div>
                             </div>
                         </div>
 
@@ -435,23 +446,55 @@
                 </div>
             </template>
         </Dialog>
+
+        <!-- Model Items Modal -->
+        <ModelItemsModal
+            :visible="showModelItemsModal"
+            :model="selectedModel"
+            :items="modelItems"
+            :market="market"
+            @update:visible="showModelItemsModal = $event"
+            @view-item="handleViewItem"
+            @edit-item="handleEditItem"
+        />
     </AppLayout>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useForm, router, Link } from '@inertiajs/vue3'
 import AppLayout from '@/Layouts/AppLayout.vue'
 import Dialog from 'primevue/dialog'
 import Button from 'primevue/button'
 import FileUpload from 'primevue/fileupload'
+import ModelItemsModal from '@/Pages/Ecommerce/Modals/ModelItemsModal.vue'
 import axios from 'axios'
 
 // Props
 const props = defineProps({
     market: Object,
-    items: Object,
+    models: Object,
     filters: Object,
+})
+
+// Computed - normalize models to items for compatibility
+const items = computed(() => {
+    const models = props.models
+    
+    if (!models) return { data: [] }
+    
+    // If models is an array, wrap it
+    if (Array.isArray(models)) {
+        return { data: models }
+    }
+    
+    // If models already has data property, use it
+    if (models.data) {
+        return models
+    }
+    
+    // Otherwise wrap it
+    return { data: models }
 })
 
 // State
@@ -464,7 +507,16 @@ const photoToDelete = ref(null)
 const draggedIndex = ref(null)
 const searchQuery = ref(props.filters?.search || '')
 const fileUploadRef = ref(null)
+const showModelItemsModal = ref(false)
+const selectedModel = ref(null)
+const modelItems = ref([])
 let searchTimeout = null
+
+onMounted(() => {
+    console.log('MarketItemsEdit mounted')
+    console.log('Props:', props)
+    console.log('Models:', props.models)
+})
 
 // Forms
 const deleteForm = useForm({})
@@ -532,7 +584,7 @@ const closePhotoModal = () => {
     modalPhotos.value = []
     
     // Reload the page to refresh item photo counts
-    router.reload({ only: ['items'] })
+    router.reload({ only: ['models'] })
 }
 
 const triggerUpload = () => {
@@ -669,6 +721,40 @@ const handleReorder = async () => {
         // Reload photos on error
         await openPhotoModal(selectedItem.value)
     }
+}
+
+const openModelItemsModal = async (item) => {
+    selectedModel.value = item
+    
+    try {
+        // Load all items for this model
+        const response = await axios.get(route('ecommerce.items.by-model', {
+            market: props.market.id,
+            item: item.id
+        }))
+        
+        if (response.data && response.data.items) {
+            modelItems.value = response.data.items
+        } else {
+            modelItems.value = [item] // Fallback to current item
+        }
+        
+        showModelItemsModal.value = true
+    } catch (error) {
+        console.error('Error loading model items:', error)
+        modelItems.value = [item] // Fallback to current item
+        showModelItemsModal.value = true
+    }
+}
+
+const handleViewItem = (item) => {
+    console.log('View item:', item)
+    // Aquí puedes agregar la lógica para ver detalles del item
+}
+
+const handleEditItem = (item) => {
+    console.log('Edit item:', item)
+    // Aquí puedes agregar la lógica para editar el item
 }
 </script>
 

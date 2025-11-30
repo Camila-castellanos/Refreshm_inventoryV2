@@ -7,6 +7,7 @@ use App\Models\Item;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -166,6 +167,58 @@ class Market extends Model
     }
 
     /**
+     * Relationship: Custom prices for items in this market
+     */
+    public function itemPrices(): BelongsToMany
+    {
+        return $this->belongsToMany(Item::class, 'market_item_prices')
+            ->withPivot('custom_price')
+            ->withTimestamps();
+    }
+
+    /**
+     * Get the price for a specific item (custom price or fallback to selling_price)
+     */
+    public function getItemPrice(int $itemId): ?float
+    {
+        // Check for custom price in pivot table
+        $customPrice = DB::table('market_item_prices')
+            ->where('market_id', $this->id)
+            ->where('item_id', $itemId)
+            ->value('custom_price');
+
+        if ($customPrice !== null) {
+            return (float) $customPrice;
+        }
+
+        // Fallback to item's selling_price
+        $item = Item::find($itemId);
+        return $item ? (float) $item->selling_price : null;
+    }
+
+    /**
+     * Set a custom price for an item in this market
+     */
+    public function setItemPrice(int $itemId, float $price): void
+    {
+        DB::table('market_item_prices')->updateOrInsert(
+            ['market_id' => $this->id, 'item_id' => $itemId],
+            ['custom_price' => $price, 'updated_at' => now(), 'created_at' => now()]
+        );
+    }
+
+    /**
+     * Remove custom price for an item (will use selling_price as fallback)
+     */
+    public function removeItemPrice(int $itemId): void
+    {
+        DB::table('market_item_prices')
+            ->where('market_id', $this->id)
+            ->where('item_id', $itemId)
+            ->delete();
+    }
+
+    /**
      * Get published (available for sale) items
      */
     public function publishedItems()
@@ -236,12 +289,17 @@ class Market extends Model
 
         // Get all items first to parse models and extract storage
         $items = $query->get();
+
+        // Load custom prices for this market
+        $customPrices = DB::table('market_item_prices')
+            ->where('market_id', $this->id)
+            ->pluck('custom_price', 'item_id');
         
         // Group by parsed model (without storage) + manufacturer + type
         $grouped = $items->groupBy(function ($item) {
             $parsed = $this->parseModelStorage($item->model);
             return $parsed['model'] . '|' . $item->manufacturer . '|' . $item->type;
-        })->map(function ($group) {
+        })->map(function ($group) use ($customPrices) {
             $firstItem = $group->first();
             $parsed = $this->parseModelStorage($firstItem->model);
             
@@ -251,6 +309,11 @@ class Market extends Model
                 ->filter()
                 ->unique()
                 ->count();
+
+            // Get prices using custom price or fallback to selling_price
+            $prices = $group->map(function ($item) use ($customPrices) {
+                return $customPrices[$item->id] ?? $item->selling_price;
+            });
             
             return (object)[
                 'model' => $parsed['model'],
@@ -260,9 +323,9 @@ class Market extends Model
                 'color_options' => $group->pluck('colour')->unique()->count(),
                 'grade_options' => $group->pluck('grade')->unique()->count(),
                 'storage_options' => $storageOptions,
-                'min_price' => $group->min('selling_price'),
-                'max_price' => $group->max('selling_price'),
-                'avg_price' => $group->avg('selling_price'),
+                'min_price' => $prices->min(),
+                'max_price' => $prices->max(),
+                'avg_price' => $prices->avg(),
                 'sample_item_id' => $group->min('id'),
                 'photo' => $firstItem->getFirstMediaUrl('item-photos', 'thumb'),
                 'id' => $group->min('id'),
@@ -320,31 +383,38 @@ class Market extends Model
             return null;
         }
 
+        // Load custom prices for this market
+        $customPrices = DB::table('market_item_prices')
+            ->where('market_id', $this->id)
+            ->pluck('custom_price', 'item_id');
+
         // Group by storage (parsed from model name)
         $variants = $items->groupBy(function ($item) {
             $parsed = $this->parseModelStorage($item->model);
             return $parsed['storage'] ?? 'No Storage Info';
-        })->map(function ($storageGroup) {
+        })->map(function ($storageGroup) use ($customPrices) {
             // Then group by colour within each storage
             return [
                 'storage' => $storageGroup->first() ? ($this->parseModelStorage($storageGroup->first()->model)['storage'] ?? 'No Storage Info') : null,
                 'total' => $storageGroup->count(),
                 'photo' => $storageGroup->first()->getFirstMediaUrl('item-photos', 'thumb'),
-                'colours' => $storageGroup->groupBy('colour')->map(function ($colorGroup) {
+                'colours' => $storageGroup->groupBy('colour')->map(function ($colorGroup) use ($customPrices) {
                     // Then group by grade within each colour
                     return [
                         'colour' => $colorGroup->first()->colour,
                         'count' => $colorGroup->count(),
-                        'grades' => $colorGroup->groupBy('grade')->map(function ($gradeGroup) {
+                        'grades' => $colorGroup->groupBy('grade')->map(function ($gradeGroup) use ($customPrices) {
                             return [
                                 'grade' => $gradeGroup->first()->grade,
                                 'count' => $gradeGroup->count(),
                                 'battery_options' => $gradeGroup->pluck('battery')->unique()->values(),
-                                'issues' => $gradeGroup->map(function ($item) {
+                                'issues' => $gradeGroup->map(function ($item) use ($customPrices) {
+                                    // Use custom price or fallback to selling_price
+                                    $price = $customPrices[$item->id] ?? $item->selling_price;
                                     return [
                                         'id' => $item->id,
                                         'issues' => $item->issues,
-                                        'selling_price' => $item->selling_price,
+                                        'selling_price' => $price,
                                         'count' => 1,
                                     ];
                                 })->unique('issues'),

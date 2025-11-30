@@ -266,6 +266,8 @@ Route::get('/customers/by-name/{name}', [CustomerController::class, 'getByName']
     Route::prefix('ecommerce/items')->name('ecommerce.items.')->group(function () {
         Route::get('/{market:id}', [App\Http\Controllers\Ecommerce\MarketItemController::class, 'index'])->name('index');
         Route::get('/{market:id}/model/{model}/details', [App\Http\Controllers\Ecommerce\MarketItemController::class, 'modelDetails'])->name('model-details');
+        Route::get('/{market:id}/item/{item:id}/by-model', [App\Http\Controllers\Ecommerce\MarketItemController::class, 'byModel'])->name('by-model');
+        Route::post('/{market:id}/item/{item:id}/update-price', [App\Http\Controllers\Ecommerce\MarketItemController::class, 'updatePrice'])->name('update-price');
         Route::get('/{market:id}/item/{item:id}/photos', [App\Http\Controllers\Ecommerce\MarketItemController::class, 'edit'])->name('edit');
         Route::post('/{market:id}/item/{item:id}/photos', [App\Http\Controllers\Ecommerce\MarketItemController::class, 'upload'])->name('upload');
         Route::delete('/{market:id}/item/{item:id}/photos/{media}', [App\Http\Controllers\Ecommerce\MarketItemController::class, 'delete'])->name('delete');
