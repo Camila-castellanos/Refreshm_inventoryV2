@@ -11,13 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('market_item_prices', function (Blueprint $table) {
+        Schema::create('market_items', function (Blueprint $table) {
             $table->id();
             $table->foreignId('market_id')->constrained()->onDelete('cascade');
             $table->foreignId('item_id')->constrained()->onDelete('cascade');
-            $table->decimal('custom_price', 10, 2);
+            $table->decimal('custom_price', 10, 2)->nullable();
+            $table->boolean('is_visible')->default(false);
             $table->timestamps();
-            
             // Ensure unique combination of market_id and item_id
             $table->unique(['market_id', 'item_id']);
         });
@@ -28,6 +28,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('market_item_prices');
+        Schema::dropIfExists('market_items');
     }
 };

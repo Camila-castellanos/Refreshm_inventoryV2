@@ -1,11 +1,19 @@
 <template>
     <div class="bg-white rounded-lg border border-gray-200 hover:border-gray-300 overflow-hidden transition-all duration-200 hover:shadow-lg group">
-        <!-- Product Image Placeholder -->
+        <!-- Product Image -->
         <div 
-            class="aspect-w-16 aspect-h-12 bg-gray-100 flex items-center justify-center group-hover:bg-gray-50 transition-colors duration-200"
+            class="aspect-w-16 aspect-h-12 bg-gray-100 flex items-center justify-center group-hover:bg-gray-50 transition-colors duration-200 overflow-hidden"
             :class="compact ? 'h-40' : 'h-48'"
         >
-            <div class="text-center" :class="compact ? 'p-4' : 'p-6'">
+            <!-- Show actual image if available -->
+            <img 
+                v-if="productImage"
+                :src="productImage"
+                :alt="item.model"
+                class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            />
+            <!-- Fallback placeholder if no image -->
+            <div v-else class="text-center" :class="compact ? 'p-4' : 'p-6'">
                 <svg 
                     class="text-gray-400 mx-auto mb-2 group-hover:text-gray-500 transition-colors duration-200" 
                     :class="compact ? 'w-12 h-12' : 'w-16 h-16'"
@@ -175,6 +183,19 @@ const isInCart = ref(false)
 // Detect if this is a grouped model (has min_price/max_price) or individual item (has selling_price)
 const isGroupedModel = computed(() => {
     return props.item.min_price !== undefined && props.item.max_price !== undefined
+})
+
+// Get product image (from grouped model or individual item)
+const productImage = computed(() => {
+    // For grouped models, use the 'photo' field
+    if (props.item.photo) {
+        return props.item.photo
+    }
+    // For individual items, use main_photo_thumb
+    if (props.item.main_photo_thumb) {
+        return props.item.main_photo_thumb
+    }
+    return null
 })
 
 // Watch items changes and update isInCart state
