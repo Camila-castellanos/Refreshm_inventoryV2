@@ -379,10 +379,12 @@ class Market extends Model
 
         // Create pagination manually
         $page = request()->get('page', 1);
+        $total = $sorted->count();
         $items = $sorted->slice(($page - 1) * $perPage, $perPage)->values();
         
-        $paginated = new \Illuminate\Pagination\Paginator(
+        $paginated = new \Illuminate\Pagination\LengthAwarePaginator(
             $items,
+            $total,
             $perPage,
             $page,
             [
