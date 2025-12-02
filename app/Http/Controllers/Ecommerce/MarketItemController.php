@@ -4,10 +4,10 @@ namespace App\Http\Controllers\Ecommerce;
 
 use App\Http\Controllers\Controller;
 use App\Models\Ecommerce\Market;
+use App\Models\Ecommerce\MarketItem;
 use App\Models\Item;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
@@ -75,29 +75,29 @@ class MarketItemController extends Controller
         $items = Item::where('shop_id', $market->shop_id)
             ->where('model', $item->model)
             ->whereNull('sold')
+            ->whereNull('hold')
             ->with('media')
             ->get();
 
-        // Load custom prices and visibility for this market
-        $marketData = DB::table('market_item_prices')
-            ->where('market_id', $market->id)
-            ->pluck('custom_price', 'item_id');
-        
-        $visibilityData = DB::table('market_item_prices')
-            ->where('market_id', $market->id)
-            ->pluck('is_visible', 'item_id');
+        // Load market items for this market
+        $marketItemsMap = $market->marketItems()
+            ->whereIn('item_id', $items->pluck('id'))
+            ->get()
+            ->keyBy('item_id');
 
         // Conditions that should be visible by default (if not configured)
         $visibleConditions = ['A', 'A-', 'B+', 'B'];
 
-        $mappedItems = $items->map(function ($modelItem) use ($marketData, $visibilityData, $visibleConditions) {
-            // Use custom price from market_item_prices, or fallback to selling_price
-            $price = $marketData[$modelItem->id] ?? $modelItem->selling_price;
+        $mappedItems = $items->map(function ($modelItem) use ($market, $marketItemsMap, $visibleConditions) {
+            $marketItem = $marketItemsMap[$modelItem->id] ?? null;
+            
+            // Use custom price from MarketItem, or fallback to selling_price
+            $price = $marketItem ? $marketItem->getPrice() : $modelItem->selling_price;
             
             // Determine visibility:
-            // If already configured in market_item_prices, use that value
+            // If MarketItem exists, use its is_visible value
             // Otherwise, use default based on condition (A, A-, B+, B = visible, others = hidden)
-            $isVisible = $visibilityData[$modelItem->id] ?? in_array($modelItem->grade, $visibleConditions);
+            $isVisible = $marketItem ? $marketItem->is_visible : in_array($modelItem->grade, $visibleConditions);
             
             return [
                 'id' => $modelItem->id,
@@ -111,7 +111,7 @@ class MarketItemController extends Controller
                 'buying_price' => $modelItem->buying_price,
                 'selling_price' => $modelItem->selling_price,
                 'market_price' => $price,
-                'has_custom_price' => isset($marketData[$modelItem->id]),
+                'has_custom_price' => $marketItem && $marketItem->custom_price !== null,
                 'is_visible' => $isVisible,
                 'photo_count' => $modelItem->media->count(),
                 'main_photo_thumb' => $modelItem->getFirstMediaUrl('item-photos', 'thumb'),

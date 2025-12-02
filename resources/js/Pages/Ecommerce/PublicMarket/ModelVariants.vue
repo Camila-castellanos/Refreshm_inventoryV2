@@ -122,8 +122,13 @@
                                 <!-- Product Image and Name (Left) - 30% width -->
                                 <div class="flex-none w-1/3 flex flex-col items-center justify-center p-8 bg-gray-50 border-r border-gray-200">
                                     <!-- Product Image -->
-                                    <div class="w-32 h-32 bg-gray-100 flex items-center justify-center rounded-lg mb-6 flex-shrink-0">
-                                        <svg class="w-24 h-24 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <div class="w-32 h-32 bg-gray-100 flex items-center justify-center rounded-lg mb-6 flex-shrink-0 overflow-hidden">
+                                        <img v-if="item.main_photo_thumb" 
+                                             :src="item.main_photo_thumb" 
+                                             :alt="item.model"
+                                             class="w-full h-full object-cover"
+                                        />
+                                        <svg v-else class="w-24 h-24 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
                                         </svg>
                                     </div>
@@ -269,7 +274,7 @@ const allItems = computed(() => {
             colorGroup.grades.forEach(gradeGroup => {
                 gradeGroup.battery_options.forEach(battery => {
                     gradeGroup.issues.forEach(issueItem => {
-                        items.push({
+                        const item = {
                             id: issueItem.id,
                             model: props.modelData.model,
                             manufacturer: props.modelData.manufacturer,
@@ -280,14 +285,24 @@ const allItems = computed(() => {
                             gradeRaw: gradeGroup.grade, // Keep original for reference
                             battery: Number(battery), // Ensure battery is always a number
                             issues: issueItem.issues,
-                            photo: colorGroup.photo,
-                            selling_price: issueItem.selling_price || 0
-                        })
+                            selling_price: issueItem.selling_price || 0,
+                            // Media data from backend
+                            photo_count: issueItem.photo_count || 0,
+                            main_photo_thumb: issueItem.main_photo_thumb || null,
+                            main_photo_url: issueItem.main_photo_url || null,
+                            photos: issueItem.photos || []
+                        }
+                        // Debug: log items con imágenes
+                        if (item.main_photo_thumb) {
+                            console.log('Item con imagen:', item.id, item.main_photo_thumb)
+                        }
+                        items.push(item)
                     })
                 })
             })
         })
     })
+    console.log('Total items:', items.length, 'Con imágenes:', items.filter(i => i.main_photo_thumb).length)
     return items
 })
 

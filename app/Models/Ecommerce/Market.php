@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -167,12 +168,20 @@ class Market extends Model
     }
 
     /**
+     * Relationship: Market items with custom prices and visibility
+     */
+    public function marketItems(): HasMany
+    {
+        return $this->hasMany(MarketItem::class);
+    }
+
+    /**
      * Relationship: Custom prices for items in this market
      */
     public function itemPrices(): BelongsToMany
     {
-        return $this->belongsToMany(Item::class, 'market_item_prices')
-            ->withPivot('custom_price')
+        return $this->belongsToMany(Item::class, 'market_items')
+            ->withPivot('custom_price', 'is_visible')
             ->withTimestamps();
     }
 
@@ -181,14 +190,10 @@ class Market extends Model
      */
     public function getItemPrice(int $itemId): ?float
     {
-        // Check for custom price in pivot table
-        $customPrice = DB::table('market_item_prices')
-            ->where('market_id', $this->id)
-            ->where('item_id', $itemId)
-            ->value('custom_price');
-
-        if ($customPrice !== null) {
-            return (float) $customPrice;
+        $marketItem = $this->marketItems()->where('item_id', $itemId)->first();
+        
+        if ($marketItem) {
+            return $marketItem->getPrice();
         }
 
         // Fallback to item's selling_price
@@ -201,9 +206,9 @@ class Market extends Model
      */
     public function setItemPrice(int $itemId, float $price): void
     {
-        DB::table('market_item_prices')->updateOrInsert(
-            ['market_id' => $this->id, 'item_id' => $itemId],
-            ['custom_price' => $price, 'updated_at' => now(), 'created_at' => now()]
+        $this->marketItems()->updateOrCreate(
+            ['item_id' => $itemId],
+            ['custom_price' => $price, 'is_visible' => true]
         );
     }
 
@@ -212,24 +217,12 @@ class Market extends Model
      */
     public function toggleItemVisibility(int $itemId): bool
     {
-        // Get current visibility or default to true if it doesn't exist
-        $currentVisibility = DB::table('market_item_prices')
-            ->where('market_id', $this->id)
-            ->where('item_id', $itemId)
-            ->value('is_visible') ?? true;
-
-        $newVisibility = !$currentVisibility;
-
-        DB::table('market_item_prices')->updateOrInsert(
-            ['market_id' => $this->id, 'item_id' => $itemId],
-            [
-                'is_visible' => $newVisibility,
-                'updated_at' => now(),
-                'created_at' => now()
-            ]
+        $marketItem = $this->marketItems()->firstOrCreate(
+            ['item_id' => $itemId],
+            ['is_visible' => false]
         );
 
-        return $newVisibility;
+        return $marketItem->toggleVisibility();
     }
 
     /**
@@ -237,9 +230,9 @@ class Market extends Model
      */
     public function setItemVisibility(int $itemId, bool $isVisible): void
     {
-        DB::table('market_item_prices')->updateOrInsert(
-            ['market_id' => $this->id, 'item_id' => $itemId],
-            ['is_visible' => $isVisible, 'updated_at' => now(), 'created_at' => now()]
+        $this->marketItems()->updateOrCreate(
+            ['item_id' => $itemId],
+            ['is_visible' => $isVisible]
         );
     }
 
@@ -248,10 +241,11 @@ class Market extends Model
      */
     public function removeItemPrice(int $itemId): void
     {
-        DB::table('market_item_prices')
-            ->where('market_id', $this->id)
-            ->where('item_id', $itemId)
-            ->delete();
+        $marketItem = $this->marketItems()->where('item_id', $itemId)->first();
+        
+        if ($marketItem) {
+            $marketItem->resetPrice();
+        }
     }
 
     /**
@@ -327,16 +321,15 @@ class Market extends Model
         // Get all items first to parse models and extract storage
         $items = $query->get();
 
-        // Load custom prices for this market
-        $customPrices = DB::table('market_item_prices')
-            ->where('market_id', $this->id)
-            ->pluck('custom_price', 'item_id');
+        // Load market items for custom prices and visibility
+        $marketItems = $this->marketItems()->whereIn('item_id', $items->pluck('id'))->get();
+        $marketItemsMap = $marketItems->keyBy('item_id');
         
         // Group by parsed model (without storage) + manufacturer + type
         $grouped = $items->groupBy(function ($item) {
             $parsed = $this->parseModelStorage($item->model);
             return $parsed['model'] . '|' . $item->manufacturer . '|' . $item->type;
-        })->map(function ($group) use ($customPrices) {
+        })->map(function ($group) use ($marketItemsMap) {
             $firstItem = $group->first();
             $parsed = $this->parseModelStorage($firstItem->model);
             
@@ -348,8 +341,9 @@ class Market extends Model
                 ->count();
 
             // Get prices using custom price or fallback to selling_price
-            $prices = $group->map(function ($item) use ($customPrices) {
-                return $customPrices[$item->id] ?? $item->selling_price;
+            $prices = $group->map(function ($item) use ($marketItemsMap) {
+                $marketItem = $marketItemsMap[$item->id] ?? null;
+                return $marketItem ? $marketItem->getPrice() : $item->selling_price;
             });
             
             // Count total photos in the group
@@ -404,6 +398,7 @@ class Market extends Model
      * Get all variants for a specific model
      * Groups by storage -> colour -> grade -> battery -> issues
      * Storage is now a selectable characteristic
+     * Only returns items where is_visible is true
      */
     public function getModelVariants(string $model)
     {
@@ -426,39 +421,78 @@ class Market extends Model
             return null;
         }
 
-        // Load custom prices for this market
-        $customPrices = DB::table('market_item_prices')
-            ->where('market_id', $this->id)
-            ->pluck('custom_price', 'item_id');
+        // Load market items for custom prices, visibility, and filtering
+        $marketItems = $this->marketItems()->whereIn('item_id', $items->pluck('id'))->get();
+        $marketItemsMap = $marketItems->keyBy('item_id');
+
+        // Conditions that should be visible by default (if not configured)
+        $visibleConditions = ['A', 'A-', 'B+', 'B'];
+
+        // Filter items to only include those that are visible
+        $items = $items->filter(function ($item) use ($marketItemsMap, $visibleConditions) {
+            $marketItem = $marketItemsMap[$item->id] ?? null;
+            
+            // If MarketItem exists, use its is_visible value
+            if ($marketItem) {
+                return $marketItem->is_visible;
+            }
+            
+            // If no MarketItem entry, use default visibility based on grade
+            return in_array($item->grade, $visibleConditions);
+        });
+
+        if ($items->isEmpty()) {
+            return null;
+        }
+
+        // Find the first item with a photo to use as the model's main image
+        $itemWithPhoto = $items->first(function ($item) {
+            return $item->media->count() > 0;
+        });
+        $modelPhoto = $itemWithPhoto ? $itemWithPhoto->getFirstMediaUrl('item-photos', 'thumb') : null;
+        $modelPhotoUrl = $itemWithPhoto ? $itemWithPhoto->getFirstMediaUrl('item-photos') : null;
+        $modelPhotos = $itemWithPhoto ? $itemWithPhoto->media->map(function ($media) {
+            return [
+                'id' => $media->id,
+                'url' => $media->getUrl(),
+                'thumb' => $media->getUrl('thumb'),
+            ];
+        })->toArray() : [];
 
         // Group by storage (parsed from model name)
         $variants = $items->groupBy(function ($item) {
             $parsed = $this->parseModelStorage($item->model);
             return $parsed['storage'] ?? 'No Storage Info';
-        })->map(function ($storageGroup) use ($customPrices) {
+        })->map(function ($storageGroup) use ($marketItemsMap, $modelPhoto, $modelPhotoUrl, $modelPhotos) {
             // Then group by colour within each storage
             return [
                 'storage' => $storageGroup->first() ? ($this->parseModelStorage($storageGroup->first()->model)['storage'] ?? 'No Storage Info') : null,
                 'total' => $storageGroup->count(),
-                'photo' => $storageGroup->first()->getFirstMediaUrl('item-photos', 'thumb'),
-                'colours' => $storageGroup->groupBy('colour')->map(function ($colorGroup) use ($customPrices) {
+                'photo' => $modelPhoto,
+                'colours' => $storageGroup->groupBy('colour')->map(function ($colorGroup) use ($marketItemsMap, $modelPhoto, $modelPhotoUrl, $modelPhotos) {
                     // Then group by grade within each colour
                     return [
                         'colour' => $colorGroup->first()->colour,
                         'count' => $colorGroup->count(),
-                        'grades' => $colorGroup->groupBy('grade')->map(function ($gradeGroup) use ($customPrices) {
+                        'grades' => $colorGroup->groupBy('grade')->map(function ($gradeGroup) use ($marketItemsMap, $modelPhoto, $modelPhotoUrl, $modelPhotos) {
                             return [
                                 'grade' => $gradeGroup->first()->grade,
                                 'count' => $gradeGroup->count(),
                                 'battery_options' => $gradeGroup->pluck('battery')->unique()->values(),
-                                'issues' => $gradeGroup->map(function ($item) use ($customPrices) {
+                                'issues' => $gradeGroup->map(function ($item) use ($marketItemsMap, $modelPhoto, $modelPhotoUrl, $modelPhotos) {
                                     // Use custom price or fallback to selling_price
-                                    $price = $customPrices[$item->id] ?? $item->selling_price;
+                                    $marketItem = $marketItemsMap[$item->id] ?? null;
+                                    $price = $marketItem ? $marketItem->getPrice() : $item->selling_price;
                                     return [
                                         'id' => $item->id,
                                         'issues' => $item->issues,
                                         'selling_price' => $price,
                                         'count' => 1,
+                                        // Use model's shared photo for all items
+                                        'photo_count' => count($modelPhotos),
+                                        'main_photo_thumb' => $modelPhoto,
+                                        'main_photo_url' => $modelPhotoUrl,
+                                        'photos' => $modelPhotos,
                                     ];
                                 })->unique('issues'),
                             ];
