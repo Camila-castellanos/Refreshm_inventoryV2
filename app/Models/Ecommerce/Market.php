@@ -324,9 +324,25 @@ class Market extends Model
         // Load market items for custom prices and visibility
         $marketItems = $this->marketItems()->whereIn('item_id', $items->pluck('id'))->get();
         $marketItemsMap = $marketItems->keyBy('item_id');
+
+        // Default visible grades (when no MarketItem record exists)
+        $defaultVisibleGrades = ['A', 'A-', 'B+', 'B'];
+
+        // Filter items by visibility (same logic as getModelVariants)
+        $visibleItems = $items->filter(function ($item) use ($marketItemsMap, $defaultVisibleGrades) {
+            $marketItem = $marketItemsMap[$item->id] ?? null;
+            
+            if ($marketItem) {
+                // If MarketItem exists, use its is_visible flag
+                return $marketItem->is_visible;
+            }
+            
+            // Default visibility based on grade
+            return in_array($item->grade, $defaultVisibleGrades);
+        });
         
         // Group by parsed model (without storage) + manufacturer + type
-        $grouped = $items->groupBy(function ($item) {
+        $grouped = $visibleItems->groupBy(function ($item) {
             $parsed = $this->parseModelStorage($item->model);
             return $parsed['model'] . '|' . $item->manufacturer . '|' . $item->type;
         })->map(function ($group) use ($marketItemsMap) {
