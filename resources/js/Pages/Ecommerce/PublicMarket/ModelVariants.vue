@@ -76,10 +76,11 @@
                         </div>
 
                         <!-- Issues Filter -->
-                        <div v-if="availableIssues.length > 0" class="mb-8">
+                        <div class="mb-8">
                             <label class="block text-base font-semibold text-gray-800 mb-4">Issues</label>
                             <select v-model="filters.issues" class="w-full px-4 py-3 border border-gray-300 rounded-lg text-base focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-400 transition-colors">
-                                <option value="">No Issues</option>
+                                <option value="">All Issues</option>
+                                <option value="__no_issues__">No Issues</option>
                                 <option v-for="issue in availableIssues" :key="issue" :value="issue">
                                     {{ issue }}
                                 </option>
@@ -356,7 +357,8 @@ const availableIssues = computed(() => {
         if (filters.value.battery && item.battery !== parseInt(filters.value.battery)) return false
         return true
     })
-    return [...new Set(filtered.map(v => v.issues))].filter(Boolean)
+    // Only return actual issues (non-empty strings)
+    return [...new Set(filtered.map(v => v.issues))].filter(issue => issue && issue.trim() !== '')
 })
 
 // Filtered variants based on selected filters
@@ -366,7 +368,9 @@ const filteredVariants = computed(() => {
         if (filters.value.colour && item.colour !== filters.value.colour) return false
         if (filters.value.grade && item.grade !== filters.value.grade) return false
         if (filters.value.battery && item.battery !== parseInt(filters.value.battery)) return false
-        if (filters.value.issues && item.issues !== filters.value.issues) return false
+        // Handle issues filter: __no_issues__ means only items without issues
+        if (filters.value.issues === '__no_issues__' && item.issues) return false
+        if (filters.value.issues && filters.value.issues !== '__no_issues__' && item.issues !== filters.value.issues) return false
         return true
     })
 })
