@@ -51,6 +51,7 @@
                             <th class="px-4 py-3 text-left font-semibold text-gray-900">Condition</th>
                             <th class="px-4 py-3 text-right font-semibold text-gray-900">Market Price</th>
                             <th class="px-4 py-3 text-left font-semibold text-gray-900">Status</th>
+                            <th class="px-4 py-3 text-center font-semibold text-gray-900">Visible</th>
                             <th class="px-4 py-3 text-center font-semibold text-gray-900">Photos</th>
                         </tr>
                     </thead>
@@ -106,6 +107,27 @@
                                 >
                                     {{ getStatusLabel(item.status) }}
                                 </span>
+                            </td>
+                            <td class="px-4 py-3 text-center">
+                                <button
+                                    @click="toggleItemVisibility(item)"
+                                    :disabled="togglingVisibility[item.id]"
+                                    :class="[
+                                        'p-2 rounded-lg transition-all duration-200',
+                                        item.is_visible
+                                            ? 'bg-green-100 hover:bg-green-200 text-green-600'
+                                            : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+                                    ]"
+                                    :title="item.is_visible ? 'Click to hide' : 'Click to show'"
+                                >
+                                    <i
+                                        :class="[
+                                            'pi',
+                                            item.is_visible ? 'pi-eye' : 'pi-eye-slash',
+                                            togglingVisibility[item.id] ? 'pi-spin pi-spinner' : ''
+                                        ]"
+                                    ></i>
+                                </button>
                             </td>
                             <td class="px-4 py-3 text-center">
                                 <div class="flex items-center justify-center gap-1">
@@ -195,6 +217,7 @@ const searchQuery = ref('')
 const filterStatus = ref('')
 const toast = useToast()
 const savingPrices = ref({})  // Track which items are saving
+const togglingVisibility = ref({})  // Track which items are toggling visibility
 
 watch(() => props.visible, (newVal) => {
     isVisible.value = newVal
@@ -289,6 +312,48 @@ const updatePrice = async (item) => {
         console.error('Price update error:', error)
     } finally {
         savingPrices.value[item.id] = false
+    }
+}
+
+const toggleItemVisibility = async (item) => {
+    if (!item || !item.id || !props.market || !props.market.id) {
+        toast.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: 'Missing required data for visibility update',
+            life: 3000
+        })
+        return
+    }
+    
+    togglingVisibility.value[item.id] = true
+    
+    try {
+        const response = await axios.post(
+            route('ecommerce.items.toggle-visibility', {
+                market: props.market.id,
+                item: item.id
+            })
+        )
+        
+        item.is_visible = response.data.is_visible
+        
+        toast.add({
+            severity: 'success',
+            summary: 'Visibility Updated',
+            detail: response.data.message,
+            life: 3000
+        })
+    } catch (error) {
+        toast.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: error.response?.data?.message || 'Failed to update visibility',
+            life: 3000
+        })
+        console.error('Visibility update error:', error)
+    } finally {
+        togglingVisibility.value[item.id] = false
     }
 }
 </script>
