@@ -78,14 +78,26 @@ class MarketItemController extends Controller
             ->with('media')
             ->get();
 
-        // Load custom prices for this market
-        $customPrices = DB::table('market_item_prices')
+        // Load custom prices and visibility for this market
+        $marketData = DB::table('market_item_prices')
             ->where('market_id', $market->id)
             ->pluck('custom_price', 'item_id');
+        
+        $visibilityData = DB::table('market_item_prices')
+            ->where('market_id', $market->id)
+            ->pluck('is_visible', 'item_id');
 
-        $mappedItems = $items->map(function ($modelItem) use ($customPrices, $market) {
+        // Conditions that should be visible by default (if not configured)
+        $visibleConditions = ['A', 'A-', 'B+', 'B'];
+
+        $mappedItems = $items->map(function ($modelItem) use ($marketData, $visibilityData, $visibleConditions) {
             // Use custom price from market_item_prices, or fallback to selling_price
-            $price = $customPrices[$modelItem->id] ?? $modelItem->selling_price;
+            $price = $marketData[$modelItem->id] ?? $modelItem->selling_price;
+            
+            // Determine visibility:
+            // If already configured in market_item_prices, use that value
+            // Otherwise, use default based on condition (A, A-, B+, B = visible, others = hidden)
+            $isVisible = $visibilityData[$modelItem->id] ?? in_array($modelItem->grade, $visibleConditions);
             
             return [
                 'id' => $modelItem->id,
@@ -99,7 +111,8 @@ class MarketItemController extends Controller
                 'buying_price' => $modelItem->buying_price,
                 'selling_price' => $modelItem->selling_price,
                 'market_price' => $price,
-                'has_custom_price' => isset($customPrices[$modelItem->id]),
+                'has_custom_price' => isset($marketData[$modelItem->id]),
+                'is_visible' => $isVisible,
                 'photo_count' => $modelItem->media->count(),
                 'main_photo_thumb' => $modelItem->getFirstMediaUrl('item-photos', 'thumb'),
                 'main_photo_url' => $modelItem->getFirstMediaUrl('item-photos'),
@@ -147,6 +160,30 @@ class MarketItemController extends Controller
     }
 
     /**
+     * Toggle item visibility in market
+     */
+    public function toggleVisibility(Request $request, Market $market, Item $item)
+    {
+        // Ensure the market belongs to the current user's company
+        if ($market->shop->company_id !== Auth::user()->company_id) {
+            abort(403, 'Unauthorized access to this market.');
+        }
+
+        // Ensure the item belongs to the market's shop
+        if ($item->shop_id !== $market->shop_id) {
+            abort(404, 'Item not found in this market.');
+        }
+
+        $newVisibility = $market->toggleItemVisibility($item->id);
+
+        return response()->json([
+            'success' => true,
+            'message' => $newVisibility ? 'Item is now visible' : 'Item is now hidden',
+            'is_visible' => $newVisibility,
+        ]);
+    }
+
+    /**
      * Show the photo management page for an item
      */
     public function edit(Market $market, Item $item)
@@ -164,8 +201,8 @@ class MarketItemController extends Controller
         // Load item with photos
         $item->load('media');
 
-        // If request is AJAX, return JSON
-        if (request()->wantsJson()) {
+        // If request is AJAX or explicitly asks for JSON, return JSON
+        if (request()->wantsJson() || request()->query('format') === 'json') {
             return response()->json([
                 'props' => [
                     'market' => $market,
@@ -197,7 +234,7 @@ class MarketItemController extends Controller
 
         $request->validate([
             'photos' => 'required|array|max:10',
-            'photos.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:10240', // 10MB max
+            'photos.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:10240',
         ]);
 
         // Add photos to the item
@@ -208,6 +245,14 @@ class MarketItemController extends Controller
 
         // Reload item with updated photos
         $item->load('media');
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => count($request->file('photos')) . ' photo(s) uploaded successfully!',
+                'item' => $item
+            ]);
+        }
 
         return back()->with('success', count($request->file('photos')) . ' photo(s) uploaded successfully!');
     }

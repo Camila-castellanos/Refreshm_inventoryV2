@@ -208,6 +208,42 @@ class Market extends Model
     }
 
     /**
+     * Toggle visibility for an item in this market
+     */
+    public function toggleItemVisibility(int $itemId): bool
+    {
+        // Get current visibility or default to true if it doesn't exist
+        $currentVisibility = DB::table('market_item_prices')
+            ->where('market_id', $this->id)
+            ->where('item_id', $itemId)
+            ->value('is_visible') ?? true;
+
+        $newVisibility = !$currentVisibility;
+
+        DB::table('market_item_prices')->updateOrInsert(
+            ['market_id' => $this->id, 'item_id' => $itemId],
+            [
+                'is_visible' => $newVisibility,
+                'updated_at' => now(),
+                'created_at' => now()
+            ]
+        );
+
+        return $newVisibility;
+    }
+
+    /**
+     * Set visibility for an item in this market
+     */
+    public function setItemVisibility(int $itemId, bool $isVisible): void
+    {
+        DB::table('market_item_prices')->updateOrInsert(
+            ['market_id' => $this->id, 'item_id' => $itemId],
+            ['is_visible' => $isVisible, 'updated_at' => now(), 'created_at' => now()]
+        );
+    }
+
+    /**
      * Remove custom price for an item (will use selling_price as fallback)
      */
     public function removeItemPrice(int $itemId): void
@@ -266,7 +302,8 @@ class Market extends Model
             ->whereNull('sold')
             ->whereNull('hold')
             ->whereNotNull('selling_price')
-            ->where('selling_price', '>', 0);
+            ->where('selling_price', '>', 0)
+            ->with('media');
 
         // Apply search filter
         if ($search) {
@@ -315,6 +352,11 @@ class Market extends Model
                 return $customPrices[$item->id] ?? $item->selling_price;
             });
             
+            // Count total photos in the group
+            $photoCount = $group->reduce(function ($carry, $item) {
+                return $carry + $item->media->count();
+            }, 0);
+            
             return (object)[
                 'model' => $parsed['model'],
                 'manufacturer' => $firstItem->manufacturer,
@@ -328,6 +370,7 @@ class Market extends Model
                 'avg_price' => $prices->avg(),
                 'sample_item_id' => $group->min('id'),
                 'photo' => $firstItem->getFirstMediaUrl('item-photos', 'thumb'),
+                'photo_count' => $photoCount,
                 'id' => $group->min('id'),
             ];
         })->values();

@@ -56,8 +56,8 @@
                                 <!-- Item Image -->
                                 <div class="aspect-square bg-gray-100 rounded-lg mb-3 overflow-hidden">
                                     <img
-                                        v-if="item.main_photo_thumb"
-                                        :src="item.main_photo_thumb"
+                                        v-if="item.photo"
+                                        :src="item.photo"
                                         :alt="item.model"
                                         class="w-full h-full object-cover"
                                     >
@@ -213,7 +213,10 @@
             :style="{ width: '90vw', maxWidth: '1200px' }"
             :header="`Manage Photos - ${selectedItem?.model || ''}`"
         >
-            <div v-if="selectedItem" class="space-y-6">
+            <div v-if="loadingPhotos" class="flex justify-center items-center p-12">
+                <i class="pi pi-spin pi-spinner text-4xl text-gray-400"></i>
+            </div>
+            <div v-else-if="selectedItem" class="space-y-6">
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <!-- Left Column - Item Info -->
                     <div class="lg:col-span-1">
@@ -269,6 +272,7 @@
                                 :maxFileSize="10000000"
                                 :customUpload="true"
                                 @uploader="handleUpload"
+                                @select="onFileSelect"
                                 :auto="false"
                                 chooseLabel="Select Photos"
                                 uploadLabel="Upload"
@@ -300,6 +304,7 @@
                                                 label="Upload"
                                                 :disabled="!files || files.length === 0"
                                                 :loading="uploading"
+                                                :severity="files && files.length > 0 ? 'success' : 'secondary'"
                                                 size="small"
                                             />
                                         </div>
@@ -501,6 +506,7 @@ const items = computed(() => {
 const showPhotoModal = ref(false)
 const selectedItem = ref(null)
 const modalPhotos = ref([])
+const loadingPhotos = ref(false)
 const uploading = ref(false)
 const showDeleteConfirm = ref(false)
 const photoToDelete = ref(null)
@@ -513,9 +519,7 @@ const modelItems = ref([])
 let searchTimeout = null
 
 onMounted(() => {
-    console.log('MarketItemsEdit mounted')
-    console.log('Props:', props)
-    console.log('Models:', props.models)
+    // Component mounted
 })
 
 // Forms
@@ -559,22 +563,29 @@ const clearSearch = () => {
 const openPhotoModal = async (item) => {
     selectedItem.value = item
     showPhotoModal.value = true
+    loadingPhotos.value = true
     
-    // Load item photos
     try {
-        const response = await axios.get(route('ecommerce.items.edit', {
+        const url = route('ecommerce.items.edit', {
             market: props.market.id,
-            item: item.id
-        }))
-        
-        // Extract photos from response
+            item: item.id,
+            format: 'json'
+        });
+
+        const response = await axios.get(url, {
+            headers: {
+                'Accept': 'application/json'
+            }
+        })
+
         if (response.data.props && response.data.props.item) {
             modalPhotos.value = response.data.props.item.photo_urls || []
             selectedItem.value = { ...selectedItem.value, ...response.data.props.item }
         }
     } catch (error) {
-        console.error('Error loading photos:', error)
         modalPhotos.value = []
+    } finally {
+        loadingPhotos.value = false
     }
 }
 
@@ -587,22 +598,23 @@ const closePhotoModal = () => {
     router.reload({ only: ['models'] })
 }
 
+const onFileSelect = (event) => {
+    // Files selected
+}
+
 const triggerUpload = () => {
-    console.log('triggerUpload called')
-    console.log('fileUploadRef:', fileUploadRef.value)
     if (fileUploadRef.value) {
-        fileUploadRef.value.upload()
+        const files = fileUploadRef.value.files
+        if (files && files.length > 0) {
+            handleUpload({ files })
+        }
     }
 }
 
 const handleUpload = async (event) => {
-    console.log('Uploading files')
     const files = event.files
 
-
     if (!files || files.length === 0 || !selectedItem.value) return
-
-    console.log('Uploading files verification passed:', files)
 
     uploading.value = true
 
@@ -612,33 +624,26 @@ const handleUpload = async (event) => {
     })
 
     try {
-        await router.post(
-            route('ecommerce.items.upload', {
-                market: props.market.id,
-                item: selectedItem.value.id
-            }),
+        const uploadUrl = route('ecommerce.items.upload', {
+            market: props.market.id,
+            item: selectedItem.value.id
+        })
+        
+        const response = await axios.post(
+            uploadUrl,
             formData,
             {
-                preserveState: true,
-                preserveScroll: true,
-                onSuccess: async () => {
-                    // Reload photos
-                    await openPhotoModal(selectedItem.value)
-                    
-                    // Clear the FileUpload component
-                    event.files.length = 0
-                },
-                onError: (errors) => {
-                    console.error('Upload error:', errors)
-                    alert('Failed to upload photos. Please try again.')
-                },
-                onFinish: () => {
-                    uploading.value = false
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                    'Accept': 'application/json'
                 }
             }
         )
+
+        await openPhotoModal(selectedItem.value)
+        event.files.length = 0
+        uploading.value = false
     } catch (error) {
-        console.error('Upload error:', error)
         alert('Failed to upload photos. Please try again.')
         uploading.value = false
     }
@@ -705,7 +710,6 @@ const handleDragEnd = () => {
 const handleReorder = async () => {
     if (!selectedItem.value) return
     
-    // Send new order to backend
     const photoIds = modalPhotos.value.map(photo => photo.id)
     
     try {
@@ -717,8 +721,6 @@ const handleReorder = async () => {
             { photo_ids: photoIds }
         )
     } catch (error) {
-        console.error('Reorder error:', error)
-        // Reload photos on error
         await openPhotoModal(selectedItem.value)
     }
 }
@@ -727,7 +729,6 @@ const openModelItemsModal = async (item) => {
     selectedModel.value = item
     
     try {
-        // Load all items for this model
         const response = await axios.get(route('ecommerce.items.by-model', {
             market: props.market.id,
             item: item.id
@@ -736,25 +737,22 @@ const openModelItemsModal = async (item) => {
         if (response.data && response.data.items) {
             modelItems.value = response.data.items
         } else {
-            modelItems.value = [item] // Fallback to current item
+            modelItems.value = [item]
         }
         
         showModelItemsModal.value = true
     } catch (error) {
-        console.error('Error loading model items:', error)
-        modelItems.value = [item] // Fallback to current item
+        modelItems.value = [item]
         showModelItemsModal.value = true
     }
 }
 
 const handleViewItem = (item) => {
-    console.log('View item:', item)
-    // Aquí puedes agregar la lógica para ver detalles del item
+    // View item
 }
 
 const handleEditItem = (item) => {
-    console.log('Edit item:', item)
-    // Aquí puedes agregar la lógica para editar el item
+    // Edit item
 }
 </script>
 
