@@ -24,13 +24,11 @@ import { CustomField, Field, Tab as ITab, Item, Tab } from "@/Lib/types";
 import { router } from "@inertiajs/vue3";
 import { defineProps, onMounted, ref, Ref, watchEffect } from "vue";
 import { headers } from "./IndexData";
-import ItemsSell from "./Modals/ItemsSell.vue";
-import MoveItem from "./Modals/MoveItem.vue";
-import { Dialog, useConfirm, useDialog, useToast } from "primevue";
+import { Dialog, useConfirm, useToast } from "primevue";
 import axios from "axios";
 import CustomFields from "./Modals/CustomFields.vue";
+import { useInventoryActions } from "@/composables/useInventoryActions";
 
-const dialog = useDialog();
 const confirm = useConfirm();
 const toast = useToast();
 const props = defineProps({
@@ -46,6 +44,11 @@ const props = defineProps({
 let selectedItems: Ref<Item[]> = ref([]);
 const showCustomFields = ref(false);
 const allHeaders: Ref<CustomField[]> = ref([]);
+
+const { getDefaultTableActions } = useInventoryActions(
+  selectedItems,
+  props.tabs ?? []
+);
 
 const updateTableHeaders = (updatedHeaders: CustomField[]) => {
   allHeaders.value = updatedHeaders;
@@ -102,22 +105,6 @@ watchEffect(() => {
   }
 });
 
-function openSellItemsModal() {
-  dialog.open(ItemsSell, {
-    data: {
-      items: selectedItems,
-      customers: props.customers,
-    },
-    props: {
-      modal: true,
-    },
-    onClose: () => {
-      selectedItems.value = [];
-      router.reload({ only: ["items"] });
-    },
-  });
-}
-
 const onClickReturnMove = () => {
   confirm.require({
     message: "Are you sure you want to return these items to Active Inventory?",
@@ -145,75 +132,20 @@ const onClickReturnMove = () => {
   });
 };
 
-const tableActions = [
-  {
-    label: "Edit fields",
-    icon: "pi pi-pen-to-square",
-    action: () => {
-      showCustomFields.value = true;
-    },
-    },
-  {
-    label: "Edit Items",
-    icon: "pi pi-pencil",
-    action: () => {
-      onEdit();
-    },
-    disable: (selectedItems: Item[]) => selectedItems.length !== 1,
+const tableActions = getDefaultTableActions({
+  showCustomFields: () => {
+    showCustomFields.value = true;
   },
-  {
-    label: "Return move",
-    icon: "pi pi-undo",
-    severity: "danger",
-    action: () => {
-      onClickReturnMove();
+  hideExport: true,
+  hideDuplicate: true,
+  customActions: [
+    {
+      label: "Return to Inventory",
+      icon: "pi pi-undo",
+      severity: "danger",
+      action: () => onClickReturnMove(),
+      disable: (selectedItems: Item[]) => selectedItems.length == 0,
     },
-    disable: (selectedItems: Item[]) => selectedItems.length == 0,
-  },
-  {
-    label: "Sell",
-    icon: "pi pi-dollar",
-    action: () => {
-      openSellItemsModal();
-    },
-    disable: (selectedItems: Item[]) => selectedItems.length == 0,
-  },
-  {
-    label: "Move Tab",
-    icon: "pi pi-arrow-right-arrow-left",
-    extraClasses: "!font-black",
-    action: () => {
-      openMoveItemsModal();
-    },
-    disable: (selectedItems: Item[]) => selectedItems.length == 0,
-  },
-];
-
-const onEdit = () => {
-  const currentPaginate = document.getElementById("currentPaginate")?.getAttribute("data-id") || "";
-  const filter = document.getElementsByClassName("filter--value")[0]?.value || "";
-
-  document.cookie = `paginate=${currentPaginate}`;
-  document.cookie = `pagefilter=${filter}`;
-
-  let items = selectedItems.value.map((item: any) => item.id).join(";");
-
-  router.get(route("items.edit", btoa(items)));
-};
-
-function openMoveItemsModal() {
-  dialog.open(MoveItem, {
-    data: {
-      tabs: props.tabs.filter((customTab) => customTab.id !== tab.value!.id),
-      items: selectedItems.value,
-    },
-    props: {
-      modal: true,
-      header: "Move items",
-    },
-    onClose: () => {
-      router.reload({ only: ["items"] });
-    },
-  });
-}
+  ],
+});
 </script>

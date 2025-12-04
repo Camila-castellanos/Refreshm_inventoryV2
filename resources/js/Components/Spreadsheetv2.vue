@@ -730,7 +730,6 @@ async function saveAsDraft() {
     toast.add({ severity:'success', summary:'Draft saved' });
     clearLocalDraft();
     showOptions.value = false;
-    router.visit("/inventory/items", { only: ["items", "tabs"] });
   } catch(e) {
     toast.add({ severity:'error', summary:'Error saving draft' });
     console.error("Error saving draft:", e);
