@@ -33,6 +33,7 @@ import ItemsSell from "./Modals/ItemsSell.vue";
 import MoveItem from "./Modals/MoveItem.vue";
 import AddItemsToSale from "./Modals/AddItemsToSale.vue";
 import { nextTick } from 'vue';
+import { useInventoryActions } from '@/composables/useInventoryActions';
 
 const confirm = useConfirm();
 const toast = useToast();
@@ -47,15 +48,25 @@ const props = defineProps({
 });
 
 const tabs = ref(props.tabs);
-
 const assignStorageVisible: Ref<any> = ref(null);
-
-const toggleAssignStorageVisible = () => {
-  assignStorageVisible.value.openDialog();
-};
 
 let selectedItems: Ref<Item[]> = ref([]);
 const allHeaders: Ref<CustomField[]> = ref([]);
+
+const { getDefaultTableActions } = useInventoryActions(
+  selectedItems,
+  props.tabs,
+  assignStorageVisible
+);
+
+const tableActions = getDefaultTableActions({
+  showCustomFields: () => {
+    showCustomFields.value = true;
+  },
+  showAddItemsToSale: () => {
+    showAddItemsToSale.value = true;
+  },
+});
 
 const handleSelection = (selected: Item[]) => {
   selectedItems.value = selected;
@@ -169,118 +180,6 @@ function openMoveItemsModal() {
     },
   });
 }
-
-const tableActions = [
-  {
-    label: "Add Items",
-    important: true,
-    icon: "pi pi-plus",
-    action: () => {
-      router.visit("/inventory/items/excel/create");
-    },
-  },
-  {
-    label: "Sell",
-    icon: "pi pi-dollar",
-    important: true,
-    action: () => {
-      openSellItemsModal();
-    },
-  },
-  {
-    label: "Edit",
-    icon: "pi pi-pencil",
-    important: true,
-    action: () => {
-      onEdit();
-    },
-    disable: (selectedItems: Item[]) => selectedItems.length === 0,
-  },
-  {
-    label: "Edit fields",
-    icon: "pi pi-pen-to-square",
-    action: () => {
-      showCustomFields.value = true;
-    },
-  },
-  {
-    label: "Delete selected",
-    icon: "pi pi-trash",
-    severity: "danger",
-    important: true,
-    action: () => {
-      onDeleteMultiple();
-    },
-    disable: (selectedItems: Item[]) => selectedItems.length == 0,
-  },
-  {
-    label: "Reassign location",
-    icon: "pi pi-arrow-up",
-    action: () => {
-      toggleAssignStorageVisible();
-    },
-    disable: (selectedItems: Item[]) => selectedItems.length == 0,
-  },
-  {
-    label: "Move Tab",
-    icon: "pi pi-arrow-right-arrow-left",
-    extraClasses: "!font-black",
-    action: () => {
-      openMoveItemsModal();
-    },
-    disable: (selectedItems: Item[]) => selectedItems.length == 0,
-  },
-  {
-    label: "Print Items Labels",
-    icon: "pi pi-print",
-    action: () => openLabels(),
-    disable: (selectedItems: Item[]) => selectedItems.length == 0,
-  },
-  {
-    label: "Add To Existing Invoice",
-    icon: "pi pi-credit-card",
-    action: () => {
-      showAddItemsToSale.value = true;
-    },
-    disable: (selectedItems: Item[]) => selectedItems.length == 0,
-  }
-];
-
-const onEdit = () => {
-  const currentPaginate = document.getElementById("currentPaginate")?.getAttribute("data-id") || "";
-  const filter = document.getElementsByClassName("filter--value")[0]?.value || "";
-
-  document.cookie = `paginate=${currentPaginate}`;
-  document.cookie = `pagefilter=${filter}`;
-
-  let items = selectedItems.value.map((item: any) => item.id).join(";");
-
-  router.get(route("items.edit", btoa(items)));
-};
-
-const onDeleteMultiple = () => {
-  confirm.require({
-    message: "Are you sure? You won't be able to revert this!",
-    header: "Delete Confirmation",
-    icon: "pi pi-exclamation-triangle",
-    accept: async () => {
-      try {
-        const response = await axios.delete(route("items.obliterate"), { data: selectedItems.value });
-        if (response.status >= 200 && response.status < 400) {
-          toast.add({ severity: "success", summary: "Deleted", detail: "Items deleted successfully", life: 3000 });
-          location.reload();
-        }
-      } catch (error: any) {
-        toast.add({
-          severity: "error",
-          summary: "Error",
-          detail: error.response?.data || error.message || "An error occurred",
-          life: 5000,
-        });
-      }
-    },
-  });
-};
 
 const updateTableHeaders = (updatedHeaders: CustomField[]) => {
   allHeaders.value = updatedHeaders;

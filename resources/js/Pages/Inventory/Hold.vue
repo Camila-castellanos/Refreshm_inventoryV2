@@ -28,6 +28,7 @@ import { onHoldHeaders as headers } from "./IndexData";
 import ItemsSell from "./Modals/ItemsSell.vue";
 import CustomFields from "./Modals/CustomFields.vue";
 import { router } from "@inertiajs/vue3";
+import { useInventoryActions } from "@/composables/useInventoryActions";
 
 const dialog = useDialog();
 const confirm = useConfirm()
@@ -43,6 +44,33 @@ const props = defineProps({
 let selectedItems: Ref<Item[]> = ref([]);
 const allHeaders: Ref<CustomField[]> = ref([]);
 const tabs = ref(props.tabs);
+
+const { getDefaultTableActions } = useInventoryActions(
+  selectedItems,
+  props.tabs ?? []
+);
+
+const onClickReturn = () => {
+  confirm.require({
+    message: "Are you sure you want to return these items?", 
+    header: "Confirmation",
+    icon: "pi pi-exclamation-triangle",
+    accept: async () => {
+      try {
+        await axios.put(route("items.unhold"), { data: selectedItems.value });
+        toast.add({ severity: "success", summary: "Success", detail: "Items returned!", life: 3000 });
+        location.reload();
+      } catch (error: any) {
+        toast.add({
+          severity: "error",
+          summary: "Error",
+          detail: error.response?.data || "An error occurred",
+          life: 5000,
+        });
+      }
+    },
+  });
+};
 
 const handleSelection = (selected: Item[]) => {
   selectedItems.value = selected;
@@ -127,45 +155,19 @@ function openSellItemsModal() {
   });
 }
 
-const onClickReturn = () => {
-  confirm.require({
-    message: "Are you sure you want to return these items?", 
-    header: "Confirmation",
-    icon: "pi pi-exclamation-triangle",
-    accept: async () => {
-      try {
-        await axios.put(route("items.unhold"), { data: selectedItems.value });
-        toast.add({ severity: "success", summary: "Success", detail: "Items returned!", life: 3000 });
-        location.reload();
-      } catch (error: any) {
-        toast.add({
-          severity: "error",
-          summary: "Error",
-          detail: error.response?.data || "An error occurred",
-          life: 5000,
-        });
-      }
+const tableActions = getDefaultTableActions({
+  hideExport: true,
+  hideDuplicate: true,
+  customActions: [
+    {
+      label: "Return Items",
+      icon: "pi pi-undo",
+      severity: "danger",
+      action: () => {onClickReturn();},
+      disable: (selectedItems: Item[]) => selectedItems.length == 0,
     },
-  });
-};
-
-const tableActions = [
-  {
-    label: "Sell",
-    icon: "pi pi-dollar",
-    action: () => {
-      openSellItemsModal();
-    },
-    disable: (selectedItems: Item[]) => selectedItems.length == 0,
-  },
-  {
-    label: "Return Items",
-    icon: "pi pi-undo",
-    severity: "danger",
-    action: () => {onClickReturn();},
-    disable: (selectedItems: Item[]) => selectedItems.length == 0,
-  },
-];
+  ],
+});
 
 const updateTableHeaders = (updatedHeaders: CustomField[]) => {
   allHeaders.value = updatedHeaders;
