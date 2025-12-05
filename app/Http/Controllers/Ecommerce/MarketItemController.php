@@ -94,10 +94,22 @@ class MarketItemController extends Controller
             // Use custom price from MarketItem, or fallback to selling_price
             $price = $marketItem ? $marketItem->getPrice() : $modelItem->selling_price;
             
+            // Check if item has issues
+            $hasIssues = !empty($modelItem->issues) && $modelItem->issues !== '{}';
+            
             // Determine visibility:
-            // If MarketItem exists, use its is_visible value
-            // Otherwise, use default based on condition (A, A-, B+, B = visible, others = hidden)
-            $isVisible = $marketItem ? $marketItem->is_visible : in_array($modelItem->grade, $visibleConditions);
+            // 1. If MarketItem exists, use its is_visible value (highest priority)
+            // 2. If item has issues and no MarketItem, default to false (priority over conditions)
+            // 3. Otherwise, use default based on condition (A, A-, B+, B = visible, others = hidden)
+            if ($marketItem) {
+                $isVisible = $marketItem->is_visible;
+            } elseif ($hasIssues) {
+                // If item has issues and not configured, hide by default
+                $isVisible = false;
+            } else {
+                // Use default visibility based on condition
+                $isVisible = in_array($modelItem->grade, $visibleConditions);
+            }
             
             return [
                 'id' => $modelItem->id,
@@ -113,6 +125,7 @@ class MarketItemController extends Controller
                 'market_price' => $price,
                 'has_custom_price' => $marketItem && $marketItem->custom_price !== null,
                 'is_visible' => $isVisible,
+                'issues' => $modelItem->issues,
                 'photo_count' => $modelItem->media->count(),
                 'main_photo_thumb' => $modelItem->getFirstMediaUrl('item-photos', 'thumb'),
                 'main_photo_url' => $modelItem->getFirstMediaUrl('item-photos'),

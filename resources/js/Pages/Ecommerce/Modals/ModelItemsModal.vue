@@ -49,6 +49,7 @@
                             <th class="px-4 py-3 text-left font-semibold text-gray-900">Type</th>
                             <th class="px-4 py-3 text-left font-semibold text-gray-900">Color</th>
                             <th class="px-4 py-3 text-left font-semibold text-gray-900">Condition</th>
+                            <th class="px-4 py-3 text-left font-semibold text-gray-900">Issues</th>
                             <th class="px-4 py-3 text-right font-semibold text-gray-900">Market Price</th>
                             <th class="px-4 py-3 text-left font-semibold text-gray-900">Status</th>
                             <th class="px-4 py-3 text-center font-semibold text-gray-900">Visible</th>
@@ -75,6 +76,15 @@
                                 <span v-else class="text-gray-500 text-xs">N/A</span>
                             </td>
                             <td class="px-4 py-3 text-gray-700">{{ item.condition || 'N/A' }}</td>
+                            <td class="px-4 py-3">
+                                <div v-if="item.issues && item.issues !== '{}' && item.issues !== ''" class="bg-red-50 border border-red-200 rounded px-2 py-1">
+                                    <p class="text-xs text-red-700 font-medium">⚠️ Issues:</p>
+                                    <p class="text-xs text-red-600 mt-1">{{ parseIssues(item.issues) }}</p>
+                                </div>
+                                <div v-else class="text-xs text-green-600 font-medium">
+                                    ✓ Sin issues
+                                </div>
+                            </td>
                             <td class="px-4 py-3 text-right font-semibold text-gray-900">
                                 <div class="flex items-center justify-end gap-2">
                                     <span class="text-xs text-gray-400" v-if="item.has_custom_price" title="Custom market price"><i class="pi pi-star text-yellow-400"></i></span>
@@ -266,6 +276,32 @@ const getStatusLabel = (status) => {
         damaged: 'Damaged',
     }
     return labels[status] || status
+}
+
+const parseIssues = (issues) => {
+    if (!issues || issues === '{}' || issues === '') {
+        return 'Sin issues'
+    }
+    
+    try {
+        // Si es un string JSON, intentar parsearlo
+        if (typeof issues === 'string') {
+            const parsed = JSON.parse(issues)
+            if (typeof parsed === 'object' && Object.keys(parsed).length === 0) {
+                return 'Sin issues'
+            }
+            // Si es un objeto, mostrar sus valores
+            return Object.values(parsed).join(', ')
+        }
+        // Si ya es un objeto
+        if (typeof issues === 'object' && Object.keys(issues).length === 0) {
+            return 'Sin issues'
+        }
+        return Object.values(issues).join(', ')
+    } catch (e) {
+        // Si falla el parseo, mostrar el string tal cual
+        return issues
+    }
 }
 
 const handleClose = () => {

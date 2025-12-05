@@ -123,33 +123,60 @@ class MarketController extends Controller
                 $query->where('manufacturer', $brand);
             }
 
-            // Apply sorting
-            switch ($sort) {
-                case 'price_low':
-                    $query->orderBy('selling_price', 'asc');
-                    break;
-                case 'price_high':
-                    $query->orderBy('selling_price', 'desc');
-                    break;
-                case 'name':
-                    $query->orderBy('model', 'asc');
-                    break;
-                case 'latest':
-                default:
-                    $query->latest();
-                    break;
-            }
+            // Get items first
+            $items = $query->get();
 
-            // Get paginated results
-            $items = $query->paginate($perPage, ['*'], 'page', $page);
+            // Load market items for visibility filtering
+            $marketItems = $market->marketItems()->whereIn('item_id', $items->pluck('id'))->get();
+            $marketItemsMap = $marketItems->keyBy('item_id');
+
+            // Filter items: exclude those with issues unless is_visible = true
+            $filteredItems = $items->filter(function ($item) use ($marketItemsMap) {
+                $marketItem = $marketItemsMap[$item->id] ?? null;
+                $hasIssues = !empty($item->issues) && $item->issues !== '{}';
+
+                // If item has issues, only include if is_visible is explicitly true
+                if ($hasIssues) {
+                    return $marketItem && $marketItem->is_visible === true;
+                }
+
+                // If no issues, include it
+                return true;
+            });
+
+            // Apply sorting to filtered results
+            $sorted = match($sort) {
+                'price_low' => $filteredItems->sortBy('selling_price'),
+                'price_high' => $filteredItems->sortByDesc('selling_price'),
+                'name' => $filteredItems->sortBy('model'),
+                default => $filteredItems->reverse(), // latest first
+            };
+
+            // Paginate manually
+            $perPage = 12;
+            $page = $request->get('page', 1);
+            $total = $sorted->count();
+            $paginatedItems = $sorted->slice(($page - 1) * $perPage, $perPage)->values();
+
+            // Create Laravel paginator
+            $paginator = new \Illuminate\Pagination\LengthAwarePaginator(
+                $paginatedItems,
+                $total,
+                $perPage,
+                $page,
+                [
+                    'path' => $request->url(),
+                    'query' => $request->query(),
+                ]
+            );
 
             return response()->json([
-                'data' => $items->items(),
-                'current_page' => $items->currentPage(),
-                'last_page' => $items->lastPage(),
-                'per_page' => $items->perPage(),
-                'total' => $items->total(),
-                'has_more_pages' => $items->hasMorePages(),
+                'data' => $paginator->items(),
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+                'has_more_pages' => $paginator->hasMorePages(),
                 'grouped_by_model' => false
             ]);
 
@@ -309,8 +336,29 @@ class MarketController extends Controller
                         break;
                 }
 
+                // Get items first
+                $items = $query->take($perPage * 2)->get(); // Get more to account for filtering
+
+                // Load market items for visibility filtering
+                $marketItems = $market->marketItems()->whereIn('item_id', $items->pluck('id'))->get();
+                $marketItemsMap = $marketItems->keyBy('item_id');
+
+                // Filter items: exclude those with issues unless is_visible = true
+                $filteredItems = $items->filter(function ($item) use ($marketItemsMap) {
+                    $marketItem = $marketItemsMap[$item->id] ?? null;
+                    $hasIssues = !empty($item->issues) && $item->issues !== '{}';
+
+                    // If item has issues, only include if is_visible is explicitly true
+                    if ($hasIssues) {
+                        return $marketItem && $marketItem->is_visible === true;
+                    }
+
+                    // If no issues, include it
+                    return true;
+                });
+
                 // Get initial items for infinite scroll (first page only)
-                $initialItems = $query->take($perPage)->get();
+                $initialItems = $filteredItems->take($perPage)->values();
             }
 
             return Inertia::render('Ecommerce/PublicMarket/ProductsList', [
