@@ -20,7 +20,7 @@
 
         <div v-if="items.length > 0" class="space-y-4">
             <!-- Filters -->
-            <div class="flex gap-2 flex-wrap">
+            <div class="flex gap-2 flex-wrap items-center">
                 <div class="flex-1 min-w-64">
                     <input
                         v-model="searchQuery"
@@ -29,15 +29,26 @@
                         class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                 </div>
-                <select
-                    v-model="filterStatus"
-                    class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                    <option value="">All statuses</option>
-                    <option value="available">Available</option>
-                    <option value="sold">Sold</option>
-                    <option value="hold">On Hold</option>
-                </select>
+                <div class="flex gap-2">
+                    <button
+                        @click="setAllVisibility(true)"
+                        :disabled="togglingAllVisibility"
+                        class="px-3 py-2 bg-green-100 text-green-700 rounded-lg text-sm font-medium hover:bg-green-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                        title="Show all items"
+                    >
+                        <i :class="['pi', togglingAllVisibility ? 'pi-spin pi-spinner' : 'pi-eye']"></i>
+                        Show All
+                    </button>
+                    <button
+                        @click="setAllVisibility(false)"
+                        :disabled="togglingAllVisibility"
+                        class="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                        title="Hide all items"
+                    >
+                        <i :class="['pi', togglingAllVisibility ? 'pi-spin pi-spinner' : 'pi-eye-slash']"></i>
+                        Hide All
+                    </button>
+                </div>
             </div>
 
             <!-- Items Table -->
@@ -165,22 +176,18 @@
             </div>
 
             <!-- Summary -->
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 bg-gray-50 p-4 rounded-lg">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 bg-gray-50 p-4 rounded-lg">
                 <div>
                     <p class="text-xs text-gray-600 uppercase font-semibold">Total Items</p>
                     <p class="text-2xl font-bold text-gray-900">{{ totalItems }}</p>
                 </div>
                 <div>
-                    <p class="text-xs text-gray-600 uppercase font-semibold">Available</p>
-                    <p class="text-2xl font-bold text-green-600">{{ availableItems }}</p>
+                    <p class="text-xs text-gray-600 uppercase font-semibold">Visible</p>
+                    <p class="text-2xl font-bold text-green-600">{{ visibleItems }}</p>
                 </div>
                 <div>
-                    <p class="text-xs text-gray-600 uppercase font-semibold">Sold</p>
-                    <p class="text-2xl font-bold text-blue-600">{{ soldItems }}</p>
-                </div>
-                <div>
-                    <p class="text-xs text-gray-600 uppercase font-semibold">On Hold</p>
-                    <p class="text-2xl font-bold text-yellow-600">{{ onHoldItems }}</p>
+                    <p class="text-xs text-gray-600 uppercase font-semibold">Hidden</p>
+                    <p class="text-2xl font-bold text-gray-500">{{ hiddenItems }}</p>
                 </div>
             </div>
         </div>
@@ -238,11 +245,11 @@ const emit = defineEmits(['update:visible', 'view-item', 'edit-item'])
 
 const isVisible = ref(props.visible)
 const searchQuery = ref('')
-const filterStatus = ref('')
 const toast = useToast()
 const savingPrices = ref({})  // Track which items are saving
 const savingDescriptions = ref({})  // Track which items are saving descriptions
 const togglingVisibility = ref({})  // Track which items are toggling visibility
+const togglingAllVisibility = ref(false)  // Track bulk visibility toggle
 
 watch(() => props.visible, (newVal) => {
     isVisible.value = newVal
@@ -256,31 +263,22 @@ watch(isVisible, (newVal) => {
 
 const filteredItems = computed(() => {
     return props.items.filter(item => {
-        const matchSearch =
-            !searchQuery.value ||
+        return !searchQuery.value ||
             (item.imei && item.imei.toLowerCase().includes(searchQuery.value.toLowerCase())) ||
             (item.type && item.type.toLowerCase().includes(searchQuery.value.toLowerCase())) ||
             (item.colour && item.colour.toLowerCase().includes(searchQuery.value.toLowerCase())) ||
             (item.market_price && item.market_price.toString().includes(searchQuery.value))
-
-        const matchStatus = !filterStatus.value || item.status === filterStatus.value
-
-        return matchSearch && matchStatus
     })
 })
 
 const totalItems = computed(() => props.items.length)
 
-const availableItems = computed(() => {
-    return props.items.filter(item => item.status === 'available').length
+const visibleItems = computed(() => {
+    return props.items.filter(item => item.is_visible).length
 })
 
-const soldItems = computed(() => {
-    return props.items.filter(item => item.status === 'sold').length
-})
-
-const onHoldItems = computed(() => {
-    return props.items.filter(item => item.status === 'hold').length
+const hiddenItems = computed(() => {
+    return props.items.filter(item => !item.is_visible).length
 })
 
 const getStatusLabel = (status) => {
@@ -446,6 +444,56 @@ const toggleItemVisibility = async (item) => {
         console.error('Visibility update error:', error)
     } finally {
         togglingVisibility.value[item.id] = false
+    }
+}
+
+const setAllVisibility = async (visible) => {
+    if (!props.market || !props.market.id || props.items.length === 0) {
+        toast.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: 'Missing required data for bulk visibility update',
+            life: 3000
+        })
+        return
+    }
+    
+    togglingAllVisibility.value = true
+    
+    try {
+        const itemIds = props.items.map(item => item.id)
+        
+        const response = await axios.post(
+            route('ecommerce.items.set-bulk-visibility', {
+                market: props.market.id
+            }),
+            { 
+                item_ids: itemIds,
+                is_visible: visible 
+            }
+        )
+        
+        // Update all items visibility in the local state
+        props.items.forEach(item => {
+            item.is_visible = visible
+        })
+        
+        toast.add({
+            severity: 'success',
+            summary: 'Visibility Updated',
+            detail: response.data.message,
+            life: 3000
+        })
+    } catch (error) {
+        toast.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: error.response?.data?.message || 'Failed to update visibility',
+            life: 3000
+        })
+        console.error('Bulk visibility update error:', error)
+    } finally {
+        togglingAllVisibility.value = false
     }
 }
 </script>
