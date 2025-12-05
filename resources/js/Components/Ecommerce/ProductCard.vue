@@ -63,9 +63,7 @@
                          class="font-bold text-gray-800"
                          :class="compact ? 'text-lg' : 'text-2xl'"
                     >
-                        {{ getCurrencySymbol(market.currency) }}{{ formatPrice(item.min_price) }} 
-                        <span class="text-gray-500">—</span>
-                        {{ getCurrencySymbol(market.currency) }}{{ formatPrice(item.max_price) }}
+                        Starting from {{ getCurrencySymbol(market.currency) }}{{ formatPrice(item.min_price) }}
                     </div>
                     
                     <!-- Show single price for individual items -->
