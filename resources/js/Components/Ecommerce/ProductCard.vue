@@ -63,9 +63,9 @@
                          class="font-bold text-gray-800"
                          :class="compact ? 'text-lg' : 'text-2xl'"
                     >
-                        {{ market.currency }}{{ formatPrice(item.min_price) }} 
+                        {{ getCurrencySymbol(market.currency) }}{{ formatPrice(item.min_price) }} 
                         <span class="text-gray-500">—</span>
-                        {{ market.currency }}{{ formatPrice(item.max_price) }}
+                        {{ getCurrencySymbol(market.currency) }}{{ formatPrice(item.max_price) }}
                     </div>
                     
                     <!-- Show single price for individual items -->
@@ -73,7 +73,7 @@
                          class="font-bold text-gray-800"
                          :class="compact ? 'text-lg' : 'text-2xl'"
                     >
-                        {{ market.currency }}{{ formatPrice(item.selling_price) }}
+                        {{ getCurrencySymbol(market.currency) }}{{ formatPrice(item.selling_price) }}
                     </div>
 
                     <!-- Show color and grade options for grouped models -->
@@ -153,6 +153,7 @@
 <script setup>
 import { ref, computed, watchEffect, onMounted } from 'vue'
 import { useCart } from '@/composables/useCart'
+import { getCurrencySymbol } from '@/utils/currency'
 
 // Props
 const props = defineProps({
