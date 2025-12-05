@@ -328,10 +328,22 @@ class Market extends Model
         // Default visible grades (when no MarketItem record exists)
         $defaultVisibleGrades = ['A', 'A-', 'B+', 'B'];
 
-        // Filter items by visibility (same logic as getModelVariants)
+        // Filter items: exclude those with issues unless is_visible = true
         $visibleItems = $items->filter(function ($item) use ($marketItemsMap, $defaultVisibleGrades) {
             $marketItem = $marketItemsMap[$item->id] ?? null;
-            
+            $hasIssues = !empty($item->issues) && $item->issues !== '{}';
+
+            // If item has issues
+            if ($hasIssues) {
+                // Only include if is_visible is explicitly true
+                if ($marketItem) {
+                    return $marketItem->is_visible === true;
+                }
+                // If no MarketItem entry and has issues, exclude it
+                return false;
+            }
+
+            // If no issues, apply normal visibility logic
             if ($marketItem) {
                 // If MarketItem exists, use its is_visible flag
                 return $marketItem->is_visible;
@@ -446,12 +458,24 @@ class Market extends Model
         // Conditions that should be visible by default (if not configured)
         $visibleConditions = ['A', 'A-', 'B+', 'B'];
 
-        // Filter items to only include those that are visible
+        // Filter items: exclude those with issues unless is_visible = true
         $items = $items->filter(function ($item) use ($marketItemsMap, $visibleConditions) {
             $marketItem = $marketItemsMap[$item->id] ?? null;
-            
-            // If MarketItem exists, use its is_visible value
+            $hasIssues = !empty($item->issues) && $item->issues !== '{}';
+
+            // If item has issues
+            if ($hasIssues) {
+                // Only include if is_visible is explicitly true
+                if ($marketItem) {
+                    return $marketItem->is_visible === true;
+                }
+                // If no MarketItem entry and has issues, exclude it
+                return false;
+            }
+
+            // If no issues, apply normal visibility logic
             if ($marketItem) {
+                // If MarketItem exists, use its is_visible flag
                 return $marketItem->is_visible;
             }
             
