@@ -88,16 +88,15 @@
                         </div>
 
                         <!-- Price Summary / Placeholder -->
-                        <div v-if="filteredVariants.length > 0" class="mb-8 p-6 bg-blue-50 border-2 border-blue-200 rounded-lg">
-                            <p class="text-sm text-gray-600 mb-2">Price Range</p>
-                            <p class="text-3xl font-bold text-blue-600">
-                                {{ getCurrencySymbol(market.currency) }}{{ formatPrice(Math.min(...filteredVariants.map(v => v.selling_price))) }} - {{ getCurrencySymbol(market.currency) }}{{ formatPrice(Math.max(...filteredVariants.map(v => v.selling_price))) }}
+                        <div v-if="filteredVariants.length > 0" class="mb-8 pb-6 border-b border-gray-200">
+                            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Price Range</p>
+                            <p class="text-2xl font-light text-gray-900">
+                                Starting from {{ getCurrencySymbol(market.currency) }}{{ formatPrice(Math.min(...filteredVariants.map(v => v.selling_price))) }}
                             </p>
-                            <p class="text-sm text-gray-600 mt-3">{{ filteredVariants.length }} item(s) available</p>
+                            <p class="text-xs text-gray-500 mt-3">{{ filteredVariants.length }} item(s)</p>
                         </div>
-                        <div v-else class="mb-8 p-6 bg-amber-50 border-2 border-amber-200 rounded-lg text-center">
-                            <p class="text-base font-semibold text-amber-700">Select your specifications first</p>
-                            <p class="text-sm text-amber-600 mt-2">Choose storage, color, grade, and battery to see available items</p>
+                        <div v-else class="mb-8 pb-6 border-b border-gray-200 text-center">
+                            <p class="text-sm text-gray-500">Select specifications to view prices</p>
                         </div>
 
                         <!-- Reset Filters -->
