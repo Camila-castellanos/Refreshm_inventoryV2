@@ -4,6 +4,7 @@ namespace App\Models\Ecommerce;
 
 use App\Models\Shop;
 use App\Models\Item;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -529,6 +530,7 @@ class Market extends Model
                                         'id' => $item->id,
                                         'issues' => $item->issues,
                                         'selling_price' => $price,
+                                        'description' => $marketItem ? $marketItem->description : null,
                                         'count' => 1,
                                         // Use model's shared photo for all items
                                         'photo_count' => count($modelPhotos),
@@ -536,7 +538,7 @@ class Market extends Model
                                         'main_photo_url' => $modelPhotoUrl,
                                         'photos' => $modelPhotos,
                                     ];
-                                })->unique('issues'),
+                                })->unique('id')->values(),
                             ];
                         })->values(),
                     ];

@@ -173,6 +173,11 @@
                                             </div>
                                         </div>
 
+                                        <!-- Description -->
+                                        <div v-if="item.description" class="mb-6">
+                                            <p class="text-sm text-gray-600 italic">{{ item.description }}</p>
+                                        </div>
+
                                         <!-- Price -->
                                         <div class="mb-8 pt-4 border-t-2 border-gray-200">
                                             <p class="text-sm text-gray-600 mb-2">Price</p>
@@ -286,6 +291,7 @@ const allItems = computed(() => {
                             gradeRaw: gradeGroup.grade, // Keep original for reference
                             battery: Number(battery), // Ensure battery is always a number
                             issues: issueItem.issues,
+                            description: issueItem.description || null,
                             selling_price: issueItem.selling_price || 0,
                             // Media data from backend
                             photo_count: issueItem.photo_count || 0,
@@ -293,17 +299,12 @@ const allItems = computed(() => {
                             main_photo_url: issueItem.main_photo_url || null,
                             photos: issueItem.photos || []
                         }
-                        // Debug: log items con imágenes
-                        if (item.main_photo_thumb) {
-                            console.log('Item con imagen:', item.id, item.main_photo_thumb)
-                        }
                         items.push(item)
                     })
                 })
             })
         })
     })
-    console.log('Total items:', items.length, 'Con imágenes:', items.filter(i => i.main_photo_thumb).length)
     return items
 })
 
