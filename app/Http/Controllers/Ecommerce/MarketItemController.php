@@ -125,6 +125,7 @@ class MarketItemController extends Controller
                 'market_price' => $price,
                 'has_custom_price' => $marketItem && $marketItem->custom_price !== null,
                 'is_visible' => $isVisible,
+                'description' => $marketItem ? $marketItem->description : null,
                 'issues' => $modelItem->issues,
                 'photo_count' => $modelItem->media->count(),
                 'main_photo_thumb' => $modelItem->getFirstMediaUrl('item-photos', 'thumb'),
@@ -169,6 +170,43 @@ class MarketItemController extends Controller
             'success' => true,
             'message' => 'Price updated successfully',
             'price' => $request->price,
+        ]);
+    }
+
+    /**
+     * Update the description for an item in a market
+     */
+    public function updateDescription(Request $request, Market $market, Item $item)
+    {
+        // Ensure the market belongs to the current user's company
+        if ($market->shop->company_id !== Auth::user()->company_id) {
+            abort(403, 'Unauthorized access to this market.');
+        }
+
+        // Ensure the item belongs to the market's shop
+        if ($item->shop_id !== $market->shop_id) {
+            abort(404, 'Item not found in this market.');
+        }
+
+        $request->validate([
+            'description' => 'nullable|string|max:1000',
+        ]);
+
+        // Update or create description for this market item
+        $marketItem = MarketItem::updateOrCreate(
+            [
+                'market_id' => $market->id,
+                'item_id' => $item->id,
+            ],
+            [
+                'description' => $request->description,
+            ]
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Description updated successfully',
+            'description' => $marketItem->description,
         ]);
     }
 

@@ -24,6 +24,7 @@ class MarketItem extends Model
         'item_id',
         'custom_price',
         'is_visible',
+        'description',
     ];
 
     /**

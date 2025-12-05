@@ -51,6 +51,7 @@
                             <th class="px-4 py-3 text-left font-semibold text-gray-900">Condition</th>
                             <th class="px-4 py-3 text-left font-semibold text-gray-900">Issues</th>
                             <th class="px-4 py-3 text-right font-semibold text-gray-900">Market Price</th>
+                            <th class="px-4 py-3 text-left font-semibold text-gray-900">Description</th>
                             <th class="px-4 py-3 text-left font-semibold text-gray-900">Status</th>
                             <th class="px-4 py-3 text-center font-semibold text-gray-900">Visible</th>
                             <th class="px-4 py-3 text-center font-semibold text-gray-900">Photos</th>
@@ -101,6 +102,19 @@
                                         <i class="pi pi-spin pi-spinner"></i>
                                     </span>
                                 </div>
+                            </td>
+                            <td class="px-4 py-3">
+                                <textarea
+                                    v-model="item.description"
+                                    @blur="updateDescription(item)"
+                                    :disabled="savingDescriptions[item.id]"
+                                    class="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 resize-none"
+                                    placeholder="Add description..."
+                                    rows="2"
+                                ></textarea>
+                                <span v-if="savingDescriptions[item.id]" class="text-xs text-gray-500">
+                                    <i class="pi pi-spin pi-spinner"></i> Saving...
+                                </span>
                             </td>
                             <td class="px-4 py-3">
                                 <span
@@ -227,6 +241,7 @@ const searchQuery = ref('')
 const filterStatus = ref('')
 const toast = useToast()
 const savingPrices = ref({})  // Track which items are saving
+const savingDescriptions = ref({})  // Track which items are saving descriptions
 const togglingVisibility = ref({})  // Track which items are toggling visibility
 
 watch(() => props.visible, (newVal) => {
@@ -348,6 +363,47 @@ const updatePrice = async (item) => {
         console.error('Price update error:', error)
     } finally {
         savingPrices.value[item.id] = false
+    }
+}
+
+const updateDescription = async (item) => {
+    if (!item || !item.id || !props.market || !props.market.id) {
+        toast.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: 'Missing required data for description update',
+            life: 3000
+        })
+        return
+    }
+    
+    savingDescriptions.value[item.id] = true
+    
+    try {
+        await axios.post(
+            route('ecommerce.items.update-description', {
+                market: props.market.id,
+                item: item.id
+            }),
+            { description: item.description }
+        )
+        
+        toast.add({
+            severity: 'success',
+            summary: 'Description Updated',
+            detail: `Description updated successfully`,
+            life: 3000
+        })
+    } catch (error) {
+        toast.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: error.response?.data?.message || 'Failed to update description',
+            life: 3000
+        })
+        console.error('Description update error:', error)
+    } finally {
+        savingDescriptions.value[item.id] = false
     }
 }
 
