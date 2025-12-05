@@ -235,6 +235,48 @@ class MarketItemController extends Controller
     }
 
     /**
+     * Set visibility for multiple items in a market
+     */
+    public function setBulkVisibility(Request $request, Market $market)
+    {
+        // Ensure the market belongs to the current user's company
+        if ($market->shop->company_id !== Auth::user()->company_id) {
+            abort(403, 'Unauthorized access to this market.');
+        }
+
+        $request->validate([
+            'item_ids' => 'required|array',
+            'item_ids.*' => 'exists:items,id',
+            'is_visible' => 'required|boolean',
+        ]);
+
+        $itemIds = $request->item_ids;
+        $isVisible = $request->is_visible;
+
+        // Update or create MarketItem entries for each item
+        foreach ($itemIds as $itemId) {
+            MarketItem::updateOrCreate(
+                [
+                    'market_id' => $market->id,
+                    'item_id' => $itemId,
+                ],
+                [
+                    'is_visible' => $isVisible,
+                ]
+            );
+        }
+
+        $action = $isVisible ? 'shown' : 'hidden';
+        $count = count($itemIds);
+
+        return response()->json([
+            'success' => true,
+            'message' => "{$count} item(s) are now {$action}",
+            'is_visible' => $isVisible,
+        ]);
+    }
+
+    /**
      * Show the photo management page for an item
      */
     public function edit(Market $market, Item $item)
