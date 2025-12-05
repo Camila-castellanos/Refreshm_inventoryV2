@@ -214,7 +214,7 @@
                                             <div class="flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
                                                 <span class="text-sm text-gray-600">Price:</span>
                                                 <span class="text-2xl font-bold text-gray-900">
-                                                    {{ market.currency }}{{ formatPrice(item.price) }}
+                                                    {{ getCurrencySymbol(market.currency) }}{{ formatPrice(item.price) }}
                                                 </span>
                                             </div>
                                         </div>
@@ -244,7 +244,7 @@
                             <div class="space-y-4 mb-6">
                                 <div class="flex items-center justify-between text-gray-600">
                                     <span>Subtotal ({{ itemCount }} items)</span>
-                                    <span class="font-medium">{{ market.currency }}{{ formatPrice(subtotal) }}</span>
+                                    <span class="font-medium">{{ getCurrencySymbol(market.currency) }}{{ formatPrice(subtotal) }}</span>
                                 </div>
                                 <div class="flex items-center justify-between text-gray-600">
                                     <span>Shipping</span>
@@ -259,7 +259,7 @@
                                     <div class="flex items-center justify-between">
                                         <span class="text-lg font-semibold text-gray-900">Total</span>
                                         <span class="text-2xl font-bold text-gray-900">
-                                            {{ market.currency }}{{ formatPrice(total) }}
+                                            {{ getCurrencySymbol(market.currency) }}{{ formatPrice(total) }}
                                         </span>
                                     </div>
                                 </div>
@@ -365,6 +365,7 @@ import { Head, router } from '@inertiajs/vue3'
 import Dialog from 'primevue/dialog'
 import MarketLayout from '@/Layouts/Ecommerce/MarketLayout.vue'
 import { useCart } from '@/composables/useCart'
+import { getCurrencySymbol } from '@/utils/currency'
 
 defineOptions({ layout: MarketLayout })
 

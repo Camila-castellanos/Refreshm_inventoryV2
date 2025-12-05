@@ -207,6 +207,7 @@ import { Head, router, Link } from '@inertiajs/vue3'
 import Carousel from 'primevue/carousel'
 import MarketLayout from '@/Layouts/Ecommerce/MarketLayout.vue'
 import ProductCard from '@/Components/Ecommerce/ProductCard.vue'
+import { getCurrencySymbol } from '@/utils/currency'
 
 defineOptions({layout: MarketLayout})
 // Props
@@ -301,7 +302,7 @@ const heroSlides = ref([
     },
     {
         title: 'Best Deals Available',
-        subtitle: `Save up to 70% on premium devices. Starting from ${props.market.currency} ${props.stats.price_range?.min || '0'}`,
+        subtitle: `Save up to 70% on premium devices. Starting from ${getCurrencySymbol(props.market.currency)} ${props.stats.price_range?.min || '0'}`,
         background: 'linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)',
         showStats: false,
         primaryAction: {

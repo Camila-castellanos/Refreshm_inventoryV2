@@ -137,11 +137,11 @@
                         <div class="text-sm text-gray-600 mt-2">Categories</div>
                     </div>
                     <div class="bg-slate-100 rounded-lg border border-gray-200 p-6 text-center">
-                        <div class="text-3xl font-bold text-gray-800">{{ market.currency }}{{ formatPrice(stats.price_range.min) }}</div>
+                        <div class="text-3xl font-bold text-gray-800">{{ getCurrencySymbol(market.currency) }}{{ formatPrice(stats.price_range.min) }}</div>
                         <div class="text-sm text-gray-600 mt-2">Starting Price</div>
                     </div>
                     <div class="bg-slate-100 rounded-lg border border-gray-200 p-6 text-center">
-                        <div class="text-3xl font-bold text-gray-800">{{ market.currency }}{{ formatPrice(stats.price_range.max) }}</div>
+                        <div class="text-3xl font-bold text-gray-800">{{ getCurrencySymbol(market.currency) }}{{ formatPrice(stats.price_range.max) }}</div>
                         <div class="text-sm text-gray-600 mt-2">Top Price</div>
                     </div>
                 </div>
@@ -221,6 +221,7 @@ import axios from 'axios'
 import Dropdown from 'primevue/dropdown'
 import MarketLayout from '@/Layouts/Ecommerce/MarketLayout.vue'
 import ProductCard from '@/Components/Ecommerce/ProductCard.vue'
+import { getCurrencySymbol } from '@/utils/currency'
 
 defineOptions({ layout: MarketLayout })
 // Props

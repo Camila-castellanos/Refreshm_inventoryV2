@@ -91,7 +91,7 @@
                         <div v-if="filteredVariants.length > 0" class="mb-8 p-6 bg-blue-50 border-2 border-blue-200 rounded-lg">
                             <p class="text-sm text-gray-600 mb-2">Price Range</p>
                             <p class="text-3xl font-bold text-blue-600">
-                                {{ market.currency }}{{ formatPrice(Math.min(...filteredVariants.map(v => v.selling_price))) }} - {{ market.currency }}{{ formatPrice(Math.max(...filteredVariants.map(v => v.selling_price))) }}
+                                {{ getCurrencySymbol(market.currency) }}{{ formatPrice(Math.min(...filteredVariants.map(v => v.selling_price))) }} - {{ getCurrencySymbol(market.currency) }}{{ formatPrice(Math.max(...filteredVariants.map(v => v.selling_price))) }}
                             </p>
                             <p class="text-sm text-gray-600 mt-3">{{ filteredVariants.length }} item(s) available</p>
                         </div>
@@ -178,7 +178,7 @@
                                         <div class="mb-8 pt-4 border-t-2 border-gray-200">
                                             <p class="text-sm text-gray-600 mb-2">Price</p>
                                             <p class="text-4xl font-bold text-gray-900">
-                                                {{ market.currency }}{{ formatPrice(item.selling_price) }}
+                                                {{ getCurrencySymbol(market.currency) }}{{ formatPrice(item.selling_price) }}
                                             </p>
                                         </div>
                                     </div>
@@ -223,6 +223,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useCart } from '@/composables/useCart'
+import { getCurrencySymbol } from '@/utils/currency'
 
 // Props
 const props = defineProps({

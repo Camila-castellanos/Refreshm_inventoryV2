@@ -52,7 +52,7 @@
                             
                             <div class="flex items-center space-x-4 mb-6">
                                 <div class="text-4xl font-bold text-gray-800">
-                                    {{ market.currency }} {{ formatPrice(item.selling_price) }}
+                                    {{ getCurrencySymbol(market.currency) }} {{ formatPrice(item.selling_price) }}
                                 </div>
                                 <div v-if="market.show_inventory_count" class="inline-flex items-center space-x-1 px-3 py-1 bg-green-100 text-green-800 rounded-md border border-green-200">
                                     <i class="pi pi-check text-sm"></i>
@@ -171,7 +171,7 @@
                             
                             <div class="flex items-center justify-between">
                                 <div class="text-lg font-bold text-gray-800">
-                                    {{ market.currency }} {{ formatPrice(relatedItem.selling_price) }}
+                                    {{ getCurrencySymbol(market.currency) }} {{ formatPrice(relatedItem.selling_price) }}
                                 </div>
                                 <div v-if="relatedItem.type" class="text-xs text-gray-600 bg-slate-100 px-2 py-1 rounded border border-gray-200">
                                     {{ formatCategoryName(relatedItem.type) }}
@@ -189,6 +189,7 @@ import { ref, onMounted, inject, onUnmounted } from 'vue'
 import { Head, router } from '@inertiajs/vue3'
 import MarketLayout from '@/Layouts/Ecommerce/MarketLayout.vue'
 import { useCart } from '@/composables/useCart'
+import { getCurrencySymbol } from '@/utils/currency'
 
 defineOptions({
     layout: MarketLayout
