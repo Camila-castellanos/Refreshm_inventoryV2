@@ -25,7 +25,11 @@ const customerName = ref("");
 
 onMounted(() => {
   items.value = dialogRef.value.data.items;
-  tabs.value = [{ name: "On Hold", id: "On Hold" }, ...dialogRef.value.data.tabs];
+  tabs.value = [
+    { name: "Active Inventory", id: "Active Inventory" },
+    { name: "On Hold", id: "On Hold" }, 
+    ...dialogRef.value.data.tabs
+  ];
 });
 
 const selectedTab = ref(null);
@@ -33,7 +37,13 @@ const selectedTab = ref(null);
 const moveItems = async () => {
   if (!selectedTab.value) return;
   try {
-    if (selectedTab.value === "On Hold") {
+    if (selectedTab.value === "Active Inventory") {
+      // Move to active inventory (clear hold and tab assignment)
+      await axios.put(route("items.unhold"), {
+        data: items.value,
+      });
+      toast.add({ severity: "success", summary: "Success", detail: "Items moved to Active Inventory!", life: 3000 });
+    } else if (selectedTab.value === "On Hold") {
       await axios.put(route("items.hold"), {
         data: items.value,
         customer: customerName.value, 

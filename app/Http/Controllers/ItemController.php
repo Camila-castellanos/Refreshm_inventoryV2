@@ -1037,15 +1037,23 @@ public function getLabelsNewItems(Request $request): \Illuminate\Http\Response
     {
         try {
             $tab = $request->tab;
-            $item = $request->item;
-            $tabitem = TabItem::where('item_id', $item)->first();
+            $itemId = $request->item;
+            
+            // Clear the hold status when moving an item to a tab
+            $item = Item::find($itemId);
+            if ($item && $item->hold !== null) {
+                $item->hold = null;
+                $item->save();
+            }
+            
+            $tabitem = TabItem::where('item_id', $itemId)->first();
             if ($tabitem) {
-                $tabitem->item_id = $item;
+                $tabitem->item_id = $itemId;
                 $tabitem->tab_id = $tab;
                 $tabitem->save(['item_id', 'tab_id']);
             } else {
                 $tabitem = new TabItem;
-                $tabitem->item_id = $item;
+                $tabitem->item_id = $itemId;
                 $tabitem->tab_id = $tab;
                 $tabitem->save();
             }
