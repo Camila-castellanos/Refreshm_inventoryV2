@@ -215,15 +215,32 @@ class Market extends Model
 
     /**
      * Toggle visibility for an item in this market
+     * Correctly handles items that don't have a MarketItem record yet
+     * Takes into account if the item has issues (affects default visibility)
      */
     public function toggleItemVisibility(int $itemId): bool
     {
-        $marketItem = $this->marketItems()->firstOrCreate(
-            ['item_id' => $itemId],
-            ['is_visible' => false]
-        );
-
-        return $marketItem->toggleVisibility();
+        // Check if MarketItem exists
+        $marketItem = $this->marketItems()->where('item_id', $itemId)->first();
+        
+        if ($marketItem) {
+            // If exists, toggle the existing value
+            return $marketItem->toggleVisibility();
+        } else {
+            // If doesn't exist, determine default visibility based on item's issues
+            $item = Item::find($itemId);
+            $hasIssues = $item && !empty($item->issues) && $item->issues !== '{}';
+            
+            // If item has no issues, it's visible by default, so toggle to hidden (false)
+            // If item has issues, it's hidden by default, so toggle to visible (true)
+            $newVisibility = $hasIssues ? true : false;
+            
+            $newMarketItem = $this->marketItems()->create([
+                'item_id' => $itemId,
+                'is_visible' => $newVisibility
+            ]);
+            return $newMarketItem->is_visible;
+        }
     }
 
     /**
@@ -290,8 +307,9 @@ class Market extends Model
      * Groups by parsed model (without storage) + manufacturer + type
      * Returns ONE item per model with aggregated data
      * Supports filtering by category, brand, search, and sorting
+     * @param bool $includeHidden If true, includes hidden items (for admin) - default false (public view only)
      */
-    public function getGroupedModels(string $search = null, int $perPage = 20, string $category = null, string $brand = null, string $sort = 'latest')
+    public function getGroupedModels(string $search = null, int $perPage = 20, string $category = null, string $brand = null, string $sort = 'latest', bool $includeHidden = false)
     {
         $query = Item::where('shop_id', $this->shop_id)
             ->whereNull('sold')
@@ -329,33 +347,41 @@ class Market extends Model
         // Default visible grades (when no MarketItem record exists)
         $defaultVisibleGrades = ['A', 'A-', 'B+', 'B'];
 
-        // Filter items: exclude those with issues unless is_visible = true
-        $visibleItems = $items->filter(function ($item) use ($marketItemsMap, $defaultVisibleGrades) {
-            $marketItem = $marketItemsMap[$item->id] ?? null;
-            $hasIssues = !empty($item->issues) && $item->issues !== '{}';
+        // Filter items based on visibility
+        // In admin mode (includeHidden=true), show all items
+        // In public mode (includeHidden=false), filter by visibility
+        if ($includeHidden) {
+            // Admin view: show all items
+            $filteredItems = $items;
+        } else {
+            // Public view: filter items: exclude those with issues unless is_visible = true
+            $filteredItems = $items->filter(function ($item) use ($marketItemsMap, $defaultVisibleGrades) {
+                $marketItem = $marketItemsMap[$item->id] ?? null;
+                $hasIssues = !empty($item->issues) && $item->issues !== '{}';
 
-            // If item has issues
-            if ($hasIssues) {
-                // Only include if is_visible is explicitly true
-                if ($marketItem) {
-                    return $marketItem->is_visible === true;
+                // If item has issues
+                if ($hasIssues) {
+                    // Only include if is_visible is explicitly true
+                    if ($marketItem) {
+                        return $marketItem->is_visible === true;
+                    }
+                    // If no MarketItem entry and has issues, exclude it
+                    return false;
                 }
-                // If no MarketItem entry and has issues, exclude it
-                return false;
-            }
 
-            // If no issues, apply normal visibility logic
-            if ($marketItem) {
-                // If MarketItem exists, use its is_visible flag
-                return $marketItem->is_visible;
-            }
-            
-            // Default visibility based on grade
-            return in_array($item->grade, $defaultVisibleGrades);
-        });
+                // If no issues, apply normal visibility logic
+                if ($marketItem) {
+                    // If MarketItem exists, use its is_visible flag
+                    return $marketItem->is_visible;
+                }
+                
+                // Default visibility based on grade
+                return in_array($item->grade, $defaultVisibleGrades);
+            });
+        }
         
         // Group by parsed model (without storage) + manufacturer + type
-        $grouped = $visibleItems->groupBy(function ($item) {
+        $grouped = $filteredItems->groupBy(function ($item) {
             $parsed = $this->parseModelStorage($item->model);
             return $parsed['model'] . '|' . $item->manufacturer . '|' . $item->type;
         })->map(function ($group) use ($marketItemsMap) {
