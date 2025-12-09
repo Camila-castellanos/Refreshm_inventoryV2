@@ -25,8 +25,8 @@ class MarketItemController extends Controller
 
         $search = $request->input('search');
 
-        // Get grouped models from market
-        $models = $market->getGroupedModels($search, 20);
+        // Get grouped models from market - includeHidden=true for admin view to show all models
+        $models = $market->getGroupedModels($search, 20, null, null, 'latest', true);
 
         return Inertia::render('Ecommerce/MarketItemsEdit', [
             'market' => $market,
@@ -192,7 +192,13 @@ class MarketItemController extends Controller
             'description' => 'nullable|string|max:1000',
         ]);
 
+        // Check if MarketItem already exists
+        $existingMarketItem = MarketItem::where('market_id', $market->id)
+            ->where('item_id', $item->id)
+            ->first();
+
         // Update or create description for this market item
+        // Preserve is_visible if exists, otherwise default to true
         $marketItem = MarketItem::updateOrCreate(
             [
                 'market_id' => $market->id,
@@ -200,6 +206,7 @@ class MarketItemController extends Controller
             ],
             [
                 'description' => $request->description,
+                'is_visible' => $existingMarketItem ? $existingMarketItem->is_visible : true,
             ]
         );
 
