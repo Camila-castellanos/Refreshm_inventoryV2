@@ -129,18 +129,13 @@
                 <nav class="hidden md:flex items-center px-6 py-3 border-t border-gray-200 bg-slate-50">
                     <div class="flex items-center space-x-8">
                         <Link 
-                            :href="route('market.index', market.slug)"
+                            v-for="brand in phoneBrands"
+                            :key="brand.name"
+                            :href="route('market.products-list', { market: market.slug, brand: brand.filterValue })"
                             :class="['text-sm font-medium transition-colors duration-200', 
-                                    isCurrentRoute('market.index') ? 'text-gray-900' : 'text-gray-600 hover:text-gray-900']"
+                                    'text-gray-600 hover:text-gray-900']"
                         >
-                            Home
-                        </Link>
-                        <Link 
-                            :href="route('market.products-list', market.slug)"
-                            :class="['text-sm font-medium transition-colors duration-200', 
-                                    isCurrentRoute('market.products-list') ? 'text-gray-900' : 'text-gray-600 hover:text-gray-900']"
-                        >
-                            Products
+                            {{ brand.name }}
                         </Link>
                         <Link 
                             v-if="market.has_categories"
@@ -151,20 +146,24 @@
                             Categories
                         </Link>
                         <Link 
-                            v-if="market.contact_email"
-                            :href="route('market.contact', market.slug)"
-                            :class="['text-sm font-medium transition-colors duration-200', 
-                                    isCurrentRoute('market.contact') ? 'text-gray-900' : 'text-gray-600 hover:text-gray-900']"
-                        >
-                            Contact
-                        </Link>
-                        <Link 
                             :href="route('market.faq', market.slug)"
                             :class="['text-sm font-medium transition-colors duration-200', 
                                     isCurrentRoute('market.faq') ? 'text-gray-900' : 'text-gray-600 hover:text-gray-900']"
                         >
                             FAQ
                         </Link>
+                        <Link 
+                            :href="route('market.contact', market.slug)"
+                            :class="['text-sm font-medium transition-colors duration-200', 
+                                    isCurrentRoute('market.contact') ? 'text-gray-900' : 'text-gray-600 hover:text-gray-900']"
+                        >
+                            Contact
+                        </Link>
+                        <button
+                            class="text-sm font-medium transition-colors duration-200 text-gray-600 hover:text-gray-900"
+                        >
+                            More
+                        </button>
                     </div>
                 </nav>
 
@@ -172,20 +171,13 @@
                 <div v-if="showMobileMenu" class="md:hidden border-t border-gray-200 bg-slate-50">
                     <div class="px-6 py-4 space-y-3">
                         <Link 
-                            :href="route('market.index', market.slug)"
-                            :class="['block text-sm font-medium transition-colors duration-200', 
-                                    isCurrentRoute('market.index') ? 'text-gray-900' : 'text-gray-600 hover:text-gray-900']"
+                            v-for="brand in phoneBrands"
+                            :key="brand.name"
+                            :href="route('market.products-list', { market: market.slug, brand: brand.filterValue })"
+                            class="block text-sm font-medium transition-colors duration-200 text-gray-600 hover:text-gray-900"
                             @click="closeMobileMenu"
                         >
-                            Home
-                        </Link>
-                        <Link 
-                            :href="route('market.products-list', market.slug)"
-                            :class="['block text-sm font-medium transition-colors duration-200', 
-                                    isCurrentRoute('market.products-list') ? 'text-gray-900' : 'text-gray-600 hover:text-gray-900']"
-                            @click="closeMobileMenu"
-                        >
-                            Products
+                            {{ brand.name }}
                         </Link>
                         <Link 
                             v-if="market.has_categories"
@@ -197,15 +189,6 @@
                             Categories
                         </Link>
                         <Link 
-                            v-if="market.contact_email"
-                            :href="route('market.contact', market.slug)"
-                            :class="['block text-sm font-medium transition-colors duration-200', 
-                                    isCurrentRoute('market.contact') ? 'text-gray-900' : 'text-gray-600 hover:text-gray-900']"
-                            @click="closeMobileMenu"
-                        >
-                            Contact
-                        </Link>
-                        <Link 
                             :href="route('market.faq', market.slug)"
                             :class="['block text-sm font-medium transition-colors duration-200', 
                                     isCurrentRoute('market.faq') ? 'text-gray-900' : 'text-gray-600 hover:text-gray-900']"
@@ -213,6 +196,19 @@
                         >
                             FAQ
                         </Link>
+                        <Link 
+                            :href="route('market.contact', market.slug)"
+                            :class="['block text-sm font-medium transition-colors duration-200', 
+                                    isCurrentRoute('market.contact') ? 'text-gray-900' : 'text-gray-600 hover:text-gray-900']"
+                            @click="closeMobileMenu"
+                        >
+                            Contact
+                        </Link>
+                        <button
+                            class="block text-sm font-medium transition-colors duration-200 text-gray-600 hover:text-gray-900 w-full text-left"
+                        >
+                            More
+                        </button>
                     </div>
                 </div>
             </div>
@@ -350,6 +346,13 @@ const showMobileSearch = ref(false)
 const showMobileMenu = ref(false)
 const showCart = ref(false)
 const cartComponent = ref(null) // Reference to Cart component
+
+// Phone brands constant
+const phoneBrands = [
+    { name: 'iPhone', icon: 'pi-apple', filterValue: 'Apple' },
+    { name: 'Samsung', icon: 'pi-android', filterValue: 'Samsung' },
+    { name: 'Google', icon: 'pi-google', filterValue: 'Google' },
+]
 
 // Use cart count from store
 const cartCount = computed(() => cartStore.itemCount)
