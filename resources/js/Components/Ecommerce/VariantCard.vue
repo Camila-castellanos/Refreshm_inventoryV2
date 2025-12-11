@@ -4,11 +4,11 @@
             <!-- Product Image (Top on mobile, Left on desktop) - Larger -->
             <div class="flex-none w-full lg:w-2/5 flex flex-col items-center justify-center p-8 bg-white border-b lg:border-b-0 lg:border-r border-gray-200">
                 <!-- Product Image -->
-                <div class="w-64 h-64 bg-white flex items-center justify-center rounded-lg mb-6 flex-shrink-0 overflow-hidden border border-gray-100">
+                <div class="w-64 h-64 bg-white flex items-center justify-center rounded-lg mb-6 flex-shrink-0 overflow-hidden border border-gray-100 cursor-pointer hover:border-gray-300 transition-all duration-300 hover:shadow-xl hover:scale-105" @click="openImageModal" style="perspective: 1000px;">
                     <img v-if="item.main_photo_thumb" 
                          :src="item.main_photo_thumb" 
                          :alt="item.model"
-                         class="w-full h-full object-contain"
+                         class="w-full h-full object-contain transition-transform duration-300"
                     />
                     <svg v-else class="w-32 h-32 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
@@ -71,7 +71,7 @@
 
                 <!-- Actions -->
                 <div class="flex gap-3 pt-4 border-t border-gray-200">
-                    <button @click="emit('view-product', item.id)" 
+                    <button @click="openImageModal" 
                             class="flex-1 px-6 py-3 bg-slate-100 text-gray-700 rounded-lg hover:bg-slate-200 font-semibold text-base transition-colors border border-gray-200 hover:border-gray-300 hover:shadow-md">
                         <i class="pi pi-eye text-sm mr-2"></i> View
                     </button>
@@ -86,6 +86,32 @@
             </div>
         </div>
     </div>
+
+    <!-- Image Modal -->
+    <transition name="fade">
+        <div v-if="showImageModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4 !mt-0" @click="closeImageModal">
+            <div class="relative w-full h-full content-center">
+                <!-- Close Button -->
+                <button
+                    @click="closeImageModal"
+                    class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors z-10"
+                >
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+
+                <!-- Image Container -->
+                <div class="flex-1 bg-transparent flex items-center justify-center p-4 perspective image-container-scroll w-full h-full">
+                    <img
+                        :src="item.main_photo_url || item.main_photo_thumb"
+                        :alt="item.model"
+                        class="max-w-full max-h-full object-contain image-3d-effect"
+                    />
+                </div>
+            </div>
+        </div>
+    </transition>
 </template>
 
 <script setup>
@@ -109,6 +135,16 @@ const props = defineProps({
 const emit = defineEmits(['toggle-grade', 'view-product', 'add-to-cart'])
 
 const showGradeDetail = ref(false)
+const showImageModal = ref(false)
+
+const openImageModal = () => {
+    showImageModal.value = true
+}
+
+const closeImageModal = () => {
+    showImageModal.value = false
+}
+
 
 const formatColorName = (color) => {
     return color ? color.charAt(0).toUpperCase() + color.slice(1).toLowerCase() : ''
@@ -120,4 +156,35 @@ const formatPrice = (price) => {
 </script>
 
 <style scoped>
+.fade-enter-active, .fade-leave-active {
+    transition: opacity 0.3s ease;
+}
+
+.fade-enter-from, .fade-leave-to {
+    opacity: 0;
+}
+
+.perspective {
+    perspective: 1500px;
+}
+
+.image-3d-effect {
+    transition: all 0.4s cubic-bezier(0.23, 1, 0.320, 1);
+    transform-style: preserve-3d;
+}
+
+.image-3d-effect:hover {
+    transform: rotateX(8deg) rotateY(-8deg) rotateZ(2deg) scale(1.05);
+}
+
+/* Hide scrollbars */
+.image-container-scroll {
+    overflow: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.image-container-scroll::-webkit-scrollbar {
+    display: none;
+}
 </style>
