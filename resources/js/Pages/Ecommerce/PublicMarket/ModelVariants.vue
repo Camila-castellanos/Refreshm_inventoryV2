@@ -117,93 +117,16 @@
 
                     <!-- Products Grid -->
                     <div v-if="filteredVariants.length > 0" class="space-y-6">
-                        <div v-for="item in filteredVariants" :key="item.id" class="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-200 hover:border-gray-300">
-                            <div class="flex flex-row">
-                                <!-- Product Image and Name (Left) - 30% width -->
-                                <div class="flex-none w-1/3 flex flex-col items-center justify-center p-8 bg-gray-50 border-r border-gray-200">
-                                    <!-- Product Image -->
-                                    <div class="w-32 h-32 bg-gray-100 flex items-center justify-center rounded-lg mb-6 flex-shrink-0 overflow-hidden">
-                                        <img v-if="item.main_photo_thumb" 
-                                             :src="item.main_photo_thumb" 
-                                             :alt="item.model"
-                                             class="w-full h-full object-cover"
-                                        />
-                                        <svg v-else class="w-24 h-24 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                                        </svg>
-                                    </div>
-                                    <!-- Product Name -->
-                                    <h4 class="font-semibold text-lg text-gray-900 text-center line-clamp-2">{{ item.model }}</h4>
-                                </div>
-
-                                <!-- Product Details (Right) - 70% width -->
-                                <div class="flex-1 w-2/3 p-8 flex flex-col justify-between">
-                                    <!-- Characteristics -->
-                                    <div>
-                                        <h5 class="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-6">Specifications</h5>
-                                        <div class="space-y-4 text-base text-gray-700 mb-8">
-                                            <div v-if="item.storage" class="flex justify-between items-center pb-3 border-b border-gray-100">
-                                                <span class="text-gray-600 font-medium">Storage:</span>
-                                                <span class="font-semibold text-gray-900">{{ item.storage }}</span>
-                                            </div>
-                                            <div v-if="item.colour" class="flex justify-between items-center pb-3 border-b border-gray-100">
-                                                <span class="text-gray-600 font-medium">Color:</span>
-                                                <span class="font-semibold text-gray-900">{{ formatColorName(item.colour) }}</span>
-                                            </div>
-                                            <div v-if="item.grade" class="flex justify-between items-center pb-3 border-b border-gray-100 group">
-                                                <div class="flex items-center gap-2">
-                                                    <span class="text-gray-600 font-medium">Grade:</span>
-                                                    <span class="font-semibold text-gray-900">{{ item.grade }}</span>
-                                                </div>
-                                                <button @click="toggleGradeDetail(item.id)" class="text-xs px-2 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors">
-                                                    <i class="pi pi-info-circle text-xs"></i>
-                                                </button>
-                                            </div>
-                                            <!-- Grade Detail (Hidden by default) -->
-                                            <div v-if="expandedGrades[item.id]" class="pb-3 border-b border-blue-100 bg-blue-50 px-3 py-2 rounded">
-                                                <p class="text-xs text-blue-600">Specific condition: <span class="font-semibold">{{ item.gradeRaw }}</span></p>
-                                            </div>
-                                            <div v-if="item.battery" class="flex justify-between items-center pb-3 border-b border-gray-100">
-                                                <span class="text-gray-600 font-medium">Battery:</span>
-                                                <span class="font-semibold text-gray-900">{{ item.battery }}%</span>
-                                            </div>
-                                            <div v-if="item.issues" class="flex justify-between items-center pb-3 border-b border-red-100 bg-red-50 px-3 py-2 rounded">
-                                                <span class="text-red-700 font-medium">⚠️ Issues:</span>
-                                                <span class="font-semibold text-red-700">{{ item.issues }}</span>
-                                            </div>
-                                        </div>
-
-                                        <!-- Description -->
-                                        <div v-if="item.description" class="mb-6">
-                                            <p class="text-sm text-gray-600 italic">{{ item.description }}</p>
-                                        </div>
-
-                                        <!-- Price -->
-                                        <div class="mb-8 pt-4 border-t-2 border-gray-200">
-                                            <p class="text-sm text-gray-600 mb-2">Price</p>
-                                            <p class="text-4xl font-bold text-gray-900">
-                                                {{ getCurrencySymbol(market.currency) }}{{ formatPrice(item.selling_price) }}
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    <!-- Actions -->
-                                    <div class="flex gap-3 pt-4 border-t border-gray-200">
-                                        <button @click="viewProductDetail(item.id)" 
-                                                class="flex-1 px-6 py-3 bg-slate-100 text-gray-700 rounded-lg hover:bg-slate-200 font-semibold text-base transition-colors border border-gray-200 hover:border-gray-300 hover:shadow-md">
-                                            <i class="pi pi-eye text-sm mr-2"></i> View
-                                        </button>
-                                        <button @click="addToCart(item)" 
-                                                :disabled="isAddingToCart === item.id"
-                                                class="flex-1 px-6 py-3 bg-slate-100 text-gray-700 rounded-lg hover:bg-slate-200 font-semibold text-base transition-colors border border-gray-200 hover:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-md">
-                                            <i v-if="isAddingToCart === item.id" class="pi pi-spin pi-spinner text-sm mr-2"></i>
-                                            <i v-else class="pi pi-shopping-cart text-sm mr-2"></i>
-                                            Add
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                        <VariantCard
+                            v-for="item in filteredVariants"
+                            :key="item.id"
+                            :item="item"
+                            :currency-symbol="getCurrencySymbol(market.currency)"
+                            :is-loading="isAddingToCart === item.id"
+                            @toggle-grade="toggleGradeDetail"
+                            @view-product="viewProductDetail"
+                            @add-to-cart="addToCart"
+                        />
                     </div>
 
                     <!-- No Results -->
@@ -228,6 +151,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useCart } from '@/composables/useCart'
 import { getCurrencySymbol } from '@/utils/currency'
+import VariantCard from '@/Components/Ecommerce/VariantCard.vue'
 
 // Props
 const props = defineProps({
@@ -268,9 +192,6 @@ const filters = ref({
 })
 
 const isAddingToCart = ref(null)
-
-// Track expanded grade details
-const expandedGrades = ref({})
 
 // Get all items directly from the items array (unified method)
 const allItems = computed(() => {
@@ -401,25 +322,6 @@ const filteredVariants = computed(() => {
     })
 })
 
-// Helper methods
-const formatColorName = (color) => {
-    return color ? color.charAt(0).toUpperCase() + color.slice(1).toLowerCase() : ''
-}
-
-const formatGradeName = (grade) => {
-    const gradeMap = {
-        'New': 'New (Brand New Sealed)',
-        'Excellent': 'Excellent (A-, A, A+)',
-        'Good': 'Good (B+)',
-        'Fair': 'Fair (B, C, D...)'
-    }
-    return gradeMap[grade] || grade
-}
-
-const formatPrice = (price) => {
-    return new Intl.NumberFormat().format(price)
-}
-
 const resetFilters = () => {
     filters.value = {
         storage: '',
@@ -428,6 +330,14 @@ const resetFilters = () => {
         battery: '',
         issues: ''
     }
+}
+
+const formatColorName = (color) => {
+    return color ? color.charAt(0).toUpperCase() + color.slice(1).toLowerCase() : ''
+}
+
+const formatPrice = (price) => {
+    return new Intl.NumberFormat().format(price)
 }
 
 const viewProductDetail = (itemId) => {
@@ -448,10 +358,6 @@ const addToCart = async (item) => {
     } finally {
         isAddingToCart.value = null
     }
-}
-
-const toggleGradeDetail = (itemId) => {
-    expandedGrades.value[itemId] = !expandedGrades.value[itemId]
 }
 
 </script>
