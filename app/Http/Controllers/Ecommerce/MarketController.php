@@ -207,13 +207,24 @@ class MarketController extends Controller
                 return response()->json(['error' => 'Market unavailable'], 503);
             }
 
-            $variants = $market->getModelVariants($model);
+            // Use unified method - includeHidden=false for public view (only visible items)
+            $result = $market->getModelsWithVariants($model, false);
 
-            if (!$variants) {
+            if (!$result) {
                 return response()->json(['error' => 'Model not found'], 404);
             }
 
-            return response()->json($variants);
+            // Also get the structured variants for the dropdown selectors
+            $variants = $market->getModelVariants($model);
+
+            return response()->json([
+                'model' => $result['model'],
+                'manufacturer' => $result['manufacturer'],
+                'type' => $result['type'],
+                'items' => $result['items'],
+                'variants' => $variants ? $variants['variants'] : [],
+                'total_stock' => count($result['items']),
+            ]);
 
         } catch (\Exception $e) {
             Log::error('Market model variants error: ' . $e->getMessage(), [
@@ -226,7 +237,7 @@ class MarketController extends Controller
     }
 
     /**
-     * Display model variants page with dropdowns for filtering
+     * Display model variants page with dropdowns for filtering (Public view)
      */
     public function showModelVariants(Request $request, Market $market, $model)
     {
@@ -238,18 +249,29 @@ class MarketController extends Controller
                 abort(503, 'This market is temporarily unavailable');
             }
 
-            $variants = $market->getModelVariants($model);
+            // Use unified method - includeHidden=false for public view (only visible items)
+            $result = $market->getModelsWithVariants($model, false);
 
-            if (!$variants) {
+            if (!$result) {
                 abort(404, 'Model not found');
             }
+
+            // Also get the structured variants for the dropdown selectors
+            $variants = $market->getModelVariants($model);
 
             // Get safe market data
             $safeMarketData = $market->getSafeData();
 
             return Inertia::render('Ecommerce/PublicMarket/ModelVariants', [
                 'market' => $safeMarketData,
-                'modelData' => $variants,
+                'modelData' => [
+                    'model' => $result['model'],
+                    'manufacturer' => $result['manufacturer'],
+                    'type' => $result['type'],
+                    'items' => $result['items'],
+                    'variants' => $variants ? $variants['variants'] : [],
+                    'total_stock' => count($result['items']),
+                ],
             ]);
 
         } catch (\Exception $e) {

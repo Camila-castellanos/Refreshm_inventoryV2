@@ -272,39 +272,64 @@ const isAddingToCart = ref(null)
 // Track expanded grade details
 const expandedGrades = ref({})
 
-// Get all items from variants structure (now nested with storage)
+// Get all items directly from the items array (unified method)
 const allItems = computed(() => {
+    // Use items array from new unified method
+    if (props.modelData.items && Array.isArray(props.modelData.items)) {
+        return props.modelData.items.map(item => ({
+            id: item.id,
+            model: item.model,
+            manufacturer: item.manufacturer || props.modelData.manufacturer,
+            type: item.type || props.modelData.type,
+            storage: item.storage,
+            colour: item.colour,
+            grade: simplifyGrade(item.condition), // Use simplified grade
+            gradeRaw: item.condition, // Keep original for reference
+            battery: item.battery ? Number(item.battery) : null,
+            issues: item.issues,
+            description: item.description || null,
+            selling_price: item.market_price || item.selling_price || 0,
+            // Media data from backend
+            photo_count: item.photo_count || 0,
+            main_photo_thumb: item.main_photo_thumb || null,
+            main_photo_url: item.main_photo_url || null,
+            photos: item.photos || []
+        }))
+    }
+    
+    // Fallback to old variants structure for backwards compatibility
     const items = []
-    props.modelData.variants.forEach(storageGroup => {
-        storageGroup.colours.forEach(colorGroup => {
-            colorGroup.grades.forEach(gradeGroup => {
-                gradeGroup.battery_options.forEach(battery => {
-                    gradeGroup.issues.forEach(issueItem => {
-                        const item = {
-                            id: issueItem.id,
-                            model: props.modelData.model,
-                            manufacturer: props.modelData.manufacturer,
-                            type: props.modelData.type,
-                            storage: storageGroup.storage,
-                            colour: colorGroup.colour,
-                            grade: simplifyGrade(gradeGroup.grade), // Use simplified grade
-                            gradeRaw: gradeGroup.grade, // Keep original for reference
-                            battery: Number(battery), // Ensure battery is always a number
-                            issues: issueItem.issues,
-                            description: issueItem.description || null,
-                            selling_price: issueItem.selling_price || 0,
-                            // Media data from backend
-                            photo_count: issueItem.photo_count || 0,
-                            main_photo_thumb: issueItem.main_photo_thumb || null,
-                            main_photo_url: issueItem.main_photo_url || null,
-                            photos: issueItem.photos || []
-                        }
-                        items.push(item)
+    if (props.modelData.variants) {
+        props.modelData.variants.forEach(storageGroup => {
+            storageGroup.colours.forEach(colorGroup => {
+                colorGroup.grades.forEach(gradeGroup => {
+                    gradeGroup.battery_options.forEach(battery => {
+                        gradeGroup.issues.forEach(issueItem => {
+                            const item = {
+                                id: issueItem.id,
+                                model: props.modelData.model,
+                                manufacturer: props.modelData.manufacturer,
+                                type: props.modelData.type,
+                                storage: storageGroup.storage,
+                                colour: colorGroup.colour,
+                                grade: simplifyGrade(gradeGroup.grade),
+                                gradeRaw: gradeGroup.grade,
+                                battery: Number(battery),
+                                issues: issueItem.issues,
+                                description: issueItem.description || null,
+                                selling_price: issueItem.selling_price || 0,
+                                photo_count: issueItem.photo_count || 0,
+                                main_photo_thumb: issueItem.main_photo_thumb || null,
+                                main_photo_url: issueItem.main_photo_url || null,
+                                photos: issueItem.photos || []
+                            }
+                            items.push(item)
+                        })
                     })
                 })
             })
         })
-    })
+    }
     return items
 })
 

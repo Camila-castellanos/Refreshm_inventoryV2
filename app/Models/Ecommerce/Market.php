@@ -350,6 +350,27 @@ class Market extends Model
         // Default visible grades (when no MarketItem record exists)
         $defaultVisibleGrades = ['A', 'A-', 'B+', 'B'];
 
+        // First, group ALL items (before filtering) to find photos
+        $allGrouped = $items->groupBy(function ($item) {
+            $parsed = $this->parseModelStorage($item->model);
+            return $parsed['model'] . '|' . $item->manufacturer . '|' . $item->type;
+        });
+
+        // Create a map of model groups with their photos
+        $modelPhotoMap = $allGrouped->map(function ($group) {
+            // Find the first item with photos from ALL items (including those that may be filtered)
+            $itemWithPhoto = $group->first(function ($item) {
+                return $item->media->count() > 0;
+            });
+            $sharedPhoto = $itemWithPhoto ? $itemWithPhoto->getFirstMediaUrl('item-photos', 'thumb') : null;
+            $sharedPhotoCount = $itemWithPhoto ? $itemWithPhoto->media->count() : 0;
+            
+            return [
+                'photo' => $sharedPhoto,
+                'photo_count' => $sharedPhotoCount
+            ];
+        });
+
         // Filter items based on visibility
         // In admin mode (includeHidden=true), show all items
         // In public mode (includeHidden=false), filter by visibility
@@ -387,7 +408,7 @@ class Market extends Model
         $grouped = $filteredItems->groupBy(function ($item) {
             $parsed = $this->parseModelStorage($item->model);
             return $parsed['model'] . '|' . $item->manufacturer . '|' . $item->type;
-        })->map(function ($group) use ($marketItemsMap) {
+        })->map(function ($group, $groupKey) use ($marketItemsMap, $modelPhotoMap) {
             $firstItem = $group->first();
             $parsed = $this->parseModelStorage($firstItem->model);
             
@@ -408,6 +429,9 @@ class Market extends Model
             $photoCount = $group->reduce(function ($carry, $item) {
                 return $carry + $item->media->count();
             }, 0);
+
+            // Use the pre-calculated photo from the all-items grouping
+            $photoData = $modelPhotoMap[$groupKey] ?? ['photo' => null, 'photo_count' => 0];
             
             return (object)[
                 'model' => $parsed['model'],
@@ -421,8 +445,8 @@ class Market extends Model
                 'max_price' => $prices->max(),
                 'avg_price' => $prices->avg(),
                 'sample_item_id' => $group->min('id'),
-                'photo' => $firstItem->getFirstMediaUrl('item-photos', 'thumb'),
-                'photo_count' => $photoCount,
+                'photo' => $photoData['photo'],
+                'photo_count' => $photoData['photo_count'],
                 'id' => $group->min('id'),
             ];
         })->values();
@@ -584,6 +608,113 @@ class Market extends Model
             'type' => $firstItem->type,
             'total_stock' => $items->count(),
             'variants' => $variants,
+        ];
+    }
+
+    /**
+     * Get model variants with all items - unified method for admin and public views
+     * 
+     * @param string $model The model name to search for
+     * @param bool $includeHidden If true, returns ALL items (admin view). If false, only visible items (public view)
+     * @return array|null Returns null if no items found
+     */
+    public function getModelsWithVariants(string $model, bool $includeHidden = false): ?array
+    {
+        // Get all available items (not sold, not on hold)
+        $allItems = Item::where('shop_id', $this->shop_id)
+            ->whereNull('sold')
+            ->whereNull('hold')
+            ->with('media')
+            ->get();
+
+        // Parse model name and filter by matching model
+        $parsedModel = $this->parseModelStorage(urldecode($model));
+        $modelItems = $allItems->filter(function ($item) use ($parsedModel) {
+            $parsed = $this->parseModelStorage($item->model);
+            return $parsed['model'] === $parsedModel['model'];
+        });
+
+        if ($modelItems->isEmpty()) {
+            return null;
+        }
+
+        // Load market items for custom prices and visibility
+        $marketItemsMap = $this->marketItems()
+            ->whereIn('item_id', $modelItems->pluck('id'))
+            ->get()
+            ->keyBy('item_id');
+
+        // Conditions that should be visible by default
+        $visibleConditions = ['A', 'A-', 'B+', 'B'];
+
+        // Find the first item with photos from ALL items (including hidden ones)
+        // This ensures the model photo is found even if the item with the photo is hidden
+        $itemWithPhoto = $modelItems->first(function ($item) {
+            return $item->media->count() > 0;
+        });
+        $sharedPhotoThumb = $itemWithPhoto ? $itemWithPhoto->getFirstMediaUrl('item-photos', 'thumb') : null;
+        $sharedPhotoUrl = $itemWithPhoto ? $itemWithPhoto->getFirstMediaUrl('item-photos') : null;
+        $sharedPhotoCount = $itemWithPhoto ? $itemWithPhoto->media->count() : 0;
+
+        // Map all items with their visibility status
+        $mappedItems = $modelItems->map(function ($modelItem) use ($marketItemsMap, $visibleConditions, $sharedPhotoThumb, $sharedPhotoUrl, $sharedPhotoCount) {
+            $marketItem = $marketItemsMap[$modelItem->id] ?? null;
+            $price = $marketItem ? $marketItem->getPrice() : $modelItem->selling_price;
+            $hasIssues = !empty($modelItem->issues) && $modelItem->issues !== '{}';
+
+            // Determine visibility
+            if ($marketItem) {
+                $isVisible = $marketItem->is_visible;
+            } elseif ($hasIssues) {
+                $isVisible = false;
+            } else {
+                $isVisible = in_array($modelItem->grade, $visibleConditions);
+            }
+
+            // Parse storage from model name
+            $parsed = $this->parseModelStorage($modelItem->model);
+
+            return [
+                'id' => $modelItem->id,
+                'model' => $modelItem->model,
+                'manufacturer' => $modelItem->manufacturer,
+                'imei' => $modelItem->imei,
+                'type' => $modelItem->type,
+                'colour' => $modelItem->colour,
+                'condition' => $modelItem->grade,
+                'storage' => $parsed['storage'] ?? null,
+                'battery' => $modelItem->battery,
+                'status' => $modelItem->sold ? 'sold' : ($modelItem->hold ? 'hold' : 'available'),
+                'buying_price' => $modelItem->buying_price,
+                'selling_price' => $modelItem->selling_price,
+                'market_price' => $price,
+                'has_custom_price' => $marketItem && $marketItem->custom_price !== null,
+                'is_visible' => $isVisible,
+                'description' => $marketItem ? $marketItem->description : null,
+                'issues' => $modelItem->issues,
+                // Use shared model photo for all variants
+                'photo_count' => $sharedPhotoCount,
+                'main_photo_thumb' => $sharedPhotoThumb,
+                'main_photo_url' => $sharedPhotoUrl,
+            ];
+        });
+
+        // For public view, filter to only visible items
+        if (!$includeHidden) {
+            $mappedItems = $mappedItems->filter(fn($item) => $item['is_visible'] === true);
+            
+            if ($mappedItems->isEmpty()) {
+                return null;
+            }
+        }
+
+        $firstItem = $modelItems->first();
+
+        return [
+            'model' => $parsedModel['model'],
+            'manufacturer' => $firstItem->manufacturer,
+            'type' => $firstItem->type,
+            'items' => $mappedItems->values()->toArray(),
         ];
     }
 
