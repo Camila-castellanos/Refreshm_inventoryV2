@@ -34,15 +34,15 @@
                         </div>
                         <div v-if="item.grade" class="flex justify-between items-center pb-3 border-b border-gray-100 group">
                             <div class="flex items-center gap-2">
-                                <span class="text-gray-600 font-medium">Grade:</span>
+                                <span class="text-gray-600 font-medium">Condition:</span>
                                 <span class="font-semibold text-gray-900">{{ item.grade }}</span>
                             </div>
-                            <button @click="emit('toggle-grade', item.id)" class="text-xs px-2 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors">
+                            <button @click="emit('toggle-condition', item.id)" class="text-xs px-2 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors">
                                 <i class="pi pi-info-circle text-xs"></i>
                             </button>
                         </div>
-                        <!-- Grade Detail (Hidden by default) -->
-                        <div v-if="showGradeDetail" class="pb-3 border-b border-blue-100 bg-blue-50 px-3 py-2 rounded">
+                        <!-- Condition Detail (Hidden by default) -->
+                        <div v-if="showConditionDetail" class="pb-3 border-b border-blue-100 bg-blue-50 px-3 py-2 rounded">
                             <p class="text-xs text-blue-600">Specific condition: <span class="font-semibold">{{ item.gradeRaw }}</span></p>
                         </div>
                         <div v-if="item.battery" class="flex justify-between items-center pb-3 border-b border-gray-100">
@@ -132,9 +132,9 @@ const props = defineProps({
     }
 })
 
-const emit = defineEmits(['toggle-grade', 'view-product', 'add-to-cart'])
+const emit = defineEmits(['toggle-condition', 'view-product', 'add-to-cart'])
 
-const showGradeDetail = ref(false)
+const showConditionDetail = ref(false)
 const showImageModal = ref(false)
 
 const openImageModal = () => {

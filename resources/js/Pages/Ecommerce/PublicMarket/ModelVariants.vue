@@ -55,11 +55,11 @@
                             </select>
                         </div>
 
-                        <!-- Grade Filter -->
+                        <!-- Condition Filter -->
                         <div class="mb-8">
-                            <label class="block text-base font-semibold text-gray-800 mb-4">Grade</label>
+                            <label class="block text-base font-semibold text-gray-800 mb-4">Condition</label>
                             <select v-model="filters.grade" class="w-full px-4 py-3 border border-gray-300 rounded-lg text-base focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-400 transition-colors">
-                                <option value="">All Grades</option>
+                                <option value="">All Conditions</option>
                                 <option v-for="grade in availableGrades" :key="grade" :value="grade">
                                     {{ grade }}
                                 </option>
@@ -123,7 +123,7 @@
                             :item="item"
                             :currency-symbol="getCurrencySymbol(market.currency)"
                             :is-loading="isAddingToCart === item.id"
-                            @toggle-grade="toggleGradeDetail"
+                            @toggle-condition="toggleConditionDetail"
                             @view-product="viewProductDetail"
                             @add-to-cart="addToCart"
                         />
@@ -168,16 +168,16 @@ const props = defineProps({
 const router = useRouter()
 const { addItem } = useCart()
 
-// Simplify grade categories
-const simplifyGrade = (grade) => {
-    if (!grade) return grade
-    const gradeUpper = grade.toUpperCase()
+// Simplify condition categories
+const simplifyCondition = (condition) => {
+    if (!condition) return condition
+    const conditionUpper = condition.toUpperCase()
     // New
-    if (gradeUpper === 'BRAND NEW SEALED') return 'New'
+    if (conditionUpper === 'BRAND NEW SEALED') return 'New'
     // Excellent: A-, A, A+
-    if (['A-', 'A', 'A+'].includes(gradeUpper)) return 'Excellent'
+    if (['A-', 'A', 'A+'].includes(conditionUpper)) return 'Excellent'
     // Good: B+
-    if (gradeUpper === 'B+') return 'Good'
+    if (conditionUpper === 'B+') return 'Good'
     // Fair: B, C, D, and others
     return 'Fair'
 }
@@ -204,7 +204,7 @@ const allItems = computed(() => {
             type: item.type || props.modelData.type,
             storage: item.storage,
             colour: item.colour,
-            grade: simplifyGrade(item.condition), // Use simplified grade
+            grade: simplifyCondition(item.condition), // Use simplified condition
             gradeRaw: item.condition, // Keep original for reference
             battery: item.battery ? Number(item.battery) : null,
             issues: item.issues,
@@ -233,7 +233,7 @@ const allItems = computed(() => {
                                 type: props.modelData.type,
                                 storage: storageGroup.storage,
                                 colour: colorGroup.colour,
-                                grade: simplifyGrade(gradeGroup.grade),
+                                grade: simplifyCondition(gradeGroup.grade),
                                 gradeRaw: gradeGroup.grade,
                                 battery: Number(battery),
                                 issues: issueItem.issues,
@@ -345,6 +345,16 @@ const goBack = () => {
         window.location.href = `/market/${props.market.slug}/products-list`
     } else {
         window.history.back()
+    }
+}
+
+const toggleConditionDetail = (itemId) => {
+    // Handle condition detail toggle if needed
+}
+
+const viewProductDetail = (itemId) => {
+    if (props.market?.slug) {
+        window.location.href = `/market/${props.market.slug}/product/${itemId}`
     }
 }
 

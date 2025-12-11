@@ -74,9 +74,9 @@
                         {{ getCurrencySymbol(market.currency) }}{{ formatPrice(item.selling_price) }}
                     </div>
 
-                    <!-- Show color and grade options for grouped models -->
+                    <!-- Show color and condition options for grouped models -->
                     <div v-if="isGroupedModel" class="text-xs text-gray-600 mt-1">
-                        {{ item.color_options }} color(s) • {{ item.grade_options }} grade(s)
+                        {{ item.color_options }} color(s) • {{ item.grade_options }} condition(s)
                     </div>
                 </div>
                 
