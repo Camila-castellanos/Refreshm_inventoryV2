@@ -541,6 +541,43 @@ class MarketController extends Controller
     }
 
     /**
+     * Display the FAQ page
+     */
+    public function faq(Market $market)
+    {
+        try {
+            $market->load(['shop']);
+
+            // Verify shop accessibility
+            if (!$market->shop) {
+                abort(503, 'This market is temporarily unavailable');
+            }
+
+            // Get safe market data
+            $safeMarketData = $market->getSafeData();
+
+            // Get FAQ data from market, default to empty structure if not set
+            $faqData = $market->faq ?? [
+                'title' => 'Frequently Asked Questions',
+                'description' => '',
+                'questions' => []
+            ];
+
+            return Inertia::render('Ecommerce/PublicMarket/Faq', [
+                'market' => $safeMarketData,
+                'faqData' => $faqData
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Market FAQ error: ' . $e->getMessage(), [
+                'market_id' => $market->id ?? null,
+                'market_slug' => $market->slug ?? null,
+            ]);
+
+            abort(503, 'FAQ page is temporarily unavailable. Please try again later.');
+        }
+    }
+
+    /**
      * Display the cart review page
      */
     public function cart(Market $market)
