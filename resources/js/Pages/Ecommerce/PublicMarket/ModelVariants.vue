@@ -5,10 +5,10 @@
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
                 <div class="flex items-center justify-between mb-4">
                     <div class="flex items-center space-x-6">
-                        <router-link :to="{ name: 'market.index', params: { slug: market.slug } }" 
-                                     class="text-gray-600 hover:text-gray-900 font-medium text-base transition-colors">
+                        <button @click="goBack"
+                                class="text-gray-600 hover:text-gray-900 font-medium text-base transition-colors">
                             &larr; Back to Store
-                        </router-link>
+                        </button>
                         <span class="text-gray-300 text-lg">|</span>
                         <h1 class="text-3xl font-bold text-gray-900">{{ modelData.model }}</h1>
                     </div>
@@ -340,11 +340,12 @@ const formatPrice = (price) => {
     return new Intl.NumberFormat().format(price)
 }
 
-const viewProductDetail = (itemId) => {
-    router.push({
-        name: 'market.product',
-        params: { item: itemId }
-    })
+const goBack = () => {
+    if (props.market?.slug) {
+        window.location.href = `/market/${props.market.slug}/products-list`
+    } else {
+        window.history.back()
+    }
 }
 
 const addToCart = async (item) => {
