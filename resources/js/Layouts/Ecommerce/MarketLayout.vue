@@ -158,6 +158,13 @@
                         >
                             Contact
                         </Link>
+                        <Link 
+                            :href="route('market.faq', market.slug)"
+                            :class="['text-sm font-medium transition-colors duration-200', 
+                                    isCurrentRoute('market.faq') ? 'text-gray-900' : 'text-gray-600 hover:text-gray-900']"
+                        >
+                            FAQ
+                        </Link>
                     </div>
                 </nav>
 
@@ -197,6 +204,14 @@
                             @click="closeMobileMenu"
                         >
                             Contact
+                        </Link>
+                        <Link 
+                            :href="route('market.faq', market.slug)"
+                            :class="['block text-sm font-medium transition-colors duration-200', 
+                                    isCurrentRoute('market.faq') ? 'text-gray-900' : 'text-gray-600 hover:text-gray-900']"
+                            @click="closeMobileMenu"
+                        >
+                            FAQ
                         </Link>
                     </div>
                 </div>
@@ -266,6 +281,11 @@
                             <li v-if="market.contact_email">
                                 <Link :href="route('market.contact', market.slug)" class="hover:text-gray-900 transition-colors duration-200">
                                     Contact
+                                </Link>
+                            </li>
+                            <li>
+                                <Link :href="route('market.faq', market.slug)" class="hover:text-gray-900 transition-colors duration-200">
+                                    FAQ
                                 </Link>
                             </li>
                         </ul>

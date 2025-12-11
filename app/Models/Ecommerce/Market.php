@@ -44,6 +44,7 @@ class Market extends Model
         'return_policy',
         'shipping_policy',
         'privacy_policy',
+        'faq',
     ];
 
     /**
@@ -56,6 +57,7 @@ class Market extends Model
         'show_inventory_count' => false,
         'theme_colors' => null,
         'meta_keywords' => null,
+        'faq' => '{"title":"","description":"","questions":[]}',
     ];
 
     /**
@@ -64,6 +66,7 @@ class Market extends Model
     protected $casts = [
         'theme_colors' => 'array',
         'meta_keywords' => 'array',
+        'faq' => 'array',
         'is_active' => 'boolean',
         'show_inventory_count' => 'boolean',
         'tax_rate' => 'decimal:4',

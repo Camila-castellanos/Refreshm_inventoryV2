@@ -3,12 +3,12 @@
 namespace App\Http\Controllers\Ecommerce;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\MarketForm;
 use App\Models\Ecommerce\Market;
 use App\Models\Shop;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class MarketAdminController extends Controller
@@ -50,34 +50,9 @@ class MarketAdminController extends Controller
     /**
      * Store a newly created market
      */
-    public function store(Request $request)
+    public function store(MarketForm $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'shop_id' => [
-                'required',
-                'exists:shops,id',
-                Rule::exists('shops', 'id')->where(function ($query) {
-                    $query->where('company_id', Auth::user()->company_id);
-                }),
-            ],
-            'description' => 'nullable|string|max:1000',
-            'tagline' => 'nullable|string|max:255',
-            'currency' => 'required|string|in:USD,EUR,GBP,CAD,AUD',
-            'show_inventory_count' => 'boolean',
-            'is_active' => 'boolean',
-            'contact_email' => 'nullable|email|max:255',
-            'contact_phone' => 'nullable|string|max:50',
-            'address' => 'nullable|string|max:500',
-            'meta_title' => 'nullable|string|max:255',
-            'meta_description' => 'nullable|string|max:500',
-            'custom_domain' => [
-                'nullable',
-                'string',
-                'max:255',
-                Rule::unique('markets', 'custom_domain'),
-            ],
-        ]);
+        $validated = $request->validated();
 
         // Generate unique slug
         $baseSlug = Str::slug($validated['name']);
@@ -89,7 +64,7 @@ class MarketAdminController extends Controller
             $counter++;
         }
 
-                // Create the market
+        // Create the market
         $market = Market::create([
             'name' => $validated['name'],
             'slug' => $slug,
@@ -105,6 +80,7 @@ class MarketAdminController extends Controller
             'address' => $validated['address'],
             'meta_title' => $validated['meta_title'] ?: ($validated['name'] . ' - Online Market'),
             'meta_description' => $validated['meta_description'] ?: ('Browse and shop ' . $validated['name'] . ' collection of quality products.'),
+            'faq' => $validated['faq'] ?? null,
         ]);
 
         // Build the public market URL
@@ -142,39 +118,14 @@ class MarketAdminController extends Controller
     /**
      * Update the specified market
      */
-    public function update(Request $request, Market $market)
+    public function update(MarketForm $request, Market $market)
     {
         // Ensure the market belongs to the current user's company
         if ($market->shop->company_id !== Auth::user()->company_id) {
             abort(403, 'Unauthorized access to this market.');
         }
 
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'shop_id' => [
-                'required',
-                'exists:shops,id',
-                Rule::exists('shops', 'id')->where(function ($query) {
-                    $query->where('company_id', Auth::user()->company_id);
-                }),
-            ],
-            'description' => 'nullable|string|max:1000',
-            'tagline' => 'nullable|string|max:255',
-            'currency' => 'required|string|in:USD,EUR,GBP,CAD,AUD',
-            'show_inventory_count' => 'boolean',
-            'is_active' => 'boolean',
-            'contact_email' => 'nullable|email|max:255',
-            'contact_phone' => 'nullable|string|max:50',
-            'address' => 'nullable|string|max:500',
-            'meta_title' => 'nullable|string|max:255',
-            'meta_description' => 'nullable|string|max:500',
-            'custom_domain' => [
-                'nullable',
-                'string',
-                'max:255',
-                Rule::unique('markets', 'custom_domain')->ignore($market->id),
-            ],
-        ]);
+        $validated = $request->validated();
 
         // Update slug if name changed
         if ($market->name !== $validated['name']) {

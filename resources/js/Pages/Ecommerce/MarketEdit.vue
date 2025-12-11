@@ -232,6 +232,138 @@
                                 />
                                 <small v-if="form.errors.meta_description" class="p-error">{{ form.errors.meta_description }}</small>
                             </div>
+
+                            <!-- FAQ Settings -->
+                            <div class="col-span-2 border-t pt-6">
+                                <h3 class="text-lg font-medium text-gray-900 mb-4">FAQ Page</h3>
+                            </div>
+
+                            <!-- FAQ Title -->
+                            <div class="col-span-2">
+                                <label for="faq_title" class="block text-sm font-medium text-gray-900 mb-2">
+                                    FAQ Title
+                                </label>
+                                <InputText
+                                    id="faq_title"
+                                    v-model="form.faq.title"
+                                    placeholder="e.g., Frequently Asked Questions"
+                                    class="w-full"
+                                />
+                            </div>
+
+                            <!-- FAQ Description -->
+                            <div class="col-span-2">
+                                <label for="faq_description" class="block text-sm font-medium text-gray-900 mb-2">
+                                    FAQ Description
+                                </label>
+                                <Textarea
+                                    id="faq_description"
+                                    v-model="form.faq.description"
+                                    placeholder="Brief FAQ description..."
+                                    rows="2"
+                                    class="w-full"
+                                />
+                            </div>
+
+                            <!-- FAQ Questions -->
+                            <div class="col-span-2">
+                                <div class="flex items-center justify-between mb-4">
+                                    <label class="block text-sm font-medium text-gray-900">
+                                        Questions
+                                    </label>
+                                    <Button
+                                        type="button"
+                                        label="Add Question"
+                                        icon="pi pi-plus"
+                                        severity="info"
+                                        size="small"
+                                        @click="addQuestion"
+                                    />
+                                </div>
+
+                                <!-- Questions List -->
+                                <div v-if="form.faq.questions.length > 0" class="space-y-4">
+                                    <div
+                                        v-for="(question, index) in form.faq.questions"
+                                        :key="index"
+                                        class="p-4 border border-gray-200 rounded-lg bg-gray-50"
+                                    >
+                                        <!-- Question Number and Actions -->
+                                        <div class="flex items-center justify-between mb-4">
+                                            <span class="text-sm font-medium text-gray-600">Question {{ index + 1 }}</span>
+                                            <div class="flex gap-2">
+                                                <!-- Move Up Button -->
+                                                <Button
+                                                    v-if="index > 0"
+                                                    type="button"
+                                                    icon="pi pi-arrow-up"
+                                                    severity="secondary"
+                                                    size="small"
+                                                    text
+                                                    @click="moveQuestionUp(index)"
+                                                    title="Move up"
+                                                />
+
+                                                <!-- Move Down Button -->
+                                                <Button
+                                                    v-if="index < form.faq.questions.length - 1"
+                                                    type="button"
+                                                    icon="pi pi-arrow-down"
+                                                    severity="secondary"
+                                                    size="small"
+                                                    text
+                                                    @click="moveQuestionDown(index)"
+                                                    title="Move down"
+                                                />
+
+                                                <!-- Delete Button -->
+                                                <Button
+                                                    type="button"
+                                                    icon="pi pi-trash"
+                                                    severity="danger"
+                                                    size="small"
+                                                    text
+                                                    @click="removeQuestion(index)"
+                                                    title="Delete question"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <!-- Question Text -->
+                                        <div class="mb-4">
+                                            <label :for="`question_${index}`" class="block text-sm font-medium text-gray-700 mb-2">
+                                                Question
+                                            </label>
+                                            <InputText
+                                                :id="`question_${index}`"
+                                                v-model="question.question"
+                                                placeholder="What is your question?"
+                                                class="w-full"
+                                            />
+                                        </div>
+
+                                        <!-- Answer Text -->
+                                        <div>
+                                            <label :for="`answer_${index}`" class="block text-sm font-medium text-gray-700 mb-2">
+                                                Answer
+                                            </label>
+                                            <Textarea
+                                                :id="`answer_${index}`"
+                                                v-model="question.answer"
+                                                placeholder="Your answer..."
+                                                rows="3"
+                                                class="w-full"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Empty State -->
+                                <div v-else class="p-6 border border-dashed border-gray-300 rounded-lg text-center">
+                                    <i class="pi pi-inbox text-3xl text-gray-400 mb-2"></i>
+                                    <p class="text-gray-500">No questions added yet. Click "Add Question" to get started.</p>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Form Actions -->
@@ -311,7 +443,12 @@ const form = useForm({
     contact_phone: '',
     address: '',
     meta_title: '',
-    meta_description: ''
+    meta_description: '',
+    faq: {
+        title: '',
+        description: '',
+        questions: []
+    }
 });
 
 // Load market data into form
@@ -330,6 +467,11 @@ onMounted(() => {
         form.address = props.market.address || '';
         form.meta_title = props.market.meta_title || '';
         form.meta_description = props.market.meta_description || '';
+        form.faq = props.market.faq || {
+            title: 'Frequently Asked Questions',
+            description: '',
+            questions: []
+        };
     }
 });
 
@@ -353,5 +495,46 @@ const submitForm = () => {
             // Redirect will be handled by the controller
         }
     });
+};
+
+const addQuestion = () => {
+    form.faq.questions.push({
+        id: `faq-${Date.now()}`,
+        question: '',
+        answer: '',
+        order: form.faq.questions.length + 1
+    });
+};
+
+const removeQuestion = (index) => {
+    form.faq.questions.splice(index, 1);
+    // Reorder questions
+    form.faq.questions.forEach((q, i) => {
+        q.order = i + 1;
+    });
+};
+
+const moveQuestionUp = (index) => {
+    if (index > 0) {
+        const temp = form.faq.questions[index];
+        form.faq.questions[index] = form.faq.questions[index - 1];
+        form.faq.questions[index - 1] = temp;
+        // Reorder
+        form.faq.questions.forEach((q, i) => {
+            q.order = i + 1;
+        });
+    }
+};
+
+const moveQuestionDown = (index) => {
+    if (index < form.faq.questions.length - 1) {
+        const temp = form.faq.questions[index];
+        form.faq.questions[index] = form.faq.questions[index + 1];
+        form.faq.questions[index + 1] = temp;
+        // Reorder
+        form.faq.questions.forEach((q, i) => {
+            q.order = i + 1;
+        });
+    }
 };
 </script>
