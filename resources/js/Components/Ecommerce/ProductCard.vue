@@ -2,7 +2,7 @@
     <div class="bg-white rounded-lg border border-gray-200 hover:border-gray-300 overflow-hidden transition-all duration-200 hover:shadow-lg group">
         <!-- Product Image -->
         <div 
-            class="aspect-w-16 aspect-h-12 bg-gray-100 flex items-center justify-center group-hover:bg-gray-50 transition-colors duration-200 overflow-hidden"
+            class="aspect-w-16 aspect-h-12 bg-white flex items-center justify-center group-hover:bg-gray-50 transition-colors duration-200 overflow-hidden"
             :class="compact ? 'h-40' : 'h-48'"
         >
             <!-- Show actual image if available -->
@@ -10,7 +10,7 @@
                 v-if="productImage"
                 :src="productImage"
                 :alt="item.model"
-                class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                class="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
             />
             <!-- Fallback placeholder if no image -->
             <div v-else class="text-center" :class="compact ? 'p-4' : 'p-6'">

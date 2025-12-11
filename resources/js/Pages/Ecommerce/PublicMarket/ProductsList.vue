@@ -506,8 +506,6 @@ const clearSearch = () => {
 
 // Lifecycle
 onMounted(() => {
-    console.log('ProductsList mounted:', items.value)
-    
     // Set initial hasMoreItems state
     hasMoreItems.value = props.initialItems.length >= 24 // Assuming 24 items per page
     

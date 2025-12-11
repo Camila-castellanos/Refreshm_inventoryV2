@@ -38,7 +38,7 @@ class MarketItemController extends Controller
     }
 
     /**
-     * Get detailed variants for a specific model
+     * Get detailed variants for a specific model (Admin view - shows all items including hidden)
      */
     public function modelDetails(Request $request, Market $market, $model)
     {
@@ -47,17 +47,18 @@ class MarketItemController extends Controller
             abort(403, 'Unauthorized access to this market.');
         }
 
-        $variants = $market->getModelVariants($model);
+        // Use unified method - includeHidden=true for admin view
+        $result = $market->getModelsWithVariants($model, true);
 
-        if (!$variants) {
+        if (!$result) {
             return response()->json(['error' => 'Model not found'], 404);
         }
 
-        return response()->json($variants);
+        return response()->json($result);
     }
 
     /**
-     * Get all items for a specific model with market-specific pricing
+     * Get all items for a specific model with market-specific pricing (Admin view)
      */
     public function byModel(Request $request, Market $market, Item $item)
     {
@@ -71,76 +72,21 @@ class MarketItemController extends Controller
             abort(404, 'Item not found in this market.');
         }
 
-        // Get all items with the same model - excluding sold items
-        $items = Item::where('shop_id', $market->shop_id)
-            ->where('model', $item->model)
-            ->whereNull('sold')
-            ->whereNull('hold')
-            ->with('media')
-            ->get();
+        // Use unified method - includeHidden=true for admin view
+        $result = $market->getModelsWithVariants($item->model, true);
 
-        // Load market items for this market
-        $marketItemsMap = $market->marketItems()
-            ->whereIn('item_id', $items->pluck('id'))
-            ->get()
-            ->keyBy('item_id');
-
-        // Conditions that should be visible by default (if not configured)
-        $visibleConditions = ['A', 'A-', 'B+', 'B'];
-
-        $mappedItems = $items->map(function ($modelItem) use ($market, $marketItemsMap, $visibleConditions) {
-            $marketItem = $marketItemsMap[$modelItem->id] ?? null;
-            
-            // Use custom price from MarketItem, or fallback to selling_price
-            $price = $marketItem ? $marketItem->getPrice() : $modelItem->selling_price;
-            
-            // Check if item has issues
-            $hasIssues = !empty($modelItem->issues) && $modelItem->issues !== '{}';
-            
-            // Determine visibility:
-            // 1. If MarketItem exists, use its is_visible value (highest priority)
-            // 2. If item has issues and no MarketItem, default to false (priority over conditions)
-            // 3. Otherwise, use default based on condition (A, A-, B+, B = visible, others = hidden)
-            if ($marketItem) {
-                $isVisible = $marketItem->is_visible;
-            } elseif ($hasIssues) {
-                // If item has issues and not configured, hide by default
-                $isVisible = false;
-            } else {
-                // Use default visibility based on condition
-                $isVisible = in_array($modelItem->grade, $visibleConditions);
-            }
-            
-            return [
-                'id' => $modelItem->id,
-                'model' => $modelItem->model,
-                'manufacturer' => $modelItem->manufacturer,
-                'imei' => $modelItem->imei,
-                'type' => $modelItem->type,
-                'colour' => $modelItem->colour,
-                'condition' => $modelItem->grade,
-                'status' => $modelItem->sold ? 'sold' : ($modelItem->hold ? 'hold' : 'available'),
-                'buying_price' => $modelItem->buying_price,
-                'selling_price' => $modelItem->selling_price,
-                'market_price' => $price,
-                'has_custom_price' => $marketItem && $marketItem->custom_price !== null,
-                'is_visible' => $isVisible,
-                'description' => $marketItem ? $marketItem->description : null,
-                'issues' => $modelItem->issues,
-                'photo_count' => $modelItem->media->count(),
-                'main_photo_thumb' => $modelItem->getFirstMediaUrl('item-photos', 'thumb'),
-                'main_photo_url' => $modelItem->getFirstMediaUrl('item-photos'),
-            ];
-        });
+        if (!$result) {
+            return response()->json(['error' => 'Model not found'], 404);
+        }
 
         return response()->json([
             'market' => $market,
             'model' => [
                 'id' => $item->id,
-                'model' => $item->model,
-                'manufacturer' => $item->manufacturer,
+                'model' => $result['model'],
+                'manufacturer' => $result['manufacturer'],
             ],
-            'items' => $mappedItems,
+            'items' => $result['items'],
         ]);
     }
 
