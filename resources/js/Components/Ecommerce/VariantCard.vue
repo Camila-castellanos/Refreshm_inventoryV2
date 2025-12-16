@@ -56,8 +56,8 @@
                     </div>
 
                     <!-- Description -->
-                    <div v-if="item.description" class="mb-6">
-                        <p class="text-sm text-gray-600 italic">{{ item.description }}</p>
+                    <div v-if="item.description" class="mb-6 prose prose-sm max-w-none text-gray-700">
+                        <div v-html="item.description"></div>
                     </div>
 
                     <!-- Price -->
