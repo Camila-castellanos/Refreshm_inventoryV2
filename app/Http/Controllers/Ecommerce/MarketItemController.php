@@ -138,6 +138,8 @@ class MarketItemController extends Controller
             'description' => 'nullable|string|max:1000',
         ]);
 
+        $description = $this->sanitizeDescription($request->description);
+
         // Check if MarketItem already exists
         $existingMarketItem = MarketItem::where('market_id', $market->id)
             ->where('item_id', $item->id)
@@ -151,7 +153,7 @@ class MarketItemController extends Controller
                 'item_id' => $item->id,
             ],
             [
-                'description' => $request->description,
+                'description' => $description,
                 'is_visible' => $existingMarketItem ? $existingMarketItem->is_visible : true,
             ]
         );
@@ -246,6 +248,13 @@ class MarketItemController extends Controller
 
         // Load item with photos
         $item->load('media');
+        // Include market-specific description/visibility
+        $marketItem = MarketItem::where('market_id', $market->id)
+            ->where('item_id', $item->id)
+            ->first();
+
+        $item->description = $marketItem?->description;
+        $item->is_visible = $marketItem?->is_visible ?? true;
 
         // If request is AJAX or explicitly asks for JSON, return JSON
         if (request()->wantsJson() || request()->query('format') === 'json') {
@@ -366,5 +375,33 @@ class MarketItemController extends Controller
         $item->load('media');
 
         return back()->with('success', 'Photos reordered successfully!');
+    }
+
+    /**
+     * Sanitize rich text description allowing a limited set of tags/attributes
+     */
+    private function sanitizeDescription(?string $html): ?string
+    {
+        if (!$html) {
+            return null;
+        }
+
+        // Remove script tags entirely
+        $clean = preg_replace('/<script\b[^>]*>(.*?)<\/script>/is', '', $html);
+
+        // Allow only a safe set of tags
+        $allowedTags = '<p><br><strong><em><u><s><ul><ol><li><a><img><h1><h2><h3><h4><blockquote><div><span>';
+        $clean = strip_tags($clean, $allowedTags);
+
+        // Strip inline event handlers and javascript: urls
+        $clean = preg_replace('/on\w+="[^"]*"/i', '', $clean);
+        $clean = preg_replace("/on\w+='[^']*'/i", '', $clean);
+        $clean = preg_replace('/javascript:/i', '', $clean);
+
+        // Remove style attributes to avoid injected CSS
+        $clean = preg_replace('/\sstyle="[^"]*"/i', '', $clean);
+        $clean = preg_replace("/\sstyle='[^']*'/i", '', $clean);
+
+        return $clean;
     }
 }

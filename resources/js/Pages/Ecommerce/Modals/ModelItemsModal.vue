@@ -62,10 +62,10 @@
                             <th class="px-4 py-3 text-left font-semibold text-gray-900">Condition</th>
                             <th class="px-4 py-3 text-left font-semibold text-gray-900">Issues</th>
                             <th class="px-4 py-3 text-right font-semibold text-gray-900">Market Price</th>
-                            <th class="px-4 py-3 text-left font-semibold text-gray-900">Description</th>
                             <th class="px-4 py-3 text-left font-semibold text-gray-900">Status</th>
                             <th class="px-4 py-3 text-center font-semibold text-gray-900">Visible</th>
                             <th class="px-4 py-3 text-center font-semibold text-gray-900">Photos</th>
+                            <th class="px-4 py-3 text-left font-semibold text-gray-900">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -115,19 +115,6 @@
                                 </div>
                             </td>
                             <td class="px-4 py-3">
-                                <textarea
-                                    v-model="item.description"
-                                    @blur="updateDescription(item)"
-                                    :disabled="savingDescriptions[item.id]"
-                                    class="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 resize-none"
-                                    placeholder="Add description..."
-                                    rows="2"
-                                ></textarea>
-                                <span v-if="savingDescriptions[item.id]" class="text-xs text-gray-500">
-                                    <i class="pi pi-spin pi-spinner"></i> Saving...
-                                </span>
-                            </td>
-                            <td class="px-4 py-3">
                                 <span
                                     :class="[
                                         'inline-flex items-center px-2 py-1 rounded-full text-xs font-medium',
@@ -170,6 +157,15 @@
                                     <span class="text-gray-600 font-medium">{{ item.photo_count || 0 }}</span>
                                 </div>
                             </td>
+                            <td class="px-4 py-3">
+                                <button
+                                    @click="openDescriptionModal(item)"
+                                    class="px-3 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors flex items-center gap-2"
+                                >
+                                    <i class="pi pi-file-edit text-sm"></i>
+                                    Edit Description
+                                </button>
+                            </td>
                         </tr>
                     </tbody>
                 </table>
@@ -201,6 +197,14 @@
             <p class="text-gray-600">There are no items for this model.</p>
         </div>
 
+        <ItemDescriptionModal
+            :visible="showDescriptionModal"
+            :item="descriptionItem"
+            :market="props.market"
+            @update:visible="handleDescriptionModalVisible"
+            @saved="handleDescriptionSaved"
+        />
+
         <template #footer>
             <div class="flex justify-end">
                 <Button
@@ -220,6 +224,7 @@ import { useToast } from 'primevue/usetoast'
 import Dialog from 'primevue/dialog'
 import Button from 'primevue/button'
 import Toast from 'primevue/toast'
+import ItemDescriptionModal from '@/Pages/Ecommerce/Modals/ItemDescriptionModal.vue'
 import axios from 'axios'
 
 const props = defineProps({
@@ -247,9 +252,10 @@ const isVisible = ref(props.visible)
 const searchQuery = ref('')
 const toast = useToast()
 const savingPrices = ref({})  // Track which items are saving
-const savingDescriptions = ref({})  // Track which items are saving descriptions
 const togglingVisibility = ref({})  // Track which items are toggling visibility
 const togglingAllVisibility = ref(false)  // Track bulk visibility toggle
+const showDescriptionModal = ref(false)
+const descriptionItem = ref(null)
 
 watch(() => props.visible, (newVal) => {
     isVisible.value = newVal
@@ -364,47 +370,6 @@ const updatePrice = async (item) => {
     }
 }
 
-const updateDescription = async (item) => {
-    if (!item || !item.id || !props.market || !props.market.id) {
-        toast.add({
-            severity: 'error',
-            summary: 'Error',
-            detail: 'Missing required data for description update',
-            life: 3000
-        })
-        return
-    }
-    
-    savingDescriptions.value[item.id] = true
-    
-    try {
-        await axios.post(
-            route('ecommerce.items.update-description', {
-                market: props.market.id,
-                item: item.id
-            }),
-            { description: item.description }
-        )
-        
-        toast.add({
-            severity: 'success',
-            summary: 'Description Updated',
-            detail: `Description updated successfully`,
-            life: 3000
-        })
-    } catch (error) {
-        toast.add({
-            severity: 'error',
-            summary: 'Error',
-            detail: error.response?.data?.message || 'Failed to update description',
-            life: 3000
-        })
-        console.error('Description update error:', error)
-    } finally {
-        savingDescriptions.value[item.id] = false
-    }
-}
-
 const toggleItemVisibility = async (item) => {
     if (!item || !item.id || !props.market || !props.market.id) {
         toast.add({
@@ -494,6 +459,27 @@ const setAllVisibility = async (visible) => {
         console.error('Bulk visibility update error:', error)
     } finally {
         togglingAllVisibility.value = false
+    }
+}
+
+const openDescriptionModal = (item) => {
+    descriptionItem.value = item
+    showDescriptionModal.value = true
+}
+
+const handleDescriptionModalVisible = (value) => {
+    showDescriptionModal.value = value
+    if (!value) {
+        descriptionItem.value = null
+    }
+}
+
+const handleDescriptionSaved = ({ id, description }) => {
+    if (!id) return
+
+    const target = props.items.find((i) => i.id === id)
+    if (target) {
+        target.description = description
     }
 }
 </script>
