@@ -11,7 +11,7 @@
       <Button
           icon="pi pi-print"
           class="ml-2 !w-fit !h-fit !px-2"
-          @click="openLabelsFromTable(mapSpreadsheetData(tableData))"
+          @click="openLabelsFromTable(filterItemsForLabels(tableData))"
           :disabled="
             tableData.length < 1 ||
             (tableData.length === 1 && isEmptyRow(tableData[0]))
@@ -166,7 +166,13 @@ import LoadDraftModal from "./LoadDraftModal.vue";
 type VendorOption = { label: string; value: string };
 type ContextMenu = { visible: boolean; x: number; y: number; row: number | null };
 
-type ItemWithLocation = Item & { location: string } & { subtotal: number|string; selling_price?: number|string; total?: number|string };
+type ItemWithLocation = Item & {
+  location: string;
+  draft_unassigned?: boolean;
+  subtotal: number | string;
+  selling_price?: number | string;
+  total?: number | string;
+};
 
 const props = defineProps<{ initialData?: Item[] }>();
 
@@ -226,6 +232,18 @@ const menuItems = computed(() => {
     command: () => deleteRow(),
   });
 
+  // Activate/deactivate rows based on draft_unassigned flag
+  const targetIndices = getTargetRowIndices();
+  const hasInactive = targetIndices.some((idx) => tableData.value[idx]?.draft_unassigned);
+  const toggleLabel = hasInactive
+    ? (targetIndices.length > 1 ? `Activate Rows (${targetIndices.length})` : "Activate Row")
+    : (targetIndices.length > 1 ? `Deactivate Rows (${targetIndices.length})` : "Deactivate Row");
+  items.push({
+    label: toggleLabel,
+    icon: hasInactive ? "pi pi-check" : "pi pi-ban",
+    command: () => toggleRowsActive(hasInactive),
+  });
+
   // Print labels: calcular lista de filas a imprimir (seleccionadas o fila de contexto)
   const printCount = nSelected > 0 ? nSelected : 1;
   const printLabel = printCount > 1 ? `Print Labels (${printCount})` : `Print Label (${printCount})`;
@@ -236,7 +254,7 @@ const menuItems = computed(() => {
       const rows = selectedRows.value.length > 0
         ? selectedRows.value.map(i => tableData.value[i]).filter(Boolean)
         : [tableData.value[contextRow.value ?? 0]];
-      openLabelsFromTable(mapSpreadsheetData(rows));
+      openLabelsFromTable(filterItemsForLabels(rows));
     },
   });
 
@@ -608,6 +626,40 @@ function deleteRow() {
   }
 }
 
+function getTargetRowIndices(): number[] {
+  const rows = selectedRows.value.length > 1
+    ? [...selectedRows.value]
+    : [contextRow.value ?? 0];
+  return Array.from(new Set(rows))
+    .filter(Number.isFinite)
+    .map(Number)
+    .filter((idx) => idx >= 0 && idx < tableData.value.length);
+}
+
+function toggleRowsActive(activate: boolean) {
+  const targets = getTargetRowIndices();
+  if (targets.length === 0) return;
+
+  let toAssign = 0;
+  targets.forEach((idx) => {
+    const row = tableData.value[idx];
+    if (!row) return;
+    row.draft_unassigned = activate ? false : true;
+    if (!activate) {
+      row.location = "";
+      row.position = null;
+      row.storage_id = null;
+    }
+    if (activate && !row.location) {
+      toAssign += 1;
+    }
+  });
+
+  if (activate && toAssign > 0) {
+    renderPositions(toAssign);
+  }
+}
+
 function onInsertRow(e: CustomEvent<{ records: ItemWithLocation[] }>): void {
   const rows = e?.detail?.records?.length || 1;
 
@@ -622,14 +674,18 @@ function onDeleteRow(e: CustomEvent<{ count: number }>): void {
 }
 
 async function renderPositions(numOfRows: number): Promise<void> {
-   // Get rows that need position assignment
-   const newRowsToAssign = tableData.value.filter((row) => !row.location);
+   // Get rows that need position assignment (skip draft rows marked unassigned)
+   const newRowsToAssign = tableData.value.filter(
+     (row) => !row.location && !row.draft_unassigned
+   );
 
    if (newRowsToAssign.length === 0) return;
 
    try {
      // Get rows that are already assigned (reserved in front)
-     const assignedRows = tableData.value.filter((row) => row.location && row.storage_id && row.position);
+     const assignedRows = tableData.value.filter(
+       (row) => row.location && row.storage_id && row.position && !row.draft_unassigned
+     );
      
      // Parse assigned rows to extract storage_id and position
      const assignedInFront = assignedRows.map((row) => {
@@ -697,6 +753,11 @@ async function renderPositions(numOfRows: number): Promise<void> {
 
 function handleBeforeEdit(e: RevoGridCustomEvent<BeforeSaveDataDetails>): void {
   const { prop, rowIndex } = e.detail;
+  const row = tableData.value[rowIndex];
+  if (row?.draft_unassigned) {
+    e.preventDefault();
+    return;
+  }
   if (prop === "location") {
     e.preventDefault(); // evita cambios manuales en 'location'
   }
@@ -743,7 +804,7 @@ function createDevices(): void {
     icon: "pi pi-exclamation-triangle",
     rejectProps: { label: "Cancel", severity: "secondary", outlined: true },
     acceptProps: { label: "Save" },
-    accept: () => verifySpreadsheetRequired(() => submitSpreadsheet(mapSpreadsheetData(tableData.value))),
+    accept: () => verifySpreadsheetRequired(() => submitSpreadsheet(filterItemsForInventory())),
   });
 }
   function verifySpreadsheetRequired(callback: () => void): void {
@@ -769,7 +830,7 @@ function createDevices(): void {
   }
 function editDevices(): void {
   isLoading.value = true;
-  const formattedData = mapSpreadsheetData(tableData.value);
+  const formattedData = filterItemsForInventory();
   axios
     .post(route("items.update"), { items: formattedData }, { responseType: "blob" })
     .then(() => {
@@ -833,6 +894,14 @@ function mapSpreadsheetData(data: ItemWithLocation[]): any[] {
       subtotal
     };
   });
+}
+
+function filterItemsForInventory(): any[] {
+  return mapSpreadsheetData(tableData.value).filter((item) => item.position != null);
+}
+
+function filterItemsForLabels(rows: ItemWithLocation[]): any[] {
+  return mapSpreadsheetData(rows).filter((item) => item.position != null);
 }
 
 async function submitSpreadsheet(body: any[]): Promise<void> {
@@ -1220,9 +1289,10 @@ function handleLoadDraft(draft: any) {
   tableData.value = draft.items.map((item: any) => {
     const storage = storagesList.value.find(s => s.id === item.storage_id);
     let location = '';
+    const hasPosition = storage && item.storage_position;
     
     // Si el item tiene storage_id y storage_position, construir la location
-    if (storage && item.storage_position) {
+    if (hasPosition) {
       location = `${storage.name} - ${item.storage_position} / ${storage.limit}`;
     }
     // Si no tiene location, se dejará vacío para que renderPositions lo asigne
@@ -1230,6 +1300,7 @@ function handleLoadDraft(draft: any) {
     return {
       ...item,
       location: location,
+      draft_unassigned: !hasPosition,
       vendor: selectedVendor.value as string,
       date: draft.date,
       tax: draft.tax_id,
@@ -1240,10 +1311,12 @@ function handleLoadDraft(draft: any) {
   });
   
   // Verificar si hay items sin location y asignarles posiciones automáticamente
-  const itemsWithoutLocation = tableData.value.filter(item => !item.location);
-  if (itemsWithoutLocation.length > 0) {
-    console.log(`Found ${itemsWithoutLocation.length} items without location, assigning positions...`);
-    renderPositions(itemsWithoutLocation.length);
+  const itemsNeedingAutoAssign = tableData.value.filter(
+    item => !item.location && !item.draft_unassigned
+  );
+  if (itemsNeedingAutoAssign.length > 0) {
+    console.log(`Found ${itemsNeedingAutoAssign.length} items without location, assigning positions...`);
+    renderPositions(itemsNeedingAutoAssign.length);
   }
 }
 

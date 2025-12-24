@@ -47,8 +47,8 @@ class DraftController extends Controller
           'title'              => 'required|string|max:255',
           'vendor'             => 'nullable|string|max:255',
           'items'              => 'required|array',
-          'items.*.storage_id'         => 'required|integer|exists:storages,id',
-          'items.*.storage_position'   => 'required|integer',
+          'items.*.storage_id'         => 'nullable|integer|exists:storages,id',
+          'items.*.storage_position'   => 'nullable|integer',
           // add other item fields validation as needed
         ]);
 
@@ -101,8 +101,8 @@ class DraftController extends Controller
           'title'              => 'sometimes|required|string|max:255',
           'vendor'             => 'nullable|string|max:255',
           'items'              => 'sometimes|required|array',
-          'items.*.storage_id'         => 'required_with:items|integer|exists:storages,id',
-          'items.*.storage_position'   => 'required_with:items|integer',
+          'items.*.storage_id'         => 'nullable|integer|exists:storages,id',
+          'items.*.storage_position'   => 'nullable|integer',
         ]);
         // preserve full items for update
         $allItems = $request->input('items', []);
