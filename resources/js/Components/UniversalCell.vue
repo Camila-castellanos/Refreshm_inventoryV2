@@ -1,5 +1,10 @@
 <template>
-  <div ref="cell" class="flex items-center w-full h-full relative border-b border-gray-300" @contextmenu.prevent="handleContextMenu">
+  <div
+    ref="cell"
+    class="flex items-center w-full h-full relative border-b border-gray-300"
+    :class="{ 'draft-unassigned': isDraftUnassigned }"
+    @contextmenu.prevent="handleContextMenu"
+  >
     <span v-if="props.colIndex === 0 && props.column.columnType !== 'date'" class="text-center w-full">{{ props.rowIndex + 1 }}</span>
     <DatePicker
       v-else-if="props.column.columnType === 'date'"
@@ -7,6 +12,7 @@
       v-model="props.model.date"
       class="!w-full"
       dateFormat="yy-mm-dd"
+      :disabled="isDraftUnassigned"
       :max-date="new Date()" />
     <Select
       v-else-if="props.column.columnType === 'select'"
@@ -14,7 +20,8 @@
       :options="source"
       optionLabel="label"
       optionValue="value"
-      class="w-full">
+      class="w-full"
+      :disabled="isDraftUnassigned">
       <template #footer>
         <Button label="Add New" icon="pi pi-plus" class="p-button-sm w-full mt-2" @click="openAddVendorDialog" />
       </template>
@@ -39,6 +46,10 @@ const source = ref(props.column.source || []);
 
 const displayValue = computed(() => {
   return props.model[props.prop] || "";
+});
+
+const isDraftUnassigned = computed(() => {
+  return !!props.model?.draft_unassigned;
 });
 
 function handleContextMenu(event: MouseEvent) {
@@ -67,5 +78,10 @@ function openAddVendorDialog(): void {
 <style>
 [role="gridcell"] {
   padding: 0 !important;
+}
+.draft-unassigned {
+  background: #f3f4f6;
+  color: #6b7280;
+  opacity: 0.6;
 }
 </style>
