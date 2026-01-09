@@ -776,19 +776,21 @@ async function saveAsDraft() {
   try {
   
     const formattedDate = format(selectedDate.value, "yyyy-MM-dd");
+    // mapSpreadsheetData already handles draft_unassigned by clearing storage fields
+    const mappedItems = mapSpreadsheetData(tableData.value).map(item => {
+      // For draft storage, use storage_position field name
+      return {
+        ...item,
+        storage_position: item.draft_unassigned ? null : item.position,
+      };
+    });
+    
     const payload = {
       id: currentLoadedDraftId.value,
       date: formattedDate,
       vendor: selectedVendor.value,
       title: BillTitle.value,
-      items: mapSpreadsheetData(tableData.value).map(item => {
-        const [_, rest] = item.location?.split(' - ') || [];
-        const pos = rest?.split(' / ')[0] || null;
-        return {
-          ...item,
-          storage_position: pos ? parseInt(pos, 10) : null
-        };
-      })
+      items: mappedItems
     };
     console.log("Saving draft with payload:", payload);
     const {data} = await axios.post(route('drafts.store'), payload);
@@ -850,6 +852,49 @@ function editDevices(): void {
 
 function mapSpreadsheetData(data: ItemWithLocation[]): any[] {
   return data.map((row) => {
+    // If row is marked as unassigned, clear all storage-related fields
+    if (row.draft_unassigned) {
+      const vendorId = selectedVendor.value != null
+        ? vendorsList.value.find(v => v.vendor === selectedVendor.value)?.id
+        : row.vendor_id;
+      let cost = row.cost;
+      let selling_price = row.selling_price;
+      let subtotal = row.subtotal;
+      if (subtotal?.toString().startsWith("$")) {
+        subtotal = Number(subtotal.toString().slice(1));
+      }
+      if (cost?.toString().startsWith("$")) {
+        cost = Number(cost.toString().slice(1));
+      }
+      if (selling_price?.toString().startsWith("$")) {
+        selling_price = Number(selling_price.toString().slice(1));
+      }
+      const date = selectedDate.value
+        ? format(selectedDate.value, "yyyy-MM-dd")
+        : row.date
+          ? row.date
+          : format(new Date(), "yyyy-MM-dd");
+      const tax = selectedTax.value != null ? selectedTax.value : row.tax;
+      if (typeof subtotal === 'string') {
+        subtotal = parseFloat(subtotal.replace(/[^0-9.-]+/g, ''));
+      }
+      
+      return {
+        ...row,
+        storage_id: null,
+        storage_position: null,
+        position: null,
+        location: null,
+        draft_unassigned: true,
+        vendor_id: vendorId,
+        date: date,
+        cost,
+        selling_price,
+        tax,
+        subtotal
+      };
+    }
+    
     let storageId = storagesList.value.find((s) => s.name === row.location?.split("-")[0].trim())?.id;
     if (!storageId && row.storage_id) {
       storageId = row.storage_id;
@@ -898,6 +943,7 @@ function mapSpreadsheetData(data: ItemWithLocation[]): any[] {
       ...row,
       storage_id: storageId,
       position: positionParsed,
+      draft_unassigned: false,
       vendor_id: vendorId,
       date: date,
       cost,
@@ -1345,17 +1391,22 @@ function handleLoadDraft(draft: any) {
     let location = '';
     const hasPosition = storage && item.storage_position;
     
-    // Si el item tiene storage_id y storage_position, construir la location
-    if (hasPosition) {
+    // Check if item was explicitly marked as unassigned in the database
+    // If draft_unassigned is true in DB, respect that. Otherwise, infer from position data.
+    const isUnassigned = item.draft_unassigned === true || item.draft_unassigned === 1 || (!hasPosition && item.draft_unassigned !== false);
+    
+    // Si el item tiene storage_id y storage_position y NO está marcado como unassigned, construir la location
+    if (hasPosition && !isUnassigned) {
       location = `${storage.name} - ${item.storage_position} / ${storage.limit}`;
     }
-    // Si no tiene location, se dejará vacío para que renderPositions lo asigne
+    // Si está marcado como unassigned o no tiene location, se dejará vacío
     
     return {
       ...item,
       location: location,
-      position: item.storage_position,
-      draft_unassigned: !hasPosition,
+      position: isUnassigned ? null : item.storage_position,
+      storage_id: isUnassigned ? null : item.storage_id,
+      draft_unassigned: isUnassigned,
       vendor: selectedVendor.value as string,
       date: draft.date,
       tax: draft.tax_id,
@@ -1365,7 +1416,8 @@ function handleLoadDraft(draft: any) {
     };
   });
   
-  // Verificar si hay items sin location y asignarles posiciones automáticamente
+  // Verificar si hay items sin location que NO están marcados como unassigned
+  // Solo esos necesitan auto-asignación
   const itemsNeedingAutoAssign = tableData.value.filter(
     item => !item.location && !item.draft_unassigned
   );
@@ -1404,14 +1456,13 @@ function saveDraftToLocalStorage() {
   if (!selectedDate.value) {
     selectedDate.value = new Date();
   }
+  // mapSpreadsheetData already handles draft_unassigned by clearing storage fields
   const items = mapSpreadsheetData(tableData.value).map(item => {
-        const [_, rest] = item.location?.split(' - ') || [];
-        const pos = rest?.split(' / ')[0] || null;
-        return {
-          ...item,
-          storage_position: pos ? parseInt(pos, 10) : null
-        };
-      });
+    return {
+      ...item,
+      storage_position: item.draft_unassigned ? null : item.position,
+    };
+  });
   const draft = {
     id: currentLoadedDraftId.value,
     vendor: selectedVendor.value,

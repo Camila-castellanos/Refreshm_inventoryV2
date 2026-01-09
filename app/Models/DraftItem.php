@@ -30,6 +30,7 @@ class DraftItem extends Model
         'subtotal',
         'cost',
         'selling_price',
+        'draft_unassigned',
     ];
 
     protected $casts = [
@@ -37,6 +38,7 @@ class DraftItem extends Model
         'subtotal' => 'decimal:2',
         'cost' => 'decimal:2',
         'selling_price' => 'decimal:2',
+        'draft_unassigned' => 'boolean',
     ];
 
     public function draft(): BelongsTo
