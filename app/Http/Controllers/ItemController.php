@@ -605,7 +605,33 @@ class ItemController extends Controller
      */
     public function store(ItemForm $request): \Illuminate\Http\JsonResponse
     {
-        $items = $request->validated();
+        $validated = $request->validated();
+        
+        Log::info("DEBUG STORE: Received validated data", [
+            'has_items_key' => $request->has('items'),
+            'has_draft_id_key' => $request->has('draft_id'),
+            'draft_id_value' => $request->input('draft_id'),
+            'items_content' => $request->input('items')
+        ]);
+
+        $items = $request->input('items');
+        $draftId = $request->input('draft_id');
+        
+        // Convert DraftItem models to arrays if necessary
+        $items = collect($items)->map(function ($item) {
+            if (is_object($item)) {
+                return is_a($item, 'Illuminate\Database\Eloquent\Model') 
+                    ? $item->toArray() 
+                    : (array) $item;
+            }
+            return $item;
+        })->toArray();
+        
+        Log::info("DEBUG STORE: Items after conversion", [
+            'items_count' => count($items),
+            'first_item_type' => !empty($items) ? gettype($items[0]) : 'empty',
+            'first_item_keys' => !empty($items) ? array_keys($items[0]) : []
+        ]);
 
         $user = $request->user();
         $company = $user->company;
@@ -617,7 +643,7 @@ class ItemController extends Controller
 
 
         // Initialize maps for occupied positions and storage limits
-        $storageIds = collect($items["items"])->pluck('storage_id')->filter()->unique()->toArray();
+        $storageIds = collect($items)->pluck('storage_id')->filter()->unique()->toArray();
         $occupiedByStorage = [];
         $storageLimits = [];
 
@@ -641,11 +667,31 @@ class ItemController extends Controller
                 ->get()
                 ->groupBy('storage_id');
 
-            $dbDrafts = \App\Models\DraftItem::whereIn('storage_id', $storageIds)
-                ->whereNotNull('storage_position')
-                ->select('storage_id', 'storage_position')
+            $dbDraftsQuery = \App\Models\DraftItem::whereIn('storage_id', $storageIds)
+                ->whereNotNull('storage_position');
+
+            if ($request->has('draft_id') && $request->draft_id) {
+                $dbDraftsQuery->where('draft_id', '!=', $request->draft_id);
+            }
+
+            $dbDrafts = $dbDraftsQuery->select('storage_id', 'storage_position', 'draft_id')
                 ->get()
                 ->groupBy('storage_id');
+
+            // DEBUG LOGS - Format draft items with draft_id info
+            $formattedDrafts = [];
+            foreach ($dbDrafts as $storageId => $draftItemsGroup) {
+                $formattedDrafts[$storageId] = $draftItemsGroup->map(fn($item) => [
+                    'position' => $item->storage_position,
+                    'draft_id' => $item->draft_id
+                ])->toArray();
+            }
+
+            Log::info("DEBUG STORE: Loaded existing items for conflict check", [
+                'active_items_positions' => $dbItems->toArray(),
+                'draft_items_positions_with_draft_ids' => $formattedDrafts,
+                'excluded_draft_id' => $draftId
+            ]);
 
             $storagesInfo = Storage::whereIn('id', $storageIds)->pluck('limit', 'id');
 
@@ -660,22 +706,57 @@ class ItemController extends Controller
                 // Use array keys for fast lookup
                 $occupiedByStorage[$sid] = array_flip(array_unique($occupiedByStorage[$sid]));
                 $storageLimits[$sid] = $storagesInfo[$sid] ?? 999999;
+                
+                Log::info("DEBUG STORE: Merged occupied list for storage {$sid}", [
+                    'occupied' => array_keys($occupiedByStorage[$sid])
+                ]);
             }
         }
 
         // Process items: check conflicts and auto-assign positions
         $conflicts = [];
-        foreach ($items["items"] as $idx => &$item) {
+        
+        // DEBUG: Log first item to see its structure
+        if (!empty($items)) {
+            Log::info("DEBUG STORE: First item structure", [
+                'item' => $items[0],
+                'has_model_key' => isset($items[0]['model']),
+                'model_value' => $items[0]['model'] ?? 'NOT SET'
+            ]);
+        }
+        
+        foreach ($items as $idx => &$item) {
             if (empty($item['storage_id'])) continue;
 
             $sid = $item['storage_id'];
             $pos = $item['position'] ?? null;
+            $modelName = $item['model'] ?? 'Unknown Model';
+            
+            Log::info("DEBUG STORE: Checking item #{$idx} with name {$modelName}", [
+                'storage_id' => $sid,
+                'requested_position' => $pos,
+                'is_occupied' => isset($occupiedByStorage [$sid][$pos]) ? 'YES' : 'NO',
+                'occupied_list' => array_keys($occupiedByStorage[$sid] ?? [])
+            ]);
+            
             $limit = $storageLimits[$sid] ?? 999999;
 
             $conflict = false;
             // Conflict if position is already taken in DB (active or sold) or by previous item in this batch
             if ($pos && isset($occupiedByStorage[$sid][$pos])) {
                 $conflict = true;
+                Log::info("DEBUG STORE: CONFLICT DETECTED for Item #{$idx} with name {$modelName}", [
+                    'storage_id' => $sid,
+                    'position' => $pos,
+                    'reason' => 'Position already occupied in map (DB or previous item)',
+                ]);
+            } else {
+                 if ($pos) {
+                    Log::info("DEBUG STORE: Position claimed by Item #{$idx} with name {$modelName}", [
+                        'storage_id' => $sid,
+                        'position' => $pos,
+                    ]);
+                 }
             }
 
             if ($conflict || !$pos) {
@@ -749,14 +830,24 @@ class ItemController extends Controller
 
 
         $created = [];
-        Log::info("Creating items", ['items' => $items["items"]]);
+        Log::info("Creating items", [
+            'count' => count($items),
+            'models' => array_map(fn($i) => $i['model'] ?? 'N/A', $items),
+            'imeis' => array_map(fn($i) => $i['imei'] ?? 'N/A', $items)
+        ]);
         
         try {
             DB::beginTransaction();
             
-            foreach ($items["items"] as $item) {
+            foreach ($items as $item) {
                 $item['user_id'] = Auth::user()->id;
                 $item['shop_id'] = $shopId;
+                
+                // Establecer type por defecto si es null
+                if (empty($item['type'])) {
+                    $item['type'] = 'device';
+                }
+                
                 // Si la fecha viene solo en Y-m-d, anexar hora actual
                 if (!empty($item['date'])) {
                     $item['date'] = Carbon::createFromFormat('Y-m-d', $item['date'])
@@ -782,7 +873,9 @@ class ItemController extends Controller
     public function storeWithBill(ItemsWithBillForm $request)
     {
         // validate and extract items data and bill data
-        ['bill' => $billData, 'items' => $itemsData] = $request->validated();
+        $validated = $request->validated();
+        $billData = $request->input('bill');
+        $itemsData = $request->input('items');
         
 
         // Initialize maps for occupied positions and storage limits
@@ -810,11 +903,31 @@ class ItemController extends Controller
                 ->get()
                 ->groupBy('storage_id');
 
-            $dbDrafts = \App\Models\DraftItem::whereIn('storage_id', $storageIds)
-                ->whereNotNull('storage_position')
-                ->select('storage_id', 'storage_position')
+            $dbDraftsQuery = \App\Models\DraftItem::whereIn('storage_id', $storageIds)
+                ->whereNotNull('storage_position');
+
+            if ($request->has('draft_id') && $request->draft_id) {
+                $dbDraftsQuery->where('draft_id', '!=', $request->draft_id);
+            }
+
+            $dbDrafts = $dbDraftsQuery->select('storage_id', 'storage_position', 'draft_id')
                 ->get()
                 ->groupBy('storage_id');
+
+            // DEBUG LOGS - Format draft items with draft_id info
+            $formattedDrafts = [];
+            foreach ($dbDrafts as $storageId => $draftItemsGroup) {
+                $formattedDrafts[$storageId] = $draftItemsGroup->map(fn($item) => [
+                    'position' => $item->storage_position,
+                    'draft_id' => $item->draft_id
+                ])->toArray();
+            }
+
+            Log::info("DEBUG STORE WITH BILL: Loaded existing items for conflict check", [
+                'active_items_positions' => $dbItems->toArray(),
+                'draft_items_positions_with_draft_ids' => $formattedDrafts,
+                'excluded_draft_id' => $request->draft_id ?? 'None'
+            ]);
 
             $storagesInfo = Storage::whereIn('id', $storageIds)->pluck('limit', 'id');
 
@@ -829,6 +942,10 @@ class ItemController extends Controller
                 // Use array keys for fast lookup
                 $occupiedByStorage[$sid] = array_flip(array_unique($occupiedByStorage[$sid]));
                 $storageLimits[$sid] = $storagesInfo[$sid] ?? 999999;
+                
+                Log::info("DEBUG STORE WITH BILL: Merged occupied list for storage {$sid}", [
+                    'occupied' => array_keys($occupiedByStorage[$sid])
+                ]);
             }
         }
 
@@ -839,6 +956,15 @@ class ItemController extends Controller
 
             $sid = $item['storage_id'];
             $pos = $item['position'] ?? null;
+            $modelName = $item['model'] ?? 'Unknown Model';
+            
+            Log::info("DEBUG STORE WITH BILL: Checking item #{$idx} with name {$modelName}", [
+                'storage_id' => $sid,
+                'requested_position' => $pos,
+                'is_occupied' => isset($occupiedByStorage[$sid][$pos]) ? 'YES' : 'NO',
+                'occupied_list' => array_keys($occupiedByStorage[$sid] ?? [])
+            ]);
+
             $limit = $storageLimits[$sid] ?? 999999;
 
             $conflict = false;
@@ -964,6 +1090,12 @@ class ItemController extends Controller
         foreach ($itemsData as $item) {
             $item['user_id'] = Auth::user()->id;
             $item['shop_id'] = $shopId;
+            
+            // Establecer type por defecto si es null
+            if (empty($item['type'])) {
+                $item['type'] = 'device';
+            }
+            
             $itemsCreated[] = Item::create($item);
         }
         $createdBill = Bill::create($newBill);

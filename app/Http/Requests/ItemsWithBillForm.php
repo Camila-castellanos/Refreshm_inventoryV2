@@ -40,6 +40,7 @@ class ItemsWithBillForm extends FormRequest
             "items.*.supplier" => "sometimes",
             "items.*.date" => "sometimes",
             "items.*.vendor_id" => "sometimes",
+            "draft_id" => "sometimes|nullable|integer|exists:drafts,id",
             ];
         }
     
