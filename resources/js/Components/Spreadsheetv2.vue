@@ -1,7 +1,11 @@
 <template>
   <Toast></Toast>
-  <!-- PrimeVue confirmation dialog -->
-  <ConfirmDialog />
+  <!-- Loading Overlay -->
+  <div v-if="isLoading" class="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black/50 backdrop-blur-sm">
+      <i class="pi pi-spin pi-spinner !text-4xl text-white mb-2"></i>
+      <p class="text-white font-medium text-lg">Processing items...</p>
+  </div>
+
   <section class="flex flex-col w-full px-4 relative">
     <section>
       <div class="flex flex-row justify-between" id="spreadsheet-header">
@@ -959,35 +963,72 @@ async function submitSpreadsheet(body: any[]): Promise<void> {
     const conflicts = responseData.conflicts || [];
     console.error('Storage position conflicts detected:', conflicts);
     
+    let updatedCount = 0;
+
     // Show detailed error message for each conflict
     conflicts.forEach((conflict: any) => {
       toast.add({
         severity: "warn",
         summary: "Position Conflict",
         detail: conflict.message,
-        life: 15000
+        life: 10000
       });
       
       // Update the row with suggested position if available
       if (conflict.suggested_position && conflict.item_index !== undefined) {
         const rowIndex = conflict.item_index;
         if (rowIndex >= 0 && rowIndex < tableData.value.length) {
-          const storage = storagesList.value.find((s: any) => s.id === conflict.storage_id);
+          // Loose equality check for storage ID to handle string/number mismatch
+          const storage = storagesList.value.find((s: any) => s.id == conflict.storage_id);
+          
           if (storage) {
             tableData.value[rowIndex].position = conflict.suggested_position;
             tableData.value[rowIndex].location = `${storage.name} - ${conflict.suggested_position} / ${storage.limit}`;
-            console.log(`Updated row ${rowIndex} with suggested position ${conflict.suggested_position}`);
+            tableData.value[rowIndex].storage_id = storage.id; // Ensure storage_id is updated too
+            updatedCount++;
+            console.log(`Updated row ${rowIndex} with suggested position ${conflict.suggested_position} in storage ${storage.name}`);
+          } else {
+             console.warn(`Storage not found for conflict suggestions: ID ${conflict.storage_id}`);
           }
         }
       }
     });
     
-    toast.add({
-      severity: "error",
-      summary: "Storage Conflicts Detected",
-      detail: `${conflicts.length} position(s) were already occupied. Suggested positions have been applied. Please review and try again.`,
-      life: 15000
-    });
+    console.log(`Total rows updated with suggestions: ${updatedCount}`);
+
+    if (updatedCount > 0) {
+        console.log("Triggering confirmation dialog...");
+        confirm.require({
+            message: `${updatedCount} items had storage conflicts and have been updated to the suggested positions. Do you want to accept these changes and save now?`,
+            header: 'Storage Conflicts Detected',
+            icon: 'pi pi-exclamation-triangle',
+            acceptLabel: 'Yes, Accept & Save',
+            rejectLabel: 'No, Let me review',
+            rejectClass: 'p-button-secondary p-button-outlined',
+            acceptClass: 'p-button-primary',
+            accept: () => {
+                // Re-submit with updated data
+                console.log("User accepted conflict resolution. Retrying save...");
+                verifySpreadsheetRequired(() => submitSpreadsheet(filterItemsForInventory()));
+            },
+            reject: () => {
+                 console.log("User rejected conflict resolution.");
+                 toast.add({ 
+                    severity: "info", 
+                    summary: "Action Cancelled", 
+                    detail: "Suggested positions applied to table. Please review and save manually.", 
+                    life: 5000 
+                });
+            }
+        });
+    } else {
+        toast.add({
+           severity: "error",
+           summary: "Storage Conflicts Detected",
+           detail: `${conflicts.length} position(s) were occupied. No suggestions available. Please review manually.`,
+           life: 15000
+        });
+    }
   }
 }
 // adjust column sizes to screen size

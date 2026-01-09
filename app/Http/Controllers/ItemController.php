@@ -615,49 +615,138 @@ class ItemController extends Controller
 
         $shopId = $firstShop ? $firstShop->id : null;
 
-        // Validate storage positions before attempting to create items
-        $conflicts = [];
-        $occupiedPositions = [];
-        
-        foreach ($items["items"] as $idx => $item) {
-            if (!empty($item['storage_id']) && !empty($item['position'])) {
-                // Check if this (storage_id, position) already exists in DB
-                $existingItem = Item::where('storage_id', $item['storage_id'])
-                    ->where('position', $item['position'])
-                    ->whereNull('sold')
-                    ->first();
-                
-                if ($existingItem) {
-                    // Find the first available position using the helper method
-                    $suggested = StorageController::findFirstAvailablePosition($occupiedPositions);
-                    
-                    if ($suggested) {
-                        $suggestedStorage = Storage::find($suggested['storage_id']);
-                        $conflicts[] = [
-                            'item_index' => $idx,
-                            'storage_id' => $suggested['storage_id'],
-                            'requested_position' => $item['position'],
-                            'suggested_position' => $suggested['position'],
-                            'message' => "Position {$item['position']} in storage {$item['storage_id']} is already occupied. Suggested: {$suggestedStorage->name} position {$suggested['position']}"
-                        ];
-                    }
-                } else {
-                    // Track this position as occupied for subsequent conflict checks
-                    $occupiedPositions[] = [
-                        'storage_id' => $item['storage_id'],
-                        'position' => $item['position']
-                    ];
+
+        // Initialize maps for occupied positions and storage limits
+        $storageIds = collect($items["items"])->pluck('storage_id')->filter()->unique()->toArray();
+        $occupiedByStorage = [];
+        $storageLimits = [];
+
+        if (!empty($storageIds)) {
+            // Clean up sold items occupying active positions
+            Item::whereIn('storage_id', $storageIds)
+                ->whereNotNull('position')
+                ->whereNotNull('sold')
+                ->update([
+                    'sold_storage_id' => DB::raw('storage_id'),
+                    'sold_position' => DB::raw('position'),
+                    'storage_id' => null,
+                    'position' => null
+                ]);
+
+            // Get positions from active items ONLY
+            $dbItems = Item::whereIn('storage_id', $storageIds)
+                ->whereNotNull('position')
+                ->whereNull('sold')
+                ->select('storage_id', 'position')
+                ->get()
+                ->groupBy('storage_id');
+
+            $dbDrafts = \App\Models\DraftItem::whereIn('storage_id', $storageIds)
+                ->whereNotNull('storage_position')
+                ->select('storage_id', 'storage_position')
+                ->get()
+                ->groupBy('storage_id');
+
+            $storagesInfo = Storage::whereIn('id', $storageIds)->pluck('limit', 'id');
+
+            foreach ($storageIds as $sid) {
+                $occupiedByStorage[$sid] = [];
+                if (isset($dbItems[$sid])) {
+                    foreach ($dbItems[$sid] as $rec) $occupiedByStorage[$sid][] = $rec->position;
                 }
+                if (isset($dbDrafts[$sid])) {
+                    foreach ($dbDrafts[$sid] as $rec) $occupiedByStorage[$sid][] = $rec->storage_position;
+                }
+                // Use array keys for fast lookup
+                $occupiedByStorage[$sid] = array_flip(array_unique($occupiedByStorage[$sid]));
+                $storageLimits[$sid] = $storagesInfo[$sid] ?? 999999;
             }
         }
 
-        // If there are conflicts, return error with suggestions
+        // Process items: check conflicts and auto-assign positions
+        $conflicts = [];
+        foreach ($items["items"] as $idx => &$item) {
+            if (empty($item['storage_id'])) continue;
+
+            $sid = $item['storage_id'];
+            $pos = $item['position'] ?? null;
+            $limit = $storageLimits[$sid] ?? 999999;
+
+            $conflict = false;
+            // Conflict if position is already taken in DB (active or sold) or by previous item in this batch
+            if ($pos && isset($occupiedByStorage[$sid][$pos])) {
+                $conflict = true;
+            }
+
+            if ($conflict || !$pos) {
+                // Find next available position
+                $found = false;
+                $newSid = $sid;
+                $newPos = null;
+
+                // 1. Try same storage
+                for ($p = 1; $p <= $limit; $p++) {
+                    if (!isset($occupiedByStorage[$sid][$p])) {
+                        $newPos = $p;
+                        $found = true;
+                        break;
+                    }
+                }
+
+                // 2. If not found, try other storages
+                if (!$found) {
+                    // Try to find space in ANY available storage
+                    $currentOccupied = [];
+                    foreach ($occupiedByStorage as $sId => $positions) {
+                        foreach ($positions as $pPos => $val) {
+                            $currentOccupied[] = ['storage_id' => $sId, 'position' => $pPos];
+                        }
+                    }
+                    $suggestion = StorageController::findFirstAvailablePosition($currentOccupied);
+
+                    if ($suggestion) {
+                        $newSid = $suggestion['storage_id'];
+                        $newPos = $suggestion['position'];
+                        $found = true;
+                    }
+                }
+
+                if ($found) {
+                    $occupiedByStorage[$newSid][$newPos] = true;
+                    // Prepare conflict message
+                    $suggestedStorageName = Storage::find($newSid)->name ?? $newSid;
+                    $msg = $conflict 
+                        ? "Position {$pos} in storage {$sid} is occupied. Suggested: {$suggestedStorageName} position {$newPos}"
+                        : "No position provided. Suggested: {$suggestedStorageName} position {$newPos}";
+
+                    $conflicts[] = [
+                        'item_index' => $idx,
+                        'storage_id' => $newSid,
+                        'requested_position' => $pos,
+                        'suggested_position' => $newPos,
+                        'message' => $msg
+                    ];
+                } else {
+                     return response()->json([
+                        'message' => "Storage ID {$sid} is full and no other storage has space available for item #{$idx}.",
+                    ], 422);
+                }
+            } else {
+                // No conflict, mark this position as taken for subsequent items in loop
+                $occupiedByStorage[$sid][$pos] = true;
+            }
+        }
+        unset($item); // Break reference
+
+        // Return conflicts to frontend if any
         if (!empty($conflicts)) {
             return response()->json([
                 'message' => 'Storage position conflicts detected',
                 'conflicts' => $conflicts,
             ], 422);
         }
+
+
 
         $created = [];
         Log::info("Creating items", ['items' => $items["items"]]);
@@ -695,49 +784,138 @@ class ItemController extends Controller
         // validate and extract items data and bill data
         ['bill' => $billData, 'items' => $itemsData] = $request->validated();
         
-        // Validate storage positions before attempting to create items
-        $conflicts = [];
-        $occupiedPositions = [];
-        
-        foreach ($itemsData as $idx => $item) {
-            if (!empty($item['storage_id']) && !empty($item['position'])) {
-                // Check if this (storage_id, position) already exists in DB
-                $existingItem = Item::where('storage_id', $item['storage_id'])
-                    ->where('position', $item['position'])
-                    ->whereNull('sold')
-                    ->first();
-                
-                if ($existingItem) {
-                    // Find the first available position using the helper method
-                    $suggested = StorageController::findFirstAvailablePosition($occupiedPositions);
-                    
-                    if ($suggested) {
-                        $suggestedStorage = Storage::find($suggested['storage_id']);
-                        $conflicts[] = [
-                            'item_index' => $idx,
-                            'storage_id' => $suggested['storage_id'],
-                            'requested_position' => $item['position'],
-                            'suggested_position' => $suggested['position'],
-                            'message' => "Position {$item['position']} in storage {$item['storage_id']} is already occupied. Suggested: {$suggestedStorage->name} position {$suggested['position']}"
-                        ];
-                    }
-                } else {
-                    // Track this position as occupied for subsequent conflict checks
-                    $occupiedPositions[] = [
-                        'storage_id' => $item['storage_id'],
-                        'position' => $item['position']
-                    ];
+
+        // Initialize maps for occupied positions and storage limits
+        $storageIds = collect($itemsData)->pluck('storage_id')->filter()->unique()->toArray();
+        $occupiedByStorage = [];
+        $storageLimits = [];
+
+        if (!empty($storageIds)) {
+            // Clean up sold items occupying active positions
+            Item::whereIn('storage_id', $storageIds)
+                ->whereNotNull('position')
+                ->whereNotNull('sold')
+                ->update([
+                    'sold_storage_id' => DB::raw('storage_id'),
+                    'sold_position' => DB::raw('position'),
+                    'storage_id' => null,
+                    'position' => null
+                ]);
+
+            // Get positions from active items ONLY
+            $dbItems = Item::whereIn('storage_id', $storageIds)
+                ->whereNotNull('position')
+                ->whereNull('sold')
+                ->select('storage_id', 'position')
+                ->get()
+                ->groupBy('storage_id');
+
+            $dbDrafts = \App\Models\DraftItem::whereIn('storage_id', $storageIds)
+                ->whereNotNull('storage_position')
+                ->select('storage_id', 'storage_position')
+                ->get()
+                ->groupBy('storage_id');
+
+            $storagesInfo = Storage::whereIn('id', $storageIds)->pluck('limit', 'id');
+
+            foreach ($storageIds as $sid) {
+                $occupiedByStorage[$sid] = [];
+                if (isset($dbItems[$sid])) {
+                    foreach ($dbItems[$sid] as $rec) $occupiedByStorage[$sid][] = $rec->position;
                 }
+                if (isset($dbDrafts[$sid])) {
+                    foreach ($dbDrafts[$sid] as $rec) $occupiedByStorage[$sid][] = $rec->storage_position;
+                }
+                // Use array keys for fast lookup
+                $occupiedByStorage[$sid] = array_flip(array_unique($occupiedByStorage[$sid]));
+                $storageLimits[$sid] = $storagesInfo[$sid] ?? 999999;
             }
         }
 
-        // If there are conflicts, return error with suggestions
+        // Process items: check conflicts and auto-assign positions
+        $conflicts = [];
+        foreach ($itemsData as $idx => &$item) {
+            if (empty($item['storage_id'])) continue;
+
+            $sid = $item['storage_id'];
+            $pos = $item['position'] ?? null;
+            $limit = $storageLimits[$sid] ?? 999999;
+
+            $conflict = false;
+            // Conflict if position is already taken in DB (active or sold) or by previous item in this batch
+            if ($pos && isset($occupiedByStorage[$sid][$pos])) {
+                $conflict = true;
+            }
+
+            if ($conflict || !$pos) {
+                // Find next available position
+                $found = false;
+                $newSid = $sid;
+                $newPos = null;
+
+                // 1. Try same storage
+                for ($p = 1; $p <= $limit; $p++) {
+                    if (!isset($occupiedByStorage[$sid][$p])) {
+                        $newPos = $p;
+                        $found = true;
+                        break;
+                    }
+                }
+
+                // 2. If not found, try other storages
+                if (!$found) {
+                    // Try to find space in ANY available storage
+                    $currentOccupied = [];
+                    foreach ($occupiedByStorage as $sId => $positions) {
+                        foreach ($positions as $pPos => $val) {
+                            $currentOccupied[] = ['storage_id' => $sId, 'position' => $pPos];
+                        }
+                    }
+                    $suggestion = StorageController::findFirstAvailablePosition($currentOccupied);
+
+                    if ($suggestion) {
+                        $newSid = $suggestion['storage_id'];
+                        $newPos = $suggestion['position'];
+                        $found = true;
+                    }
+                }
+
+                if ($found) {
+                    $occupiedByStorage[$newSid][$newPos] = true;
+                    // Prepare conflict message
+                    $suggestedStorageName = Storage::find($newSid)->name ?? $newSid;
+                    $msg = $conflict 
+                        ? "Position {$pos} in storage {$sid} is occupied. Suggested: {$suggestedStorageName} position {$newPos}"
+                        : "No position provided. Suggested: {$suggestedStorageName} position {$newPos}";
+
+                    $conflicts[] = [
+                        'item_index' => $idx,
+                        'storage_id' => $newSid,
+                        'requested_position' => $pos,
+                        'suggested_position' => $newPos,
+                        'message' => $msg
+                    ];
+                } else {
+                     return response()->json([
+                        'message' => "Storage ID {$sid} is full and no other storage has space available for item #{$idx}.",
+                    ], 422);
+                }
+            } else {
+                // No conflict, mark this position as taken for subsequent items in loop
+                $occupiedByStorage[$sid][$pos] = true;
+            }
+        }
+        unset($item);
+
+        // Return conflicts to frontend if any
         if (!empty($conflicts)) {
             return response()->json([
                 'message' => 'Storage position conflicts detected',
                 'conflicts' => $conflicts,
             ], 422);
         }
+
+
         
          // sum subtotals of items
         $sumSubtotals = collect($itemsData)->sum(fn($i) => $i['subtotal'] ?? 0);
