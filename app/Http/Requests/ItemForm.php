@@ -41,6 +41,7 @@ class ItemForm extends FormRequest
             "items.*.position"   => "sometimes|integer",
             "items.*.tax" => "sometimes",
             "items.*.subtotal" => "sometimes",
+            "draft_id" => "sometimes|nullable|integer|exists:drafts,id",
         ];
     }
 }

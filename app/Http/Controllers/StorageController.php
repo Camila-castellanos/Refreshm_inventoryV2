@@ -385,10 +385,14 @@ class StorageController extends Controller
                     ->toArray();
 
                 // Get occupied positions from draft items
-                $draftPositions = \App\Models\DraftItem::where('storage_id', $storage->id)
-                    ->whereNotNull('storage_position')
-                    ->pluck('storage_position')
-                    ->toArray();
+                $draftPositionsQuery = \App\Models\DraftItem::where('storage_id', $storage->id)
+                    ->whereNotNull('storage_position');
+
+                if ($request->has('draft_id') && $request->draft_id) {
+                    $draftPositionsQuery->where('draft_id', '!=', $request->draft_id);
+                }
+
+                $draftPositions = $draftPositionsQuery->pluck('storage_position')->toArray();  
 
                 // Get occupied positions from items already assigned in the front (reserved)
                 $frontAssignedPositions = collect($assignedInFront)

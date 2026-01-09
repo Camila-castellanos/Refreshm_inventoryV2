@@ -708,6 +708,7 @@ async function renderPositions(numOfRows: number): Promise<void> {
      const response = await axios.post(route('storages.assignPositions'), {
        items: newRowsToAssign,
        assigned: assignedInFront,
+       draft_id: currentLoadedDraftId.value,
      });
 
      const { items: assignedItems, unassigned_count } = response.data;
@@ -849,7 +850,10 @@ function editDevices(): void {
 
 function mapSpreadsheetData(data: ItemWithLocation[]): any[] {
   return data.map((row) => {
-    const storageId = storagesList.value.find((s) => s.name === row.location?.split("-")[0].trim())?.id;
+    let storageId = storagesList.value.find((s) => s.name === row.location?.split("-")[0].trim())?.id;
+    if (!storageId && row.storage_id) {
+      storageId = row.storage_id;
+    }
     const vendorId = selectedVendor.value != null
       ? vendorsList.value.find(v => v.vendor === selectedVendor.value)?.id
       : row.vendor_id;
@@ -872,13 +876,17 @@ function mapSpreadsheetData(data: ItemWithLocation[]): any[] {
         : format(new Date(), "yyyy-MM-dd");
 
      const tax =
-      selectedTax.value != null ? selectedTax.value : row.tax;  
-    
+      selectedTax.value != null ? selectedTax.value : row.tax;
+
     // parse position from location string (format "StorageName - X/Y")
     const locParts = row.location?.split(' - ');
-    const positionParsed = locParts && locParts[1]
+    let positionParsed = locParts && locParts[1]
       ? parseInt(locParts[1].split('/')[0].trim(), 10)
-      : row.position;
+      : null;
+
+    if (positionParsed === null || isNaN(positionParsed)) {
+      positionParsed = row.position ?? (row as any).storage_position;
+    }
 
     // ensure subtotal is a number
     if (typeof subtotal === 'string') {
@@ -908,11 +916,13 @@ function filterItemsForLabels(rows: ItemWithLocation[]): any[] {
   return mapSpreadsheetData(rows).filter((item) => item.position != null);
 }
 
-async function submitSpreadsheet(body: any[]): Promise<void> {
-  const endpoint = saveAsBill.value ? "items.storeWithBill" : "items.store";
-  const payload = saveAsBill.value
+async function submitSpreadsheet(body: any[], forceStore: boolean = false): Promise<void> {
+  const shouldUseBill = saveAsBill.value && !forceStore;
+  const endpoint = shouldUseBill ? "items.storeWithBill" : "items.store";
+  const payload = shouldUseBill
     ? {
         items: body,
+        draft_id: currentLoadedDraftId.value,
         bill: {
           date: selectedDate.value ? format(selectedDate.value, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd"),
           vendor_id: findVendorId(selectedVendor.value),
@@ -920,8 +930,11 @@ async function submitSpreadsheet(body: any[]): Promise<void> {
           title: BillTitle.value || "New Bill",
         },
       }
-    : { items: body };
-  console.log("Submitting data to endpoint:", endpoint, "with payload:", payload);
+    : { 
+        items: body,
+        draft_id: currentLoadedDraftId.value 
+      };
+  console.log("Submitting data to endpoint:", endpoint, "with payload:", payload, "draft_id:", currentLoadedDraftId.value);
   try {
     isLoading.value = true;
     await axios.post(route(endpoint), payload);
@@ -1009,7 +1022,7 @@ async function submitSpreadsheet(body: any[]): Promise<void> {
             accept: () => {
                 // Re-submit with updated data
                 console.log("User accepted conflict resolution. Retrying save...");
-                verifySpreadsheetRequired(() => submitSpreadsheet(filterItemsForInventory()));
+                verifySpreadsheetRequired(() => submitSpreadsheet(filterItemsForInventory(), true));
             },
             reject: () => {
                  console.log("User rejected conflict resolution.");
@@ -1341,6 +1354,7 @@ function handleLoadDraft(draft: any) {
     return {
       ...item,
       location: location,
+      position: item.storage_position,
       draft_unassigned: !hasPosition,
       vendor: selectedVendor.value as string,
       date: draft.date,
