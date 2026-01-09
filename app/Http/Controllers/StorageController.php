@@ -17,55 +17,9 @@ class StorageController extends Controller
      */
     public function index(Request $request)
     {
-        // Return storages ordered by priority (lower number = higher priority)
-        // Additionally compute the real occupied positions count per storage
-        // by combining Item positions (only items not sold) and DraftItem positions.
-        $storages = Storage::with(['items', 'draftItems'])->orderBy('priority', 'asc')->get();
-
-        // If no storages, just return early
-        if ($storages->isEmpty()) {
-            return response()->json($storages);
-        }
-
-        $storageIds = $storages->pluck('id')->toArray();
-
-        // Get positions from Items: only consider items with a numeric position and not sold
-        $itemPositions = \App\Models\Item::whereIn('storage_id', $storageIds)
-            ->whereNotNull('position')
-            ->whereNull('sold')
-            ->get(['storage_id', 'position']);
-
-        // Group positions by storage_id and make them unique
-        $itemPositionsByStorage = $itemPositions->groupBy('storage_id')
-            ->map(function ($group) {
-                return $group->pluck('position')->unique()->values()->toArray();
-            })->toArray();
-
-        // Get positions from DraftItems (they use storage_position)
-        $draftPositions = \App\Models\DraftItem::whereIn('storage_id', $storageIds)
-            ->whereNotNull('storage_position')
-            ->get(['storage_id', 'storage_position']);
-
-        $draftPositionsByStorage = $draftPositions->groupBy('storage_id')
-            ->map(function ($group) {
-                return $group->pluck('storage_position')->unique()->values()->toArray();
-            })->toArray();
-
-        // Attach computed fields to each storage
-        foreach ($storages as $s) {
-            $id = $s->id;
-
-            $positionsFromItems = $itemPositionsByStorage[$id] ?? [];
-            $positionsFromDrafts = $draftPositionsByStorage[$id] ?? [];
-
-            $occupied = array_unique(array_merge($positionsFromItems, $positionsFromDrafts));
-
-            $s->occupied_count = count($occupied);
-            // available slots = limit - occupied (never negative)
-            $limit = (int) ($s->limit ?? 0);
-            $s->available_slots = max(0, $limit - $s->occupied_count);
-        }
-
+        // Use the unified method from Storage model
+        $storages = Storage::getAllWithOccupancy();
+        
         return response()->json($storages);
     }
 
@@ -275,64 +229,13 @@ class StorageController extends Controller
      * Returns: { storage_id, position } or null if no space available
      *
      * @param array $occupiedPositions Array of ['storage_id' => X, 'position' => Y] already occupied
+     * @param int|null $excludeDraftId Optional draft ID to exclude from check
      * @return array|null
      */
-    public static function findFirstAvailablePosition($occupiedPositions = [])
+    public static function findFirstAvailablePosition($occupiedPositions = [], ?int $excludeDraftId = null)
     {
-        // Get all storages ordered by priority (ascending = higher priority first)
-        $storages = Storage::orderBy('priority', 'asc')->get();
-
-        if ($storages->isEmpty()) {
-            return null;
-        }
-
-        // Build a map of occupied positions by storage
-        $occupiedByStorage = [];
-        foreach ($occupiedPositions as $occupied) {
-            $storageId = $occupied['storage_id'] ?? null;
-            $position = $occupied['position'] ?? null;
-            if ($storageId && $position) {
-                if (!isset($occupiedByStorage[$storageId])) {
-                    $occupiedByStorage[$storageId] = [];
-                }
-                $occupiedByStorage[$storageId][] = $position;
-            }
-        }
-
-        // Try each storage in priority order
-        foreach ($storages as $storage) {
-            // Get occupied positions from DB items (not sold)
-            $dbPositions = \App\Models\Item::where('storage_id', $storage->id)
-                ->whereNull('sold')
-                ->whereNotNull('position')
-                ->pluck('position')
-                ->toArray();
-
-            // Get occupied positions from draft items
-            $draftPositions = \App\Models\DraftItem::where('storage_id', $storage->id)
-                ->whereNotNull('storage_position')
-                ->pluck('storage_position')
-                ->toArray();
-
-            // Get occupied positions from the provided array
-            $providedOccupied = $occupiedByStorage[$storage->id] ?? [];
-
-            // Merge all occupied positions
-            $occupied = array_unique(array_merge($dbPositions, $draftPositions, $providedOccupied));
-
-            // Find first available position in this storage
-            for ($i = 1; $i <= (int)$storage->limit; $i++) {
-                if (!in_array($i, $occupied)) {
-                    return [
-                        'storage_id' => $storage->id,
-                        'position' => $i,
-                    ];
-                }
-            }
-        }
-
-        // No available position found
-        return null;
+        // Use the unified method from Storage model
+        return Storage::findFirstAvailablePosition($excludeDraftId, $occupiedPositions);
     }
 
     /**
@@ -340,6 +243,7 @@ class StorageController extends Controller
      * Expects: { 
      *   items: [ { id?, manufacturer?, model?, ... } ],  // items sin posición asignada
      *   assigned: [ { storage_id, position, ... } ]      // items ya asignados en el front (reservados)
+     *   draft_id: int|null                               // optional draft ID to exclude from occupied check
      * }
      * Returns: { items: [ { storage_id, position, ... } ], unassigned_count: number }
      */
@@ -347,6 +251,7 @@ class StorageController extends Controller
     {
         $items = $request->input('items', []);
         $assignedInFront = $request->input('assigned', []);
+        $excludeDraftId = $request->input('draft_id');
         
         if (!is_array($items) || empty($items)) {
             return response()->json([
@@ -370,64 +275,33 @@ class StorageController extends Controller
             ], 400);
         }
 
+        // Build additional occupied positions from front-end assigned items
+        $additionalOccupied = [];
+        foreach ($assignedInFront as $frontItem) {
+            if (isset($frontItem['storage_id']) && isset($frontItem['position'])) {
+                $additionalOccupied[] = [
+                    'storage_id' => $frontItem['storage_id'],
+                    'position' => $frontItem['position']
+                ];
+            }
+        }
+
         // Process each item
         foreach ($items as $item) {
-            $itemAssigned = false;
+            // Find first available position using unified method
+            $suggestion = Storage::findFirstAvailablePosition($excludeDraftId, $additionalOccupied);
 
-            // Try to assign this item to the first available storage (by priority)
-            foreach ($storages as $storage) {
-                // Get occupied positions from DB items
-                // Ignore items that have already been sold (sold != null)
-                $dbPositions = \App\Models\Item::where('storage_id', $storage->id)
-                    ->whereNull('sold')
-                    ->whereNotNull('position')
-                    ->pluck('position')
-                    ->toArray();
+            if ($suggestion) {
+                $item['storage_id'] = $suggestion['storage_id'];
+                $item['position'] = $suggestion['position'];
+                $assigned[] = $item;
 
-                // Get occupied positions from draft items
-                $draftPositionsQuery = \App\Models\DraftItem::where('storage_id', $storage->id)
-                    ->whereNotNull('storage_position');
-
-                if ($request->has('draft_id') && $request->draft_id) {
-                    $draftPositionsQuery->where('draft_id', '!=', $request->draft_id);
-                }
-
-                $draftPositions = $draftPositionsQuery->pluck('storage_position')->toArray();  
-
-                // Get occupied positions from items already assigned in the front (reserved)
-                $frontAssignedPositions = collect($assignedInFront)
-                    ->filter(fn($assignedItem) => $assignedItem['storage_id'] === $storage->id)
-                    ->pluck('position')
-                    ->toArray();
-
-                // Get occupied positions from items already assigned in this batch
-                $batchPositions = collect($assigned)
-                    ->filter(fn($assignedItem) => $assignedItem['storage_id'] === $storage->id)
-                    ->pluck('position')
-                    ->toArray();
-
-                $occupied = array_unique(array_merge($dbPositions, $draftPositions, $frontAssignedPositions, $batchPositions));
-                Log::info("Storage {$storage->id} occupied positions: " . implode(',', $occupied));
-                // Find first available position in this storage
-                for ($i = 1; $i <= (int)$storage->limit; $i++) {
-                    if (!in_array($i, $occupied)) {
-                        // Assign this item to this position
-                        $item['storage_id'] = $storage->id;
-                        $item['position'] = $i;
-                        $assigned[] = $item;
-                        $itemAssigned = true;
-                        break;
-                    }
-                }
-
-                // If item was assigned, move to next item
-                if ($itemAssigned) {
-                    break;
-                }
-            }
-
-            // If item couldn't be assigned to any storage, add to unassigned
-            if (!$itemAssigned) {
+                // Add to additionalOccupied so next iteration doesn't reuse this position
+                $additionalOccupied[] = [
+                    'storage_id' => $suggestion['storage_id'],
+                    'position' => $suggestion['position']
+                ];
+            } else {
                 $unassigned[] = $item;
             }
         }

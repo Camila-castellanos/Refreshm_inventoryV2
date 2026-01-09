@@ -18,10 +18,7 @@
             @dragover.prevent="onDragOver($event, location.id)"
             @drop.prevent="onDrop($event, location.id)">
             <span>
-              {{ location.name }} - (
-              {{
-                (location.occupied_count ?? ((location.items?.length || 0) + (location.draftItems?.length || 0)))
-              }}/{{ location.limit }})
+              {{ location.name }} - ({{ location.occupied_count }}/{{ location.limit }})
             </span>
 
             <div class="flex items-center space-x-2">
@@ -88,9 +85,12 @@ const form = reactive({
 const draggingId = ref<number|null>(null);
 const dragOverId = ref<number|null>(null);
 
-// Fetch storages on mount
+// Fetch storages on mount using the unified position counting logic
 const fetchStorages = async () => {
   try {
+    // GET /storages now uses Storage::getAllWithOccupancy() which includes:
+    // - occupied_count: unified count from Storage::getOccupiedPositionsBatch()
+    // - available_slots: limit - occupied_count
     const { data } = await axios.get("/storages");
     storageLocations.value = data;
   } catch (error) {

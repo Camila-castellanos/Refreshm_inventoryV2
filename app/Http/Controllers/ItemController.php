@@ -696,8 +696,6 @@ class ItemController extends Controller
     private function buildOccupiedMapAndCheckConflicts(array $items, ?int $draftId = null): array
     {
         $storageIds = collect($items)->pluck('storage_id')->filter()->unique()->toArray();
-        $occupiedByStorage = [];
-        $storageLimits = [];
         $conflicts = [];
 
         if (!empty($storageIds)) {
@@ -711,59 +709,22 @@ class ItemController extends Controller
                     'storage_id' => null,
                     'position' => null
                 ]);
-
-            // Get positions from active (unsold) items in inventory
-            $dbItems = Item::whereIn('storage_id', $storageIds)
-                ->whereNotNull('position')
-                ->whereNull('sold')
-                ->select('storage_id', 'position')
-                ->get()
-                ->groupBy('storage_id');
-
-            // Get positions from OTHER drafts (exclude current draft)
-            $dbDraftsQuery = \App\Models\DraftItem::whereIn('storage_id', $storageIds)
-                ->whereNotNull('storage_position');
-
-            if ($draftId) {
-                $dbDraftsQuery->where('draft_id', '!=', $draftId);
-            }
-
-            $dbDrafts = $dbDraftsQuery->select('storage_id', 'storage_position')
-                ->get()
-                ->groupBy('storage_id');
-
-            // Get storage limits
-            $storagesInfo = Storage::whereIn('id', $storageIds)->pluck('limit', 'id');
-
-            // Build detailed maps tracking source of each occupied position (for debugging)
-            // $occupiedDetails = []; // format: [storage_id][position] => ['source' => 'inventory'|'draft', 'draft_id' => X]
-
-            // Build occupied map for each storage
-            foreach ($storageIds as $sid) {
-                $occupiedByStorage[$sid] = [];
-                // $occupiedDetails[$sid] = [];
-                
-                // Add positions from inventory items
-                if (isset($dbItems[$sid])) {
-                    foreach ($dbItems[$sid] as $rec) {
-                        $occupiedByStorage[$sid][] = $rec->position;
-                        // $occupiedDetails[$sid][$rec->position] = ['source' => 'inventory', 'draft_id' => null];
-                    }
-                }
-                
-                // Add positions from other drafts
-                if (isset($dbDrafts[$sid])) {
-                    foreach ($dbDrafts[$sid] as $rec) {
-                        $occupiedByStorage[$sid][] = $rec->storage_position;
-                        // $occupiedDetails[$sid][$rec->storage_position] = ['source' => 'draft', 'draft_id' => $rec->draft_id];
-                    }
-                }
-                
-                // Use array_flip for O(1) lookup
-                $occupiedByStorage[$sid] = array_flip(array_unique($occupiedByStorage[$sid]));
-                $storageLimits[$sid] = $storagesInfo[$sid] ?? 999999;
-            }
         }
+
+        // Use unified method to get all occupied positions
+        $occupiedByStorage = Storage::getOccupiedPositionsBatch($storageIds, $draftId);
+        
+        // Convert to flip format for O(1) lookup
+        $occupiedFlipped = [];
+        foreach ($occupiedByStorage as $sid => $positions) {
+            $occupiedFlipped[$sid] = array_flip($positions);
+        }
+
+        // Get storage limits
+        $storageLimits = Storage::whereIn('id', $storageIds)->pluck('limit', 'id')->toArray();
+
+        // Track positions we're assigning in this batch (to avoid duplicates within the batch)
+        $batchAssigned = [];
 
         // Process items and check for conflicts
         foreach ($items as $idx => &$item) {
@@ -773,10 +734,18 @@ class ItemController extends Controller
             $pos = $item['position'] ?? null;
             $limit = $storageLimits[$sid] ?? 999999;
 
+            // Initialize tracking for this storage if needed
+            if (!isset($occupiedFlipped[$sid])) {
+                $occupiedFlipped[$sid] = [];
+            }
+            if (!isset($batchAssigned[$sid])) {
+                $batchAssigned[$sid] = [];
+            }
+
             $hasConflict = false;
             
-            // Check if position is occupied
-            if ($pos && isset($occupiedByStorage[$sid][$pos])) {
+            // Check if position is occupied (from DB or from batch)
+            if ($pos && (isset($occupiedFlipped[$sid][$pos]) || isset($batchAssigned[$sid][$pos]))) {
                 $hasConflict = true;
             }
 
@@ -788,38 +757,43 @@ class ItemController extends Controller
 
                 // 1. Try same storage first
                 for ($p = 1; $p <= $limit; $p++) {
-                    if (!isset($occupiedByStorage[$sid][$p])) {
+                    if (!isset($occupiedFlipped[$sid][$p]) && !isset($batchAssigned[$sid][$p])) {
                         $newPos = $p;
                         $found = true;
                         break;
                     }
                 }
 
-                // 2. If storage is full, try other storages
+                // 2. If storage is full, try other storages using unified method
                 if (!$found) {
-                    $currentOccupied = [];
-                    foreach ($occupiedByStorage as $sId => $positions) {
+                    // Build additional occupied from batch assignments
+                    $additionalOccupied = [];
+                    foreach ($batchAssigned as $sId => $positions) {
                         foreach ($positions as $pPos => $val) {
-                            $currentOccupied[] = ['storage_id' => $sId, 'position' => $pPos];
+                            $additionalOccupied[] = ['storage_id' => $sId, 'position' => $pPos];
                         }
                     }
-                    $suggestion = StorageController::findFirstAvailablePosition($currentOccupied);
+                    
+                    $suggestion = Storage::findFirstAvailablePosition($draftId, $additionalOccupied);
 
                     if ($suggestion) {
                         $newSid = $suggestion['storage_id'];
                         $newPos = $suggestion['position'];
                         $found = true;
                         
-                        // Initialize the new storage in our map if needed
-                        if (!isset($occupiedByStorage[$newSid])) {
-                            $occupiedByStorage[$newSid] = [];
+                        // Initialize tracking for the new storage if needed
+                        if (!isset($occupiedFlipped[$newSid])) {
+                            $occupiedFlipped[$newSid] = [];
+                        }
+                        if (!isset($batchAssigned[$newSid])) {
+                            $batchAssigned[$newSid] = [];
                         }
                     }
                 }
 
                 if ($found) {
-                    // Mark the new position as occupied for subsequent items
-                    $occupiedByStorage[$newSid][$newPos] = true;
+                    // Mark the new position as assigned in batch
+                    $batchAssigned[$newSid][$newPos] = true;
                     
                     // Get storage name for message
                     $suggestedStorageName = Storage::find($newSid)->name ?? "Storage {$newSid}";
@@ -849,8 +823,8 @@ class ItemController extends Controller
                     ];
                 }
             } else {
-                // No conflict, mark position as occupied for subsequent items in batch
-                $occupiedByStorage[$sid][$pos] = true;
+                // No conflict, mark position as assigned in batch
+                $batchAssigned[$sid][$pos] = true;
             }
         }
         unset($item);

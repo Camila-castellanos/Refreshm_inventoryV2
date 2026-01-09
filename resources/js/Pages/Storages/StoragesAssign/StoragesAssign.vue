@@ -53,9 +53,11 @@ const props = defineProps<{
 type Storage = {
   id: number;
   name: string;
-  items: Item[];
-  draft_items?: Item[]; // Agregando draft_items como opcional
   limit: number;
+  occupied_count: number;
+  available_slots: number;
+  items?: Item[]; // Deprecated: kept for backward compatibility
+  draft_items?: Item[]; // Deprecated: kept for backward compatibility
 };
 
 const storages = ref<Storage[]>([]);
@@ -91,11 +93,11 @@ function exceedsLimit(storage: any): boolean {
   return currentItems + props.items.length > storage.limit;
 }
 
-// Helper function to get total items in storage (items + draft_items)
+// Helper function to get total items in storage (now uses the unified occupied_count from backend)
 function getTotalItemsInStorage(storage: Storage): number {
-  const itemsCount = storage.items?.length || 0;
-  const draftItemsCount = storage.draft_items?.length || 0;
-  return itemsCount + draftItemsCount;
+  // occupied_count is calculated server-side using Storage::getOccupiedPositionsBatch()
+  // which includes both Item positions and DraftItem positions
+  return storage.occupied_count || 0;
 }
 
 // Toggle storage selection

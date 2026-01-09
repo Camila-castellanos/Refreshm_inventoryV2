@@ -36,7 +36,7 @@ class UtilitiesController extends Controller
         $storageId = $validated['storage_id'];
         $position = $validated['position'];
 
-        // Search in active inventory items
+        // Search in active inventory items (using same logic as Storage::getOccupiedPositions)
         $item = Item::where('storage_id', $storageId)
             ->where('position', $position)
             ->whereNull('sold')
@@ -52,7 +52,7 @@ class UtilitiesController extends Controller
             ], 200);
         }
 
-        // Search in draft items
+        // Search in draft items (using same logic as Storage::getOccupiedPositions)
         $draftItem = DraftItem::where('storage_id', $storageId)
             ->where('storage_position', $position)
             ->with(['draft:id,title,created_at'])
@@ -76,7 +76,7 @@ class UtilitiesController extends Controller
             'type' => null,
             'item' => null,
             'draft' => null,
-            'message' => "No item found at storage {$storageId}, position {$position}"
+            'message' => "No item found at this position"
         ], 200);
     }
 }
