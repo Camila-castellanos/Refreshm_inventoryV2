@@ -992,7 +992,7 @@ async function submitSpreadsheet(body: any[], forceStore: boolean = false): Prom
         const rowIndex = conflict.item_index;
         if (rowIndex >= 0 && rowIndex < tableData.value.length) {
           // Loose equality check for storage ID to handle string/number mismatch
-          const storage = storagesList.value.find((s: any) => s.id == conflict.storage_id);
+          const storage = storagesList.value.find((s: any) => s.id == conflict.suggested_storage_id);
           
           if (storage) {
             tableData.value[rowIndex].position = conflict.suggested_position;
@@ -1001,7 +1001,7 @@ async function submitSpreadsheet(body: any[], forceStore: boolean = false): Prom
             updatedCount++;
             console.log(`Updated row ${rowIndex} with suggested position ${conflict.suggested_position} in storage ${storage.name}`);
           } else {
-             console.warn(`Storage not found for conflict suggestions: ID ${conflict.storage_id}`);
+             console.warn(`Storage not found for conflict suggestions: ID ${conflict.suggested_storage_id}`);
           }
         }
       }
