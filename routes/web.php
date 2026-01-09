@@ -24,6 +24,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\InventoryPublicController;
 use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\DraftController;
+use App\Http\Controllers\UtilitiesController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -119,6 +120,9 @@ Route::middleware([
 
     Route::post('/storages/assign-positions', [StorageController::class, 'assignPositions'])->name('storages.assignPositions');
 
+    // Utilities Routes
+    Route::get('/utilities/find-position', [UtilitiesController::class, 'findPositionPage'])->name('utilities.findPosition');
+    Route::post('/utilities/search-position', [UtilitiesController::class, 'searchPosition'])->name('utilities.searchPosition');
 
     Route::resource('prospects', ProspectController::class);
 
