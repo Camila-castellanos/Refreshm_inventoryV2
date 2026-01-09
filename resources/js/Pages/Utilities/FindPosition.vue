@@ -52,58 +52,85 @@
 
         <!-- Results Section -->
         <div v-if="searched" class="bg-white rounded-lg shadow-md p-6">
-          <!-- Found Result -->
+          <!-- Found Result(s) -->
           <div v-if="result.found" class="space-y-6">
+            <!-- Header with count -->
             <div class="border-l-4 border-green-500 pl-4">
-              <p class="text-sm text-gray-500 mb-1">Result found in: <strong>{{ result.type }}</strong></p>
-              <p class="text-lg font-semibold text-green-700">✓ Item Found</p>
+              <p class="text-sm text-gray-500 mb-1">
+                <strong>{{ result.count }}</strong> {{ result.count === 1 ? 'item' : 'items' }} found
+                <span v-if="result.count > 1" class="text-amber-600">⚠ (Duplicated location)</span>
+              </p>
+              <p class="text-lg font-semibold text-green-700">✓ {{ result.message }}</p>
             </div>
 
-            <!-- Item Details Card -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Multiple Results List -->
+            <div v-if="result.count > 0" class="space-y-4">
+              <div
+                v-for="(resultItem, index) in result.results"
+                :key="`result-${index}`"
+                class="border rounded-lg p-4 hover:bg-gray-50 transition"
+                :class="resultItem.type === 'draft' ? 'border-blue-200 bg-blue-50' : 'border-gray-200'"
+              >
+                <!-- Result Number Badge -->
+                <div class="flex items-start justify-between mb-4">
+                  <div class="bg-blue-100 text-blue-800 text-xs font-semibold px-3 py-1 rounded-full">
+                    Result #{{ index + 1 }}
+                  </div>
+                  <span class="text-xs font-semibold px-3 py-1 rounded-full"
+                    :class="resultItem.type === 'draft' 
+                      ? 'bg-blue-200 text-blue-800' 
+                      : 'bg-green-200 text-green-800'"
+                  >
+                    {{ resultItem.type === 'draft' ? 'DRAFT' : 'INVENTORY' }}
+                  </span>
+                </div>
 
-              <div class="bg-gray-50 rounded p-4">
-                <p class="text-sm text-gray-500 mb-1">Model</p>
-                <p class="font-semibold">{{ result.item.model || 'N/A' }}</p>
-              </div>
+                <!-- Item Details Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div class="bg-white rounded p-3 border border-gray-100">
+                    <p class="text-sm text-gray-500 mb-1">Model</p>
+                    <p class="font-semibold">{{ resultItem.item.model || 'N/A' }}</p>
+                  </div>
 
-              <div class="bg-gray-50 rounded p-4">
-                <p class="text-sm text-gray-500 mb-1">Manufacturer</p>
-                <p class="font-semibold">{{ result.item.manufacturer || 'N/A' }}</p>
-              </div>
+                  <div class="bg-white rounded p-3 border border-gray-100">
+                    <p class="text-sm text-gray-500 mb-1">Manufacturer</p>
+                    <p class="font-semibold">{{ resultItem.item.manufacturer || 'N/A' }}</p>
+                  </div>
 
-              <div class="bg-gray-50 rounded p-4">
-                <p class="text-sm text-gray-500 mb-1">Serial Number</p>
-                <p class="font-semibold">{{ result.item.serial_number || 'N/A' }}</p>
-              </div>
+                  <div class="bg-white rounded p-3 border border-gray-100">
+                    <p class="text-sm text-gray-500 mb-1">Serial Number</p>
+                    <p class="font-semibold">{{ resultItem.item.serial_number || 'N/A' }}</p>
+                  </div>
 
-              <div class="bg-gray-50 rounded p-4">
-                <p class="text-sm text-gray-500 mb-1">Purchase Price</p>
-                <p class="font-semibold">${{ formatPrice(result.item.purchase_price) }}</p>
-              </div>
+                  <div class="bg-white rounded p-3 border border-gray-100">
+                    <p class="text-sm text-gray-500 mb-1">Purchase Price</p>
+                    <p class="font-semibold">${{ formatPrice(resultItem.item.purchase_price) }}</p>
+                  </div>
 
-              <div class="bg-gray-50 rounded p-4">
-                <p class="text-sm text-gray-500 mb-1">Sale Price</p>
-                <p class="font-semibold">${{ formatPrice(result.item.sale_price) }}</p>
-              </div>
+                  <div class="bg-white rounded p-3 border border-gray-100">
+                    <p class="text-sm text-gray-500 mb-1">Sale Price</p>
+                    <p class="font-semibold">${{ formatPrice(resultItem.item.sale_price) }}</p>
+                  </div>
 
-              <div v-if="result.item.type" class="bg-gray-50 rounded p-4">
-                <p class="text-sm text-gray-500 mb-1">Type</p>
-                <p class="font-semibold">{{ result.item.type }}</p>
-              </div>
+                  <div v-if="resultItem.item.type" class="bg-white rounded p-3 border border-gray-100">
+                    <p class="text-sm text-gray-500 mb-1">Type</p>
+                    <p class="font-semibold">{{ resultItem.item.type }}</p>
+                  </div>
 
-              <div v-if="result.item.condition" class="bg-gray-50 rounded p-4">
-                <p class="text-sm text-gray-500 mb-1">Condition</p>
-                <p class="font-semibold">{{ result.item.condition }}</p>
-              </div>
-            </div>
+                  <div v-if="resultItem.item.condition" class="bg-white rounded p-3 border border-gray-100">
+                    <p class="text-sm text-gray-500 mb-1">Condition</p>
+                    <p class="font-semibold">{{ resultItem.item.condition }}</p>
+                  </div>
+                </div>
 
-            <!-- Draft Information (if applicable) -->
-            <div v-if="result.draft" class="border-l-4 border-blue-500 pl-4 bg-blue-50 rounded p-4">
-              <p class="text-sm text-gray-600 mb-2">This item is in a draft:</p>
-              <div class="space-y-1">
-                <p class="font-semibold text-blue-900">{{ formatDraftLabel(result.draft) }}</p>
-                <p class="text-sm text-gray-600">ID: {{ result.draft.id }}</p>
+                <!-- Draft Information (if applicable) -->
+                <div v-if="resultItem.draft" class="mt-4 border-l-4 border-blue-500 pl-4 bg-blue-50 rounded p-3">
+                  <p class="text-sm text-gray-600 mb-2">This item is in a draft:</p>
+                  <div class="space-y-1">
+                    <p class="font-semibold text-blue-900">{{ formatDraftLabel(resultItem.draft) }}</p>
+                    <p class="text-sm text-gray-600">ID: {{ resultItem.draft.id }}</p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -147,9 +174,8 @@ const form = ref({
 
 const result = ref({
   found: false,
-  type: null,
-  item: {},
-  draft: null,
+  results: [],
+  count: 0,
   message: ''
 })
 
@@ -209,9 +235,8 @@ const clearResults = () => {
   searched.value = false
   result.value = {
     found: false,
-    type: null,
-    item: {},
-    draft: null,
+    results: [],
+    count: 0,
     message: ''
   }
 }

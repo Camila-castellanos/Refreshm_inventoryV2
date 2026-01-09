@@ -36,46 +36,52 @@ class UtilitiesController extends Controller
         $storageId = $validated['storage_id'];
         $position = $validated['position'];
 
+        $results = [];
+
         // Search in active inventory items (using same logic as Storage::getOccupiedPositions)
-        $item = Item::where('storage_id', $storageId)
+        $items = Item::where('storage_id', $storageId)
             ->where('position', $position)
             ->whereNull('sold')
-            ->first();
+            ->get();
 
-        if ($item) {
-            return response()->json([
-                'found' => true,
+        foreach ($items as $item) {
+            $results[] = [
                 'type' => 'inventory',
                 'item' => $item,
-                'draft' => null,
-                'message' => "Item found in active inventory"
-            ], 200);
+                'draft' => null
+            ];
         }
 
         // Search in draft items (using same logic as Storage::getOccupiedPositions)
-        $draftItem = DraftItem::where('storage_id', $storageId)
+        $draftItems = DraftItem::where('storage_id', $storageId)
             ->where('storage_position', $position)
             ->with(['draft:id,title,created_at'])
-            ->first();
+            ->get();
 
-        if ($draftItem) {
+        foreach ($draftItems as $draftItem) {
             $draft = $draftItem->draft;
-            $draftLabel = $draft ? "{$draft->title} ({$draft->created_at->format('Y-m-d')})" : 'Unknown Draft';
-            
-            return response()->json([
-                'found' => true,
+            $results[] = [
                 'type' => 'draft',
                 'item' => $draftItem,
-                'draft' => $draft,
-                'message' => "Item found in draft: {$draftLabel}"
+                'draft' => $draft
+            ];
+        }
+
+        if (count($results) > 0) {
+            return response()->json([
+                'found' => true,
+                'results' => $results,
+                'count' => count($results),
+                'message' => count($results) === 1 
+                    ? "1 item found at this position"
+                    : count($results) . " items found at this position (duplicated location)"
             ], 200);
         }
 
         return response()->json([
             'found' => false,
-            'type' => null,
-            'item' => null,
-            'draft' => null,
+            'results' => [],
+            'count' => 0,
             'message' => "No item found at this position"
         ], 200);
     }

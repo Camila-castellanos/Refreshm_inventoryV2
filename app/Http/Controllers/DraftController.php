@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Draft;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 
 class DraftController extends Controller
@@ -49,24 +50,95 @@ class DraftController extends Controller
           'items'              => 'required|array',
           'items.*.storage_id'         => 'nullable|integer|exists:storages,id',
           'items.*.storage_position'   => 'nullable|integer',
+          'items.*.draft_unassigned'   => 'nullable|boolean',
           // add other item fields validation as needed
         ]);
 
-        $userId = $req->user()->id;
+        $userId = Auth::id();
+        $draftId = $data['id'] ?? null;
+        $userRole = Auth::user()?->role;
 
-        $draft = Draft::updateOrCreate(
-            ['id' => $data['id'] ?? null, 'user_id' => $userId],
-            [
-              'date'      => $data['date'],
-              'vendor' =>    $data['vendor'] ?? null,
-              'title'     => $data['title'],
-            ]
-        );
-        // sync draft items
+        // If an ID is provided, try to find the existing draft
+        if ($draftId) {
+            // Build query based on user role
+            $query = Draft::where('id', $draftId);
+            
+            // If user is not OWNER, must also match user_id
+            if ($userRole !== 'OWNER') {
+                $query->where('user_id', $userId);
+            }
+            
+            $draft = $query->first();
+            
+            if ($draft) {
+                // Update existing draft
+                $draft->update([
+                    'date'   => $data['date'],
+                    'vendor' => $data['vendor'] ?? null,
+                    'title'  => $data['title'],
+                ]);
+                Log::info('Updating existing draft:', ['draft_id' => $draft->id, 'user_id' => $userId, 'user_role' => $userRole]);
+            } else {
+                // Draft not found or unauthorized, create new one
+                Log::warning('Draft not found or unauthorized, creating new:', ['requested_id' => $draftId, 'user_id' => $userId, 'user_role' => $userRole]);
+                $draft = Draft::create([
+                    'user_id' => $userId,
+                    'date'    => $data['date'],
+                    'vendor'  => $data['vendor'] ?? null,
+                    'title'   => $data['title'],
+                ]);
+            }
+        } else {
+            // No ID provided, create new draft
+            $draft = Draft::create([
+                'user_id' => $userId,
+                'date'    => $data['date'],
+                'vendor'  => $data['vendor'] ?? null,
+                'title'   => $data['title'],
+            ]);
+            Log::info('Creating new draft:', ['draft_id' => $draft->id, 'user_id' => $userId]);
+        }
+
+        // sync draft items - delete old ones and create new
         $draft->items()->delete();
-        Log::info('Data de la request: ', [$data]);
+        Log::info('Syncing draft items for draft:', ['draft_id' => $draft->id, 'items_count' => count($allItems)]);
+        
         foreach ($allItems as $item) {
             $item['tax_id'] = $item['tax'] ?? null;
+            
+            // Check if item is marked as unassigned (deactivated)
+            $isUnassigned = isset($item['draft_unassigned']) && ($item['draft_unassigned'] === true || $item['draft_unassigned'] === 1 || $item['draft_unassigned'] === '1');
+            
+            // If item is unassigned, forcefully clear all storage fields
+            if ($isUnassigned) {
+                $item['storage_id'] = null;
+                $item['storage_position'] = null;
+                $item['location'] = null;
+                $item['draft_unassigned'] = true;
+            } else {
+                // For assigned items, ensure draft_unassigned is false
+                $item['draft_unassigned'] = false;
+                
+                // Still handle null storage fields explicitly
+                if (!isset($item['storage_id']) || $item['storage_id'] === null) {
+                    $item['storage_id'] = null;
+                }
+                if (!isset($item['storage_position']) || $item['storage_position'] === null) {
+                    $item['storage_position'] = null;
+                }
+                if (!isset($item['location']) || $item['location'] === null) {
+                    $item['location'] = null;
+                }
+            }
+            
+            Log::info('Creating draft item with storage fields:', [
+                'draft_id' => $draft->id,
+                'storage_id' => $item['storage_id'] ?? 'null',
+                'storage_position' => $item['storage_position'] ?? 'null',
+                'location' => $item['location'] ?? 'null',
+                'draft_unassigned' => $item['draft_unassigned'] ? 'true' : 'false'
+            ]);
+            
             $draft->items()->create($item);
         }
 
