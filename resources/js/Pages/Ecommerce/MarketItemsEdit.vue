@@ -78,17 +78,8 @@
                                     </div>
                                 </div>
 
-                                <!-- Buttons -->
-                                <div class="space-y-2">
-                                    <Button
-                                        @click="openPhotoModal(item)"
-                                        label="Manage Photos"
-                                        icon="pi pi-images"
-                                        class="w-full"
-                                        size="small"
-                                        severity="secondary"
-                                        outlined
-                                    />
+                                <!-- Button -->
+                                <div>
                                     <Button
                                         @click="openModelItemsModal(item)"
                                         label="View All Items"
@@ -222,6 +213,7 @@
             @update:visible="showModelItemsModal = $event"
             @view-item="handleViewItem"
             @edit-item="handleEditItem"
+            @refresh="refreshItems"
         />
     </AppLayout>
 </template>
