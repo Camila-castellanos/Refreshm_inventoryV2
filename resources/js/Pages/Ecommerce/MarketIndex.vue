@@ -9,16 +9,23 @@
                             <h3 class="text-lg font-medium text-gray-900">Your Markets</h3>
                             <p class="text-sm text-gray-600">Manage your online marketplaces</p>
                         </div>
-                        <Link
-                            :href="route('ecommerce.markets.create')"
-                            class=""
-                        >
-                            <Button 
-                                label="Create Market" 
-                                icon="pi pi-plus" 
-                                severity="primary"
-                            />
-                        </Link>
+                        <div class="flex items-center gap-3">
+                            <Link :href="route('product-models.index')">
+                                <Button
+                                    label="Model Database"
+                                    icon="pi pi-database"
+                                    severity="secondary"
+                                    outlined
+                                />
+                            </Link>
+                            <Link :href="route('ecommerce.markets.create')">
+                                <Button
+                                    label="Create Market"
+                                    icon="pi pi-plus"
+                                    severity="primary"
+                                />
+                            </Link>
+                        </div>
                     </div>
 
                     <!-- Markets Table -->
