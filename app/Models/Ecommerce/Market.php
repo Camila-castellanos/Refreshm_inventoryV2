@@ -314,35 +314,41 @@ class Market extends Model
      */
     public function getGroupedModels(string $search = null, int $perPage = 20, string $category = null, string $brand = null, string $sort = 'latest', bool $includeHidden = false)
     {
-        $query = Item::where('shop_id', $this->shop_id)
+        // First, get ALL items for photo counting (without price filters)
+        $allItems = Item::where('shop_id', $this->shop_id)
             ->whereNull('sold')
             ->whereNull('hold')
-            ->whereNotNull('selling_price')
-            ->where('selling_price', '>', 0)
             ->with('media')
-            ->with('productModel.media');
+            ->with('productModel.media')
+            ->get();
+
+        // Then filter items by selling_price for display
+        $items = $allItems->filter(function ($item) {
+            return !empty($item->selling_price) && $item->selling_price > 0;
+        });
 
         // Apply search filter
         if ($search) {
-            $query->where(function ($q) use ($search) {
-                $q->where('model', 'like', '%' . $search . '%')
-                  ->orWhere('manufacturer', 'like', '%' . $search . '%')
-                  ->orWhere('type', 'like', '%' . $search . '%');
+            $items = $items->filter(function ($item) use ($search) {
+                return stripos($item->model, $search) !== false ||
+                       stripos($item->manufacturer ?? '', $search) !== false ||
+                       stripos($item->type ?? '', $search) !== false;
             });
         }
 
         // Apply category filter (type field)
         if ($category) {
-            $query->where('type', $category);
+            $items = $items->filter(fn($item) => $item->type === $category);
         }
 
         // Apply brand filter (manufacturer field)
         if ($brand) {
-            $query->where('manufacturer', $brand);
+            $items = $items->filter(fn($item) => $item->manufacturer === $brand);
         }
 
-        // Get all items first to parse models and extract storage
-        $items = $query->get();
+        Log::debug("getGroupedModels - includeHidden: " . ($includeHidden ? 'true' : 'false'));
+        Log::debug("getGroupedModels - Total ALL items: " . $allItems->count());
+        Log::debug("getGroupedModels - Total items after price filter: " . $items->count());
 
         // Load market items for custom prices and visibility
         $marketItems = $this->marketItems()->whereIn('item_id', $items->pluck('id'))->get();
@@ -352,10 +358,12 @@ class Market extends Model
         $defaultVisibleGrades = ['A', 'A-', 'B+', 'B'];
 
         // First, group ALL items (before filtering) to find photos
-        $allGrouped = $items->groupBy(function ($item) {
+        $allGrouped = $allItems->groupBy(function ($item) {
             $parsed = $this->parseModelStorage($item->model);
             return $parsed['model'] . '|' . $item->manufacturer . '|' . $item->type;
         });
+
+        Log::debug("getGroupedModels - Groups in allGrouped: " . $allGrouped->count());
 
         // Create a map of model groups with their photos
         $modelPhotoMap = $allGrouped->map(function ($group) {
@@ -436,11 +444,17 @@ class Market extends Model
             });
         }
         
+        Log::debug("getGroupedModels - Items after filtering: " . $filteredItems->count());
+        Log::debug("getGroupedModels - Groups after filtering: " . $filteredItems->groupBy(function ($item) {
+            $parsed = $this->parseModelStorage($item->model);
+            return $parsed['model'] . '|' . $item->manufacturer . '|' . $item->type;
+        })->count());
+        
         // Group by parsed model (without storage) + manufacturer + type
         $grouped = $filteredItems->groupBy(function ($item) {
             $parsed = $this->parseModelStorage($item->model);
             return $parsed['model'] . '|' . $item->manufacturer . '|' . $item->type;
-        })->map(function ($group, $groupKey) use ($marketItemsMap, $modelPhotoMap) {
+        })->map(function ($group, $groupKey) use ($marketItemsMap, $modelPhotoMap, $allGrouped) {
             $firstItem = $group->first();
             $parsed = $this->parseModelStorage($firstItem->model);
             
@@ -457,10 +471,22 @@ class Market extends Model
                 return $marketItem ? $marketItem->getPrice() : $item->selling_price;
             });
             
-            // Count total photos in the group
-            $photoCount = $group->reduce(function ($carry, $item) {
+            // Count total photos from ALL items in the group (including hidden ones)
+            $allGroupItems = $allGrouped->get($groupKey, collect());
+            $photoCount = $allGroupItems->reduce(function ($carry, $item) {
                 return $carry + $item->media->count();
             }, 0);
+            
+            // Debug: Show each item with its photos
+            $itemDetails = $allGroupItems->map(function ($item) {
+                $mediaCount = $item->media->count();
+                $mediaIds = $item->media->pluck('id')->toArray();
+                return "  Item ID: {$item->id} | Model: {$item->model} | Colour: {$item->colour} | Photos: {$mediaCount} | Media IDs: " . implode(',', $mediaIds);
+            })->join("\n");
+            
+            Log::debug("Group: {$groupKey}");
+            Log::debug("Total Items: {$allGroupItems->count()} | Total Photos: {$photoCount}");
+            Log::debug("Item Details:\n{$itemDetails}");
 
             // Use the pre-calculated photo from the all-items grouping
             $photoData = $modelPhotoMap[$groupKey] ?? ['photo' => null, 'photo_count' => 0];
@@ -478,7 +504,7 @@ class Market extends Model
                 'avg_price' => $prices->avg(),
                 'sample_item_id' => $group->min('id'),
                 'photo' => $photoData['photo'],
-                'photo_count' => $photoData['photo_count'],
+                'photo_count' => $photoCount,
                 'photo_source' => $photoData['source'] ?? null,
                 'product_model_id' => $photoData['product_model_id'] ?? $firstItem->product_model_id,
                 'id' => $group->min('id'),
