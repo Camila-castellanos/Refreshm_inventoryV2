@@ -346,10 +346,6 @@ class Market extends Model
             $items = $items->filter(fn($item) => $item->manufacturer === $brand);
         }
 
-        Log::debug("getGroupedModels - includeHidden: " . ($includeHidden ? 'true' : 'false'));
-        Log::debug("getGroupedModels - Total ALL items: " . $allItems->count());
-        Log::debug("getGroupedModels - Total items after price filter: " . $items->count());
-
         // Load market items for custom prices and visibility
         $marketItems = $this->marketItems()->whereIn('item_id', $items->pluck('id'))->get();
         $marketItemsMap = $marketItems->keyBy('item_id');
@@ -362,8 +358,6 @@ class Market extends Model
             $parsed = $this->parseModelStorage($item->model);
             return $parsed['model'] . '|' . $item->manufacturer . '|' . $item->type;
         });
-
-        Log::debug("getGroupedModels - Groups in allGrouped: " . $allGrouped->count());
 
         // Create a map of model groups with their photos
         $modelPhotoMap = $allGrouped->map(function ($group) {
@@ -444,12 +438,6 @@ class Market extends Model
             });
         }
         
-        Log::debug("getGroupedModels - Items after filtering: " . $filteredItems->count());
-        Log::debug("getGroupedModels - Groups after filtering: " . $filteredItems->groupBy(function ($item) {
-            $parsed = $this->parseModelStorage($item->model);
-            return $parsed['model'] . '|' . $item->manufacturer . '|' . $item->type;
-        })->count());
-        
         // Group by parsed model (without storage) + manufacturer + type
         $grouped = $filteredItems->groupBy(function ($item) {
             $parsed = $this->parseModelStorage($item->model);
@@ -484,10 +472,6 @@ class Market extends Model
                 return "  Item ID: {$item->id} | Model: {$item->model} | Colour: {$item->colour} | Photos: {$mediaCount} | Media IDs: " . implode(',', $mediaIds);
             })->join("\n");
             
-            Log::debug("Group: {$groupKey}");
-            Log::debug("Total Items: {$allGroupItems->count()} | Total Photos: {$photoCount}");
-            Log::debug("Item Details:\n{$itemDetails}");
-
             // Use the pre-calculated photo from the all-items grouping
             $photoData = $modelPhotoMap[$groupKey] ?? ['photo' => null, 'photo_count' => 0];
             
@@ -685,6 +669,7 @@ class Market extends Model
             ->whereNull('sold')
             ->whereNull('hold')
             ->with('media')
+            ->with('productModel.media')
             ->get();
 
         // Parse model name and filter by matching model
@@ -716,8 +701,12 @@ class Market extends Model
         $sharedPhotoUrl = $itemWithPhoto ? $itemWithPhoto->getFirstMediaUrl('item-photos') : null;
         $sharedPhotoCount = $itemWithPhoto ? $itemWithPhoto->media->count() : 0;
 
+        // Get product model info for photo fallback
+        $firstItem = $modelItems->first();
+        $productModel = $firstItem->productModel;
+
         // Map all items with their visibility status
-        $mappedItems = $modelItems->map(function ($modelItem) use ($marketItemsMap, $visibleConditions, $sharedPhotoThumb, $sharedPhotoUrl, $sharedPhotoCount) {
+        $mappedItems = $modelItems->map(function ($modelItem) use ($marketItemsMap, $visibleConditions, $sharedPhotoThumb, $sharedPhotoUrl, $sharedPhotoCount, $productModel) {
             $marketItem = $marketItemsMap[$modelItem->id] ?? null;
             $price = $marketItem ? $marketItem->getPrice() : $modelItem->selling_price;
             $hasIssues = !empty($modelItem->issues) && $modelItem->issues !== '{}';
@@ -733,6 +722,46 @@ class Market extends Model
 
             // Parse storage from model name
             $parsed = $this->parseModelStorage($modelItem->model);
+
+            // Try to find ProductModel if not directly related
+            // Fallback: if no direct relation, search ProductModel by name (without storage)
+            $productModel = $modelItem->productModel;
+            if (!$productModel && $parsed['model']) {
+                $productModel = \App\Models\ProductModel::where('name', $parsed['model'])->first();
+            }
+
+            // Determine photo: item's own photo -> ProductModel photo -> shared photo
+            // Check if item actually has photos (not just placeholder)
+            $hasItemPhotos = $modelItem->media->count() > 0;
+            $itemPhotoThumb = $hasItemPhotos ? $modelItem->getFirstMediaUrl('item-photos', 'thumb') : null;
+            $itemPhotoUrl = $hasItemPhotos ? $modelItem->getFirstMediaUrl('item-photos') : null;
+            
+            // Try ProductModel photo by colour
+            $productModelPhotoThumb = null;
+            $productModelPhotoUrl = null;
+            if ($productModel && $modelItem->colour) {
+                $productModelPhotoThumb = $productModel->getFirstMediaUrlByColour($modelItem->colour, 'thumb');
+                $productModelPhotoUrl = $productModel->getFirstMediaUrlByColour($modelItem->colour);
+            }
+            
+            // Fallback order: item photo -> ProductModel photo -> shared photo
+            $mainPhotoThumb = $itemPhotoThumb ?: ($productModelPhotoThumb ?: $sharedPhotoThumb);
+            $mainPhotoUrl = $itemPhotoUrl ?: ($productModelPhotoUrl ?: $sharedPhotoUrl);
+
+            // Calculate total photos for this item
+            $itemPhotoCount = $modelItem->media->count();
+            $productModelPhotoCount = $productModel ? $productModel->media->count() : 0;
+            $totalPhotoCount = $itemPhotoCount ?: $productModelPhotoCount ?: $sharedPhotoCount;
+
+            // Determine which photo source was used
+            $photoSource = 'placeholder';
+            if ($itemPhotoThumb) {
+                $photoSource = 'item_photo';
+            } elseif ($productModelPhotoThumb) {
+                $photoSource = 'product_model_photo';
+            } elseif ($sharedPhotoThumb) {
+                $photoSource = 'shared_photo';
+            }
 
             return [
                 'id' => $modelItem->id,
@@ -752,10 +781,11 @@ class Market extends Model
                 'is_visible' => $isVisible,
                 'description' => $marketItem ? $marketItem->description : null,
                 'issues' => $modelItem->issues,
-                // Use shared model photo for all variants
-                'photo_count' => $sharedPhotoCount,
-                'main_photo_thumb' => $sharedPhotoThumb,
-                'main_photo_url' => $sharedPhotoUrl,
+                // Photos with ProductModel fallback
+                'photo_count' => $totalPhotoCount,
+                'main_photo_thumb' => $mainPhotoThumb,
+                'main_photo_url' => $mainPhotoUrl,
+                'product_model_id' => $modelItem->productModel?->id,
             ];
         });
 
@@ -774,6 +804,7 @@ class Market extends Model
             'model' => $parsedModel['model'],
             'manufacturer' => $firstItem->manufacturer,
             'type' => $firstItem->type,
+            'product_model_id' => $productModel?->id,
             'items' => $mappedItems->values()->toArray(),
         ];
     }
