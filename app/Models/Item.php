@@ -25,7 +25,7 @@ class Item extends Model implements HasMedia
         "customer", "sold", "hold", "discount", "tax",
         "subtotal", "profit", 'user_id', 'vendor_id', "custom_values",
         "sold_storage_id", "sold_position", "sold_storage_name", 'shop_id',
-        'type'
+        'type', 'product_model_id'
     ];
     
     // Cast date and sold attributes as full datetime
@@ -66,6 +66,11 @@ class Item extends Model implements HasMedia
         return $this->belongsTo(Storage::class);
     }
 
+    public function productModel(): BelongsTo
+    {
+        return $this->belongsTo(ProductModel::class);
+    }
+
     /**
      * Register media collections for item photos
      */
@@ -100,8 +105,21 @@ class Item extends Model implements HasMedia
      */
     public function getMainPhotoUrlAttribute(): string
     {
-        return $this->getFirstMediaUrl('item-photos', 'preview') 
-            ?: asset('images/item-placeholder.svg');
+        // 1. Si tiene fotos propias, usar la primera
+        $ownPhoto = $this->getFirstMediaUrl('item-photos', 'preview');
+        if ($ownPhoto) {
+            return $ownPhoto;
+        }
+
+        // 2. Si no, buscar foto del ProductModel por colour
+        if ($this->productModel && $this->colour) {
+            $modelPhoto = $this->productModel->getFirstMediaUrlByColour($this->colour, 'preview');
+            if ($modelPhoto && $modelPhoto !== asset('images/item-placeholder.svg')) {
+                return $modelPhoto;
+            }
+        }
+
+        return asset('images/item-placeholder.svg');
     }
 
     /**
@@ -109,8 +127,21 @@ class Item extends Model implements HasMedia
      */
     public function getMainPhotoThumbAttribute(): string
     {
-        return $this->getFirstMediaUrl('item-photos', 'thumb') 
-            ?: asset('images/item-placeholder.svg');
+        // 1. Si tiene fotos propias, usar la primera
+        $ownPhoto = $this->getFirstMediaUrl('item-photos', 'thumb');
+        if ($ownPhoto) {
+            return $ownPhoto;
+        }
+
+        // 2. Si no, buscar foto del ProductModel por colour
+        if ($this->productModel && $this->colour) {
+            $modelPhoto = $this->productModel->getFirstMediaUrlByColour($this->colour, 'thumb');
+            if ($modelPhoto && $modelPhoto !== asset('images/item-placeholder.svg')) {
+                return $modelPhoto;
+            }
+        }
+
+        return asset('images/item-placeholder.svg');
     }
 
     /**

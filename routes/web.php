@@ -16,6 +16,7 @@ use App\Http\Controllers\MailListController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProspectController;
+use App\Http\Controllers\ProductModelController;
 use App\Http\Controllers\SaleController;
 use App\Http\Controllers\StoreController;
 use App\Http\Controllers\ShopController;
@@ -248,6 +249,13 @@ Route::get('/customers/by-name/{name}', [CustomerController::class, 'getByName']
         Route::post("stores/{store}/users", [StoreController::class, "users"])->name("stores.users");
         Route::put("stores/{store}/receipt", [StoreController::class, "storeReceiptSettings"])->name("stores.storeReceiptSettings");
         Route::put("stores/{store}/cut", [StoreController::class, "updateStorePercent"])->name("stores.updateStorePercent");
+
+        // Product Models (Global - Admin only)
+        Route::resource("product-models", ProductModelController::class);
+        Route::post("product-models/{productModel}/photos", [ProductModelController::class, 'uploadPhoto'])->name('product-models.photos.upload');
+        Route::delete("product-models/{productModel}/photos/{media}", [ProductModelController::class, 'deletePhoto'])->name('product-models.photos.delete');
+        Route::post("product-models/{productModel}/photos/reorder", [ProductModelController::class, 'reorderPhotos'])->name('product-models.photos.reorder');
+        Route::get("api/product-models/search", [ProductModelController::class, 'search'])->name('product-models.search');
 
     // Shop endpoints used by front-end modals
     Route::get('shops/{shop}', [ShopController::class, 'show'])->name('shops.show');
