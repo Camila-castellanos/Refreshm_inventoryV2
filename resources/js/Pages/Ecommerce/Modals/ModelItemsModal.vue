@@ -152,10 +152,14 @@
                                 </button>
                             </td>
                             <td class="px-4 py-3 text-center">
-                                <div class="flex items-center justify-center gap-1">
-                                    <i class="pi pi-images text-gray-400"></i>
-                                    <span class="text-gray-600 font-medium">{{ item.photo_count || 0 }}</span>
-                                </div>
+                                <Button
+                                    @click="openPhotoModal(item)"
+                                    icon="pi pi-images"
+                                    size="small"
+                                    severity="secondary"
+                                    outlined
+                                    v-tooltip="'Manage Photos'"
+                                />
                             </td>
                             <td class="px-4 py-3">
                                 <button
@@ -205,6 +209,14 @@
             @saved="handleDescriptionSaved"
         />
 
+        <ItemPhotosModal
+            :visible="showPhotoModal"
+            :item="photoItem"
+            :market="props.market"
+            @update:visible="handlePhotoModalVisible"
+            @refresh="refreshItems"
+        />
+
         <template #footer>
             <div class="flex justify-end">
                 <Button
@@ -225,6 +237,7 @@ import Dialog from 'primevue/dialog'
 import Button from 'primevue/button'
 import Toast from 'primevue/toast'
 import ItemDescriptionModal from '@/Pages/Ecommerce/Modals/ItemDescriptionModal.vue'
+import ItemPhotosModal from '@/Pages/Ecommerce/Modals/ItemPhotosModal.vue'
 import axios from 'axios'
 
 const props = defineProps({
@@ -246,7 +259,7 @@ const props = defineProps({
     },
 })
 
-const emit = defineEmits(['update:visible', 'view-item', 'edit-item'])
+const emit = defineEmits(['update:visible', 'view-item', 'edit-item', 'refresh'])
 
 const isVisible = ref(props.visible)
 const searchQuery = ref('')
@@ -256,6 +269,8 @@ const togglingVisibility = ref({})  // Track which items are toggling visibility
 const togglingAllVisibility = ref(false)  // Track bulk visibility toggle
 const showDescriptionModal = ref(false)
 const descriptionItem = ref(null)
+const showPhotoModal = ref(false)
+const photoItem = ref(null)
 
 watch(() => props.visible, (newVal) => {
     isVisible.value = newVal
@@ -481,6 +496,23 @@ const handleDescriptionSaved = ({ id, description }) => {
     if (target) {
         target.description = description
     }
+}
+
+const openPhotoModal = (item) => {
+    photoItem.value = item
+    showPhotoModal.value = true
+}
+
+const handlePhotoModalVisible = (value) => {
+    showPhotoModal.value = value
+    if (!value) {
+        photoItem.value = null
+    }
+}
+
+const refreshItems = () => {
+    // Emit event to parent to reload items
+    emit('refresh')
 }
 </script>
 
