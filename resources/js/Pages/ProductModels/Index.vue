@@ -57,7 +57,6 @@
                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Colors</th>
                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Capacities</th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Items</th>
                   <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
@@ -108,9 +107,8 @@
                         +{{ model.capacities.length - 2 }}
                       </span>
                     </div>
-                   </td>
-                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{{ model.items_count }}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    </td>
+                     <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                      <div class="flex items-center justify-end gap-2">
                        <Link :href="route('product-models.edit', model.id)" class="text-blue-600 hover:text-blue-800">
                          <i class="pi pi-eye"></i>
