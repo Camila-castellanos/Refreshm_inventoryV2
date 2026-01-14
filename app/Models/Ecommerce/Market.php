@@ -319,7 +319,8 @@ class Market extends Model
             ->whereNull('hold')
             ->whereNotNull('selling_price')
             ->where('selling_price', '>', 0)
-            ->with('media');
+            ->with('media')
+            ->with('productModel.media');
 
         // Apply search filter
         if ($search) {
@@ -358,7 +359,36 @@ class Market extends Model
 
         // Create a map of model groups with their photos
         $modelPhotoMap = $allGrouped->map(function ($group) {
-            // Find the first item with photos from ALL items (including those that may be filtered)
+            $firstItem = $group->first();
+            $parsed = $this->parseModelStorage($firstItem->model);
+            
+            // 1. Try to get photo from ProductModel by colour (direct relation)
+            $productModel = $firstItem->productModel;
+            
+            // Fallback: if no direct relation, search ProductModel by name (without storage)
+            if (!$productModel && $parsed['model']) {
+                $productModel = \App\Models\ProductModel::where('name', $parsed['model'])->first();
+            }
+            
+            $productModelPhoto = null;
+            $productModelPhotoCount = 0;
+            
+            if ($productModel && $productModel->hasPhotos()) {
+                $productModelPhoto = $productModel->getFirstMediaUrl('product-photos', 'thumb');
+                $productModelPhotoCount = $productModel->media->count();
+            }
+            
+            // If ProductModel photo exists and is not a placeholder
+            if ($productModelPhoto && $productModelPhoto !== asset('images/item-placeholder.svg')) {
+                return [
+                    'photo' => $productModelPhoto,
+                    'photo_count' => $productModelPhotoCount,
+                    'source' => 'product_model',
+                    'product_model_id' => $productModel->id ?? null
+                ];
+            }
+            
+            // 2. Fallback: find the first item with photos from ALL items
             $itemWithPhoto = $group->first(function ($item) {
                 return $item->media->count() > 0;
             });
@@ -367,7 +397,9 @@ class Market extends Model
             
             return [
                 'photo' => $sharedPhoto,
-                'photo_count' => $sharedPhotoCount
+                'photo_count' => $sharedPhotoCount,
+                'source' => 'item',
+                'product_model_id' => $productModel->id ?? null
             ];
         });
 
@@ -447,6 +479,8 @@ class Market extends Model
                 'sample_item_id' => $group->min('id'),
                 'photo' => $photoData['photo'],
                 'photo_count' => $photoData['photo_count'],
+                'photo_source' => $photoData['source'] ?? null,
+                'product_model_id' => $photoData['product_model_id'] ?? $firstItem->product_model_id,
                 'id' => $group->min('id'),
             ];
         })->values();

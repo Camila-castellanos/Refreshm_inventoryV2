@@ -134,7 +134,7 @@
                 @submit.prevent="uploadPhoto"
                 class="mb-4 p-4 border border-dashed border-gray-300 rounded-lg"
               >
-                <div class="grid grid-cols-3 gap-3 mb-3">
+                <div class="grid grid-cols-2 gap-3 mb-3">
                   <div>
                     <label class="block text-xs text-gray-600 mb-1">Photo</label>
                     <input
@@ -149,13 +149,6 @@
                     <select v-model="photoForm.colour" class="w-full text-sm border rounded px-2 py-1">
                       <option value="">Not specified</option>
                       <option v-for="c in form.colours" :key="c" :value="c">{{ c }}</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label class="block text-xs text-gray-600 mb-1">Capacity (optional)</label>
-                    <select v-model="photoForm.capacity" class="w-full text-sm border rounded px-2 py-1">
-                      <option value="">Not specified</option>
-                      <option v-for="cap in form.capacities" :key="cap" :value="cap">{{ cap }}</option>
                     </select>
                   </div>
                 </div>
@@ -186,8 +179,8 @@
                       @click="deletePhoto(photo.id)"
                     />
                   </div>
-                  <div v-if="photo.colour || photo.capacity" class="absolute bottom-0 left-0 right-0 bg-black bg-opacity-70 text-white text-xs p-1 text-center">
-                    {{ photo.colour || '' }} {{ photo.capacity || '' }}
+                  <div v-if="photo.colour" class="absolute bottom-0 left-0 right-0 bg-black bg-opacity-70 text-white text-xs p-1 text-center">
+                    {{ photo.colour }}
                   </div>
                 </div>
               </div>
@@ -215,7 +208,7 @@
 
 <script setup>
 import { ref } from 'vue'
-import { Link, useForm } from '@inertiajs/vue3'
+import { Link, useForm, router } from '@inertiajs/vue3'
 import AppLayout from '@/Layouts/AppLayout.vue'
 import Button from 'primevue/button'
 
@@ -242,7 +235,6 @@ const uploading = ref(false)
 const photoForm = useForm({
   photo: null,
   colour: '',
-  capacity: '',
 })
 
 const addColour = () => {
@@ -287,7 +279,6 @@ const uploadPhoto = () => {
   const formData = new FormData()
   formData.append('photo', photoForm.photo)
   if (photoForm.colour) formData.append('colour', photoForm.colour)
-  if (photoForm.capacity) formData.append('capacity', photoForm.capacity)
 
   router.post(route('product-models.photos.upload', props.model.id), formData, {
     onFinish: () => {
