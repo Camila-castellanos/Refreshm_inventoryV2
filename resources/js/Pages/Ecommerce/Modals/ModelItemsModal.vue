@@ -136,16 +136,16 @@
                                     :disabled="togglingVisibility[item.id]"
                                     :class="[
                                         'p-2 rounded-lg transition-all duration-200',
-                                        item.is_visible
+                                        item.is_visible === true
                                             ? 'bg-green-100 hover:bg-green-200 text-green-600'
                                             : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
                                     ]"
-                                    :title="item.is_visible ? 'Click to hide' : 'Click to show'"
+                                    :title="item.is_visible === true ? 'Click to hide' : 'Click to show'"
                                 >
                                     <i
                                         :class="[
                                             'pi',
-                                            item.is_visible ? 'pi-eye' : 'pi-eye-slash',
+                                            item.is_visible === true ? 'pi-eye' : 'pi-eye-slash',
                                             togglingVisibility[item.id] ? 'pi-spin pi-spinner' : ''
                                         ]"
                                     ></i>
@@ -295,11 +295,11 @@ const filteredItems = computed(() => {
 const totalItems = computed(() => props.items.length)
 
 const visibleItems = computed(() => {
-    return props.items.filter(item => item.is_visible).length
+    return props.items.filter(item => item.is_visible === true).length
 })
 
 const hiddenItems = computed(() => {
-    return props.items.filter(item => !item.is_visible).length
+    return props.items.filter(item => item.is_visible !== true).length
 })
 
 const getStatusLabel = (status) => {
