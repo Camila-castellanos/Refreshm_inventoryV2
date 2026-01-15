@@ -218,8 +218,7 @@ class Market extends Model
 
     /**
      * Toggle visibility for an item in this market
-     * Correctly handles items that don't have a MarketItem record yet
-     * Takes into account if the item has issues (affects default visibility)
+     * Null is treated as hidden (false) by default
      */
     public function toggleItemVisibility(int $itemId): bool
     {
@@ -230,17 +229,11 @@ class Market extends Model
             // If exists, toggle the existing value
             return $marketItem->toggleVisibility();
         } else {
-            // If doesn't exist, determine default visibility based on item's issues
-            $item = Item::find($itemId);
-            $hasIssues = $item && !empty($item->issues) && $item->issues !== '{}';
-            
-            // If item has no issues, it's visible by default, so toggle to hidden (false)
-            // If item has issues, it's hidden by default, so toggle to visible (true)
-            $newVisibility = $hasIssues ? true : false;
-            
+            // If doesn't exist, null is treated as hidden (false),
+            // so toggle always sets to visible (true)
             $newMarketItem = $this->marketItems()->create([
                 'item_id' => $itemId,
-                'is_visible' => $newVisibility
+                'is_visible' => true
             ]);
             return $newMarketItem->is_visible;
         }
