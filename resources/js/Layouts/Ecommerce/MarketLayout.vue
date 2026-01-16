@@ -418,7 +418,7 @@ const toggleWishlist = () => {
 }
 
 const toggleCart = () => {
-    showCart.value = true
+    showCart.value = !showCart.value
 }
 
 const closeCart = () => {
@@ -426,28 +426,22 @@ const closeCart = () => {
 }
 
 const addItemToCart = (item) => {
-    // Add item to cart component
-    if (cartComponent.value) {
-        const success = cartComponent.value.addItem(item)
-        return success
+    const success = cartStore.addItem(item)
+    if (success) {
+        showCart.value = true
     }
-    return false
+    return success
 }
 
 const removeItemFromCart = (productId) => {
-    if (cartComponent.value) {
-        cartComponent.value.removeItem(productId)
-    }
+    cartStore.removeItem(productId)
 }
 
 const isItemInCart = (productId) => {
-    if (cartComponent.value) {
-        return cartComponent.value.hasItem(productId)
-    }
-    return false
+    return cartStore.hasItem(productId)
 }
 
-// Provide cart functions
+// Provide cart functions for child components
 provide('addToCart', addItemToCart)
 provide('removeFromCart', removeItemFromCart)
 provide('isItemInCart', isItemInCart)

@@ -83,12 +83,28 @@
                             class="flex-1 px-6 py-3 bg-slate-100 text-gray-700 rounded-lg hover:bg-slate-200 font-semibold text-base transition-colors border border-gray-200 hover:border-gray-300 hover:shadow-md">
                         <i class="pi pi-eye text-sm mr-2"></i> View
                     </button>
-                    <button @click="emit('add-to-cart', item)" 
-                            :disabled="isLoading"
-                            class="flex-1 px-6 py-3 bg-slate-100 text-gray-700 rounded-lg hover:bg-slate-200 font-semibold text-base transition-colors border border-gray-200 hover:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-md">
-                        <i v-if="isLoading" class="pi pi-spin pi-spinner text-sm mr-2"></i>
-                        <i v-else class="pi pi-shopping-cart text-sm mr-2"></i>
-                        Add
+                    <button 
+                        @click="handleAddToCart" 
+                        :disabled="isLoading || isInCart"
+                        :class="[
+                            'flex-1 px-6 py-3 rounded-lg font-semibold text-base transition-all border',
+                            isInCart 
+                                ? 'bg-green-100 text-green-700 border-green-200 cursor-default'
+                                : 'bg-slate-100 text-gray-700 border-gray-200 hover:bg-slate-200 hover:border-gray-300 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed'
+                        ]"
+                    >
+                        <template v-if="isLoading">
+                            <i class="pi pi-spin pi-spinner text-sm mr-2"></i>
+                            Adding...
+                        </template>
+                        <template v-else-if="isInCart">
+                            <i class="pi pi-check text-sm mr-2"></i>
+                            Added
+                        </template>
+                        <template v-else>
+                            <i class="pi pi-shopping-cart text-sm mr-2"></i>
+                            Add
+                        </template>
                     </button>
                 </div>
             </div>
@@ -123,7 +139,8 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useCart } from '@/composables/useCart'
 
 const props = defineProps({
     item: {
@@ -142,7 +159,22 @@ const props = defineProps({
 
 const emit = defineEmits(['toggle-condition', 'view-product', 'add-to-cart'])
 
+const { isItemInCart, addItem: addToCartStore } = useCart()
+const showImageModal = ref(false)
+const localIsInCart = ref(false)
+
 const conditionDescription = computed(() => getConditionDescription(props.item.grade))
+
+const isInCart = computed(() => {
+    return localIsInCart.value || isItemInCart(props.item.id)
+})
+
+const handleAddToCart = () => {
+    if (isInCart.value || props.isLoading) return
+    
+    localIsInCart.value = true
+    emit('add-to-cart', props.item)
+}
 
 const getConditionDescription = (grade) => {
     const descriptions = {
@@ -156,19 +188,37 @@ const getConditionDescription = (grade) => {
 const openImageModal = () => {
     showImageModal.value = true
 }
-
+    
 const closeImageModal = () => {
     showImageModal.value = false
 }
-
-
+    
+    
 const formatColorName = (color) => {
     return color ? color.charAt(0).toUpperCase() + color.slice(1).toLowerCase() : ''
 }
-
+    
 const formatPrice = (price) => {
     return new Intl.NumberFormat().format(price)
 }
+
+// Listen for cart updates to sync local state
+const handleCartUpdate = (event) => {
+    const { action, itemId } = event.detail
+    if (itemId === props.item.id) {
+        if (action === 'removed' || action === 'cleared') {
+            localIsInCart.value = false
+        }
+    }
+}
+
+onMounted(() => {
+    window.addEventListener('cart-updated', handleCartUpdate)
+})
+
+onUnmounted(() => {
+    window.removeEventListener('cart-updated', handleCartUpdate)
+})
 </script>
 
 <style scoped>

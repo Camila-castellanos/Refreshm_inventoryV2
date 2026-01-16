@@ -85,56 +85,13 @@
                 </span>
             </div>
 
-            <!-- Action Buttons -->
-            <div v-if="compact" class="flex space-x-2">
-                <button 
-                    @click="handleViewProduct" 
-                    class="flex-1 inline-flex items-center justify-center px-3 py-2 rounded-lg bg-slate-100 text-gray-700 hover:text-gray-900 border border-gray-200 hover:border-gray-300 font-medium text-sm transition-all duration-200"
-                >
-                    View Details
-                </button>
-                
-                <button 
-                    @click="handleAddToCart"
-                    :disabled="isAddingToCart"
-                    :class="[
-                        'inline-flex items-center justify-center px-3 py-2 rounded-lg border transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium',
-                        isInCart 
-                            ? 'bg-red-50 text-red-700 hover:text-red-900 border-red-200 hover:border-red-300' 
-                            : 'bg-slate-100 text-gray-700 hover:text-gray-900 border-gray-200 hover:border-gray-300'
-                    ]"
-                    :title="isGroupedModel ? 'Select Variant' : isInCart ? 'Remove from Cart' : 'Add to Cart'"
-                >
-                    <i v-if="isAddingToCart" class="pi pi-spin pi-spinner text-xs mr-1"></i>
-                    <i v-else-if="isInCart && !isGroupedModel" class="pi pi-trash text-xs mr-1"></i>
-                    <i v-else class="pi pi-shopping-cart text-xs mr-1"></i>
-                    {{ isGroupedModel ? 'Select' : isInCart ? 'Remove' : 'Add' }}
-                </button>
-            </div>
-            
-            <div v-else class="flex space-x-2">
+            <!-- Action Button -->
+            <div class="flex">
                 <button 
                     @click="handleViewProduct" 
                     class="flex-1 inline-flex items-center justify-center px-4 py-2 rounded-lg bg-slate-100 text-gray-700 hover:text-gray-900 border border-gray-200 hover:border-gray-300 font-medium text-sm transition-all duration-200"
                 >
-                    <i class="pi pi-eye text-xs mr-2"></i>
-                    View Details
-                </button>
-                
-                <button 
-                    @click="handleAddToCart"
-                    :disabled="isAddingToCart"
-                    :class="[
-                        'inline-flex items-center justify-center px-3 py-2 rounded-lg border transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed',
-                        isInCart 
-                            ? 'bg-red-50 text-red-700 hover:text-red-900 border-red-200 hover:border-red-300' 
-                            : 'bg-slate-100 text-gray-700 hover:text-gray-900 border-gray-200 hover:border-gray-300'
-                    ]"
-                    :title="isGroupedModel ? 'Select Variant' : isInCart ? 'Remove from Cart' : 'Add to Cart'"
-                >
-                    <i v-if="isAddingToCart" class="pi pi-spin pi-spinner text-xs"></i>
-                    <i v-else-if="isInCart && !isGroupedModel" class="pi pi-trash text-xs"></i>
-                    <i v-else class="pi pi-shopping-cart text-xs"></i>
+                    <i class="pi pi-eye text-xs mr-2"></i> See all options
                 </button>
             </div>
 
@@ -149,8 +106,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watchEffect, onMounted } from 'vue'
-import { useCart } from '@/composables/useCart'
+import { computed } from 'vue'
 import { getCurrencySymbol } from '@/utils/currency'
 
 // Props
@@ -172,13 +128,6 @@ const props = defineProps({
 // Emits
 const emit = defineEmits(['view-product'])
 
-// Use cart composable
-const { addItem, removeItem, hasItem, items } = useCart()
-
-// Local state for loading feedback
-const isAddingToCart = ref(false)
-const isInCart = ref(false)
-
 // Detect if this is a grouped model (has min_price/max_price) or individual item (has selling_price)
 const isGroupedModel = computed(() => {
     return props.item.min_price !== undefined && props.item.max_price !== undefined
@@ -195,12 +144,6 @@ const productImage = computed(() => {
         return props.item.main_photo_thumb
     }
     return null
-})
-
-// Watch items changes and update isInCart state
-watchEffect(() => {
-    // This will automatically re-run whenever items.value changes
-    isInCart.value = items.value.some(item => item.id === props.item.id)
 })
 
 // Methods
@@ -229,43 +172,6 @@ const handleViewProduct = () => {
     // Otherwise, navigate to the individual product detail page
     emit('view-product', props.item.id || props.item.sample_item_id)
 }
-
-const handleAddToCart = async () => {
-    if (isAddingToCart.value) return
-    
-    // If it's a grouped model, we need to navigate to variants page instead
-    if (isGroupedModel.value) {
-        // Navigate to view the model variants
-        window.location.href = `/market/${props.market.slug}/model/${encodeURIComponent(props.item.model)}/variants`
-        return
-    }
-    
-    isAddingToCart.value = true
-    
-    try {
-        if (isInCart.value) {
-            // Remove from cart
-            removeItem(props.item.id)
-        } else {
-            // Add to cart
-            addItem(props.item)
-        }
-        
-        // Brief loading animation
-        await new Promise(resolve => setTimeout(resolve, 150))
-        
-    } catch (error) {
-        console.error('Error with cart operation:', error)
-        alert('Error with cart operation. Please try again.')
-    } finally {
-        isAddingToCart.value = false
-    }
-}
-
-// Check initial state on mount
-onMounted(() => {
-    isInCart.value = items.value.some(item => item.id === props.item.id)
-})
 
 </script>
 
