@@ -380,25 +380,32 @@ class Market extends Model
 
         // Group by parsed model (without storage) + manufacturer + type
         // We group ALL items first, then filter to visible items within each group
-        Log::debug("raw items: ", [$items]);
         $grouped = $items->groupBy(function ($item) {
             $parsed = $this->parseModelStorage($item->model);
             return $parsed['model'] . '|' . $item->manufacturer . '|' . $item->type;
         });
-        Log::debug("inital grouped models: ", [$grouped]);
+
         // For public view, filter each group to keep only visible items
         // and exclude groups that have no visible items
         if (!$includeHidden) {
             $grouped = $grouped->map(function ($group) use ($marketItemsMap, $defaultVisibleGrades) {
-                Log::debug("Processing group for model: " . $group->first()->model . ", manufacturer: " . $group->first()->manufacturer);
                 return $group->filter(function ($item) use ($marketItemsMap, $defaultVisibleGrades) {
                     $marketItem = $marketItemsMap[$item->id] ?? null;
                     $hasIssues = !empty($item->issues) && $item->issues !== '{}';
-                    Log::debug("Checking visibility for item ID {$item->id}: hasIssues=" . ($hasIssues ? 'true' : 'false'));
+
+                    // Filter: Hide items with battery < 80% unless explicitly visible
+                    // If item has battery info and it's below 80%, it must have is_visible = true to show
+                    $hasBatteryInfo = isset($item->battery) && $item->battery !== null && $item->battery !== '';
+                    $lowBattery = $hasBatteryInfo && (int) $item->battery < 80;
+                    
+                    if ($lowBattery) {
+                        // Item has low battery - only show if is_visible is explicitly true
+                        return $marketItem && $marketItem->is_visible === true;
+                    }
+
                     // If item has issues, only include if is_visible is explicitly true
                     if ($hasIssues) {
                         if ($marketItem) {
-                            Log::debug("Item ID {$item->id} has issues and is_visible=" . ($marketItem->is_visible ? 'true' : 'false'));
                             return $marketItem->is_visible === true;
                         }
                         return false;
@@ -406,12 +413,10 @@ class Market extends Model
 
                     // If no issues, apply normal visibility logic
                     if ($marketItem) {
-                        Log::debug("Item ID {$item->id} is_visible=" . ($marketItem->is_visible ? 'true' : 'false'));
                         return $marketItem->is_visible === true;
                     }
                     
                     // Default visibility based on grade (null counts as hidden)
-                    Log::debug("Item ID {$item->id} has no MarketItem record, default visibility by grade: {$item->grade}");
                     return in_array($item->grade, $defaultVisibleGrades);
                 });
             })->filter(fn($group) => $group->count() > 0); // Remove groups with no visible items
@@ -441,8 +446,6 @@ class Market extends Model
         $grouped = $grouped->map(function ($group, $groupKey) use ($marketItemsMap, $modelPhotoMap, $allGrouped) {
             $firstItem = $group->first();
             $parsed = $this->parseModelStorage($firstItem->model);
-
-            Log::debug("model name: " . $parsed['model']);
             
             // Count unique storage options
             $storageOptions = $group->pluck('model')
@@ -485,17 +488,6 @@ class Market extends Model
                 'id' => $group->min('id'),
             ];
         })->values();
-
-        Log::debug("getGroupedModels - Final grouped models", [
-            'count' => $grouped->count(),
-            'models' => $grouped->map(fn($m) => [
-                'model' => $m->model,
-                'manufacturer' => $m->manufacturer,
-                'total_stock' => $m->total_stock,
-                'min_price' => $m->min_price,
-                'max_price' => $m->max_price
-            ])->toArray()
-        ]);
 
         // Apply sorting to the grouped collection
         $sorted = match($sort) {
