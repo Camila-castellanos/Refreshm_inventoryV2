@@ -108,19 +108,16 @@
                       </span>
                     </div>
                     </td>
-                     <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                     <div class="flex items-center justify-end gap-2">
-                       <Link :href="route('product-models.edit', model.id)" class="text-blue-600 hover:text-blue-800">
-                         <i class="pi pi-eye"></i>
+                   <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <div class="flex items-center justify-end gap-2">
+                       <Link :href="route('product-models.edit', model.id)" class="text-gray-600 hover:text-gray-800">
+                         <i class="pi pi-pencil"></i>
                        </Link>
-                      <Link :href="route('product-models.edit', model.id)" class="text-gray-600 hover:text-gray-800">
-                        <i class="pi pi-pencil"></i>
-                      </Link>
-                      <button @click="deleteModel(model)" class="text-red-600 hover:text-red-800">
-                        <i class="pi pi-trash"></i>
-                      </button>
-                    </div>
-                  </td>
+                       <button @click="deleteModel(model)" class="text-red-600 hover:text-red-800">
+                         <i class="pi pi-trash"></i>
+                       </button>
+                     </div>
+                   </td>
                 </tr>
               </tbody>
             </table>
