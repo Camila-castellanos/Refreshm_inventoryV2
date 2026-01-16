@@ -1,30 +1,5 @@
 <template>
     <div class="min-h-screen bg-gray-50">
-        <!-- Header Navigation -->
-        <nav class="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-sm">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-                <div class="flex items-center justify-between mb-4">
-                    <div class="flex items-center space-x-6">
-                        <button @click="goBack"
-                                class="text-gray-600 hover:text-gray-900 font-medium text-base transition-colors">
-                            &larr; Back to Store
-                        </button>
-                        <span class="text-gray-300 text-lg">|</span>
-                        <h1 class="text-3xl font-bold text-gray-900">{{ modelData.model }}</h1>
-                    </div>
-                    <a href="#cart" class="inline-flex items-center px-6 py-3 rounded-lg bg-slate-100 text-gray-700 hover:text-gray-900 border border-gray-200 hover:border-gray-300 font-medium transition-all hover:shadow-md">
-                        <i class="pi pi-shopping-cart mr-3 text-lg"></i>
-                        Cart
-                    </a>
-                </div>
-                <div class="flex items-center space-x-4 text-base text-gray-600">
-                    <span class="font-medium">{{ modelData.manufacturer }}</span>
-                    <span class="text-gray-300">•</span>
-                    <span class="text-green-600 font-semibold">{{ modelData.total_stock }} in stock</span>
-                </div>
-            </div>
-        </nav>
-
         <!-- Main Content -->
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
             <div class="grid grid-cols-6  gap-10">
@@ -149,9 +124,13 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useCart } from '@/composables/useCart'
 import { getCurrencySymbol } from '@/utils/currency'
 import VariantCard from '@/Components/Ecommerce/VariantCard.vue'
+import { useToast } from 'primevue/usetoast'
+import { useCart } from '@/composables/useCart'
+import MarketLayout from '@/Layouts/Ecommerce/MarketLayout.vue'
+
+defineOptions({ layout: MarketLayout })
 
 // Props
 const props = defineProps({
@@ -166,7 +145,8 @@ const props = defineProps({
 })
 
 const router = useRouter()
-const { addItem } = useCart()
+const toast = useToast()
+const { addItem: addItemToCart } = useCart()
 
 // Simplify condition categories
 const simplifyCondition = (condition) => {
@@ -208,6 +188,7 @@ const allItems = computed(() => {
             gradeRaw: item.condition, // Keep original for reference
             battery: item.battery ? Number(item.battery) : null,
             issues: item.issues,
+            imei: item.imei,
             description: item.description || null,
             selling_price: item.market_price || item.selling_price || 0,
             // Media data from backend
@@ -361,11 +342,30 @@ const viewProductDetail = (itemId) => {
 const addToCart = async (item) => {
     isAddingToCart.value = item.id
     try {
-        addItem(item)
-        // Show brief feedback
-        await new Promise(resolve => setTimeout(resolve, 150))
+        const success = addItemToCart(item)
+        if (success) {
+            toast.add({
+                severity: 'success',
+                summary: 'Added to Cart',
+                detail: `${item.model} has been added to your cart.`,
+                life: 3000
+            })
+        } else {
+            toast.add({
+                severity: 'warn',
+                summary: 'Already in Cart',
+                detail: 'This item is already in your cart.',
+                life: 3000
+            })
+        }
     } catch (error) {
         console.error('Error adding to cart:', error)
+        toast.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: 'Failed to add item to cart.',
+            life: 3000
+        })
     } finally {
         isAddingToCart.value = null
     }

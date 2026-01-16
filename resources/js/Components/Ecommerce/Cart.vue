@@ -274,21 +274,20 @@ onMounted(() => {
     }
 })
 
-// Watch for prop changes
+// Watch for prop changes and sync with local state
 watch(() => props.visible, (newValue) => {
-    isVisible.value = newValue
-})
-
-watch(isVisible, (newValue) => {
-    if (!newValue) {
-        emit('close')
+    if (newValue !== isVisible.value) {
+        isVisible.value = newValue
     }
 })
 
-// Watch cart changes to emit updates
-watch(itemCount, (newCount, oldCount) => {
-    if (newCount !== oldCount) {
-        // Optional: emit for parent component updates if needed
+// Watch local state changes and sync back to parent
+watch(isVisible, (newValue) => {
+    // Emit update for v-model binding
+    emit('update:visible', newValue)
+    // Emit close when drawer is closed
+    if (!newValue) {
+        emit('close')
     }
 })
 
