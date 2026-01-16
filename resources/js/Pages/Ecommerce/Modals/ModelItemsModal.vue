@@ -60,6 +60,7 @@
                             <th class="px-4 py-3 text-left font-semibold text-gray-900">Type</th>
                             <th class="px-4 py-3 text-left font-semibold text-gray-900">Color</th>
                             <th class="px-4 py-3 text-left font-semibold text-gray-900">Condition</th>
+                            <th class="px-4 py-3 text-left font-semibold text-gray-900">Battery</th>
                             <th class="px-4 py-3 text-left font-semibold text-gray-900">Issues</th>
                             <th class="px-4 py-3 text-right font-semibold text-gray-900">Market Price</th>
                             <th class="px-4 py-3 text-left font-semibold text-gray-900">Status</th>
@@ -88,6 +89,20 @@
                                 <span v-else class="text-gray-500 text-xs">N/A</span>
                             </td>
                             <td class="px-4 py-3 text-gray-700">{{ item.condition || 'N/A' }}</td>
+                            <td class="px-4 py-3">
+                                <span
+                                    v-if="item.battery !== null && item.battery !== ''"
+                                    :class="[
+                                        'inline-flex items-center px-2 py-1 rounded-full text-xs font-medium',
+                                        (typeof item.battery === 'number' ? item.battery : parseInt(item.battery)) >= 80
+                                            ? 'bg-green-100 text-green-800'
+                                            : 'bg-red-100 text-red-800'
+                                    ]"
+                                >
+                                    {{ item.battery }}%
+                                </span>
+                                <span v-else class="text-gray-500 text-xs">N/A</span>
+                            </td>
                             <td class="px-4 py-3">
                                 <div v-if="item.issues && item.issues !== '{}' && item.issues !== ''" class="bg-red-50 border border-red-200 rounded px-2 py-1">
                                     <p class="text-xs text-red-700 font-medium">⚠️ Issues:</p>
