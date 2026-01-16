@@ -1,5 +1,5 @@
 <template>
-    <div class="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-200 hover:border-gray-300">
+    <div class="bg-white rounded-lg border border-gray-200 overflow-visible hover:shadow-lg transition-all duration-200 hover:border-gray-300 z-10 relative">
         <div class="flex flex-col lg:flex-row">
             <!-- Product Image (Top on mobile, Left on desktop) - Larger -->
             <div class="flex-none w-full lg:w-2/5 flex flex-col items-center justify-center p-8 bg-white border-b lg:border-b-0 lg:border-r border-gray-200">
@@ -32,18 +32,26 @@
                             <span class="text-gray-600 font-medium">Color:</span>
                             <span class="font-semibold text-gray-900">{{ formatColorName(item.colour) }}</span>
                         </div>
-                        <div v-if="item.grade" class="flex justify-between items-center pb-3 border-b border-gray-100 group">
+                        <div v-if="item.grade" class="flex justify-between items-center pb-3 border-b border-gray-100 group relative">
                             <div class="flex items-center gap-2">
                                 <span class="text-gray-600 font-medium">Condition:</span>
                                 <span class="font-semibold text-gray-900">{{ item.grade }}</span>
                             </div>
-                            <button @click="emit('toggle-condition', item.id)" class="text-xs px-2 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors">
-                                <i class="pi pi-info-circle text-xs"></i>
-                            </button>
-                        </div>
-                        <!-- Condition Detail (Hidden by default) -->
-                        <div v-if="showConditionDetail" class="pb-3 border-b border-blue-100 bg-blue-50 px-3 py-2 rounded">
-                            <p class="text-xs text-blue-600">Specific condition: <span class="font-semibold">{{ item.gradeRaw }}</span></p>
+                            <div class="relative">
+                                <button 
+                                    class="text-xs px-2 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors"
+                                >
+                                    <i class="pi pi-info-circle text-xs"></i>
+                                </button>
+                                <!-- Hover Tooltip -->
+                                <div 
+                                    class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-64 bg-gray-900 text-white text-sm px-4 py-3 rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[100] shadow-xl text-center"
+                                >
+                                    <p class="text-sm leading-relaxed">{{ conditionDescription }}</p>
+                                    <!-- Arrow -->
+                                    <div class="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+                                </div>
+                            </div>
                         </div>
                         <div v-if="item.battery" class="flex justify-between items-center pb-3 border-b border-gray-100">
                             <span class="text-gray-600 font-medium">Battery:</span>
@@ -115,7 +123,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 
 const props = defineProps({
     item: {
@@ -134,8 +142,16 @@ const props = defineProps({
 
 const emit = defineEmits(['toggle-condition', 'view-product', 'add-to-cart'])
 
-const showConditionDetail = ref(false)
-const showImageModal = ref(false)
+const conditionDescription = computed(() => getConditionDescription(props.item.grade))
+
+const getConditionDescription = (grade) => {
+    const descriptions = {
+        'Excellent': 'The phone is in "Like New" condition with no noticeable signs of previous use. This is as close to a new phone as you can get!',
+        'Good': 'The phone shows very minor signs of previous use, may include light scratches on the screen & body. This is a phone that was well looked after by its previous owner.',
+        'Fair': 'The phone shows previous signs of use, may include scratches on the screen & body. However, the phone is still in perfect working order without any issues!'
+    }
+    return descriptions[grade] || ''
+}
 
 const openImageModal = () => {
     showImageModal.value = true
