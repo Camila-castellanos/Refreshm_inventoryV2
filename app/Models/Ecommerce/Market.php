@@ -218,22 +218,24 @@ class Market extends Model
 
     /**
      * Toggle visibility for an item in this market
-     * Null is treated as hidden (false) by default
+     * If item has no MarketItem, we invert the current visibility value
      */
-    public function toggleItemVisibility(int $itemId): bool
+    public function toggleItemVisibility(int $itemId, ?bool $currentValue = null): bool
     {
-        // Check if MarketItem exists
         $marketItem = $this->marketItems()->where('item_id', $itemId)->first();
         
         if ($marketItem) {
-            // If exists, toggle the existing value
+            // If MarketItem exists, toggle the existing value
             return $marketItem->toggleVisibility();
         } else {
-            // If doesn't exist, null is treated as hidden (false),
-            // so toggle always sets to visible (true)
+            // If doesn't exist and frontend calculated it as visible (true),
+            // invert to hidden (false)
+            // If frontend calculated it as hidden (false or null), set to visible (true)
+            $newVisibility = ($currentValue !== true);
+            
             $newMarketItem = $this->marketItems()->create([
                 'item_id' => $itemId,
-                'is_visible' => true
+                'is_visible' => $newVisibility
             ]);
             return $newMarketItem->is_visible;
         }
@@ -705,10 +707,14 @@ class Market extends Model
             $price = $marketItem ? $marketItem->getPrice() : $modelItem->selling_price;
             $hasIssues = !empty($modelItem->issues) && $modelItem->issues !== '{}';
 
-            // Determine visibility
+            // Determine visibility (null is treated as hidden/false)
+            // Battery < 80% also hides unless explicitly visible via MarketItem
+            // Battery null is treated as unknown (allowed, shows if grade is visible)
             if ($marketItem) {
-                $isVisible = $marketItem->is_visible;
+                $isVisible = $marketItem->is_visible === true;
             } elseif ($hasIssues) {
+                $isVisible = false;
+            } elseif ($modelItem->battery !== null && $modelItem->battery < 80) {
                 $isVisible = false;
             } else {
                 $isVisible = in_array($modelItem->grade, $visibleConditions);

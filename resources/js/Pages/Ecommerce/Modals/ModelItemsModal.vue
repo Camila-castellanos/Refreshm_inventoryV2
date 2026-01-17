@@ -418,7 +418,10 @@ const toggleItemVisibility = async (item) => {
             route('ecommerce.items.toggle-visibility', {
                 market: props.market.id,
                 item: item.id
-            })
+            }),
+            {
+                current_value: item.is_visible
+            }
         )
         
         item.is_visible = response.data.is_visible
