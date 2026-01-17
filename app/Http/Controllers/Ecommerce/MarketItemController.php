@@ -165,29 +165,33 @@ class MarketItemController extends Controller
         ]);
     }
 
-    /**
-     * Toggle item visibility in market
-     */
-    public function toggleVisibility(Request $request, Market $market, Item $item)
-    {
-        // Ensure the market belongs to the current user's company
-        if ($market->shop->company_id !== Auth::user()->company_id) {
-            abort(403, 'Unauthorized access to this market.');
-        }
+     /**
+      * Toggle item visibility in market
+      */
+     public function toggleVisibility(Request $request, Market $market, Item $item)
+     {
+         // Ensure the market belongs to the current user's company
+         if ($market->shop->company_id !== Auth::user()->company_id) {
+             abort(403, 'Unauthorized access to this market.');
+         }
 
-        // Ensure the item belongs to the market's shop
-        if ($item->shop_id !== $market->shop_id) {
-            abort(404, 'Item not found in this market.');
-        }
+         // Ensure the item belongs to the market's shop
+         if ($item->shop_id !== $market->shop_id) {
+             abort(404, 'Item not found in this market.');
+         }
 
-        $newVisibility = $market->toggleItemVisibility($item->id);
+         // Get current visibility value from frontend (what frontend calculated)
+         $currentValue = $request->input('current_value', null);
+         
+         // Toggle visibility - if frontend calculated true, we invert it
+         $newVisibility = $market->toggleItemVisibility($item->id, $currentValue);
 
-        return response()->json([
-            'success' => true,
-            'message' => $newVisibility ? 'Item is now visible' : 'Item is now hidden',
-            'is_visible' => $newVisibility,
-        ]);
-    }
+         return response()->json([
+             'success' => true,
+             'message' => $newVisibility ? 'Item is now visible' : 'Item is now hidden',
+             'is_visible' => $newVisibility,
+         ]);
+     }
 
     /**
      * Set visibility for multiple items in a market
