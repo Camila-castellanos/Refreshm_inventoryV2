@@ -110,24 +110,12 @@ class CustomerController extends Controller
                     $customer->balance = max(0, (float) $customer->balance);
                     $customer->credit = (float) $customer->credit;
 
-                    // Process names efficiently
-                    if (is_array($customer->first_name)) {
-                        $names = [];
-                        foreach ($customer->first_name as $key => $fname) {
-                            $lastName = $customer->last_name[$key] ?? '';
-                            $fullName = trim("$fname $lastName");
-                            if ($fullName !== '') {
-                                $names[] = $fullName;
-                            }
-                        }
-                        $customer->name = implode(', ', $names);
-                    } else {
-                        $customer->name = trim(($customer->first_name ?? '') . ' ' . ($customer->last_name ?? ''));
-                    }
+                    // Process names - handles old JSON format, new string format, and arrays
+                    $customer->name = $this->processCustomerName($customer->first_name, $customer->last_name);
 
                     // Process contact info
-                    $customer->email = is_array($customer->email) ? implode(", ", $customer->email) : ($customer->email ?? '');
-                    $customer->phone = is_array($customer->phone) ? implode(", ", $customer->phone) : ($customer->phone ?? '');
+                    $customer->email = $this->processContactInfo($customer->email);
+                    $customer->phone = $this->processContactInfo($customer->phone);
 
                     return $customer;
                 });
@@ -178,28 +166,47 @@ class CustomerController extends Controller
                 $personal_phone_optional[$key] = [];
             }
         }
+
+        // DEBUG: Log de los datos recibidos del frontend
+        \Log::debug('=== BACKEND DEBUG - DATOS RECIBIDOS ===');
+        \Log::debug('customer_name:', ['value' => $form["customer_name"] ?? null, 'type' => gettype($form["customer_name"] ?? null)]);
+        \Log::debug('first_name:', ['value' => $form["first_name"] ?? null, 'type' => gettype($form["first_name"] ?? null), 'isArray' => is_array($form["first_name"] ?? null)]);
+        \Log::debug('last_name:', ['value' => $form["last_name"] ?? null, 'type' => gettype($form["last_name"] ?? null), 'isArray' => is_array($form["last_name"] ?? null)]);
+        \Log::debug('email:', ['value' => $form["email"] ?? null, 'type' => gettype($form["email"] ?? null), 'isArray' => is_array($form["email"] ?? null)]);
+        \Log::debug('personal_phone:', ['value' => $form["personal_phone"] ?? null, 'type' => gettype($form["personal_phone"] ?? null), 'isArray' => is_array($form["personal_phone"] ?? null)]);
+        \Log::debug('phone_optional:', ['value' => $personal_phone_optional, 'type' => gettype($personal_phone_optional), 'isArray' => is_array($personal_phone_optional)]);
+        \Log::debug('billing_address_optional:', ['value' => $form["billing_address_optional"] ?? null, 'type' => gettype($form["billing_address_optional"] ?? null), 'isArray' => is_array($form["billing_address_optional"] ?? null)]);
+        \Log::debug('shipping_address_optional:', ['value' => $form["shipping_address_optional"] ?? null, 'type' => gettype($form["shipping_address_optional"] ?? null), 'isArray' => is_array($form["shipping_address_optional"] ?? null)]);
+        \Log::debug('========================================');
+
         $customer = new Customer();
         $customer->customer = $form["customer_name"];
         $customer->user_id = Auth::id();
         $customer->company_id = Auth::user()->company_id;
-        $customer->first_name = $form["first_name"] ?? null;
-        $customer->last_name = $form["last_name"] ?? null;
-        $customer->email = $form["email"] ?? null;
-        $customer->phone = $form["personal_phone"] ?? null;
-        $customer->phone_optional = $personal_phone_optional;
+        $customer->first_name = isset($form["first_name"][0]) ? $form["first_name"][0] : null;
+        $customer->last_name = isset($form["last_name"][0]) ? $form["last_name"][0] : null;
+        $customer->email = isset($form["email"][0]) ? $form["email"][0] : null;
+        $customer->phone = isset($form["personal_phone"][0]) ? $form["personal_phone"][0] : null;
+        // Filtrar arrays vacíos internos primero, luego verificar si hay datos
+        $filtered_phones = array_filter($personal_phone_optional, fn($v) => !empty(array_filter($v)));
+        $customer->phone_optional = !empty($filtered_phones) ? $filtered_phones : null;
         $customer->account_number = $form["accnumber"] ?? null;
         $customer->website = $form["website"] ?? null;
         $customer->notes = $form["note"] ?? null;
         $customer->currency = $form["billing_currency"] ?? 'CAD';
         $customer->billing_address = $form["billing_address"] ?? null;
-        $customer->billing_address_optional = $form["billing_address_optional"] ?? [];
+        $customer->billing_address_optional = !empty($form["billing_address_optional"]) 
+            ? $form["billing_address_optional"] 
+            : null;
         $customer->billing_address_country = $form["billing_country"] ?? null;
         $customer->billing_address_state = $form["billing_state"] ?? null;
         $customer->billing_address_city = $form["billing_city"] ?? null;
         $customer->billing_address_postal = $form["billing_postal_code"] ?? null;
         $customer->ship_name = $form["shipto"] ?? null;
         $customer->shipping_address = $form["shipping_address"] ?? null;
-        $customer->shipping_address_optional = $form["shipping_address_optional"] ?? [];
+        $customer->shipping_address_optional = !empty($form["shipping_address_optional"]) 
+            ? $form["shipping_address_optional"] 
+            : null;
         $customer->shipping_address_country = $form["shipping_country"] ?? null;
         $customer->shipping_address_state = $form["shipping_state"] ?? null;
         $customer->shipping_address_city = $form["shipping_city"] ?? null;
@@ -212,14 +219,18 @@ class CustomerController extends Controller
         \Log::info('Customer Before Save:', $customer->toArray());
         
         $customer->save();
-        
+
+        // Invalidar cache de customers después de crear nuevo
+        $user = Auth::user();
+        Cache::forget("customers_index_user_{$user->id}");
+
         // Log after saving
         \Log::info('Customer After Save:', $customer->toArray());
 
-        if (is_array($customer->email) && count($customer->email) > 0) {
+        if (!empty($customer->email)) {
             $contact = new Contact();
             $contact->name = $form["customer_name"];
-            $contact->email = $customer->email[0];
+            $contact->email = is_array($customer->email) ? $customer->email[0] : $customer->email;
             $contact->type = 1;
             $contact->user_id = Auth::user()->id;
             $contact->customer_id = $customer->id;
@@ -277,29 +288,49 @@ class CustomerController extends Controller
                     $personal_phone_optional[$key] = [];
                 }
             }
+
+            // DEBUG: Log de los datos recibidos del frontend
+            \Log::debug('=== BACKEND DEBUG UPDATE - DATOS RECIBIDOS ===');
+            \Log::debug('customer_name:', ['value' => $form["customer_name"] ?? null, 'type' => gettype($form["customer_name"] ?? null)]);
+            \Log::debug('first_name:', ['value' => $form["first_name"] ?? null, 'type' => gettype($form["first_name"] ?? null), 'isArray' => is_array($form["first_name"] ?? null)]);
+            \Log::debug('last_name:', ['value' => $form["last_name"] ?? null, 'type' => gettype($form["last_name"] ?? null), 'isArray' => is_array($form["last_name"] ?? null)]);
+            \Log::debug('email:', ['value' => $form["email"] ?? null, 'type' => gettype($form["email"] ?? null), 'isArray' => is_array($form["email"] ?? null)]);
+            \Log::debug('personal_phone:', ['value' => $form["personal_phone"] ?? null, 'type' => gettype($form["personal_phone"] ?? null), 'isArray' => is_array($form["personal_phone"] ?? null)]);
+            \Log::debug('phone_optional:', ['value' => $personal_phone_optional, 'type' => gettype($personal_phone_optional), 'isArray' => is_array($personal_phone_optional)]);
+            \Log::debug('billing_address_optional:', ['value' => $form["billing_address_optional"] ?? null, 'type' => gettype($form["billing_address_optional"] ?? null), 'isArray' => is_array($form["billing_address_optional"] ?? null)]);
+            \Log::debug('shipping_address_optional:', ['value' => $form["shipping_address_optional"] ?? null, 'type' => gettype($form["shipping_address_optional"] ?? null), 'isArray' => is_array($form["shipping_address_optional"] ?? null)]);
+            \Log::debug('========================================');
+
+            // Filtrar arrays vacíos internos primero, luego verificar si hay datos
+            $filtered_phones = array_filter($personal_phone_optional, fn($v) => !empty(array_filter($v)));
+
             $customer_data = array(
                 'customer' => $form["customer_name"],
                 'user_id' => Auth::id(),
                 'company_id' => Auth::user()->company_id,
-                'first_name' => $form["first_name"] ?? null,
-                'last_name' => $form["last_name"] ?? null,
-                'email' => $form["email"] ?? null,
-                'phone' => $form["personal_phone"] ?? null,
-                'phone_optional' => $personal_phone_optional,
+                'first_name' => isset($form["first_name"][0]) ? $form["first_name"][0] : null,
+                'last_name' => isset($form["last_name"][0]) ? $form["last_name"][0] : null,
+                'email' => isset($form["email"][0]) ? $form["email"][0] : null,
+                'phone' => isset($form["personal_phone"][0]) ? $form["personal_phone"][0] : null,
+                'phone_optional' => !empty($filtered_phones) ? $filtered_phones : null,
                 'account_number' => $form["accnumber"] ?? null,
                 'website' => $form["website"] ?? null,
                 'notes' => $form["note"] ?? null,
                 'currency' => $form["billing_currency"] ?? 'CAD',
                 'credit' => $form["credit"] ?? 0,
                 'billing_address' => $form["billing_address"] ?? null,
-                'billing_address_optional' => $form["billing_address_optional"] ?? [],
+                'billing_address_optional' => !empty($form["billing_address_optional"]) 
+                    ? $form["billing_address_optional"] 
+                    : null,
                 'billing_address_country' => $form["billing_country"] ?? null,
                 'billing_address_state' => $form["billing_state"] ?? null,
                 'billing_address_city' => $form["billing_city"] ?? null,
                 'billing_address_postal' => $form["billing_postal_code"] ?? null,
                 'ship_name' => $form["shipto"] ?? null,
                 'shipping_address' => $form["shipping_address"] ?? null,
-                'shipping_address_optional' => $form["shipping_address_optional"] ?? [],
+                'shipping_address_optional' => !empty($form["shipping_address_optional"]) 
+                    ? $form["shipping_address_optional"] 
+                    : null,
                 'shipping_address_country' => $form["shipping_country"] ?? null,
                 'shipping_address_state' => $form["shipping_state"] ?? null,
                 'shipping_address_city' => $form["shipping_city"] ?? null,
@@ -360,11 +391,9 @@ class CustomerController extends Controller
             $query->orWhere('last_name', 'LIKE', '%' . $customer . '%');
         })->select('id', 'customer', 'first_name', 'last_name', 'credit')->get();
         foreach ($customers as $customer) {
-        // Check if the arrays have values before accessing them
-        $firstName = is_array($customer->first_name) && !empty($customer->first_name) ? $customer->first_name[0] : '';
-        $lastName = is_array($customer->last_name) && !empty($customer->last_name) ? $customer->last_name[0] : '';
-        $customer->customer_name = $firstName . ($firstName && $lastName ? " " : "") . $lastName;
-    }
+            // Process customer name - handles old JSON format, new string format, and arrays
+            $customer->customer_name = $this->processCustomerName($customer->first_name, $customer->last_name);
+        }
         return response()->json($customers, 200);
     }
 
@@ -429,7 +458,7 @@ class CustomerController extends Controller
                                        ->whereRaw('items.sale_id = sales.id')
                                        ->whereRaw('(items.customer = customers.customer OR items.customer = customers.id)');
                           })
-                          ->whereBetween('sales.created_at', [$start, $end]);
+                           ->whereBetween('sales.created_at', [$start, $end]);
                 }, 'balance')
                 ->get()
                 ->map(function ($customer) {
@@ -445,24 +474,12 @@ class CustomerController extends Controller
                     $customer->balance = max(0, (float) $customer->balance);
                     $customer->credit = (float) $customer->credit;
 
-                    // Process names efficiently
-                    if (is_array($customer->first_name)) {
-                        $names = [];
-                        foreach ($customer->first_name as $key => $fname) {
-                            $lastName = $customer->last_name[$key] ?? '';
-                            $fullName = trim("$fname $lastName");
-                            if ($fullName !== '') {
-                                $names[] = $fullName;
-                            }
-                        }
-                        $customer->name = implode(', ', $names);
-                    } else {
-                        $customer->name = trim(($customer->first_name ?? '') . ' ' . ($customer->last_name ?? ''));
-                    }
+                    // Process names - handles old JSON format, new string format, and arrays
+                    $customer->name = $this->processCustomerName($customer->first_name, $customer->last_name);
 
                     // Process contact info
-                    $customer->email = is_array($customer->email) ? implode(", ", $customer->email) : ($customer->email ?? '');
-                    $customer->phone = is_array($customer->phone) ? implode(", ", $customer->phone) : ($customer->phone ?? '');
+                    $customer->email = $this->processContactInfo($customer->email);
+                    $customer->phone = $this->processContactInfo($customer->phone);
 
                     return $customer;
                 });
@@ -556,5 +573,90 @@ class CustomerController extends Controller
         } else {
             return response()->json(['error' => 'Customer not found'], 404);
         }
+    }
+
+    /**
+     * Decode JSON field or return as array
+     * Handles both old JSON strings and new string values
+     */
+    private function decodeJsonField($value): array
+    {
+        if (is_array($value)) {
+            return $value;
+        }
+        if (is_string($value)) {
+            // Trim and check if it looks like JSON array
+            $trimmed = trim($value);
+            if ($trimmed !== '' && $trimmed[0] === '[') {
+                $decoded = json_decode($trimmed, true);
+                if (is_array($decoded) && !empty($decoded)) {
+                    return $decoded;
+                }
+            }
+            // Return as single element if not valid JSON array
+            return [$value];
+        }
+        return [$value];
+    }
+
+    /**
+     * Process customer name from first_name and last_name fields
+     * Handles old JSON format, new string format, and already decoded arrays
+     */
+    private function processCustomerName($firstName, $lastName): string
+    {
+        // DEBUG: Log what we're receiving
+        \Log::debug('processCustomerName - input:', [
+            'firstName' => $firstName,
+            'firstNameType' => gettype($firstName),
+            'lastName' => $lastName,
+            'lastNameType' => gettype($lastName)
+        ]);
+
+        $firstNames = $this->decodeJsonField($firstName);
+        $lastNames = $this->decodeJsonField($lastName);
+
+        // DEBUG: Log after decoding
+        \Log::debug('processCustomerName - decoded:', [
+            'firstNames' => $firstNames,
+            'lastNames' => $lastNames
+        ]);
+
+        $fullNames = [];
+        foreach ($firstNames as $key => $fname) {
+            $lname = $lastNames[$key] ?? '';
+            $fullName = trim("$fname $lname");
+            if ($fullName !== '') {
+                $fullNames[] = $fullName;
+            }
+        }
+
+        $result = implode(', ', $fullNames);
+
+        // DEBUG: Log final result
+        \Log::debug('processCustomerName - result:', ['result' => $result]);
+
+        return $result;
+    }
+
+    /**
+     * Process contact info (email or phone) from field
+     */
+    private function processContactInfo($value): string
+    {
+        if (is_array($value)) {
+            return implode(", ", $value);
+        }
+        if (is_string($value)) {
+            $trimmed = trim($value);
+            if ($trimmed !== '' && $trimmed[0] === '[') {
+                $decoded = json_decode($trimmed, true);
+                if (is_array($decoded)) {
+                    return implode(", ", $decoded);
+                }
+            }
+            return $value;
+        }
+        return '';
     }
 }

@@ -102,7 +102,8 @@ function transformCustomerData(data) {
   return data
     .map((customer) => ({
       ...customer,
-      name: `${customer.first_name} ${customer.last_name}`,
+      // Use the name already processed by backend, don't overwrite
+      name: customer.name,
       margin: formatPercentage(customer.margin),
       actions: [
       {
@@ -128,7 +129,8 @@ function parseItemsData() {
   tableData.value = props.customers.map((customer) => {
     return {
       ...customer,
-      name: `${customer.first_name} ${customer.last_name}`,
+      // Use the name already processed by backend, don't overwrite
+      name: customer.name,
       margin: formatPercentage(customer.margin),
       actions: [
         {
