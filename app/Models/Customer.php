@@ -56,10 +56,13 @@ class Customer extends Model
     // ];
 
     /**
-     * Accessor for phone - decodes JSON array if stored as string
+     * Accessor for phone - handles both arrays and JSON strings
      */
     public function getPhoneAttribute($value)
     {
+        if (is_array($value)) {
+            return $value[0] ?? '';
+        }
         if (is_string($value) && str_starts_with($value, '[')) {
             $decoded = json_decode($value, true);
             if (is_array($decoded) && !empty($decoded)) {
@@ -71,10 +74,13 @@ class Customer extends Model
     }
 
     /**
-     * Accessor for email - decodes JSON array if stored as string
+     * Accessor for email - handles both arrays and JSON strings
      */
     public function getEmailAttribute($value)
     {
+        if (is_array($value)) {
+            return $value[0] ?? '';
+        }
         if (is_string($value) && str_starts_with($value, '[')) {
             $decoded = json_decode($value, true);
             if (is_array($decoded) && !empty($decoded)) {
@@ -86,10 +92,13 @@ class Customer extends Model
     }
 
     /**
-     * Accessor for first_name - decodes JSON array if stored as string
+     * Accessor for first_name - handles both arrays and JSON strings
      */
     public function getFirstNameAttribute($value)
     {
+        if (is_array($value)) {
+            return $value[0] ?? '';
+        }
         if (is_string($value) && str_starts_with($value, '[')) {
             $decoded = json_decode($value, true);
             if (is_array($decoded) && !empty($decoded)) {
@@ -101,10 +110,13 @@ class Customer extends Model
     }
 
     /**
-     * Accessor for last_name - decodes JSON array if stored as string
+     * Accessor for last_name - handles both arrays and JSON strings
      */
     public function getLastNameAttribute($value)
     {
+        if (is_array($value)) {
+            return $value[0] ?? '';
+        }
         if (is_string($value) && str_starts_with($value, '[')) {
             $decoded = json_decode($value, true);
             if (is_array($decoded) && !empty($decoded)) {
@@ -113,4 +125,5 @@ class Customer extends Model
             return '';
         }
         return $value ?? '';
-    }}
+    }
+}

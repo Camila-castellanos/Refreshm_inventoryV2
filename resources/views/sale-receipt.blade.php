@@ -8,6 +8,21 @@
 
     <title>{{ config('app.name', 'Laravel') }}</title>
 
+    <?php
+    /**
+     * Helper function to safely convert any value to string for display
+     */
+    function safeString($value) {
+        if (is_array($value)) {
+            return implode(', ', array_filter($value));
+        }
+        if (is_object($value)) {
+            return method_exists($value, '__toString') ? (string) $value : '';
+        }
+        return $value ?? '';
+    }
+    ?>
+
     <!-- Fonts -->
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap">
 
@@ -46,14 +61,18 @@
                 <td class="text-left" style="width:70%;padding:20px 0; ">
                     <p class="mb-1"><strong>Bill To</strong></p>
                     @if(isset($customer->billing_address))
-                        <p class="mb-2">{{$customer->customer}}</p>
-                        <p style="margin: 0">{{$customer->billing_address}}</p>
-                        <p style="margin: 0">{{$customer->billing_address_city}}, {{$customer->billing_address_state}}</p>
-                        <p class="mb-2">{{$customer->billing_address_country}}</p>
-                        <p style="margin: 0">{{ $customer->phone ?? '' }}</p>
-                        <p>{{ $customer->email ?? '' }}</p>
+                        <p class="mb-2">{{ is_object($customer) ? $customer->customer : $customer }}</p>
+                        <p style="margin: 0">{{ $customer->billing_address ?? '' }}</p>
+                        <p style="margin: 0">{{ $customer->billing_address_city ?? '' }}, {{ $customer->billing_address_state ?? '' }}</p>
+                        <p class="mb-2">{{ $customer->billing_address_country ?? '' }}</p>
+                        <p style="margin: 0">{{ safeString($customer->phone ?? '') }}</p>
+                        <p>{{ safeString($customer->email ?? '') }}</p>
                     @else
                         <p class="mb-2">{{ is_object($customer) ? $customer->customer : $customer }}</p>
+                        @if(is_object($customer))
+                            <p style="margin: 0">{{ safeString($customer->phone ?? '') }}</p>
+                            <p>{{ safeString($customer->email ?? '') }}</p>
+                        @endif
                     @endif
                 </td>
                 <td class="text-right" style="width:30%;padding:20px 0;">

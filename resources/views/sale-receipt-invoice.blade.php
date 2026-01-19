@@ -11,6 +11,21 @@
     <!-- Fonts -->
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap">
 
+    <?php
+    /**
+     * Helper function to safely convert any value to string for display
+     */
+    function safeString($value) {
+        if (is_array($value)) {
+            return implode(', ', array_filter($value));
+        }
+        if (is_object($value)) {
+            return method_exists($value, '__toString') ? (string) $value : '';
+        }
+        return $value ?? '';
+    }
+    ?>
+
 
     <!-- Styles -->
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
@@ -257,14 +272,18 @@
                                      <td style="width:55%; vertical-align:top; padding-left:2px;" class="bill-to">
                                         <div class="bill-label">Bill To</div>
                                         @if(isset($customer->billing_address))
-                                            <div class="bill-name">{{$customer->customer}}</div>
-                                            <div class="bill-contact">{{$customer->billing_address}}</div>
-                                            <div class="bill-contact">{{$customer->billing_address_city}}, {{$customer->billing_address_state}} {{$customer->billing_address_postal}}</div>
-                                            <div class="bill-contact">{{$customer->billing_address_country}}</div>
-                                            <div class="bill-contact">{{ $customer->phone ?? '' }}</div>
-                                            <div class="bill-contact">{{ $customer->email ?? '' }}</div>
+                                            <div class="bill-name">{{ is_object($customer) ? $customer->customer : $customer }}</div>
+                                            <div class="bill-contact">{{ $customer->billing_address ?? '' }}</div>
+                                            <div class="bill-contact">{{ $customer->billing_address_city ?? '' }}, {{ $customer->billing_address_state ?? '' }} {{ $customer->billing_address_postal ?? '' }}</div>
+                                            <div class="bill-contact">{{ $customer->billing_address_country ?? '' }}</div>
+                                            <div class="bill-contact">{{ safeString($customer->phone ?? '') }}</div>
+                                            <div class="bill-contact">{{ safeString($customer->email ?? '') }}</div>
                                         @else
                                             <div class="bill-name">{{ is_object($customer) ? $customer->customer : $customer }}</div>
+                                            @if(is_object($customer))
+                                                <div class="bill-contact">{{ safeString($customer->phone ?? '') }}</div>
+                                                <div class="bill-contact">{{ safeString($customer->email ?? '') }}</div>
+                                            @endif
                                         @endif
                                     </td>
                                 </tr>
