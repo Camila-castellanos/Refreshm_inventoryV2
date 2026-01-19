@@ -54,4 +54,63 @@ class Customer extends Model
     //     'phone' => 'array',
     //     'phone_optional' => 'array'
     // ];
-}
+
+    /**
+     * Accessor for phone - decodes JSON array if stored as string
+     */
+    public function getPhoneAttribute($value)
+    {
+        if (is_string($value) && str_starts_with($value, '[')) {
+            $decoded = json_decode($value, true);
+            if (is_array($decoded) && !empty($decoded)) {
+                return $decoded[0];
+            }
+            return '';
+        }
+        return $value ?? '';
+    }
+
+    /**
+     * Accessor for email - decodes JSON array if stored as string
+     */
+    public function getEmailAttribute($value)
+    {
+        if (is_string($value) && str_starts_with($value, '[')) {
+            $decoded = json_decode($value, true);
+            if (is_array($decoded) && !empty($decoded)) {
+                return $decoded[0];
+            }
+            return '';
+        }
+        return $value ?? '';
+    }
+
+    /**
+     * Accessor for first_name - decodes JSON array if stored as string
+     */
+    public function getFirstNameAttribute($value)
+    {
+        if (is_string($value) && str_starts_with($value, '[')) {
+            $decoded = json_decode($value, true);
+            if (is_array($decoded) && !empty($decoded)) {
+                return $decoded[0];
+            }
+            return '';
+        }
+        return $value ?? '';
+    }
+
+    /**
+     * Accessor for last_name - decodes JSON array if stored as string
+     */
+    public function getLastNameAttribute($value)
+    {
+        if (is_string($value) && str_starts_with($value, '[')) {
+            $decoded = json_decode($value, true);
+            if (is_array($decoded) && !empty($decoded)) {
+                return $decoded[0];
+            }
+            return '';
+        }
+        return $value ?? '';
+    }}
