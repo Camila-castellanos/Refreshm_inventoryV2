@@ -47,11 +47,11 @@ class Customer extends Model
 
     // For array
 
-    protected $casts = [
-        'first_name' => 'array',
-        'last_name' => 'array',
-        'email' => 'array',
-        'phone' => 'array',
-        'phone_optional' => 'array'
-    ];
+    // protected $casts = [
+    //     'first_name' => 'array',
+    //     'last_name' => 'array',
+    //     'email' => 'array',
+    //     'phone' => 'array',
+    //     'phone_optional' => 'array'
+    // ];
 }

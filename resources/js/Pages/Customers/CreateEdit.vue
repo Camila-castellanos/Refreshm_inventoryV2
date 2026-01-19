@@ -307,6 +307,27 @@ import { computed, inject, onMounted, ref } from "vue";
 const dialogRef = inject("dialogRef");
 const toast = useToast();
 
+// Helper function to convert field to array (handles old JSON format, new string format, and arrays)
+function toArray(value) {
+  if (Array.isArray(value)) {
+    return value;
+  }
+  if (typeof value === 'string') {
+    // Check if it's a JSON string (starts with [)
+    if (value.trim().startsWith('[')) {
+      try {
+        const parsed = JSON.parse(value);
+        return Array.isArray(parsed) ? parsed : [value];
+      } catch (e) {
+        return [value];
+      }
+    }
+    // It's a regular string, split by comma or return as single element
+    return value ? [value] : [];
+  }
+  return [];
+}
+
 // Refs for form
 const customerForm = ref(null);
 
@@ -328,10 +349,10 @@ onMounted(() => {
   customer.value = dialogRef.value?.data?.customer ?? null;
   if (customer.value !== null) {
     form.customer_name = customer.value.customer;
-    form.first_name = customer.value.first_name;
-    form.last_name = customer.value.last_name;
-    form.email = customer.value.email.split(", ");
-    form.personal_phone = customer.value.phone.split(", ");
+    form.first_name = toArray(customer.value.first_name);
+    form.last_name = toArray(customer.value.last_name);
+    form.email = toArray(customer.value.email);
+    form.personal_phone = toArray(customer.value.phone);
     form.optional_number = customer.value.phone_optional != null ? customer.value.phone_optional : [];
     form.accnumber = customer.value.account_number;
     form.website = customer.value.website;
@@ -355,13 +376,13 @@ onMounted(() => {
     form.credit = customer.value.credit;
 
     // Add entries to personal_info_content for each contact
-    customer.value.first_name.forEach(() => {
+    form.first_name.forEach(() => {
       personal_info_content.value.push(contact);
     });
 
     // Adjust size of phone_optional if empty
     if (form.optional_number.length == 0) {
-      customer.value.first_name.forEach(() => {
+      form.first_name.forEach(() => {
         phone_optional.value.push([]);
         form.optional_number.push([]);
       });
@@ -456,6 +477,18 @@ async function onFormSubmit(event) {
       form.personal_phone_optional.push(phones);
     });
   }
+
+  // DEBUG: Log de los datos antes de enviar
+  console.log('=== FRONTEND DEBUG - DATOS ENVIADOS ===');
+  console.log('customer_name:', form.customer_name);
+  console.log('first_name:', form.first_name, 'type:', typeof form.first_name, 'isArray:', Array.isArray(form.first_name));
+  console.log('last_name:', form.last_name, 'type:', typeof form.last_name, 'isArray:', Array.isArray(form.last_name));
+  console.log('email:', form.email, 'type:', typeof form.email, 'isArray:', Array.isArray(form.email));
+  console.log('personal_phone:', form.personal_phone, 'type:', typeof form.personal_phone, 'isArray:', Array.isArray(form.personal_phone));
+  console.log('phone_optional:', form.personal_phone_optional);
+  console.log('billing_address_optional:', form.billing_address_optional, 'type:', typeof form.billing_address_optional);
+  console.log('shipping_address_optional:', form.shipping_address_optional, 'type:', typeof form.shipping_address_optional);
+  console.log('==========================================');
 
   try {
     let response;
