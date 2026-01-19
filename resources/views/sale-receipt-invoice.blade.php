@@ -254,17 +254,17 @@
                                             </div>
                                     </td>
                                     @endif
-                                    <td style="width:55%; vertical-align:top; padding-left:2px;" class="bill-to">
+                                     <td style="width:55%; vertical-align:top; padding-left:2px;" class="bill-to">
                                         <div class="bill-label">Bill To</div>
                                         @if(isset($customer->billing_address))
                                             <div class="bill-name">{{$customer->customer}}</div>
                                             <div class="bill-contact">{{$customer->billing_address}}</div>
                                             <div class="bill-contact">{{$customer->billing_address_city}}, {{$customer->billing_address_state}} {{$customer->billing_address_postal}}</div>
                                             <div class="bill-contact">{{$customer->billing_address_country}}</div>
-                                            <div class="bill-contact">{{ $customer->phone[0] ?? '' }}</div>
-                                            <div class="bill-contact">{{ $customer->email[0] ?? '' }}</div>
+                                            <div class="bill-contact">{{ $customer->phone ?? '' }}</div>
+                                            <div class="bill-contact">{{ $customer->email ?? '' }}</div>
                                         @else
-                                            <div class="bill-name">{{$customer}}</div>
+                                            <div class="bill-name">{{ is_object($customer) ? $customer->customer : $customer }}</div>
                                         @endif
                                     </td>
                                 </tr>

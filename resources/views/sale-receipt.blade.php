@@ -50,10 +50,10 @@
                         <p style="margin: 0">{{$customer->billing_address}}</p>
                         <p style="margin: 0">{{$customer->billing_address_city}}, {{$customer->billing_address_state}}</p>
                         <p class="mb-2">{{$customer->billing_address_country}}</p>
-                        <p style="margin: 0">{{$customer->phone[0]}}</p>
-                        <p>{{$customer->email[0]}}</p>
+                        <p style="margin: 0">{{ $customer->phone ?? '' }}</p>
+                        <p>{{ $customer->email ?? '' }}</p>
                     @else
-                        <p class="mb-2">{{$customer}}</p>
+                        <p class="mb-2">{{ is_object($customer) ? $customer->customer : $customer }}</p>
                     @endif
                 </td>
                 <td class="text-right" style="width:30%;padding:20px 0;">
