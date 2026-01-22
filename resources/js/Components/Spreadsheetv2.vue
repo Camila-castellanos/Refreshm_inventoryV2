@@ -144,6 +144,10 @@
     @load="handleLoadDraft"
     @update:visible="showLoadDraft = $event"
   />
+  <BarcodeScanner
+    v-model:visible="showBarcodeScanner"
+    @scanned="handleBarcodeScanned"
+  />
 </template>
 
 <script lang="ts" setup>
@@ -158,7 +162,7 @@ import RevoGrid, { BeforeSaveDataDetails, RevoGridCustomEvent, VGridVueTemplate,
 import axios from "axios";
 import { Button, ContextMenu, useDialog, useToast, Select, DatePicker, ToggleSwitch } from "primevue";
 import { useConfirm } from "primevue/useconfirm";
-import { nextTick, onMounted, ref, onBeforeUnmount, watch, computed } from "vue";
+import { nextTick, onMounted, ref, onBeforeUnmount, watch, computed, reactive } from "vue";
 import UniversalCell from "./UniversalCell.vue";
 import { format } from "date-fns";
 import CreateTax from "@/Pages/Accounting/Modals/CreateTax.vue";
@@ -166,6 +170,7 @@ import SaveAsBillModal from "./SaveAsBillModal.vue";
 import SaveDevicesOptions from "./SaveDevicesOptions.vue";
 import DraftNameModal from "./DraftNameModal.vue";
 import LoadDraftModal from "./LoadDraftModal.vue";
+import BarcodeScanner from "./BarcodeScanner.vue";
 
 type VendorOption = { label: string; value: string };
 type ContextMenu = { visible: boolean; x: number; y: number; row: number | null };
@@ -205,6 +210,58 @@ const dontSaveDraft = ref(false);
 const selectedRows = ref<number[]>([]);
 const lastRightClickAt = ref<number | null>(null);
 const isRightClickActive = ref(false);
+const showBarcodeScanner = ref(false);
+
+// Scanner detection state (for physical barcode scanner)
+const scanDetection = reactive({
+  startTime: null as number | null,
+  chars: [] as string[],
+  timeout: null as any | null
+});
+
+function handleScannerInput(event: KeyboardEvent) {
+  // Only track printable characters
+  if (event.key.length !== 1) return;
+  
+  const now = Date.now();
+  
+  // First character - start timing
+  if (scanDetection.startTime === null) {
+    scanDetection.startTime = now;
+    scanDetection.chars = [event.key];
+    return;
+  }
+  
+  const timeDiff = now - scanDetection.startTime;
+  scanDetection.chars.push(event.key);
+  
+  // Reset if too much time between characters (> 500ms)
+  if (timeDiff > 500) {
+    scanDetection.startTime = now;
+    scanDetection.chars = [event.key];
+    return;
+  }
+  
+  // Detect scanner: minimum 10 characters + fast typing (< 30ms average)
+  if (scanDetection.chars.length >= 10 && timeDiff < 500) {
+    const scannedCode = scanDetection.chars.join('');
+    
+    // Show toast at the top
+    toast.add({
+      severity: 'success',
+      summary: 'Barcode successfully scanned',
+      detail: scannedCode,
+      life: 3000
+    });
+    
+    // console.log('[Scanner] Physical scanner detected:', scannedCode);
+    
+    // Reset
+    scanDetection.startTime = null;
+    scanDetection.chars = [];
+  }
+}
+
 const selectedRangeLimits = ref<{
   minRow: number | null;
   maxRow: number | null;
@@ -418,14 +475,15 @@ onMounted(async () => {
   });
    initialColumns.value = columns.value.map(col => ({ ...col }))
    await adjustColumnSizes();
-  window.addEventListener('resize', adjustColumnSizes);
-  window.addEventListener('paste', handleGlobalPaste);
-  window.addEventListener('keydown', onKeyDown, {capture: true});
+   window.addEventListener('resize', adjustColumnSizes);
+   window.addEventListener('paste', handleGlobalPaste);
+   window.addEventListener('keydown', onKeyDown, {capture: true});
+   window.addEventListener('keydown', handleScannerInput, {capture: true});
 
-  tableData.value = props.initialData?.length
+   tableData.value = props.initialData?.length
     ? props.initialData.map((item) => {
       const storage = storages.data.find((s: Storage) => s.id === item.storage_id);
-      console.log("item", item);
+      // console.log("item", item);
       return {
         ...item,
         location: `${storage?.name} - ${item.position}/${storage?.limit}`,
@@ -435,7 +493,7 @@ onMounted(async () => {
       };
     })
     : [{}] as ItemWithLocation[];
-    console.log("Initial table data:", tableData.value);
+    // console.log("Initial table data:", tableData.value);
     await nextTick();
     // Apply header tooltips once grid has rendered
     applyHeaderTooltips();
@@ -455,14 +513,14 @@ watch(columns, async () => {
       // Capturar eventos INMEDIATAMENTE en el elemento revo-grid
   const revogridElement = revogrid.value?.$el;
   if (revogridElement) {
-    console.log("Setting up immediate RevoGrid right-click detection");
+    // console.log("Setting up immediate RevoGrid right-click detection");
     
     // Capturar mousedown con máxima prioridad
     revogridElement.addEventListener('mousedown', (e: MouseEvent) => {
       if (e.button === 2) {
         isRightClickActive.value = true;
         lastRightClickAt.value = Date.now();
-        console.log("IMMEDIATE right-click detected on RevoGrid");
+        // console.log("IMMEDIATE right-click detected on RevoGrid");
         
         // Resetear después de 150ms
         setTimeout(() => {
@@ -510,6 +568,7 @@ onBeforeUnmount(() => {
   window.removeEventListener('resize', adjustColumnSizes);
   window.removeEventListener('paste', handleGlobalPaste);
   window.removeEventListener('keydown', onKeyDown, {capture: true});
+  window.removeEventListener('keydown', handleScannerInput, {capture: true});
   window.removeEventListener('beforeunload', saveDraftToLocalStorage);
   // clear the draft save interval
   clearInterval(draftSaveInterval);
@@ -553,13 +612,13 @@ async function getUserTaxes() {
     try {
       let taxes;
       const { data } = await axios.get(route('tax.list'));
-      console.log("Taxes data:", data);
+      // console.log("Taxes data:", data);
       taxes = data.map((tax: any) => ({
         label: `${tax.name || 'N/A'} - (${tax.percentage + '%' || 'N/A'})`,
         value: tax.id,
         percentage: tax.percentage
       }));
-      console.log("Taxes loaded:", taxes);
+      // console.log("Taxes loaded:", taxes);
       return taxes;
     } catch (err) {
       console.error('Failed to load taxes:', err);
@@ -574,7 +633,7 @@ async function getUserTaxes() {
 
 function showContextMenu(e: CustomEvent<{ event: MouseEvent; rowIndex: number; prop: string }>) {
   e.preventDefault();
-  console.log("context menu event:", e.detail.event);
+  // console.log("context menu event:", e.detail.event);
   if (props.initialData?.length) return;
   contextRow.value = e.detail.rowIndex;
   menuRef.value.show(e.detail.event);
@@ -671,7 +730,7 @@ function onInsertRow(e: CustomEvent<{ records: ItemWithLocation[] }>): void {
 }
 
 function onDeleteRow(e: CustomEvent<{ count: number }>): void {
-  console.log(e.detail);
+  // console.log(e.detail);
   const rows = e?.detail?.count || 1;
   tableData.value = tableData.value.filter((row, index) => index !== rows);
   renderPositions(rows);
@@ -701,8 +760,8 @@ async function renderPositions(numOfRows: number): Promise<void> {
        };
      }).filter((item) => item.storage_id && item.position);
 
-     console.log("Items to assign:", newRowsToAssign);
-     console.log("Already assigned (reserved):", assignedInFront);
+      // console.log("Items to assign:", newRowsToAssign);
+      // console.log("Already assigned (reserved):", assignedInFront);
 
      // Call backend to assign positions based on storage priority
      const response = await axios.post(route('storages.assignPositions'), {
@@ -713,7 +772,7 @@ async function renderPositions(numOfRows: number): Promise<void> {
 
      const { items: assignedItems, unassigned_count } = response.data;
 
-     console.log("Backend response:", { assignedItems, unassigned_count });
+      // console.log("Backend response:", { assignedItems, unassigned_count });
 
      // Update tableData with assigned positions
      assignedItems.forEach((assignedItem: any) => {
@@ -792,7 +851,7 @@ async function saveAsDraft() {
       title: BillTitle.value,
       items: mappedItems
     };
-    console.log("Saving draft with payload:", payload);
+    // console.log("Saving draft with payload:", payload);
     const {data} = await axios.post(route('drafts.store'), payload);
     currentLoadedDraftId.value = data.id;
     toast.add({ severity:'success', summary:'Draft saved' });
@@ -980,7 +1039,7 @@ async function submitSpreadsheet(body: any[], forceStore: boolean = false): Prom
         items: body,
         draft_id: currentLoadedDraftId.value 
       };
-  console.log("Submitting data to endpoint:", endpoint, "with payload:", payload, "draft_id:", currentLoadedDraftId.value);
+  // console.log("Submitting data to endpoint:", endpoint, "with payload:", payload, "draft_id:", currentLoadedDraftId.value);
   try {
     isLoading.value = true;
     await axios.post(route(endpoint), payload);
@@ -990,7 +1049,7 @@ async function submitSpreadsheet(body: any[], forceStore: boolean = false): Prom
     if (currentLoadedDraftId.value) {
       try {
         await axios.post(route('drafts.purge', currentLoadedDraftId.value));
-        console.log("Draft purged successfully");
+        // console.log("Draft purged successfully");
       } catch (err) {
         console.warn('Failed to purge draft:', err);
       }
@@ -1045,7 +1104,7 @@ async function submitSpreadsheet(body: any[], forceStore: boolean = false): Prom
             tableData.value[rowIndex].location = `${storage.name} - ${conflict.suggested_position} / ${storage.limit}`;
             tableData.value[rowIndex].storage_id = storage.id; // Ensure storage_id is updated too
             updatedCount++;
-            console.log(`Updated row ${rowIndex} with suggested position ${conflict.suggested_position} in storage ${storage.name}`);
+            // console.log(`Updated row ${rowIndex} with suggested position ${conflict.suggested_position} in storage ${storage.name}`);
           } else {
              console.warn(`Storage not found for conflict suggestions: ID ${conflict.suggested_storage_id}`);
           }
@@ -1053,10 +1112,10 @@ async function submitSpreadsheet(body: any[], forceStore: boolean = false): Prom
       }
     });
     
-    console.log(`Total rows updated with suggestions: ${updatedCount}`);
+    // console.log(`Total rows updated with suggestions: ${updatedCount}`);
 
     if (updatedCount > 0) {
-        console.log("Triggering confirmation dialog...");
+        // console.log("Triggering confirmation dialog...");
         confirm.require({
             message: `${updatedCount} items had storage conflicts and have been updated to the suggested positions. Do you want to accept these changes and save now?`,
             header: 'Storage Conflicts Detected',
@@ -1067,11 +1126,11 @@ async function submitSpreadsheet(body: any[], forceStore: boolean = false): Prom
             acceptClass: 'p-button-primary',
             accept: () => {
                 // Re-submit with updated data
-                console.log("User accepted conflict resolution. Retrying save...");
+                // console.log("User accepted conflict resolution. Retrying save...");
                 verifySpreadsheetRequired(() => submitSpreadsheet(filterItemsForInventory(), true));
             },
             reject: () => {
-                 console.log("User rejected conflict resolution.");
+                 // console.log("User rejected conflict resolution.");
                  toast.add({ 
                     severity: "info", 
                     summary: "Action Cancelled", 
@@ -1284,7 +1343,7 @@ watch(
 // function to create labels from the actual items in the table that are not saved yet
 async function openLabelsFromTable(items) {
   if (!items.length) return;
-  console.log("Creating labels for items:", items);
+  // console.log("Creating labels for items:", items);
   try {
     const res = await axios.post(
       route('items.newlabels'),
@@ -1340,13 +1399,13 @@ function updateTotals() {
         : row.subtotal,
       selectedTax.value ? getTaxPercentageById(selectedTax.value) : getTaxPercentageById(row.tax) || null
     );
-    console.log("Updated row tax:", row.tax);
+    // console.log("Updated row tax:", row.tax);
   });
 }
 
 // recalculate totals when tax changes or costs change
 watch(selectedTax, () => {
-  console.log("cambio el tax")
+  // console.log("cambio el tax")
   updateTotals();
 });
 
@@ -1379,7 +1438,7 @@ function findVendorId(vendorName: string): number | null {
 function handleLoadDraft(draft: any) {
   currentLoadedDraftId.value = draft.id;
   // Carga campos del draft
-  console.log("Loading draft:", draft);
+  // console.log("Loading draft:", draft);
   selectedVendor.value = draft.vendor ? draft.vendor : vendorsList.value.find(v => v.id === draft.items[0]?.vendor_id)?.vendor || null;
   selectedDate.value   = draft.date ? new Date(draft.date) : new Date();
   selectedTax.value    = draft.items[0]?.tax_id ?? null;
@@ -1422,8 +1481,22 @@ function handleLoadDraft(draft: any) {
     item => !item.location && !item.draft_unassigned
   );
   if (itemsNeedingAutoAssign.length > 0) {
-    console.log(`Found ${itemsNeedingAutoAssign.length} items without location, assigning positions...`);
+    // console.log(`Found ${itemsNeedingAutoAssign.length} items without location, assigning positions...`);
     renderPositions(itemsNeedingAutoAssign.length);
+  }
+}
+
+function handleBarcodeScanned(value: string) {
+  const rowIndex = contextRow.value ?? 0;
+  if (rowIndex >= 0 && rowIndex < tableData.value.length) {
+    tableData.value[rowIndex].imei = value;
+    tableData.value = [...tableData.value];
+    toast.add({
+      severity: 'success',
+      summary: 'Barcode Scanned',
+      detail: `IMEI set to: ${value}`,
+      life: 2000
+    });
   }
 }
 
@@ -1487,13 +1560,13 @@ function handleCleanLocalSave() {
 
 // Auto-generate selling prices for rows (stub - user can extend)
 async function autoGenerateSalesPrices() {
-  console.log('Requesting server-side auto-generate of selling prices');
+  // console.log('Requesting server-side auto-generate of selling prices');
   try {
     isLoading.value = true;
     // send mapped data (same shape as submission)
     const payload = mapSpreadsheetData(tableData.value);
     const res = await axios.post(route('items.generateSellingPrices'), { items: payload });
-    console.log('Server responded with:', res.data);
+    // console.log('Server responded with:', res.data);
     // Expect response to contain updated items array
     if (res && res.data && Array.isArray(res.data.items)) {
       // merge selling_price from response into tableData preserving other fields
@@ -1552,15 +1625,15 @@ function handleBeforeCellFocus(e: RevoGridCustomEvent<any>) {
     clickedColIndex <= limits.maxCol &&
     clickedRowIndex <= limits.maxRow;
 
-  console.log("selected rows more than one:", selectedRows.value.length > 1, "is right-click?:", isRightClickActive.value, "is selected range?:", inSelectedRange);
+  // console.log("selected rows more than one:", selectedRows.value.length > 1, "is right-click?:", isRightClickActive.value, "is selected range?:", inSelectedRange);
   // SI hay múltiples filas seleccionadas Y es right-click, NO hacer focus
   if (selectedRows.value.length > 1 && isRightClickActive.value && inSelectedRange) {
-    console.log("🚫 PREVENTING FOCUS - Right-click on multiple selection");
+    // console.log("🚫 PREVENTING FOCUS - Right-click on multiple selection");
     e.preventDefault();
     return;
   }
   
-  console.log("✅ ALLOWING FOCUS - Single selection or right-click context menu");
+  // console.log("✅ ALLOWING FOCUS - Single selection or right-click context menu");
   selectedRows.value = [];
 }
 
