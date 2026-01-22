@@ -33,6 +33,7 @@
         </div>
 
         <div class="flex justify-end mb-4 space-x-2">
+          <Button label="Find Position" icon="pi pi-map-marker" @click="openFindPosition" />
           <Button label="Save Order" icon="pi pi-save" @click="saveOrder" />
           <Button label="Create" icon="pi pi-plus" @click="openCreateDialog" />
         </div>
@@ -99,6 +100,10 @@ const fetchStorages = async () => {
 };
 
 onMounted(fetchStorages);
+
+const openFindPosition = () => {
+  window.open(route('utilities.findPosition'), '_blank');
+};
 
 const toggleMenu = (event: Event, locationId: number) => {
   menuRefs[locationId]?.toggle(event);
