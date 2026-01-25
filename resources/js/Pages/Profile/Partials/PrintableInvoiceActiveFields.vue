@@ -44,6 +44,7 @@ const headers = [
   { name: 'items', label: 'Items' },
   { name: 'table_device', label: 'Device' },
   { name: 'table_grade', label: 'Grade' },
+  { name: 'table_battery', label: 'Battery %' },
   { name: 'table_issues', label: 'Issues' },
   { name: 'table_imei', label: 'IMEI' },
   { name: 'table_price', label: 'Price' },
