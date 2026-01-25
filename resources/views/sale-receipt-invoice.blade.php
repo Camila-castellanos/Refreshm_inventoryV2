@@ -15,13 +15,15 @@
     /**
      * Helper function to safely convert any value to string for display
      */
-    function safeString($value) {
+    function safeString($value)
+    {
         if (is_array($value)) {
             return implode(', ', array_filter($value));
         }
         if (is_object($value)) {
             return method_exists($value, '__toString') ? (string) $value : '';
         }
+
         return $value ?? '';
     }
     ?>
@@ -395,6 +397,9 @@
                 @if(in_array('table_grade', $userActiveFields))
                     <th scope="col">GRADE</th>
                 @endif
+                @if(in_array('table_battery', $userActiveFields))
+                    <th scope="col">BATTERY %</th>
+                @endif
                 @if(in_array('table_issues', $userActiveFields))
                     <th class="tbl-issues" scope="col">ISSUES</th>
                 @endif
@@ -416,6 +421,9 @@
                 @if(in_array('table_grade', $userActiveFields))
                     <td>{{ $item["grade"] ?? '' }}</td>
                 @endif
+                @if(in_array('table_battery', $userActiveFields))
+                    <td>{{ !empty($item["battery"]) ? $item["battery"] . ' %' : 'N/A' }}</td>
+                @endif
                 @if(in_array('table_issues', $userActiveFields))
                     <td class="tbl-issues">{{ $item["issues"] }}</td>
                 @endif
@@ -434,6 +442,9 @@
                 @endif
                 @if(in_array('table_grade', $userActiveFields))
                     <td>{{ $item["grade"] ?? '' }}</td>
+                @endif
+                @if(in_array('table_battery', $userActiveFields))
+                    <td>{{ !empty($item["battery"]) ? $item["battery"] . ' %' : 'N/A' }}</td>
                 @endif
                 @if(in_array('table_issues', $userActiveFields))
                     <td class="tbl-issues">{{ $item["issues"] }}</td>
