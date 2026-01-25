@@ -23,16 +23,31 @@
     'cost'          => 'Cost',
     'selling_price' => 'Selling Price',
     'storage'      => 'Location',
+    'barcode'       => 'Barcode',
   ];
 
-// Retrieve the user's selection or use all by default
-  $userFields = auth()->user()->printable_tag_fields ?? array_keys($fields);
+try {
+  // Retrieve the user's selection or use all by default
+  $userFieldsRaw = auth()->user()->printable_tag_fields;
+  
+  // Ensure it's always an array
+  if (!is_array($userFieldsRaw)) {
+    $userFieldsRaw = array_keys($fields);
+  }
+  
+  $userFields = $userFieldsRaw;
+
+} catch (\Exception $e) {
+  error_log('ERROR retrieving user fields: ' . $e->getMessage());
+  $userFields = array_keys($fields);
+}
 
 // Filter only the active fields
   $fields = Arr::only($fields, $userFields);
 
-  // count of user active fields
-  $count = count($fields);
+  // count of user active fields (excluding barcode since it doesn't display in the main data section)
+  $displayFields = Arr::except($fields, 'barcode');
+  $count = count($displayFields);
 
   // define logo postion depending on the number of fields
   $logoTopPosition = match($count) {
@@ -79,16 +94,19 @@
     $count == 11 => '2.5mm',
     $count == 10 => '2mm',
     $count == 8 => '4mm',
-    $count == 7 => '8mm',
-    $count == 6 => '10mm',
+    $count == 7 => '6mm',
+    $count == 6 => '12mm',
     $count == 5 => '10mm',
-    $count == 4 => '13mm',
-    $count == 3 => '15mm',
+    $count == 4 => '15mm',
+    $count == 3 => '10mm',
     $count == 2 => '20mm',
     $count == 1 => '25mm',
     default     => '1mm',
   };
+
+
 // Iterate through each field and determine font size based on its length
+  $barcodeData = null;
   foreach($fields as $key => $label) {
         $value = match($key) {
       'storage' => (!empty($item->storage->name) && !empty($item->position))
@@ -119,11 +137,56 @@
     'issues' => isset($item->issues)
         ? trim((string)$item->issues)
         : 'N/A',
+    'barcode' => null,
 
       default   => trim((string)($item->{$key} ?? '')),
     };
 
+    // Store barcode data separately
+    if ($key === 'barcode') {
+        $barcodeData = isset($item->imei) && !empty($item->imei) ? $item->imei : $itemId;
+        error_log('Barcode data extracted: ' . $barcodeData);
+    }
+
     $item->{$key} = $value;
+  }
+
+  //custom margin when barcode is active
+
+  if (in_array('barcode', $userFields)) {
+      $logoMargin = match(true) {
+          $count == 12 => '0mm',
+          $count == 11 => '2mm',
+          $count == 10 => '1.5mm',
+          $count == 9 => '1mm',
+          $count == 8 => '2mm',
+          $count == 7 => '3mm',
+          $count == 6 => '8mm',
+          $count == 5 => '3mm',
+          $count == 4 => '10mm',
+          $count == 3 => '8mm',
+          $count == 2 => '15mm',
+          $count == 1 => '20mm',
+          default     => '0mm',
+      };
+        // Determine actual number of issues for this item and set logo height accordingly
+        $issueCount = 0;
+        if (!empty($item->issues) && $item->issues !== 'N/A') {
+          $issuesStr = trim((string)$item->issues);
+          // If the field is a simple integer count, use it
+          if (is_numeric($issuesStr) && ctype_digit($issuesStr)) {
+            $issueCount = (int)$issuesStr;
+          } else {
+            // Otherwise split common separators (comma, semicolon, slash, newlines) and count non-empty parts
+            $parts = preg_split('/[,;\/\r\n]+/', $issuesStr);
+            $parts = array_filter(array_map('trim', $parts), function($v) {
+              return $v !== '' && $v !== 'N/A';
+            });
+            $issueCount = count($parts);
+          }
+        }
+
+        $logoheight = $issueCount < 1 ? '20mm' : '14mm';
   }
    
 @endphp
@@ -144,27 +207,27 @@
             height: 100%;
             width: 100%;
         }
-        .labeltag_container {
-            display: flex;
-            flex-direction: column;
-            width: 98%;
-            margin: 0 auto;
-            padding: 0;
-            border: 2px solid #000;
-            font-size: {{ $baseFontSize }};
-            height: 97mm;
-            box-sizing: border-box;
-            /* background-color: blue; sólo para debug */
-        }
+         .labeltag_container {
+             display: flex;
+             flex-direction: column;
+             width: 98%;
+             margin: 0 auto;
+             padding: 0;
+             border: 2px solid #000;
+             font-size: {{ $baseFontSize }};
+             height: 97mm;
+             box-sizing: border-box;
+             /* background-color: blue; sólo para debug */
+         }
 
-        .labeltag_main_data {
-            display: flex;
-            flex-direction: column;
-            width: 100%;
-            margin: 0 auto;
-            border-bottom: #000 solid 2px;
-            /* background-color: green; sólo para debug */
-        }
+         .labeltag_main_data {
+             display: flex;
+             flex-direction: column;
+             width: 100%;
+             margin: 0 auto;
+             border-bottom: #000 solid 2px;
+             /* background-color: green; sólo para debug */
+         }
         .labeltag_main_data div {
             padding: {{ $fieldPadding }} 0px;
             border-bottom: 1px solid #000;
@@ -176,17 +239,31 @@
         .labeltag_main_data div:last-child {
             border-bottom: none;
         }
-        .logo_container{
-            text-align: center;
-            height: auto;
-            margin-top: {{$logoMargin}};  
-        }
-        .logo{
-            display: block;
-            margin: 0 auto;
-            width: {{ $logoWidth }};
-            object-fit: contain;
-        }
+         .logo_container{
+              text-align: center;
+              height: auto;
+              margin-top: {{$logoMargin}};  
+          }
+          .logo{
+              display: block;
+              margin: 0 auto;
+              width: {{ $logoWidth }};
+              height: {{ $logoheight}};
+              object-fit: contain;
+          }
+         .barcode_container{
+             text-align: center;
+             margin-top: 2mm;
+             padding: 0 2mm;
+             height: auto;
+         }
+         .barcode_container svg,
+         .barcode_container img {
+             display: block;
+             margin: 0 auto;
+             max-width: 95%;
+             height: auto;
+         }
         .labeltag_contact_data {
         width: 100%;
         display: flex;
@@ -207,19 +284,68 @@
 </head>
 <body>
     <div class="labeltag_container">
-        <div class="labeltag_main_data">
-            @foreach($fields as $key => $label)
-            <div>
-              <strong>{{ $label }}:</strong>
-              <span>
-                    {{ $item->{$key} ?? '' }}    
-              </span>
-            </div>
-            @endforeach
-        </div>
-        <div class="logo_container">
-            <img src="data:image/{{ $type }};base64,{{ $image_data }}" class="logo">
-        </div>
+         <div class="labeltag_main_data">
+             @foreach($fields as $key => $label)
+             @if($key !== 'barcode')
+             <div>
+               <strong>{{ $label }}:</strong>
+               <span>
+                     {{ $item->{$key} ?? '' }}    
+               </span>
+             </div>
+             @endif
+             @endforeach
+         </div>
+          <div class="logo_container">
+              <img src="data:image/{{ $type }};base64,{{ $image_data }}" class="logo">
+          </div>
+          @php
+              try {
+                  $shouldShowBarcode = is_array($userFields) && in_array('barcode', $userFields);
+              } catch (\Exception $e) {
+                  error_log('ERROR checking barcode condition: ' . $e->getMessage());
+                  $shouldShowBarcode = false;
+              }
+          @endphp
+          @if($shouldShowBarcode)
+          <div class="barcode_container">
+              @php
+                  try {
+                      // Ensure barcodeData has a valid value
+                      if (empty($barcodeData)) {
+                          $barcodeData = $itemId;
+                      }
+                      
+                      // Force string conversion
+                      $barcodeValue = (string)$barcodeData;
+                      
+                      if (empty($barcodeValue)) {
+                          $barcodeValue = 'NO_BARCODE';
+                      }
+                      
+                       // Use Picqer barcode generator as PNG
+                       $generator = new \Picqer\Barcode\BarcodeGeneratorPNG();
+                       // Parameters: barcode value, type, widthFactor, height, foregroundColor (RGB array)
+                       $barcodeImage = $generator->getBarcode($barcodeValue, \Picqer\Barcode\BarcodeGeneratorPNG::TYPE_CODE_128, 1, 35, [0, 0, 0]);
+                      
+                      // Convert to base64
+                      $barcodeBase64 = base64_encode($barcodeImage);
+                      
+                  } catch (\Exception $e) {
+                      error_log('ERROR generating barcode: ' . $e->getMessage());
+                      $barcodeBase64 = '';
+                  }
+              @endphp
+              @if(!empty($barcodeBase64))
+                  <img src="data:image/png;base64,{{ $barcodeBase64 }}" alt="Barcode" style="max-width: 100%; height: auto;">
+              @else
+                  <div style="border: 1px dashed red; padding: 5px; color: red; font-size: 10px;">
+                      [ERROR] Could not generate barcode<br>
+                      Value: {{ $barcodeData ?? 'NULL' }}
+                  </div>
+              @endif
+          </div>
+          @endif
         <!-- <div class="labeltag_contact_data">
                 <div>Sign up for a<br>swiftstock account</div>
                 <div>{!! DNS2D::getBarcodeHTML(
