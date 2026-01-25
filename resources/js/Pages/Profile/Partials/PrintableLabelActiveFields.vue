@@ -49,14 +49,21 @@ import {headers as original} from "@/Pages/Inventory/IndexData"
 const toast = useToast()
 const loading = ref(false)
 const selectedFields = ref<string[]>([])
-const headers = computed(() =>
-  original.value.map(({ name, label, ...rest }) => {
+const headers = computed(() => {
+  const mapped = original.value.map(({ name, label, ...rest }) => {
     if (name === 'location') {
       return { name: 'storage', label: 'Location', ...rest }
     }
     return { name, label, ...rest }
   })
-)
+
+  // Add Barcode option only in this view if it's not already present
+  if (!mapped.some(h => h.name === 'barcode')) {
+    mapped.push({ label: 'Barcode', name: 'barcode', type: 'string' })
+  }
+
+  return mapped
+})
 onMounted(async () => {
   try {
     const { data } = await axios.get(route('user.printableTagFields'))
