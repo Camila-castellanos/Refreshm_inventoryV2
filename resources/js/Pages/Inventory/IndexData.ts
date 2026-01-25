@@ -62,11 +62,6 @@ export const headers: Ref<CustomField[]> = ref([
     name: "location",
     type: "string",
   },
-  {
-    label: "Barcode",
-    name: "barcode",
-    type: "string",
-  },
 ]);
 
 export const soldHeaders: Ref<CustomField[]> = ref([
