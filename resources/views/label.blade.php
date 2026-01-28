@@ -104,6 +104,13 @@ try {
     default     => '1mm',
   };
 
+  // Ensure $logoheight is always defined. Default depends on number of display fields.
+  $logoheight = match(true) {
+    $count <= 3 => '20mm',
+    $count <= 5 => '16mm',
+    default     => '14mm',
+  };
+
 
 // Iterate through each field and determine font size based on its length
   $barcodeData = null;
