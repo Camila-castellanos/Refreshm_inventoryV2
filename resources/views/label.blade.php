@@ -49,16 +49,6 @@ try {
   $displayFields = Arr::except($fields, 'barcode');
   $count = count($displayFields);
 
-  // define logo postion depending on the number of fields
-  $logoTopPosition = match($count) {
-    1 => '35%',
-    2 => '30%',
-    3 => '28%',
-    4 => '26%',
-    5 => '24%',
-    6 => '20%',
-    default => '15%',
-  };
 // define padding between fields depending on the number of fields
   $fieldPadding   = match(true) {
     $count >= 11 => '1mm',
@@ -74,42 +64,7 @@ try {
     default     => '3.5mm',
   };
 
-// define the logo width depending on the number of fields
-  $logoWidth = match(true) {
-    $count == 12 && strlen($item->issues ?? '') > 17 => '35%',
-    $count == 12 => '50%',
-    $count == 11 => '60%',
-    $count == 10 => '80%',
-    $count == 9 => '55%',
-    $count == 8 => '60%',
-    $count ==  7 => '70%',
-    $count == 6 => '80%',
-    $count <= 5 => '90%',
-    default     => '60%',
-  };  
 
-  // define the logo margin depending on the number of fields
-  $logoMargin = match(true) {
-    $count == 12 => '1mm',
-    $count == 11 => '2.5mm',
-    $count == 10 => '2mm',
-    $count == 8 => '4mm',
-    $count == 7 => '6mm',
-    $count == 6 => '12mm',
-    $count == 5 => '10mm',
-    $count == 4 => '15mm',
-    $count == 3 => '10mm',
-    $count == 2 => '20mm',
-    $count == 1 => '25mm',
-    default     => '1mm',
-  };
-
-  // Ensure $logoheight is always defined. Default depends on number of display fields.
-  $logoheight = match(true) {
-    $count <= 3 => '20mm',
-    $count <= 5 => '16mm',
-    default     => '14mm',
-  };
 
 
 // Iterate through each field and determine font size based on its length
@@ -151,50 +106,20 @@ try {
 
     // Store barcode data separately
     if ($key === 'barcode') {
-        $barcodeData = isset($item->imei) && !empty($item->imei) ? $item->imei : $itemId;
-        error_log('Barcode data extracted: ' . $barcodeData);
+        $rawImei = $item->imei ?? '';
+        // Only set barcode data if IMEI is valid (not empty and not N/A)
+        if (!empty($rawImei) && $rawImei !== 'N/A') {
+            $barcodeData = $rawImei;
+        } else {
+            $barcodeData = null;
+        }
+        error_log('Barcode data extracted: ' . ($barcodeData ?? 'NULL'));
     }
 
     $item->{$key} = $value;
   }
 
-  //custom margin when barcode is active
 
-  if (in_array('barcode', $userFields)) {
-      $logoMargin = match(true) {
-          $count == 12 => '0mm',
-          $count == 11 => '2mm',
-          $count == 10 => '1.5mm',
-          $count == 9 => '1mm',
-          $count == 8 => '2mm',
-          $count == 7 => '3mm',
-          $count == 6 => '8mm',
-          $count == 5 => '3mm',
-          $count == 4 => '10mm',
-          $count == 3 => '8mm',
-          $count == 2 => '15mm',
-          $count == 1 => '20mm',
-          default     => '0mm',
-      };
-        // Determine actual number of issues for this item and set logo height accordingly
-        $issueCount = 0;
-        if (!empty($item->issues) && $item->issues !== 'N/A') {
-          $issuesStr = trim((string)$item->issues);
-          // If the field is a simple integer count, use it
-          if (is_numeric($issuesStr) && ctype_digit($issuesStr)) {
-            $issueCount = (int)$issuesStr;
-          } else {
-            // Otherwise split common separators (comma, semicolon, slash, newlines) and count non-empty parts
-            $parts = preg_split('/[,;\/\r\n]+/', $issuesStr);
-            $parts = array_filter(array_map('trim', $parts), function($v) {
-              return $v !== '' && $v !== 'N/A';
-            });
-            $issueCount = count($parts);
-          }
-        }
-
-        $logoheight = $issueCount < 1 ? '20mm' : '14mm';
-  }
    
 @endphp
 <!DOCTYPE html>
@@ -246,23 +171,38 @@ try {
         .labeltag_main_data div:last-child {
             border-bottom: none;
         }
-         .logo_container{
+         
+          .footer-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            /* background-color: yellow; sólo para debug */
+            overflow: hidden;
+            padding-top: 3mm;
+            padding-left: 3mm;
+            padding-right: 3mm;
+          }
+
+          .logo_container {
               text-align: center;
-              height: auto;
-              margin-top: {{$logoMargin}};  
+              width: 100%;
+              margin-bottom: 2mm;
           }
           .logo{
               display: block;
               margin: 0 auto;
-              width: {{ $logoWidth }};
-              height: {{ $logoheight}};
+              max-width: 90%;
+              max-height: 20mm;
+              width: auto;
+              height: auto;
               object-fit: contain;
           }
          .barcode_container{
              text-align: center;
-             margin-top: 2mm;
-             padding: 0 2mm;
-             height: auto;
+             width: 100%;
+             margin-bottom: 2mm;
          }
          .barcode_container svg,
          .barcode_container img {
@@ -303,63 +243,54 @@ try {
              @endif
              @endforeach
          </div>
-          <div class="logo_container">
-              <img src="data:image/{{ $type }};base64,{{ $image_data }}" class="logo">
-          </div>
-          @php
-              try {
-                  $shouldShowBarcode = is_array($userFields) && in_array('barcode', $userFields);
-              } catch (\Exception $e) {
-                  error_log('ERROR checking barcode condition: ' . $e->getMessage());
-                  $shouldShowBarcode = false;
-              }
-          @endphp
-          @if($shouldShowBarcode)
-          <div class="barcode_container">
-              @php
-                  try {
-                      // Ensure barcodeData has a valid value
-                      if (empty($barcodeData)) {
-                          $barcodeData = $itemId;
-                      }
-                      
-                      // Force string conversion
-                      $barcodeValue = (string)$barcodeData;
-                      
-                      if (empty($barcodeValue)) {
-                          $barcodeValue = 'NO_BARCODE';
-                      }
-                      
-                       // Use Picqer barcode generator as PNG
-                       $generator = new \Picqer\Barcode\BarcodeGeneratorPNG();
-                       // Parameters: barcode value, type, widthFactor, height, foregroundColor (RGB array)
-                       $barcodeImage = $generator->getBarcode($barcodeValue, \Picqer\Barcode\BarcodeGeneratorPNG::TYPE_CODE_128, 3, 50, [0, 0, 0]);
-                      
-                      // Convert to base64
-                      $barcodeBase64 = base64_encode($barcodeImage);
-                      
-                  } catch (\Exception $e) {
-                      error_log('ERROR generating barcode: ' . $e->getMessage());
-                      $barcodeBase64 = '';
-                  }
-              @endphp
-              @if(!empty($barcodeBase64))
-                  <img src="data:image/png;base64,{{ $barcodeBase64 }}" alt="Barcode" style="max-width: 100%; height: auto;">
-              @else
-                  <div style="border: 1px dashed red; padding: 5px; color: red; font-size: 10px;">
-                      [ERROR] Could not generate barcode<br>
-                      Value: {{ $barcodeData ?? 'NULL' }}
-                  </div>
-              @endif
-          </div>
-          @endif
-        <!-- <div class="labeltag_contact_data">
-                <div>Sign up for a<br>swiftstock account</div>
-                <div>{!! DNS2D::getBarcodeHTML(
-                        str_pad($itemId, 10, '0'),
-                        'QRCODE', 3, 3
-)                   !!}</div>
-        </div> -->
-    </div>
+         
+         <div class="footer-section">
+           <div class="logo_container">
+               <img src="data:image/{{ $type }};base64,{{ $image_data }}" class="logo">
+           </div>
+           @php
+               try {
+                   // Only show barcode if user enabled it AND we have valid data (IMEI)
+                   $shouldShowBarcode = is_array($userFields) && in_array('barcode', $userFields) && !empty($barcodeData);
+               } catch (\Exception $e) {
+                   error_log('ERROR checking barcode condition: ' . $e->getMessage());
+                   $shouldShowBarcode = false;
+               }
+           @endphp
+           @if($shouldShowBarcode)
+           <div class="barcode_container">
+               @php
+                   try {
+                       // Force string conversion
+                       $barcodeValue = (string)$barcodeData;
+                       
+                       if (empty($barcodeValue)) {
+                           $barcodeValue = 'NO_BARCODE';
+                       }
+                       
+                        // Use Picqer barcode generator as PNG
+                        $generator = new \Picqer\Barcode\BarcodeGeneratorPNG();
+                        // Parameters: barcode value, type, widthFactor, height, foregroundColor (RGB array)
+                        $barcodeImage = $generator->getBarcode($barcodeValue, \Picqer\Barcode\BarcodeGeneratorPNG::TYPE_CODE_128, 3, 50, [0, 0, 0]);
+                       
+                       // Convert to base64
+                       $barcodeBase64 = base64_encode($barcodeImage);
+                       
+                   } catch (\Exception $e) {
+                       error_log('ERROR generating barcode: ' . $e->getMessage());
+                       $barcodeBase64 = '';
+                   }
+               @endphp
+               @if(!empty($barcodeBase64))
+                   <img src="data:image/png;base64,{{ $barcodeBase64 }}" alt="Barcode" style="max-width: 100%; height: auto;">
+               @else
+                   <div style="border: 1px dashed red; padding: 5px; color: red; font-size: 10px;">
+                       [ERROR] Could not generate barcode<br>
+                       Value: {{ $barcodeData ?? 'NULL' }}
+                   </div>
+               @endif
+           </div>
+           @endif
+         </div>
 </body>
 </html>
