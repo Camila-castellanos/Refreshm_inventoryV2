@@ -333,7 +333,7 @@ try {
                        // Use Picqer barcode generator as PNG
                        $generator = new \Picqer\Barcode\BarcodeGeneratorPNG();
                        // Parameters: barcode value, type, widthFactor, height, foregroundColor (RGB array)
-                       $barcodeImage = $generator->getBarcode($barcodeValue, \Picqer\Barcode\BarcodeGeneratorPNG::TYPE_CODE_128, 1, 35, [0, 0, 0]);
+                       $barcodeImage = $generator->getBarcode($barcodeValue, \Picqer\Barcode\BarcodeGeneratorPNG::TYPE_CODE_128, 3, 50, [0, 0, 0]);
                       
                       // Convert to base64
                       $barcodeBase64 = base64_encode($barcodeImage);
