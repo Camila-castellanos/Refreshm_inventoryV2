@@ -10,34 +10,33 @@
             <Carousel v-model:page="currentSlide" :value="heroSlides" :numVisible="1" :numScroll="1" 
                      :autoplayInterval="5000" :circular="true" class="hero-carousel">
                 <template #item="{ data: slide }">
-                    <div class="relative h-96 md:h-[500px] flex items-center justify-center" 
-                         :style="{ background: slide.background }">
+                    <div class="relative h-96 md:h-[500px] flex items-center justify-center bg-gray-900">
                         
                         <!-- Background Image Overlay -->
                         <div v-if="slide.image" class="absolute inset-0">
                             <img :src="slide.image" :alt="slide.title" 
-                                 class="w-full h-full object-cover opacity-20">
+                                 class="w-full h-full object-cover">
                         </div>
                         
                         <!-- Content -->
                         <div class="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-                            <h1 class="text-4xl md:text-6xl font-bold mb-6 text-gray-800">
+                            <h1 class="text-4xl md:text-6xl font-bold mb-6 text-white drop-shadow-lg">
                                 {{ slide.title }}
                             </h1>
                             
-                            <p class="text-xl md:text-2xl mb-8 text-gray-700 max-w-2xl mx-auto">
+                            <p class="text-xl md:text-2xl mb-8 text-gray-100 drop-shadow-md max-w-2xl mx-auto">
                                 {{ slide.subtitle }}
                             </p>
                             
                             <div class="flex flex-col sm:flex-row gap-4 justify-center">
                                 <button @click="slide.primaryAction.action" 
-                                        class="inline-flex items-center justify-center px-8 py-4 rounded-lg font-semibold text-lg bg-gray-800 text-white hover:bg-gray-900 transition-all duration-200 shadow-lg hover:shadow-xl">
+                                        class="inline-flex items-center justify-center px-8 py-4 rounded-lg font-semibold text-lg bg-white text-gray-900 hover:bg-gray-100 transition-all duration-200 shadow-lg hover:shadow-xl">
                                     {{ slide.primaryAction.text }}
                                     <i class="pi pi-arrow-right ml-2"></i>
                                 </button>
                                 
                                 <button v-if="slide.secondaryAction" @click="slide.secondaryAction.action"
-                                        class="inline-flex items-center justify-center px-8 py-4 rounded-lg font-semibold text-lg bg-slate-100 text-gray-700 hover:text-gray-900 border border-gray-200 hover:border-gray-300 transition-all duration-200 shadow-sm hover:shadow-md">
+                                        class="inline-flex items-center justify-center px-8 py-4 rounded-lg font-semibold text-lg bg-black/30 text-white border border-white/40 hover:bg-black/50 backdrop-blur-md transition-all duration-200 shadow-sm hover:shadow-md">
                                     {{ slide.secondaryAction.text }}
                                 </button>
                             </div>
@@ -270,7 +269,28 @@ const topBrands = ref([
 ])
 
 // Hero Slides Data
-const heroSlides = ref([
+const heroSlides = computed(() => {
+    // If we have multiple banners defined, create slides for them
+    if (props.market.banners && props.market.banners.length > 0) {
+        return props.market.banners.map((banner, index) => ({
+            title: index === 0 ? `Welcome to ${props.market.name}` : '', // Show title only on first slide or custom logic
+            subtitle: index === 0 ? (props.market.description || 'Browse our collection of quality refurbished devices and electronics') : '',
+            background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
+            image: banner,
+            showStats: index === 0,
+            primaryAction: {
+                text: 'Shop Now',
+                action: () => browseAllProducts()
+            },
+            secondaryAction: index === 0 ? {
+                text: 'Learn More',
+                action: () => router.visit(`/market/${props.market.slug}/contact`)
+            } : null
+        }))
+    }
+
+    // Fallback to default slides if no custom banners
+    return [
     {
         title: `Welcome to ${props.market.name}`,
         subtitle: props.market.description || 'Browse our collection of quality refurbished devices and electronics',
@@ -314,7 +334,7 @@ const heroSlides = ref([
             action: () => browseByBrand('Samsung')
         }
     }
-])
+]})
 
 // Methods
 const formatPrice = (price) => {

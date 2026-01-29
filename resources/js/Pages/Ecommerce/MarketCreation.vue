@@ -99,6 +99,70 @@
                                 <small v-if="form.errors.currency" class="p-error">{{ form.errors.currency }}</small>
                             </div>
 
+                            <!-- Visual Configuration -->
+                            <div class="col-span-2 border-t pt-6">
+                                <h3 class="text-lg font-medium text-gray-900 mb-4">Visual Configuration</h3>
+                            </div>
+
+                            <!-- Banners -->
+                            <div class="col-span-2">
+                                <div class="flex items-center justify-between mb-4">
+                                    <label class="block text-sm font-medium text-gray-900">
+                                        Market Banners
+                                    </label>
+                                    <div>
+                                        <input
+                                            type="file"
+                                            ref="bannerInput"
+                                            class="hidden"
+                                            multiple
+                                            accept="image/*"
+                                            @change="handleBannerUpload"
+                                        />
+                                        <Button
+                                            type="button"
+                                            label="Upload Banners"
+                                            icon="pi pi-upload"
+                                            severity="info"
+                                            size="small"
+                                            @click="$refs.bannerInput.click()"
+                                        />
+                                    </div>
+                                </div>
+
+                                <!-- New Uploads Preview -->
+                                <div v-if="newBanners.length > 0" class="mb-4">
+                                    <h4 class="text-sm font-medium text-gray-700 mb-2">New Uploads</h4>
+                                    <div class="space-y-2">
+                                        <div 
+                                            v-for="(file, index) in newBanners" 
+                                            :key="index"
+                                            class="flex items-center justify-between p-3 bg-gray-50 rounded border"
+                                        >
+                                            <div class="flex items-center gap-3">
+                                                <i class="pi pi-image text-gray-500"></i>
+                                                <span class="text-sm text-gray-700 truncate max-w-xs">{{ file.name }}</span>
+                                                <span class="text-xs text-gray-500">({{ (file.size / 1024).toFixed(1) }} KB)</span>
+                                            </div>
+                                            <Button
+                                                type="button"
+                                                icon="pi pi-times"
+                                                severity="secondary"
+                                                text
+                                                size="small"
+                                                @click="removeNewBanner(index)"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div v-if="newBanners.length === 0" class="p-6 border border-dashed border-gray-300 rounded-lg text-center">
+                                    <i class="pi pi-images text-3xl text-gray-400 mb-2"></i>
+                                    <p class="text-gray-500">No banners added yet. Upload images to display in the hero carousel.</p>
+                                </div>
+                                <small v-if="form.errors.banners" class="p-error block mt-2">{{ form.errors.banners }}</small>
+                            </div>
+
                             <!-- Settings -->
                             <div class="col-span-2 border-t pt-6">
                                 <h3 class="text-lg font-medium text-gray-900 mb-4">Settings</h3>
@@ -276,6 +340,7 @@ const props = defineProps({
 
 // Form
 // Data
+const newBanners = ref([])
 const currencyOptions = [
     { label: 'USD - US Dollar', value: 'USD' },
     { label: 'EUR - Euro', value: 'EUR' },
@@ -290,6 +355,7 @@ const form = useForm({
     description: '',
     tagline: '',
     currency: 'USD',
+    banners: [],
     show_inventory_count: false,
     is_active: true,
     contact_email: '',
@@ -309,6 +375,17 @@ const marketSlug = computed(() => {
 })
 
 // Methods
+const handleBannerUpload = (event) => {
+    const files = Array.from(event.target.files)
+    newBanners.value = [...newBanners.value, ...files]
+    form.banners = newBanners.value
+}
+
+const removeNewBanner = (index) => {
+    newBanners.value.splice(index, 1)
+    form.banners = newBanners.value
+}
+
 const createMarket = () => {
     form.post(route('ecommerce.markets.store'), {
         onSuccess: () => {

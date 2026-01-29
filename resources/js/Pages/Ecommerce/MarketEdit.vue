@@ -115,6 +115,88 @@
                                 <small v-if="form.errors.currency" class="p-error">{{ form.errors.currency }}</small>
                             </div>
 
+                            <!-- Visual Configuration -->
+                            <div class="col-span-2 border-t pt-6">
+                                <h3 class="text-lg font-medium text-gray-900 mb-4">Visual Configuration</h3>
+                            </div>
+
+                            <!-- Banners -->
+                            <div class="col-span-2">
+                                <label class="block text-sm font-medium text-gray-900 mb-4">
+                                    Market Banners
+                                </label>
+
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    <!-- Existing Banners -->
+                                    <div 
+                                        v-for="banner in existingBanners" 
+                                        :key="banner.id"
+                                        class="relative group aspect-video bg-gray-100 rounded-lg overflow-hidden border border-gray-200"
+                                    >
+                                        <img 
+                                            :src="banner.thumb || banner.url" 
+                                            class="w-full h-full object-cover"
+                                        >
+                                        <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                            <Button
+                                                type="button"
+                                                icon="pi pi-trash"
+                                                severity="danger"
+                                                rounded
+                                                @click="markBannerForDeletion(banner.id)"
+                                                title="Remove banner"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <!-- New Uploads -->
+                                    <div 
+                                        v-for="(file, index) in newBanners" 
+                                        :key="`new-${index}`"
+                                        class="relative group aspect-video bg-gray-100 rounded-lg overflow-hidden border border-blue-200 ring-2 ring-blue-100"
+                                    >
+                                        <img 
+                                            :src="file.preview" 
+                                            class="w-full h-full object-cover"
+                                            @load="revokePreview(file.preview)"
+                                        >
+                                        <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                            <Button
+                                                type="button"
+                                                icon="pi pi-times"
+                                                severity="danger"
+                                                rounded
+                                                @click="removeNewBanner(index)"
+                                                title="Remove upload"
+                                            />
+                                        </div>
+                                        <div class="absolute bottom-0 left-0 right-0 bg-blue-500 text-white text-xs px-2 py-1 text-center bg-opacity-90">
+                                            New Upload
+                                        </div>
+                                    </div>
+
+                                    <!-- Add Banner Button -->
+                                    <div 
+                                        class="aspect-video bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors cursor-pointer flex flex-col items-center justify-center text-gray-400 hover:text-blue-500"
+                                        @click="$refs.bannerInput.click()"
+                                    >
+                                        <i class="pi pi-plus text-2xl mb-2"></i>
+                                        <span class="text-sm font-medium">Add Image</span>
+                                    </div>
+                                </div>
+
+                                <input
+                                    type="file"
+                                    ref="bannerInput"
+                                    class="hidden"
+                                    multiple
+                                    accept="image/*"
+                                    @change="handleBannerUpload"
+                                />
+                                
+                                <small v-if="form.errors.banners" class="p-error block mt-2">{{ form.errors.banners }}</small>
+                            </div>
+
                             <!-- Settings -->
                             <div class="col-span-2 border-t pt-6">
                                 <h3 class="text-lg font-medium text-gray-900 mb-4">Settings</h3>
@@ -406,7 +488,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useForm, Link } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import Button from 'primevue/button';
@@ -437,6 +519,8 @@ const form = useForm({
     description: '',
     tagline: '',
     currency: 'USD',
+    banners: [],
+    deleted_banners: [],
     show_inventory_count: false,
     is_active: true,
     contact_email: '',
@@ -451,6 +535,9 @@ const form = useForm({
     }
 });
 
+const existingBanners = ref([]);
+const newBanners = ref([]);
+
 // Load market data into form
 onMounted(() => {
     if (props.market) {
@@ -460,6 +547,12 @@ onMounted(() => {
         form.description = props.market.description || '';
         form.tagline = props.market.tagline || '';
         form.currency = props.market.currency || 'USD';
+        
+        // Load existing media banners
+        if (props.market.media_banners && props.market.media_banners.length > 0) {
+            existingBanners.value = props.market.media_banners;
+        }
+        
         form.show_inventory_count = props.market.show_inventory_count || false;
         form.is_active = props.market.is_active || true;
         form.contact_email = props.market.contact_email || '';
@@ -488,11 +581,60 @@ const marketUrl = computed(() => {
     return `${props.appUrl}/market/${props.market.slug}`;
 });
 
+const handleBannerUpload = (event) => {
+    const files = Array.from(event.target.files);
+    
+    // Add preview URL to each file
+    files.forEach(file => {
+        file.preview = URL.createObjectURL(file);
+    });
+
+    newBanners.value = [...newBanners.value, ...files];
+    form.banners = newBanners.value;
+    
+    // Reset input so same files can be selected again if needed
+    event.target.value = '';
+};
+
+const revokePreview = (url) => {
+    // Optional: Revoke immediately on load to save memory, 
+    // or keep it if you need to re-render. 
+    // For now, we'll keep it simple and rely on browser garbage collection 
+    // or revoke on remove.
+    // URL.revokeObjectURL(url); 
+};
+
+const removeNewBanner = (index) => {
+    // Revoke the object URL to free memory
+    if (newBanners.value[index].preview) {
+        URL.revokeObjectURL(newBanners.value[index].preview);
+    }
+    
+    newBanners.value.splice(index, 1);
+    form.banners = newBanners.value;
+};
+
+const markBannerForDeletion = (id) => {
+    existingBanners.value = existingBanners.value.filter(b => b.id !== id);
+    form.deleted_banners.push(id);
+};
+
 const submitForm = () => {
-    form.put(route('ecommerce.markets.update', props.market.id), {
+    // When uploading files with Inertia using PUT/PATCH, we must use POST
+    // and include a _method field with 'PUT'.
+    // However, Inertia's useForm helper with form.post() sends the data as FormData.
+    // We need to append _method manually if we use form.post() to a PUT route?
+    // Actually, Inertia recommends using router.post for file uploads to PUT routes with method spoofing.
+    // But since we are using useForm, we can just use form.post and ensure _method is in the data.
+    
+    // Let's add _method to the form data manually before submitting
+    form.transform((data) => ({
+        ...data,
+        _method: 'PUT',
+    })).post(route('ecommerce.markets.update', props.market.id), {
         preserveScroll: true,
         onSuccess: () => {
-            // Redirect will be handled by the controller
+            newBanners.value = [];
         }
     });
 };

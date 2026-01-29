@@ -2,21 +2,22 @@
 
 namespace App\Models\Ecommerce;
 
-use App\Models\Shop;
 use App\Models\Item;
-use Illuminate\Support\Facades\Log;
+use App\Models\Shop;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
-class Market extends Model
+class Market extends Model implements HasMedia
 {
-    use HasFactory;
+    use HasFactory, InteractsWithMedia;
 
     /**
      * The attributes that are mass assignable.
@@ -29,7 +30,6 @@ class Market extends Model
         'description',
         'tagline',
         'logo_url',
-        'banner_url',
         'theme_colors',
         'is_active',
         'show_inventory_count',
@@ -90,6 +90,29 @@ class Market extends Model
         });
     }
 
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('banners')
+            ->useFallbackUrl('/images/banner-placeholder.jpg')
+            ->registerMediaConversions(function (Media $media) {
+                $this->addMediaConversion('thumb')
+                    ->width(300)
+                    ->height(100)
+                    ->sharpen(10)
+                    ->nonQueued();
+
+                $this->addMediaConversion('large')
+                    ->width(1920)
+                    ->height(600)
+                    ->sharpen(10)
+                    ->nonQueued();
+            });
+
+        $this->addMediaCollection('logo')
+            ->singleFile()
+            ->useFallbackUrl('/images/logo-placeholder.png');
+    }
+
     /**
      * Generate a unique slug for the consumer shop.
      */
@@ -100,7 +123,7 @@ class Market extends Model
         $counter = 1;
 
         while (static::where('slug', $slug)->where('id', '!=', $this->id ?? 0)->exists()) {
-            $slug = $baseSlug . '-' . $counter;
+            $slug = $baseSlug.'-'.$counter;
             $counter++;
         }
 
@@ -112,9 +135,9 @@ class Market extends Model
      */
     public function setSlugAttribute(?string $value): void
     {
-        if (!empty($value)) {
+        if (! empty($value)) {
             $this->attributes['slug'] = $this->generateUniqueSlug($value);
-        } elseif (!empty($this->name)) {
+        } elseif (! empty($this->name)) {
             $this->attributes['slug'] = $this->generateUniqueSlug($this->name);
         }
     }
@@ -136,12 +159,12 @@ class Market extends Model
     {
         // Determine the field to search by
         $searchField = $field ?: 'slug';
-        
+
         // For slug-based binding (public routes), filter by active status
         if ($searchField === 'slug') {
             return $this->where('slug', $value)->where('is_active', true)->first();
         }
-        
+
         // For ID-based binding (admin routes), don't filter by active status
         // Company access control is handled in the controller
         return $this->where($searchField, $value)->first();
@@ -195,13 +218,14 @@ class Market extends Model
     public function getItemPrice(int $itemId): ?float
     {
         $marketItem = $this->marketItems()->where('item_id', $itemId)->first();
-        
+
         if ($marketItem) {
             return $marketItem->getPrice();
         }
 
         // Fallback to item's selling_price
         $item = Item::find($itemId);
+
         return $item ? (float) $item->selling_price : null;
     }
 
@@ -223,7 +247,7 @@ class Market extends Model
     public function toggleItemVisibility(int $itemId, ?bool $currentValue = null): bool
     {
         $marketItem = $this->marketItems()->where('item_id', $itemId)->first();
-        
+
         if ($marketItem) {
             // If MarketItem exists, toggle the existing value
             return $marketItem->toggleVisibility();
@@ -232,11 +256,12 @@ class Market extends Model
             // invert to hidden (false)
             // If frontend calculated it as hidden (false or null), set to visible (true)
             $newVisibility = ($currentValue !== true);
-            
+
             $newMarketItem = $this->marketItems()->create([
                 'item_id' => $itemId,
-                'is_visible' => $newVisibility
+                'is_visible' => $newVisibility,
             ]);
+
             return $newMarketItem->is_visible;
         }
     }
@@ -258,7 +283,7 @@ class Market extends Model
     public function removeItemPrice(int $itemId): void
     {
         $marketItem = $this->marketItems()->where('item_id', $itemId)->first();
-        
+
         if ($marketItem) {
             $marketItem->resetPrice();
         }
@@ -289,14 +314,14 @@ class Market extends Model
         if (preg_match('/^(.+?)\s+([\d]+(?:GB|TB))$/i', trim($model), $matches)) {
             return [
                 'model' => trim($matches[1]),
-                'storage' => strtoupper($matches[2])
+                'storage' => strtoupper($matches[2]),
             ];
         }
-        
+
         // If no storage found, return the full model name
         return [
             'model' => trim($model),
-            'storage' => null
+            'storage' => null,
         ];
     }
 
@@ -305,9 +330,10 @@ class Market extends Model
      * Groups by parsed model (without storage) + manufacturer + type
      * Returns ONE item per model with aggregated data
      * Supports filtering by category, brand, search, and sorting
-     * @param bool $includeHidden If true, includes hidden items (for admin) - default false (public view only)
+     *
+     * @param  bool  $includeHidden  If true, includes hidden items (for admin) - default false (public view only)
      */
-    public function getGroupedModels(string $search = null, int $perPage = 20, string $category = null, string $brand = null, string $sort = 'latest', bool $includeHidden = false)
+    public function getGroupedModels(?string $search = null, int $perPage = 20, ?string $category = null, ?string $brand = null, string $sort = 'latest', bool $includeHidden = false)
     {
         // First, get ALL items for photo counting (without price filters)
         $allItems = Item::where('shop_id', $this->shop_id)
@@ -331,52 +357,53 @@ class Market extends Model
         // First, group ALL items (before filtering) to find photos
         $allGrouped = $allItems->groupBy(function ($item) {
             $parsed = $this->parseModelStorage($item->model);
-            return $parsed['model'] . '|' . $item->manufacturer . '|' . $item->type;
+
+            return $parsed['model'].'|'.$item->manufacturer.'|'.$item->type;
         });
 
         // Create a map of model groups with their photos
         $modelPhotoMap = $allGrouped->map(function ($group) {
             $firstItem = $group->first();
             $parsed = $this->parseModelStorage($firstItem->model);
-            
+
             // 1. Try to get photo from ProductModel by colour (direct relation)
             $productModel = $firstItem->productModel;
-            
+
             // Fallback: if no direct relation, search ProductModel by name (without storage)
-            if (!$productModel && $parsed['model']) {
+            if (! $productModel && $parsed['model']) {
                 $productModel = \App\Models\ProductModel::where('name', $parsed['model'])->first();
             }
-            
+
             $productModelPhoto = null;
             $productModelPhotoCount = 0;
-            
+
             if ($productModel && $productModel->hasPhotos()) {
                 $productModelPhoto = $productModel->getFirstMediaUrl('product-photos', 'thumb');
                 $productModelPhotoCount = $productModel->media->count();
             }
-            
+
             // If ProductModel photo exists and is not a placeholder
             if ($productModelPhoto && $productModelPhoto !== asset('images/item-placeholder.svg')) {
                 return [
                     'photo' => $productModelPhoto,
                     'photo_count' => $productModelPhotoCount,
                     'source' => 'product_model',
-                    'product_model_id' => $productModel->id ?? null
+                    'product_model_id' => $productModel->id ?? null,
                 ];
             }
-            
+
             // 2. Fallback: find the first item with photos from ALL items
             $itemWithPhoto = $group->first(function ($item) {
                 return $item->media->count() > 0;
             });
             $sharedPhoto = $itemWithPhoto ? $itemWithPhoto->getFirstMediaUrl('item-photos', 'thumb') : null;
             $sharedPhotoCount = $itemWithPhoto ? $itemWithPhoto->media->count() : 0;
-            
+
             return [
                 'photo' => $sharedPhoto,
                 'photo_count' => $sharedPhotoCount,
                 'source' => 'item',
-                'product_model_id' => $productModel->id ?? null
+                'product_model_id' => $productModel->id ?? null,
             ];
         });
 
@@ -384,22 +411,23 @@ class Market extends Model
         // We group ALL items first, then filter to visible items within each group
         $grouped = $items->groupBy(function ($item) {
             $parsed = $this->parseModelStorage($item->model);
-            return $parsed['model'] . '|' . $item->manufacturer . '|' . $item->type;
+
+            return $parsed['model'].'|'.$item->manufacturer.'|'.$item->type;
         });
 
         // For public view, filter each group to keep only visible items
         // and exclude groups that have no visible items
-        if (!$includeHidden) {
+        if (! $includeHidden) {
             $grouped = $grouped->map(function ($group) use ($marketItemsMap, $defaultVisibleGrades) {
                 return $group->filter(function ($item) use ($marketItemsMap, $defaultVisibleGrades) {
                     $marketItem = $marketItemsMap[$item->id] ?? null;
-                    $hasIssues = !empty($item->issues) && $item->issues !== '{}';
+                    $hasIssues = ! empty($item->issues) && $item->issues !== '{}';
 
                     // Filter: Hide items with battery < 80% unless explicitly visible
                     // If item has battery info and it's below 80%, it must have is_visible = true to show
                     $hasBatteryInfo = isset($item->battery) && $item->battery !== null && $item->battery !== '';
                     $lowBattery = $hasBatteryInfo && (int) $item->battery < 80;
-                    
+
                     if ($lowBattery) {
                         // Item has low battery - only show if is_visible is explicitly true
                         return $marketItem && $marketItem->is_visible === true;
@@ -410,6 +438,7 @@ class Market extends Model
                         if ($marketItem) {
                             return $marketItem->is_visible === true;
                         }
+
                         return false;
                     }
 
@@ -417,11 +446,11 @@ class Market extends Model
                     if ($marketItem) {
                         return $marketItem->is_visible === true;
                     }
-                    
+
                     // Default visibility based on grade (null counts as hidden)
                     return in_array($item->grade, $defaultVisibleGrades);
                 });
-            })->filter(fn($group) => $group->count() > 0); // Remove groups with no visible items
+            })->filter(fn ($group) => $group->count() > 0); // Remove groups with no visible items
 
         }
 
@@ -430,6 +459,7 @@ class Market extends Model
         if ($search) {
             $grouped = $grouped->filter(function ($group) use ($search) {
                 $firstItem = $group->first();
+
                 return stripos($firstItem->model, $search) !== false ||
                        stripos($firstItem->manufacturer ?? '', $search) !== false ||
                        stripos($firstItem->type ?? '', $search) !== false;
@@ -437,21 +467,21 @@ class Market extends Model
         }
 
         if ($category) {
-            $grouped = $grouped->filter(fn($group) => $group->first()->type === $category);
+            $grouped = $grouped->filter(fn ($group) => $group->first()->type === $category);
         }
 
         if ($brand) {
-            $grouped = $grouped->filter(fn($group) => $group->first()->manufacturer === $brand);
+            $grouped = $grouped->filter(fn ($group) => $group->first()->manufacturer === $brand);
         }
 
         // Now map groups to model data, using only visible items for prices/counts
         $grouped = $grouped->map(function ($group, $groupKey) use ($marketItemsMap, $modelPhotoMap, $allGrouped) {
             $firstItem = $group->first();
             $parsed = $this->parseModelStorage($firstItem->model);
-            
+
             // Count unique storage options
             $storageOptions = $group->pluck('model')
-                ->map(fn($m) => $this->parseModelStorage($m)['storage'])
+                ->map(fn ($m) => $this->parseModelStorage($m)['storage'])
                 ->filter()
                 ->unique()
                 ->count();
@@ -459,19 +489,20 @@ class Market extends Model
             // Get prices using custom price or fallback to selling_price
             $prices = $group->map(function ($item) use ($marketItemsMap) {
                 $marketItem = $marketItemsMap[$item->id] ?? null;
+
                 return $marketItem ? $marketItem->getPrice() : $item->selling_price;
             });
-            
+
             // Count total photos from ALL items in the group (including hidden ones)
             $allGroupItems = $allGrouped->get($groupKey, collect());
             $photoCount = $allGroupItems->reduce(function ($carry, $item) {
                 return $carry + $item->media->count();
             }, 0);
-            
+
             // Use the pre-calculated photo from the all-items grouping
             $photoData = $modelPhotoMap[$groupKey] ?? ['photo' => null, 'photo_count' => 0];
-            
-            return (object)[
+
+            return (object) [
                 'model' => $parsed['model'],
                 'manufacturer' => $firstItem->manufacturer,
                 'type' => $firstItem->type,
@@ -492,7 +523,7 @@ class Market extends Model
         })->values();
 
         // Apply sorting to the grouped collection
-        $sorted = match($sort) {
+        $sorted = match ($sort) {
             'price_low' => $grouped->sortBy('min_price'),
             'price_high' => $grouped->sortByDesc('max_price'),
             'name' => $grouped->sortBy('model'),
@@ -503,7 +534,7 @@ class Market extends Model
         $page = request()->get('page', 1);
         $total = $sorted->count();
         $items = $sorted->slice(($page - 1) * $perPage, $perPage)->values();
-        
+
         $paginated = new \Illuminate\Pagination\LengthAwarePaginator(
             $items,
             $total,
@@ -514,7 +545,7 @@ class Market extends Model
                 'query' => request()->query(),
             ]
         );
-        
+
         return $paginated;
     }
 
@@ -538,6 +569,7 @@ class Market extends Model
         // Filter items by matching the parsed model name
         $items = $allItems->filter(function ($item) use ($model) {
             $parsed = $this->parseModelStorage($item->model);
+
             return $parsed['model'] === urldecode($model);
         });
 
@@ -555,7 +587,7 @@ class Market extends Model
         // Filter items: exclude those with issues unless is_visible = true
         $items = $items->filter(function ($item) use ($marketItemsMap, $visibleConditions) {
             $marketItem = $marketItemsMap[$item->id] ?? null;
-            $hasIssues = !empty($item->issues) && $item->issues !== '{}';
+            $hasIssues = ! empty($item->issues) && $item->issues !== '{}';
 
             // If item has issues
             if ($hasIssues) {
@@ -563,6 +595,7 @@ class Market extends Model
                 if ($marketItem) {
                     return $marketItem->is_visible === true;
                 }
+
                 // If no MarketItem entry and has issues, exclude it
                 return false;
             }
@@ -572,7 +605,7 @@ class Market extends Model
                 // If MarketItem exists, use its is_visible flag
                 return $marketItem->is_visible;
             }
-            
+
             // If no MarketItem entry, use default visibility based on grade
             return in_array($item->grade, $visibleConditions);
         });
@@ -598,6 +631,7 @@ class Market extends Model
         // Group by storage (parsed from model name)
         $variants = $items->groupBy(function ($item) {
             $parsed = $this->parseModelStorage($item->model);
+
             return $parsed['storage'] ?? 'No Storage Info';
         })->map(function ($storageGroup) use ($marketItemsMap, $modelPhoto, $modelPhotoUrl, $modelPhotos) {
             // Then group by colour within each storage
@@ -619,6 +653,7 @@ class Market extends Model
                                     // Use custom price or fallback to selling_price
                                     $marketItem = $marketItemsMap[$item->id] ?? null;
                                     $price = $marketItem ? $marketItem->getPrice() : $item->selling_price;
+
                                     return [
                                         'id' => $item->id,
                                         'issues' => $item->issues,
@@ -653,9 +688,9 @@ class Market extends Model
 
     /**
      * Get model variants with all items - unified method for admin and public views
-     * 
-     * @param string $model The model name to search for
-     * @param bool $includeHidden If true, returns ALL items (admin view). If false, only visible items (public view)
+     *
+     * @param  string  $model  The model name to search for
+     * @param  bool  $includeHidden  If true, returns ALL items (admin view). If false, only visible items (public view)
      * @return array|null Returns null if no items found
      */
     public function getModelsWithVariants(string $model, bool $includeHidden = false): ?array
@@ -672,6 +707,7 @@ class Market extends Model
         $parsedModel = $this->parseModelStorage(urldecode($model));
         $modelItems = $allItems->filter(function ($item) use ($parsedModel) {
             $parsed = $this->parseModelStorage($item->model);
+
             return $parsed['model'] === $parsedModel['model'];
         });
 
@@ -705,7 +741,7 @@ class Market extends Model
         $mappedItems = $modelItems->map(function ($modelItem) use ($marketItemsMap, $visibleConditions, $sharedPhotoThumb, $sharedPhotoUrl, $sharedPhotoCount, $productModel) {
             $marketItem = $marketItemsMap[$modelItem->id] ?? null;
             $price = $marketItem ? $marketItem->getPrice() : $modelItem->selling_price;
-            $hasIssues = !empty($modelItem->issues) && $modelItem->issues !== '{}';
+            $hasIssues = ! empty($modelItem->issues) && $modelItem->issues !== '{}';
 
             // Determine visibility (null is treated as hidden/false)
             // Battery < 80% also hides unless explicitly visible via MarketItem
@@ -726,7 +762,7 @@ class Market extends Model
             // Try to find ProductModel if not directly related
             // Fallback: if no direct relation, search ProductModel by name (without storage)
             $productModel = $modelItem->productModel;
-            if (!$productModel && $parsed['model']) {
+            if (! $productModel && $parsed['model']) {
                 $productModel = \App\Models\ProductModel::where('name', $parsed['model'])->first();
             }
 
@@ -735,7 +771,7 @@ class Market extends Model
             $hasItemPhotos = $modelItem->media->count() > 0;
             $itemPhotoThumb = $hasItemPhotos ? $modelItem->getFirstMediaUrl('item-photos', 'thumb') : null;
             $itemPhotoUrl = $hasItemPhotos ? $modelItem->getFirstMediaUrl('item-photos') : null;
-            
+
             // Try ProductModel photo by colour
             $productModelPhotoThumb = null;
             $productModelPhotoUrl = null;
@@ -743,7 +779,7 @@ class Market extends Model
                 $productModelPhotoThumb = $productModel->getFirstMediaUrlByColour($modelItem->colour, 'thumb');
                 $productModelPhotoUrl = $productModel->getFirstMediaUrlByColour($modelItem->colour);
             }
-            
+
             // Fallback order: item photo -> ProductModel photo -> shared photo
             $mainPhotoThumb = $itemPhotoThumb ?: ($productModelPhotoThumb ?: $sharedPhotoThumb);
             $mainPhotoUrl = $itemPhotoUrl ?: ($productModelPhotoUrl ?: $sharedPhotoUrl);
@@ -790,9 +826,9 @@ class Market extends Model
         });
 
         // For public view, filter to only visible items
-        if (!$includeHidden) {
-            $mappedItems = $mappedItems->filter(fn($item) => $item['is_visible'] === true);
-            
+        if (! $includeHidden) {
+            $mappedItems = $mappedItems->filter(fn ($item) => $item['is_visible'] === true);
+
             if ($mappedItems->isEmpty()) {
                 return null;
             }
@@ -848,7 +884,7 @@ class Market extends Model
     public function getStats(): array
     {
         $publishedItems = $this->publishedItems();
-        
+
         return [
             'total_products' => $publishedItems->count(),
             'categories_count' => $this->getAvailableCategories()->count(),
@@ -908,12 +944,37 @@ class Market extends Model
     }
 
     /**
+     * Get the banner_url attribute (backward compatibility)
+     * Returns the first banner from the banners array
+     */
+    public function getBannerUrlAttribute(): ?string
+    {
+        $media = $this->getFirstMedia('banners');
+
+        return $media ? $media->getUrl('large') : ($this->banners[0] ?? null);
+    }
+
+    /**
      * Get market data with safe defaults
      */
     public function getSafeData(): array
     {
+        // Get banner URLs from media library
+        $banners = $this->getMedia('banners')->map(function ($media) {
+            return $media->getUrl('large');
+        })->toArray();
+
+        // If no banners, check if there's a legacy banner_url stored in banners attribute (if any legacy data remained)
+        if (empty($banners) && ! empty($this->attributes['banners'])) {
+            $legacyBanners = json_decode($this->attributes['banners'], true);
+            if (is_array($legacyBanners)) {
+                $banners = $legacyBanners;
+            }
+        }
+
         return [
             'id' => $this->id ?? null,
+            'shop_id' => $this->shop_id ?? null,
             'slug' => $this->slug ?? null,
             'name' => $this->name ?: 'Market Store',
             'description' => $this->description ?: 'Quality products at great prices',
@@ -922,23 +983,34 @@ class Market extends Model
             'show_inventory_count' => $this->show_inventory_count ?: false,
             'is_active' => $this->is_active ?: false,
             'logo_url' => $this->logo_url,
-            'banner_url' => $this->banner_url,
+            'banners' => $banners,
+            'media_banners' => $this->getMedia('banners')->map(function ($media) {
+                return [
+                    'id' => $media->id,
+                    'url' => $media->getUrl('large'),
+                    'thumb' => $media->getUrl('thumb'),
+                    'name' => $media->name,
+                    'file_name' => $media->file_name,
+                    'size' => $media->size,
+                ];
+            }),
             'theme_colors' => $this->theme_colors ?: [
                 'primary' => [
                     '50' => '#f0f9ff',
                     '500' => '#3b82f6',
                     '600' => '#2563eb',
                     '700' => '#1d4ed8',
-                ]
+                ],
             ],
-            'meta_title' => $this->meta_title ?: ($this->name . ' - Online Market'),
-            'meta_description' => $this->meta_description ?: ('Browse and shop ' . $this->name . ' collection of quality products.'),
+            'meta_title' => $this->meta_title ?: ($this->name.' - Online Market'),
+            'meta_description' => $this->meta_description ?: ('Browse and shop '.$this->name.' collection of quality products.'),
             'contact_email' => $this->contact_email,
             'contact_phone' => $this->contact_phone,
             'address' => $this->address,
             'return_policy' => $this->return_policy,
             'shipping_policy' => $this->shipping_policy,
             'custom_domain' => $this->custom_domain,
+            'faq' => $this->faq,
         ];
     }
 }

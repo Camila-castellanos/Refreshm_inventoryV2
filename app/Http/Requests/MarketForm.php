@@ -3,8 +3,8 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 
 class MarketForm extends FormRequest
 {
@@ -46,11 +46,15 @@ class MarketForm extends FormRequest
             'address' => 'nullable|string|max:500',
             'meta_title' => 'nullable|string|max:255',
             'meta_description' => 'nullable|string|max:500',
+            'banners' => 'nullable|array',
+            'banners.*' => 'file|image|max:5120', // Max 5MB per image
+            'deleted_banners' => 'nullable|array',
+            'deleted_banners.*' => 'integer|exists:media,id',
             'custom_domain' => [
                 'nullable',
                 'string',
                 'max:255',
-                $marketId 
+                $marketId
                     ? Rule::unique('markets', 'custom_domain')->ignore($marketId)
                     : Rule::unique('markets', 'custom_domain'),
             ],
