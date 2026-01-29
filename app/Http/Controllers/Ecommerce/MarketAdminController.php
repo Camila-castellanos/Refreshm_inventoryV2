@@ -6,10 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\MarketForm;
 use App\Models\Ecommerce\Market;
 use App\Models\Shop;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 class MarketAdminController extends Controller
 {
@@ -60,7 +61,7 @@ class MarketAdminController extends Controller
         $counter = 1;
 
         while (Market::where('slug', $slug)->exists()) {
-            $slug = $baseSlug . '-' . $counter;
+            $slug = $baseSlug.'-'.$counter;
             $counter++;
         }
 
@@ -78,17 +79,25 @@ class MarketAdminController extends Controller
             'contact_email' => $validated['contact_email'],
             'contact_phone' => $validated['contact_phone'],
             'address' => $validated['address'],
-            'meta_title' => $validated['meta_title'] ?: ($validated['name'] . ' - Online Market'),
-            'meta_description' => $validated['meta_description'] ?: ('Browse and shop ' . $validated['name'] . ' collection of quality products.'),
+            'meta_title' => $validated['meta_title'] ?: ($validated['name'].' - Online Market'),
+            'meta_description' => $validated['meta_description'] ?: ('Browse and shop '.$validated['name'].' collection of quality products.'),
             'faq' => $validated['faq'] ?? null,
         ]);
+
+        // Handle Banner Uploads
+        if ($request->hasFile('banners')) {
+            foreach ($request->file('banners') as $banner) {
+                $market->addMedia($banner)
+                    ->toMediaCollection('banners');
+            }
+        }
 
         // Build the public market URL
         $publicMarketUrl = route('market.index', $market->slug);
 
         return redirect()
             ->route('ecommerce.markets.index')
-            ->with('success', 'Market created successfully! Public URL: ' . $publicMarketUrl);
+            ->with('success', 'Market created successfully! Public URL: '.$publicMarketUrl);
     }
 
     /**
@@ -109,7 +118,7 @@ class MarketAdminController extends Controller
             ->get(['id', 'name']);
 
         return Inertia::render('Ecommerce/MarketEdit', [
-            'market' => $market,
+            'market' => $market->getSafeData(),
             'shops' => $shops,
             'appUrl' => config('app.url'),
         ]);
@@ -127,6 +136,15 @@ class MarketAdminController extends Controller
 
         $validated = $request->validated();
 
+        // Log incoming request data for debugging
+        Log::info('Market update request received', [
+            'market_id' => $market->id,
+            'has_banners' => $request->hasFile('banners'),
+            'banner_count' => $request->hasFile('banners') ? count($request->file('banners')) : 0,
+            'has_deleted_banners' => $request->has('deleted_banners'),
+            'deleted_banners' => $request->input('deleted_banners', []),
+        ]);
+
         // Update slug if name changed
         if ($market->name !== $validated['name']) {
             $baseSlug = Str::slug($validated['name']);
@@ -134,7 +152,7 @@ class MarketAdminController extends Controller
             $counter = 1;
 
             while (Market::where('slug', $slug)->where('id', '!=', $market->id)->exists()) {
-                $slug = $baseSlug . '-' . $counter;
+                $slug = $baseSlug.'-'.$counter;
                 $counter++;
             }
 
@@ -143,11 +161,11 @@ class MarketAdminController extends Controller
 
         // Set defaults for meta fields if empty
         if (empty($validated['meta_title'])) {
-            $validated['meta_title'] = $validated['name'] . ' - Online Market';
+            $validated['meta_title'] = $validated['name'].' - Online Market';
         }
 
         if (empty($validated['meta_description'])) {
-            $validated['meta_description'] = 'Browse and shop ' . $validated['name'] . ' collection of quality products.';
+            $validated['meta_description'] = 'Browse and shop '.$validated['name'].' collection of quality products.';
         }
 
         // validate uniqueness for custom_domain on update (ignore current)
@@ -156,6 +174,62 @@ class MarketAdminController extends Controller
         }
 
         $market->update($validated);
+
+        // Handle Banner Uploads
+        if ($request->hasFile('banners')) {
+            foreach ($request->file('banners') as $banner) {
+                $market->addMedia($banner)
+                    ->toMediaCollection('banners');
+            }
+        }
+
+        // Handle Banner Removals
+        if ($request->filled('deleted_banners')) {
+            $deletedIds = $request->input('deleted_banners');
+
+            Log::info('Processing banner deletions', [
+                'market_id' => $market->id,
+                'deleted_ids' => $deletedIds,
+            ]);
+
+            if (is_array($deletedIds) && count($deletedIds) > 0) {
+                // Ensure IDs are integers
+                $ids = array_map('intval', $deletedIds);
+
+                // Fetch the media items first to ensure we can call delete() on the models
+                // This triggers Spatie's events to delete the physical files
+                $mediaItems = Media::whereIn('id', $ids)
+                    ->where('model_type', get_class($market))
+                    ->where('model_id', $market->id)
+                    ->where('collection_name', 'banners')
+                    ->get();
+
+                Log::info('Found media items for deletion', [
+                    'requested_count' => count($ids),
+                    'found_count' => $mediaItems->count(),
+                    'found_ids' => $mediaItems->pluck('id')->toArray(),
+                ]);
+
+                // Delete each item
+                $deletedCount = 0;
+                foreach ($mediaItems as $media) {
+                    try {
+                        $media->delete();
+                        $deletedCount++;
+                    } catch (\Exception $e) {
+                        Log::error('Failed to delete media', [
+                            'media_id' => $media->id,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+                }
+
+                Log::info('Banner deletion completed', [
+                    'deleted_count' => $deletedCount,
+                    'total_requested' => count($ids),
+                ]);
+            }
+        }
 
         return redirect()
             ->route('ecommerce.markets.index')
@@ -226,7 +300,7 @@ class MarketAdminController extends Controller
         }
 
         $market->update([
-            'is_active' => !$market->is_active
+            'is_active' => ! $market->is_active,
         ]);
 
         $status = $market->is_active ? 'activated' : 'deactivated';
