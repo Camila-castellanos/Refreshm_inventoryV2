@@ -172,45 +172,49 @@ try {
             border-bottom: none;
         }
          
-          .footer-section {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            /* background-color: yellow; sólo para debug */
-            overflow: hidden;
-            padding-top: 3mm;
-            padding-left: 3mm;
-            padding-right: 3mm;
-          }
+           .footer-section {
+             flex: 1;
+             display: flex;
+             flex-direction: column;
+             justify-content: center;
+             align-items: center;
+             /* background-color: yellow; sólo para debug */
+             overflow: hidden;
+             padding-top: 4mm;
+             padding-left: 5mm;
+             padding-right: 5mm;
+             padding-bottom: 1mm;
+           }
 
-          .logo_container {
-              text-align: center;
-              width: 100%;
-              margin-bottom: 2mm;
-          }
-          .logo{
-              display: block;
-              margin: 0 auto;
-              max-width: 90%;
-              max-height: 20mm;
-              width: auto;
-              height: auto;
-              object-fit: contain;
-          }
-         .barcode_container{
-             text-align: center;
-             width: 100%;
-             margin-bottom: 2mm;
-         }
-         .barcode_container svg,
-         .barcode_container img {
-             display: block;
-             margin: 0 auto;
-             max-width: 95%;
-             height: auto;
-         }
+           .logo_container {
+               text-align: center;
+               width: 100%;
+               margin-bottom: 1mm;
+           }
+           .logo{
+               display: block;
+               margin: 0 auto;
+               max-width: 90%;
+               max-height: 20mm;
+               width: auto;
+               height: auto;
+               object-fit: contain;
+           }
+           /* Styles for PNG barcode image */
+           .barcode_container {
+               text-align: center;
+               width: 100%;
+               margin-bottom: 0;
+           }
+
+            .barcode_image {
+                width: 100%;
+                height: 10mm;
+                max-width: 95%;
+                display: block;
+                margin: 0 auto;
+                object-fit: contain;
+            }
         .labeltag_contact_data {
         width: 100%;
         display: flex;
@@ -257,40 +261,41 @@ try {
                    $shouldShowBarcode = false;
                }
            @endphp
-           @if($shouldShowBarcode)
-           <div class="barcode_container">
-               @php
-                   try {
-                       // Force string conversion
-                       $barcodeValue = (string)$barcodeData;
-                       
-                       if (empty($barcodeValue)) {
-                           $barcodeValue = 'NO_BARCODE';
-                       }
-                       
-                        // Use Picqer barcode generator as PNG
-                        $generator = new \Picqer\Barcode\BarcodeGeneratorPNG();
-                        // Parameters: barcode value, type, widthFactor, height, foregroundColor (RGB array)
-                        $barcodeImage = $generator->getBarcode($barcodeValue, \Picqer\Barcode\BarcodeGeneratorPNG::TYPE_CODE_128, 3, 50, [0, 0, 0]);
-                       
-                       // Convert to base64
-                       $barcodeBase64 = base64_encode($barcodeImage);
-                       
-                   } catch (\Exception $e) {
-                       error_log('ERROR generating barcode: ' . $e->getMessage());
-                       $barcodeBase64 = '';
-                   }
-               @endphp
-               @if(!empty($barcodeBase64))
-                   <img src="data:image/png;base64,{{ $barcodeBase64 }}" alt="Barcode" style="max-width: 100%; height: auto;">
-               @else
-                   <div style="border: 1px dashed red; padding: 5px; color: red; font-size: 10px;">
-                       [ERROR] Could not generate barcode<br>
-                       Value: {{ $barcodeData ?? 'NULL' }}
-                   </div>
-               @endif
-           </div>
-           @endif
+            @if($shouldShowBarcode)
+            <div class="barcode_container">
+                @php
+                    try {
+                        // Force string conversion
+                        $barcodeValue = (string)$barcodeData;
+                        
+                        if (empty($barcodeValue)) {
+                            $barcodeValue = 'NO_BARCODE';
+                        }
+                        
+                         // Use Picqer barcode generator as PNG
+                         // Width Factor 2: compact bars
+                         // Height 50px: balanced height for label space
+                         $generator = new \Picqer\Barcode\BarcodeGeneratorPNG();
+                         $barcodeImage = $generator->getBarcode($barcodeValue, \Picqer\Barcode\BarcodeGeneratorPNG::TYPE_CODE_128, 2, 50, [0, 0, 0]);
+                        
+                        // Convert to base64
+                        $barcodeBase64 = base64_encode($barcodeImage);
+                        
+                    } catch (\Exception $e) {
+                        error_log('ERROR generating barcode: ' . $e->getMessage());
+                        $barcodeBase64 = '';
+                    }
+                @endphp
+                @if(!empty($barcodeBase64))
+                    <img src="data:image/png;base64,{{ $barcodeBase64 }}" alt="Barcode" class="barcode_image">
+                @else
+                    <div style="border: 1px dashed red; padding: 5px; color: red; font-size: 10px;">
+                        [ERROR] Could not generate barcode<br>
+                        Value: {{ $barcodeData ?? 'NULL' }}
+                    </div>
+                @endif
+            </div>
+            @endif
          </div>
 </body>
 </html>
