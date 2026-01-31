@@ -142,10 +142,10 @@ try {
          .labeltag_container {
              display: flex;
              flex-direction: column;
-             width: 98%;
+             width: 100%;
              margin: 0 auto;
              padding: 0;
-             border: 2px solid #000;
+             border: none;
              font-size: {{ $baseFontSize }};
              height: 97mm;
              box-sizing: border-box;
@@ -179,10 +179,10 @@ try {
              justify-content: center;
              align-items: center;
              /* background-color: yellow; sólo para debug */
-             overflow: hidden;
+             overflow: visible;
              padding-top: 4mm;
-             padding-left: 5mm;
-             padding-right: 5mm;
+             padding-left: 2mm;
+             padding-right: 2mm;
              padding-bottom: 1mm;
            }
 
@@ -195,7 +195,7 @@ try {
                display: block;
                margin: 0 auto;
                max-width: 90%;
-               max-height: 20mm;
+               max-height: 14mm;
                width: auto;
                height: auto;
                object-fit: contain;
@@ -205,12 +205,14 @@ try {
                text-align: center;
                width: 100%;
                margin-bottom: 0;
+               margin-top: 2mm;
+               overflow: visible;
            }
 
             .barcode_image {
                 width: 100%;
                 height: 10mm;
-                max-width: 95%;
+                max-width: 100%;
                 display: block;
                 margin: 0 auto;
                 object-fit: contain;
