@@ -1,5 +1,5 @@
 <template>
-    <div class="bg-white rounded-lg border border-gray-200 hover:border-gray-300 overflow-hidden transition-all duration-200 hover:shadow-lg group">
+    <div @click="handleViewProduct" class="bg-white rounded-lg border border-gray-200 hover:border-gray-300 overflow-hidden transition-all duration-200 hover:shadow-lg group cursor-pointer">
         <!-- Product Image -->
         <div 
             class="aspect-w-16 aspect-h-12 bg-white flex items-center justify-center transition-colors duration-200 overflow-hidden"
@@ -88,7 +88,7 @@
             <!-- Action Button -->
             <div class="flex">
                 <button 
-                    @click="handleViewProduct" 
+                    @click.stop="handleViewProduct" 
                     class="flex-1 inline-flex items-center justify-center px-4 py-2 rounded-lg bg-slate-100 text-gray-700 hover:text-gray-900 border border-gray-200 hover:border-gray-300 font-medium text-sm transition-all duration-200"
                 >
                     <i class="pi pi-eye text-xs mr-2"></i> See all options
