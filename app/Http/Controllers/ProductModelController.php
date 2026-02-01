@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ProductModel;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
@@ -12,7 +13,7 @@ class ProductModelController extends Controller
 {
     private function ensureAdmin()
     {
-        if (!Auth::user() || !in_array(Auth::user()->role, ['ADMIN', 'OWNER'])) {
+        if (! Auth::user() || ! in_array(Auth::user()->role, ['ADMIN', 'OWNER'])) {
             abort(403, 'Only admins or owners can manage models.');
         }
     }
@@ -29,7 +30,7 @@ class ProductModelController extends Controller
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('manufacturer', 'like', "%{$search}%");
+                    ->orWhere('manufacturer', 'like', "%{$search}%");
             });
         }
 
@@ -54,6 +55,7 @@ class ProductModelController extends Controller
     public function create()
     {
         $this->ensureAdmin();
+
         return Inertia::render('ProductModels/Create');
     }
 
@@ -211,5 +213,31 @@ class ProductModelController extends Controller
             ->get(['id', 'name', 'manufacturer', 'type']);
 
         return response()->json(['models' => $models]);
+    }
+
+    public function sync(Request $request)
+    {
+        $this->ensureAdmin();
+
+        // Capture Artisan output
+        $output = [];
+        $exitCode = Artisan::call('market:extract-product-models', [], $output);
+
+        // Parse output to get counts
+        $created = 0;
+        $updated = 0;
+        $modelsFound = 0;
+
+        foreach ($output as $line) {
+            if (preg_match('/Models found:\s*(\d+)/', $line, $matches)) {
+                $modelsFound = (int) $matches[1];
+            } elseif (preg_match('/ProductModels created:\s*(\d+)/', $line, $matches)) {
+                $created = (int) $matches[1];
+            } elseif (preg_match('/ProductModels updated:\s*(\d+)/', $line, $matches)) {
+                $updated = (int) $matches[1];
+            }
+        }
+
+        return back()->with('success', "Sync complete: {$created} created, {$updated} updated, {$modelsFound} models found.");
     }
 }
