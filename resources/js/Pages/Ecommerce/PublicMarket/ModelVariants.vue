@@ -96,6 +96,7 @@
                             v-for="item in filteredVariants"
                             :key="item.id"
                             :item="item"
+                            :colour="formatColorName(item.colour)"
                             :currency-symbol="getCurrencySymbol(market.currency)"
                             :is-loading="isAddingToCart === item.id"
                             @toggle-condition="toggleConditionDetail"
@@ -314,7 +315,10 @@ const resetFilters = () => {
 }
 
 const formatColorName = (color) => {
-    return color ? color.charAt(0).toUpperCase() + color.slice(1).toLowerCase() : ''
+    if (!color) return ''
+    return color.split(' ').map(word => 
+        word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+    ).join(' ')
 }
 
 const formatPrice = (price) => {
