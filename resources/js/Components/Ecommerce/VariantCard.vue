@@ -30,7 +30,7 @@
                         </div>
                         <div v-if="item.colour" class="flex justify-between items-center pb-3 border-b border-gray-100">
                             <span class="text-gray-600 font-medium">Color:</span>
-                            <span class="font-semibold text-gray-900">{{ formatColorName(item.colour) }}</span>
+                            <span class="font-semibold text-gray-900">{{ colour }}</span>
                         </div>
                         <div v-if="item.grade" class="flex justify-between items-center pb-3 border-b border-gray-100 group relative">
                             <div class="flex items-center gap-2">
@@ -147,6 +147,10 @@ const props = defineProps({
         type: Object,
         required: true
     },
+    colour: {
+        type: String,
+        default: ''
+    },
     currencySymbol: {
         type: String,
         required: true
@@ -193,10 +197,6 @@ const closeImageModal = () => {
     showImageModal.value = false
 }
     
-    
-const formatColorName = (color) => {
-    return color ? color.charAt(0).toUpperCase() + color.slice(1).toLowerCase() : ''
-}
     
 const formatPrice = (price) => {
     return new Intl.NumberFormat().format(price)
