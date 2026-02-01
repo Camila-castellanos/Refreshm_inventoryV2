@@ -1,5 +1,14 @@
 <template>
   <AppLayout title="Product Models">
+    <!-- Sync Loader Overlay -->
+    <div v-if="isSyncing" class="fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center">
+      <div class="bg-white rounded-lg p-8 flex flex-col items-center shadow-xl">
+        <i class="pi pi-spin pi-spinner text-5xl text-blue-600 mb-4"></i>
+        <p class="text-gray-900 font-semibold text-lg">Syncing models...</p>
+        <p class="text-gray-500 text-sm mt-2">Please wait while we extract models from items.</p>
+      </div>
+    </div>
+
     <div class="py-12">
       <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
         <div class="bg-white overflow-hidden shadow-xl sm:rounded-lg">
@@ -9,15 +18,22 @@
               <h3 class="text-lg font-medium text-gray-900">Product Models</h3>
               <p class="text-sm text-gray-600">Manage your product catalog</p>
             </div>
-            <Link
-              :href="route('product-models.create')"
-            >
+            <div class="flex gap-2">
               <Button
-                label="New Model"
-                icon="pi pi-plus"
-                severity="primary"
+                label="Sync Models"
+                icon="pi pi-sync"
+                severity="secondary"
+                :loading="isSyncing"
+                @click="syncModels"
               />
-            </Link>
+              <Link :href="route('product-models.create')">
+                <Button
+                  label="New Model"
+                  icon="pi pi-plus"
+                  severity="primary"
+                />
+              </Link>
+            </div>
           </div>
 
           <!-- Filters -->
@@ -216,14 +232,62 @@
 </template>
 
 <script setup>
+import { ref } from 'vue'
 import { Link, router } from '@inertiajs/vue3'
+import axios from 'axios'
 import AppLayout from '@/Layouts/AppLayout.vue'
 import Button from 'primevue/button'
+import { useToast } from 'primevue/usetoast'
+import { useConfirm } from 'primevue/useconfirm'
+
+const toast = useToast()
+const confirm = useConfirm()
 
 const props = defineProps({
   models: Object,
   filters: Object,
 })
+
+const isSyncing = ref(false)
+
+const syncModels = () => {
+  confirm.require({
+    message: 'Sync models from inventory? New models will be created and existing ones will be updated with missing colors/capacities.',
+    header: 'Sync Models',
+    icon: 'pi pi-info-circle',
+    acceptProps: {
+      label: 'Sync',
+      severity: 'primary',
+    },
+    rejectProps: {
+      label: 'Cancel',
+      severity: 'secondary',
+      outlined: true,
+    },
+    accept: async () => {
+      isSyncing.value = true
+      try {
+        await axios.post(route('product-models.sync'))
+        toast.add({
+          severity: 'success',
+          summary: 'Sync Complete',
+          detail: 'Models synced successfully.',
+          life: 3000
+        })
+        router.reload({ only: ['models'] })
+      } catch (error) {
+        toast.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: error.response?.data?.message || 'Failed to sync models.',
+          life: 3000
+        })
+      } finally {
+        isSyncing.value = false
+      }
+    }
+  })
+}
 
 let searchTimeout = null
 

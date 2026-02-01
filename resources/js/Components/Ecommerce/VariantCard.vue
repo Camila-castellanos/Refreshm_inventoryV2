@@ -39,9 +39,9 @@
                             </div>
                             <div class="relative">
                                 <button 
-                                    class="text-xs px-2 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors"
+                                    class="text-gray-500 hover:text-gray-700 transition-colors"
                                 >
-                                    <i class="pi pi-info-circle text-xs"></i>
+                                    <i class="pi pi-info-circle"></i>
                                 </button>
                                 <!-- Hover Tooltip -->
                                 <div 
