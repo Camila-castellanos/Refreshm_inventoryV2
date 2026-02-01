@@ -113,8 +113,8 @@
 
     <!-- Image Modal -->
     <transition name="fade">
-        <div v-if="showImageModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4 !mt-0" @click="closeImageModal">
-            <div class="relative w-full h-full content-center">
+        <div v-if="showImageModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[99999] p-4 !mt-0" @click="closeImageModal">
+            <div class="relative w-full h-[90vh] max-h-[90vh] content-center">
                 <!-- Close Button -->
                 <button
                     @click="closeImageModal"
@@ -126,7 +126,7 @@
                 </button>
 
                 <!-- Image Container -->
-                <div class="flex-1 bg-transparent flex items-center justify-center p-4 perspective image-container-scroll w-full h-full">
+                <div class="flex-1 bg-transparent flex items-center justify-center p-4 perspective image-container-scroll w-full h-full max-h-[80vh] overflow-auto">
                     <img
                         :src="item.main_photo_url || item.main_photo_thumb"
                         :alt="item.model"

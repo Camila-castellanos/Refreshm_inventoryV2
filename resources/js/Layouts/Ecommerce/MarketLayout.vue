@@ -493,7 +493,7 @@ header {
 }
 
 main {
-    z-index: 10;
+    z-index: 50 !important;
 }
 
 footer {
