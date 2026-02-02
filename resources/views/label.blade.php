@@ -58,16 +58,21 @@ try {
     default     => '2mm',
   };
 // define font size depending on the number of fields
- $baseFontSize = match(true) {
-    $count <= 3 => '5mm',
-    $count <= 5 => '4mm',
-    default     => '3.5mm',
-  };
+  $baseFontSize = match(true) {
+     $count <= 3 => '5mm',
+     $count <= 5 => '4mm',
+     default     => '3.5mm',
+   };
+
+  // Check if barcode field is active in user settings
+  $barcodeActive = is_array($userFields) && in_array('barcode', $userFields);
+
+  // Define border style: no border when barcode is active (to maximize space), border when not
+  $containerBorder = $barcodeActive ? 'none' : '2px solid #000';
 
 
 
-
-// Iterate through each field and determine font size based on its length
+  // Iterate through each field and determine font size based on its length
   $barcodeData = null;
   foreach($fields as $key => $label) {
         $value = match($key) {
@@ -75,49 +80,57 @@ try {
                     ? trim($item->storage->name.' - '.$item->position)
                     : ((!empty($item->location)) ? $item->location : 'N/A'),
 
-    'battery' => isset($item->battery)
-        ? (str_ends_with(trim((string)$item->battery), '%')
-          ? trim((string)$item->battery)
-          : trim((string)$item->battery) . ' %'
-        )
-        : 'Unknown',
-    'vendor' => isset($item->vendor)
-       ? trim((string)$item->vendor->vendor)
-       : 'N/A',
-    'cost' => isset($item->cost)
-        ? (str_starts_with(trim((string)$item->cost), '$')
-          ? trim((string)$item->cost)
-          : '$ ' . trim((string)$item->cost)
-        )
-        : 'N/A',   
-    'selling_price' => isset($item->selling_price)
-        ? (str_starts_with(trim((string)$item->selling_price), '$')
-          ? trim((string)$item->selling_price)
-          : '$ ' . trim((string)$item->selling_price)
-        )
-        : 'N/A',
-    'issues' => isset($item->issues)
-        ? trim((string)$item->issues)
-        : 'N/A',
-    'barcode' => null,
+      'battery' => isset($item->battery)
+          ? (str_ends_with(trim((string)$item->battery), '%')
+            ? trim((string)$item->battery)
+            : trim((string)$item->battery) . ' %'
+          )
+          : 'Unknown',
+      'vendor' => isset($item->vendor)
+         ? trim((string)$item->vendor->vendor)
+         : 'N/A',
+      'cost' => isset($item->cost)
+          ? (str_starts_with(trim((string)$item->cost), '$')
+            ? trim((string)$item->cost)
+            : '$ ' . trim((string)$item->cost)
+          )
+          : 'N/A',   
+      'selling_price' => isset($item->selling_price)
+          ? (str_starts_with(trim((string)$item->selling_price), '$')
+            ? trim((string)$item->selling_price)
+            : '$ ' . trim((string)$item->selling_price)
+          )
+          : 'N/A',
+      'issues' => isset($item->issues)
+          ? trim((string)$item->issues)
+          : 'N/A',
+      'barcode' => null,
 
-      default   => trim((string)($item->{$key} ?? '')),
-    };
+        default   => trim((string)($item->{$key} ?? '')),
+      };
 
-    // Store barcode data separately
-    if ($key === 'barcode') {
-        $rawImei = $item->imei ?? '';
-        // Only set barcode data if IMEI is valid (not empty and not N/A)
-        if (!empty($rawImei) && $rawImei !== 'N/A') {
-            $barcodeData = $rawImei;
-        } else {
-            $barcodeData = null;
-        }
-        error_log('Barcode data extracted: ' . ($barcodeData ?? 'NULL'));
+      // Store barcode data separately
+      if ($key === 'barcode') {
+          $rawImei = $item->imei ?? '';
+          // Only set barcode data if IMEI is valid (not empty and not N/A)
+          if (!empty($rawImei) && $rawImei !== 'N/A') {
+              $barcodeData = $rawImei;
+          } else {
+              $barcodeData = null;
+          }
+          error_log('Barcode data extracted: ' . ($barcodeData ?? 'NULL'));
+      }
+
+      $item->{$key} = $value;
     }
 
-    $item->{$key} = $value;
-  }
+    // Calculate if we need reduced barcode height (many fields OR long issues text)
+    // This is done AFTER the foreach so $item->issues has been processed
+    $issuesLength = isset($item->issues) ? strlen(trim((string)$item->issues)) : 0;
+    $needsReducedBarcode = $count >= 11 || $issuesLength > 16;
+    $barcodeHeight = $needsReducedBarcode ? '8mm' : '24mm';
+
+    error_log('$needsReducedBarcode: ' . ($needsReducedBarcode ? 'true' : 'false') . ', $barcodeHeight: ' . $barcodeHeight);
 
 
    
@@ -145,7 +158,7 @@ try {
              width: 100%;
              margin: 0 auto;
              padding: 0;
-             border: none;
+             border: {{ $containerBorder }};
              font-size: {{ $baseFontSize }};
              height: 97mm;
              box-sizing: border-box;
@@ -209,14 +222,17 @@ try {
                overflow: visible;
            }
 
-            .barcode_image {
-                width: 100%;
-                height: 10mm;
-                max-width: 100%;
-                display: block;
-                margin: 0 auto;
-                object-fit: contain;
-            }
+              .barcode_image {
+                  width: 100%;
+                  height: 10mm;
+                  max-width: 100%;
+                  display: block;
+                  margin: 0 auto;
+                  object-fit: contain;
+              }
+              .barcode_image.reduced {
+                  height: 8mm;
+              }
         .labeltag_contact_data {
         width: 100%;
         display: flex;
@@ -224,7 +240,7 @@ try {
         border-top: #000 solid 2px;
         }
   .labeltag_contact_data > div {
-    width: 50%;           /* dos columnas iguales */
+    width: 50%;           
     float: left;
     padding: 5px;
     box-sizing: border-box;
@@ -289,7 +305,7 @@ try {
                     }
                 @endphp
                 @if(!empty($barcodeBase64))
-                    <img src="data:image/png;base64,{{ $barcodeBase64 }}" alt="Barcode" class="barcode_image">
+                    <img src="data:image/png;base64,{{ $barcodeBase64 }}" alt="Barcode" class="barcode_image {{ $needsReducedBarcode ? 'reduced' : '' }}">
                 @else
                     <div style="border: 1px dashed red; padding: 5px; color: red; font-size: 10px;">
                         [ERROR] Could not generate barcode<br>
