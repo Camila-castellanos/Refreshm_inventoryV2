@@ -185,7 +185,7 @@ try {
             border-bottom: none;
         }
          
-           .footer-section {
+            .footer-section {
              flex: 1;
              display: flex;
              flex-direction: column;
@@ -193,16 +193,20 @@ try {
              align-items: center;
              /* background-color: yellow; sólo para debug */
              overflow: visible;
-             padding-top: 4mm;
-             padding-left: 2mm;
-             padding-right: 2mm;
+             padding-top: 1mm;
+             left: -0.5mm;
+             padding-right: 0.5mm;
              padding-bottom: 1mm;
+             width: 100%;
+             box-sizing: border-box;
            }
 
            .logo_container {
                text-align: center;
                width: 100%;
                margin-bottom: 1mm;
+               margin-top: 0;
+               padding-top: 0;
            }
            .logo{
                display: block;
@@ -213,13 +217,15 @@ try {
                height: auto;
                object-fit: contain;
            }
-           /* Styles for PNG barcode image */
+               /* Styles for PNG barcode image */
            .barcode_container {
                text-align: center;
                width: 100%;
                margin-bottom: 0;
                margin-top: 2mm;
                overflow: visible;
+               padding-left: 0;
+               padding-right: 0;
            }
 
               .barcode_image {
@@ -228,7 +234,7 @@ try {
                   max-width: 100%;
                   display: block;
                   margin: 0 auto;
-                  object-fit: contain;
+                  object-fit: fill;
               }
               .barcode_image.reduced {
                   height: 8mm;
@@ -253,6 +259,10 @@ try {
 </head>
 <body>
     <div class="labeltag_container">
+         <div class="logo_container">
+             <img src="data:image/{{ $type }};base64,{{ $image_data }}" class="logo">
+         </div>
+         
          <div class="labeltag_main_data">
              @foreach($fields as $key => $label)
              @if($key !== 'barcode')
@@ -267,9 +277,6 @@ try {
          </div>
          
          <div class="footer-section">
-           <div class="logo_container">
-               <img src="data:image/{{ $type }};base64,{{ $image_data }}" class="logo">
-           </div>
            @php
                try {
                    // Only show barcode if user enabled it AND we have valid data (IMEI)
@@ -294,7 +301,7 @@ try {
                          // Width Factor 2: compact bars
                          // Height 50px: balanced height for label space
                          $generator = new \Picqer\Barcode\BarcodeGeneratorPNG();
-                         $barcodeImage = $generator->getBarcode($barcodeValue, \Picqer\Barcode\BarcodeGeneratorPNG::TYPE_CODE_128, 2, 50, [0, 0, 0]);
+                         $barcodeImage = $generator->getBarcode($barcodeValue, \Picqer\Barcode\BarcodeGeneratorPNG::TYPE_CODE_128, 4, 40, [0, 0, 0]);
                         
                         // Convert to base64
                         $barcodeBase64 = base64_encode($barcodeImage);
