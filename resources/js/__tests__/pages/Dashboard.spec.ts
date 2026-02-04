@@ -61,11 +61,7 @@ vi.mock('primevue/usetoast', () => ({
 }));
 
 // Mock para axios
-vi.mock('axios', () => ({
-  default: {
-    post: vi.fn(),
-  },
-}));
+vi.mock('axios');
 
 describe('Dashboard.vue - Initial Rendering', () => {
   let wrapper: VueWrapper;
@@ -809,7 +805,7 @@ describe('Dashboard.vue - Initial Rendering', () => {
 
     describe('Loading State', () => {
       it('sets isLoading to true at start', async () => {
-        vi.spyOn(axios.default, 'post').mockResolvedValue({ data: mockDashboardData });
+        vi.mocked(axios.post).mockResolvedValue({ data: mockDashboardData });
         
         expect(wrapper.vm.isLoading).toBe(false);
         wrapper.vm.applyFilter();
@@ -817,7 +813,7 @@ describe('Dashboard.vue - Initial Rendering', () => {
       });
 
       it('sets isLoading to false after successful completion', async () => {
-        vi.spyOn(axios.default, 'post').mockResolvedValue({ data: mockDashboardData });
+        vi.mocked(axios.post).mockResolvedValue({ data: mockDashboardData });
         
         expect(wrapper.vm.isLoading).toBe(false);
         await wrapper.vm.applyFilter();
@@ -825,7 +821,7 @@ describe('Dashboard.vue - Initial Rendering', () => {
       });
 
       it('sets isLoading to false after error', async () => {
-        vi.spyOn(axios.default, 'post').mockRejectedValue(new Error('API Error'));
+        vi.mocked(axios.post).mockRejectedValue(new Error('API Error'));
         
         expect(wrapper.vm.isLoading).toBe(false);
         await wrapper.vm.applyFilter();
@@ -835,7 +831,7 @@ describe('Dashboard.vue - Initial Rendering', () => {
 
     describe('Toast Notifications', () => {
       it('shows success toast on successful API response', async () => {
-        vi.spyOn(axios.default, 'post').mockResolvedValue({ data: mockDashboardData });
+        vi.mocked(axios.post).mockResolvedValue({ data: mockDashboardData });
         
         await wrapper.vm.applyFilter();
         
@@ -849,7 +845,7 @@ describe('Dashboard.vue - Initial Rendering', () => {
       });
 
       it('shows error toast when API fails', async () => {
-        vi.spyOn(axios.default, 'post').mockRejectedValue(new Error('API Error'));
+        vi.mocked(axios.post).mockRejectedValue(new Error('API Error'));
         
         await wrapper.vm.applyFilter();
         
@@ -864,7 +860,7 @@ describe('Dashboard.vue - Initial Rendering', () => {
 
       it('logs error to console on failure', async () => {
         const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-        vi.spyOn(axios.default, 'post').mockRejectedValue(new Error('API Error'));
+        vi.mocked(axios.post).mockRejectedValue(new Error('API Error'));
         
         await wrapper.vm.applyFilter();
         
@@ -874,12 +870,237 @@ describe('Dashboard.vue - Initial Rendering', () => {
 
     describe('API Integration', () => {
       it('does not call updateDashboardStats when API fails', async () => {
-        vi.spyOn(axios.default, 'post').mockRejectedValue(new Error('API Error'));
+        vi.mocked(axios.post).mockRejectedValue(new Error('API Error'));
         
         await wrapper.vm.applyFilter();
         
         expect(updateDashboardStatsSpy).not.toHaveBeenCalled();
       });
+    });
+  });
+
+  describe('editCashOnHand Functionality', () => {
+    let wrapper: VueWrapper;
+    let toastAddSpy: any;
+
+    beforeEach(() => {
+      wrapper = createWrapper();
+      toastAddSpy = vi.spyOn(wrapper.vm.toast, 'add').mockImplementation(() => {});
+      
+      // Initialize some accounting stats to update
+      wrapper.vm.accountingStats = [
+        { label: "Cash on Hand ($)", value: "5000.00", currency: true }
+      ];
+      wrapper.vm.datacashOnHand = 6000.50;
+      wrapper.vm.alterCashOnHand = true;
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('sets isLoading to true at start', async () => {
+      vi.mocked(axios.post).mockResolvedValue({ status: 200 });
+      
+      expect(wrapper.vm.isLoading).toBe(false);
+      wrapper.vm.editCashOnHand();
+      expect(wrapper.vm.isLoading).toBe(true);
+    });
+
+    it('calls API with correct payload', async () => {
+      vi.mocked(axios.post).mockResolvedValue({ status: 200 });
+      
+      await wrapper.vm.editCashOnHand();
+      
+      expect(axios.post).toHaveBeenCalledWith('/update.cash', { balance: 6000.50 });
+    });
+
+    it('updates stat value and shows success toast on API success', async () => {
+      vi.mocked(axios.post).mockResolvedValue({ status: 200 });
+      
+      await wrapper.vm.editCashOnHand();
+      
+      const stat = wrapper.vm.accountingStats.find((s: any) => s.label === "Cash on Hand ($)");
+      expect(stat?.value).toBe("6000.50");
+      expect(toastAddSpy).toHaveBeenCalledWith(expect.objectContaining({ severity: 'success' }));
+    });
+
+    it('handles decimal formatting correctly', async () => {
+      wrapper.vm.datacashOnHand = 6000.556;
+      vi.mocked(axios.post).mockResolvedValue({ status: 200 });
+      
+      await wrapper.vm.editCashOnHand();
+      
+      const stat = wrapper.vm.accountingStats.find((s: any) => s.label === "Cash on Hand ($)");
+      expect(stat?.value).toBe("6000.56");
+    });
+
+    it('shows error toast and does not update value on API failure', async () => {
+      vi.mocked(axios.post).mockRejectedValue(new Error('API Error'));
+      
+      await wrapper.vm.editCashOnHand();
+      
+      const stat = wrapper.vm.accountingStats.find((s: any) => s.label === "Cash on Hand ($)");
+      expect(stat?.value).toBe("5000.00"); // Original value
+      expect(toastAddSpy).toHaveBeenCalledWith(expect.objectContaining({ severity: 'error' }));
+    });
+
+    it('resets state (isLoading, alterCashOnHand) in finally block', async () => {
+      vi.mocked(axios.post).mockResolvedValue({ status: 200 });
+      
+      await wrapper.vm.editCashOnHand();
+      
+      expect(wrapper.vm.isLoading).toBe(false);
+      expect(wrapper.vm.alterCashOnHand).toBe(false);
+    });
+  });
+
+  describe('updateDashboardStats Functionality', () => {
+    let wrapper: VueWrapper;
+    let mockData: DashboardType;
+
+    beforeEach(() => {
+      wrapper = createWrapper();
+      mockData = {
+        devicesInInventory: 150,
+        tradesThisMonth: 60,
+        soldThisMonth: 40,
+        costSoldThisMonth: 20000.00,
+        costOfTaxedGoodsSold: 7000.00,
+        inventoryValue: 80000.00,
+        saleValue: 100000.00,
+        soldValueThisMonth: 50000.00,
+        profitThisMonth: 15000.00,
+        startDate: '2024-01-01',
+        endDate: '2024-01-31',
+        cashOnHand: '5000.00',
+        expensesThisMonth: 5000.00, // profit 15000 - exp 5000 = net 10000
+        accountsReceivableThisMonth: 10000.00,
+        accountsPayableThisMonth: 4000.00,
+        salesTaxCollected: 3000.00,
+        salesTaxPaid: 1500.00,
+        taxedSales: 35000.00,
+        nonTaxedSales: 15000.00,
+        totalPurchases: 25000.00,
+      };
+    });
+
+    it('maps Inventory stats correctly (7 items)', () => {
+      wrapper.vm.updateDashboardStats(mockData);
+      
+      const stats = wrapper.vm.inventoryStats;
+      expect(stats.length).toBe(7);
+      
+      expect(stats[0]).toEqual(expect.objectContaining({ label: "Devices in Inventory", value: 150 }));
+      expect(stats[1]).toEqual(expect.objectContaining({ label: "Devices Added", value: 60 }));
+      expect(stats[2]).toEqual(expect.objectContaining({ label: "Devices Sold", value: 40 }));
+      expect(stats[3]).toEqual(expect.objectContaining({ label: "Cost of Goods Sold", value: 20000.00, currency: true }));
+      expect(stats[4]).toEqual(expect.objectContaining({ label: "Cost of Goods Sold (Taxed)", value: 7000.00, currency: true }));
+      expect(stats[5]).toEqual(expect.objectContaining({ label: "Inventory Value ($)", value: 80000.00, currency: true }));
+      expect(stats[6]).toEqual(expect.objectContaining({ label: "Est. Sale Value of Inventory ($)", value: 100000.00, currency: true }));
+    });
+
+    it('maps Sales stats correctly (4 items)', () => {
+      wrapper.vm.updateDashboardStats(mockData);
+      
+      const stats = wrapper.vm.salesStats;
+      expect(stats.length).toBe(4);
+      
+      expect(stats[0]).toEqual(expect.objectContaining({ label: "Revenue ($)", value: 50000.00, currency: true }));
+      expect(stats[1]).toEqual(expect.objectContaining({ label: "Gross Profit ($)", value: 15000.00, currency: true }));
+      expect(stats[2]).toEqual(expect.objectContaining({ label: "Expenses ($)", value: 5000.00, currency: true }));
+    });
+
+    it('calculates Net Profit correctly (Profit - Expenses)', () => {
+      wrapper.vm.updateDashboardStats(mockData);
+      
+      // 15000 - 5000 = 10000
+      const netProfit = wrapper.vm.salesStats.find((s: any) => s.label === "Net Profit ($)");
+      expect(netProfit.value).toBe(10000.00);
+    });
+
+    it('calculates Net Profit correctly for losses', () => {
+      const lossData = { ...mockData, profitThisMonth: 2000, expensesThisMonth: 5000 };
+      wrapper.vm.updateDashboardStats(lossData);
+      
+      // 2000 - 5000 = -3000
+      const netProfit = wrapper.vm.salesStats.find((s: any) => s.label === "Net Profit ($)");
+      expect(netProfit.value).toBe(-3000);
+    });
+
+    it('maps Accounting stats correctly (8 items)', () => {
+      wrapper.vm.updateDashboardStats(mockData);
+      
+      const stats = wrapper.vm.accountingStats;
+      expect(stats.length).toBe(8);
+      
+      expect(stats[0]).toEqual(expect.objectContaining({ label: "Total Purchases ($)", value: 25000.00 }));
+      expect(stats[1]).toEqual(expect.objectContaining({ label: "Accounts Receivable ($)", value: 10000.00 }));
+      expect(stats[2]).toEqual(expect.objectContaining({ label: "Accounts Payable ($)", value: 4000.00 }));
+      expect(stats[4]).toEqual(expect.objectContaining({ label: "Sales Tax Paid ($)", value: 1500.00 }));
+      expect(stats[5]).toEqual(expect.objectContaining({ label: "Sales Tax Collected ($)", value: 3000.00 }));
+      expect(stats[6]).toEqual(expect.objectContaining({ label: "Taxed Sales ($)", value: 35000.00 }));
+      expect(stats[7]).toEqual(expect.objectContaining({ label: "Non-taxed Sales ($)", value: 15000.00 }));
+    });
+
+    it('formats Cash on Hand from props with 2 decimals when data exists', () => {
+      // The logic uses props.cashOnHand ('5000.00' string in mock) when data.cashOnHand is truthy
+      wrapper.vm.updateDashboardStats(mockData);
+      
+      const cashStat = wrapper.vm.accountingStats.find((s: any) => s.label === "Cash on Hand ($)");
+      expect(cashStat).toEqual(expect.objectContaining({ 
+        value: "5000.00", 
+        currency: true, 
+        editable: true 
+      }));
+    });
+
+    it('sets Cash on Hand to 0 when data is missing', () => {
+      const noCashData = { ...mockData, cashOnHand: null }; // Type cast to allow null for test
+      wrapper.vm.updateDashboardStats(noCashData);
+      
+      const cashStat = wrapper.vm.accountingStats.find((s: any) => s.label === "Cash on Hand ($)");
+      expect(cashStat.value).toBe(0);
+    });
+  });
+
+  describe('getStatConfig Functionality', () => {
+    let wrapper: VueWrapper;
+
+    beforeEach(() => {
+      wrapper = createWrapper();
+    });
+
+    const testCases = [
+      { label: "Devices in Inventory", icon: "pi-database", color: "blue" },
+      { label: "Devices Added", icon: "pi-plus-circle", color: "green" },
+      { label: "Devices Sold", icon: "pi-box", color: "purple" },
+      { label: "Cost of Goods Sold", icon: "pi-money-bill", color: "orange" },
+      { label: "Inventory Value ($)", icon: "pi-briefcase", color: "cyan" },
+      { label: "Est. Sale Value of Inventory ($)", icon: "pi-tags", color: "indigo" },
+      { label: "Revenue ($)", icon: "pi-dollar", color: "green" },
+      { label: "Gross Profit ($)", icon: "pi-chart-line", color: "emerald" },
+      { label: "Net Profit ($)", icon: "pi-wallet", color: "teal" },
+      { label: "Expenses ($)", icon: "pi-arrow-down", color: "red" },
+      { label: "Accounts Receivable ($)", icon: "pi-inbox", color: "amber" },
+      { label: "Accounts Payable ($)", icon: "pi-send", color: "pink" },
+      { label: "Cash on Hand ($)", icon: "pi-wallet", color: "blue" },
+      { label: "Sales Tax Paid ($)", icon: "pi-percentage", color: "cyan" },
+      { label: "Sales Tax Collected ($)", icon: "pi-percentage", color: "lime" },
+      { label: "Taxed Sales ($)", icon: "pi-check-square", color: "teal" },
+      { label: "Non-taxed Sales ($)", icon: "pi-times-circle", color: "gray" },
+    ];
+
+    testCases.forEach(({ label, icon, color }) => {
+      it(`returns correct config for "${label}"`, () => {
+        const config = wrapper.vm.getStatConfig(label);
+        expect(config).toEqual({ icon, color });
+      });
+    });
+
+    it('returns default config for unknown label', () => {
+      const config = wrapper.vm.getStatConfig("Unknown Label");
+      expect(config).toEqual({ icon: "pi-chart-bar", color: "gray" });
     });
   });
 });
