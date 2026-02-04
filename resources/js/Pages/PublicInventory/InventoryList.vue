@@ -180,6 +180,15 @@
           <Button label="Apply Filters" @click="showFilterModal = false" />
         </div>
       </Dialog>
+
+      <!-- Download all confirmation modal -->
+      <Dialog v-model:visible="showDownloadAllConfirmModal" header="Confirm Download" :modal="true">
+        <p>Do you really want to download all {{ filteredItemsWithFilters.length }} items?</p>
+        <div class="flex justify-end gap-2 mt-4">
+          <Button severity="secondary" @click="showDownloadAllConfirmModal = false">Cancel</Button>
+          <Button @click="handleDownloadAll">Download</Button>
+        </div>
+      </Dialog>
     </div>
 
     <div class="flex flex-col md:flex-row gap-4">
@@ -449,6 +458,7 @@ const selectedItems = ref([]);
 const selectedTabItems = ref<Array<any>>(null);
 const isLoadingTabItems = ref(false); // Loading state for tab items
 const showFilterModal = ref(false); // For mobile filter modal
+const showDownloadAllConfirmModal = ref(false); // For download all confirmation
 const filters = ref({
   manufacturer: [], // Use array for checkboxes
   grade: [], // Use array for checkboxes
@@ -697,9 +707,25 @@ const handleFormSubmit = async () => {
 };
 
 const handleDownload = () => {
+  if (selectedItems.value.length > 0) {
+    // Items are selected, download them
+    const keysToDownload = ["manufacturer", "model", "colour", "battery", "grade", "issues", "selling_price"]
+    try {
+      downloadSpreadsheet(selectedItems.value, keysToDownload, "request.xlsx")
+    } catch (error) {
+      toast.add({ severity: 'warn', summary: 'Alert', detail: error.message, life: 5000 });
+    }
+  } else {
+    // No items selected, show confirmation modal
+    showDownloadAllConfirmModal.value = true;
+  }
+}
+
+const handleDownloadAll = () => {
   const keysToDownload = ["manufacturer", "model", "colour", "battery", "grade", "issues", "selling_price"]
   try {
-    downloadSpreadsheet(selectedItems.value, keysToDownload, "request.xlsx")
+    downloadSpreadsheet(filteredItemsWithFilters.value, keysToDownload, "all_items.xlsx")
+    showDownloadAllConfirmModal.value = false;
   } catch (error) {
     toast.add({ severity: 'warn', summary: 'Alert', detail: error.message, life: 5000 });
   }
