@@ -71,7 +71,7 @@ import AppLayout from "@/Layouts/AppLayout.vue";
 import { Dashboard, User } from "@/Lib/types";
 import { FloatLabel, InputNumber, useToast, InputText } from "primevue";
 import axios from "axios";
-import { startOfMonth, startOfYear, subMonths, subYears, format } from "date-fns";
+import { startOfMonth, startOfYear, subMonths, subYears, endOfMonth, format } from "date-fns";
 import StatCard from "@/Components/StatCard.vue";
 import GlobalSearchBar from "@/Components/GlobalSearchBar.vue";
 import IncomingRequestsDrawer from '@/Components/IncomingRequestsDrawer.vue';
@@ -173,6 +173,20 @@ function handleCalendarChange(value: any) {
   }
 }
 
+function adjustMonthDate(date: Date, monthsToSubtract: number): Date {
+  const originalDay = date.getUTCDate();
+  const resultMonth = date.getUTCMonth() - monthsToSubtract;
+  const resultYear = date.getUTCFullYear() + Math.floor(resultMonth / 12);
+  const normalizedMonth = ((resultMonth % 12) + 12) % 12;
+  
+  const lastDayOfResultMonth = new Date(Date.UTC(resultYear, normalizedMonth + 1, 0)).getUTCDate();
+  
+  if (originalDay > lastDayOfResultMonth) {
+    return new Date(Date.UTC(resultYear, normalizedMonth, lastDayOfResultMonth));
+  }
+  return new Date(Date.UTC(resultYear, normalizedMonth, originalDay));
+}
+
 function handleQuickFilter() {
   const today = new Date();
   switch (quickFilter.value) {
@@ -185,11 +199,11 @@ function handleQuickFilter() {
       endDate.value = selectedFilter.value === "Current" ? today : null;
       break;
     case "6months":
-      startDate.value = subMonths(today, 6);
+      startDate.value = adjustMonthDate(today, 6);
       endDate.value = today;
       break;
     case "1year":
-      startDate.value = subYears(today, 1);
+      startDate.value = adjustMonthDate(today, 12);
       endDate.value = today;
       break;
     case "today":
