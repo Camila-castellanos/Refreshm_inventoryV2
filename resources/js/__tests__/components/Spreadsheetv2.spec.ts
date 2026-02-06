@@ -707,26 +707,38 @@ describe('Components/Spreadsheetv2.vue', () => {
       vm.contextRow = 0;
       
       const barcode = '1234567890';
-      const now = Date.now();
+      const now = 1000000; // Fixed start time
       
-      // Mock Date.now to simulate fast typing
-      vi.spyOn(Date, 'now').mockReturnValue(now);
+      // Spy once
+      const dateSpy = vi.spyOn(Date, 'now');
       
       // Simulate typing characters
       for (let i = 0; i < barcode.length; i++) {
         const char = barcode[i];
         // Advance time slightly (e.g. 10ms between chars)
-        vi.spyOn(Date, 'now').mockReturnValue(now + (i * 10));
+        const currentTime = now + (i * 10);
+        dateSpy.mockReturnValue(currentTime);
         
         const event = new KeyboardEvent('keydown', { key: char });
         window.dispatchEvent(event);
       }
+      
+      // Advance timers to trigger the debounce timeout (100ms)
+      // Set time forward for the timeout callback execution to calculate avgTime correctly
+      // Total time taken for typing: (10-1)*10 = 90ms. Avg = 9ms/char.
+      // Timeout fires after 100ms.
+      // Date.now() inside timeout callback will be called. We need to set it.
+      const endTime = now + (barcode.length * 10) + 150;
+      dateSpy.mockReturnValue(endTime);
+      
+      vi.advanceTimersByTime(150);
       
       await nextTick();
       
       // Should have triggered detection logic and updated table
       expect(vm.tableData[0].imei).toBe(barcode);
       
+      dateSpy.mockRestore();
       vi.useRealTimers();
     });
   });
