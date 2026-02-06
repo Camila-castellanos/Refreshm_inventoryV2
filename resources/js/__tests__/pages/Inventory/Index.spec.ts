@@ -24,9 +24,24 @@ const mockURL = {
   createObjectURL: vi.fn(() => 'blob:url'),
   revokeObjectURL: vi.fn(),
 };
+const mockLocation = {
+  reload: vi.fn(),
+};
 global.window.open = mockOpen;
 global.URL.createObjectURL = mockURL.createObjectURL;
 global.URL.revokeObjectURL = mockURL.revokeObjectURL;
+Object.defineProperty(window, 'location', {
+  value: mockLocation,
+  writable: true
+});
+
+// Mock PrimeVue services
+const mockConfirmRequire = vi.fn();
+vi.mock('primevue/useconfirm', () => ({
+  useConfirm: () => ({
+    require: mockConfirmRequire
+  })
+}));
 
 // Mocks Components
 const MockDataTable = {
@@ -194,6 +209,47 @@ describe('Inventory/Index.vue', () => {
     });
   });
 
+  describe('Delete Functionality', () => {
+    it('calls delete API when action is triggered and confirmed', async () => {
+      wrapper = createWrapper();
+      const vm = wrapper.vm as any;
+      
+      // Select items to delete
+      const itemsToDelete = [mockItems[0]];
+      vm.selectedItems = itemsToDelete;
+      
+      // Get Delete action from the DataTable props instead of vm directly
+      const dataTable = wrapper.findComponent({ name: 'DataTable' });
+      const actions = dataTable.props('actions');
+      const deleteAction = actions.find((a: any) => a.label === 'Delete selected');
+      
+      expect(deleteAction).toBeDefined();
+      
+      // Trigger action
+      deleteAction.action();
+      
+      // Verify confirmation requested
+      expect(mockConfirmRequire).toHaveBeenCalled();
+      
+      // Simulate accept callback
+      const callArgs = mockConfirmRequire.mock.calls[0][0];
+      
+      vi.mocked(axios.delete).mockResolvedValueOnce({ status: 200 });
+      
+      // Accept deletion
+      await callArgs.accept();
+      
+      // Verify API call
+      expect(axios.delete).toHaveBeenCalledWith(
+        expect.stringContaining('items.obliterate'),
+        expect.objectContaining({ data: itemsToDelete })
+      );
+      
+      // Verify reload
+      expect(mockLocation.reload).toHaveBeenCalled();
+    });
+  });
+
   describe('Global Actions', () => {
     it('refreshTableData calls API and updates tableData', async () => {
       wrapper = createWrapper();
@@ -236,6 +292,140 @@ describe('Inventory/Index.vue', () => {
       
       await vm.openLabels();
       expect(axios.get).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Export to CSV', () => {
+    it('exports selected items to CSV file', async () => {
+      wrapper = createWrapper();
+      const vm = wrapper.vm as any;
+      
+      // Select items
+      vm.selectedItems = [mockItems[0], mockItems[1]];
+      
+      // Mock DOM elements for download securely
+      const linkSpy = {
+        setAttribute: vi.fn(),
+        style: {},
+        click: vi.fn(),
+      };
+      
+      // Spy on createElement but only return mock for 'a' tag, else fallback? 
+      // JSDOM createElement is native code, hard to fallback via spy callThrough if we verify return value methods.
+      // Instead, we will restore immediately after action.
+      
+      const createElementSpy = vi.spyOn(document, 'createElement').mockReturnValue(linkSpy as any);
+      const appendChildSpy = vi.spyOn(document.body, 'appendChild').mockImplementation(() => linkSpy as any);
+      const removeChildSpy = vi.spyOn(document.body, 'removeChild').mockImplementation(() => linkSpy as any);
+      const toastSpy = vi.spyOn(vm.toast, 'add');
+      
+      try {
+        // Get action from DataTable props
+        const dataTable = wrapper.findComponent({ name: 'DataTable' });
+        const actions = dataTable.props('actions');
+        const exportAction = actions.find((a: any) => a.label === 'Export to CSV');
+        
+        expect(exportAction).toBeDefined();
+        
+        // Execute action
+        await exportAction.action();
+        
+        // Verify Blob creation
+        expect(URL.createObjectURL).toHaveBeenCalledWith(expect.any(Blob));
+        
+        // Verify Link attributes
+        expect(linkSpy.setAttribute).toHaveBeenCalledWith('href', 'blob:url');
+        expect(linkSpy.setAttribute).toHaveBeenCalledWith('download', expect.stringContaining('.csv'));
+        
+        // Verify Click (Download trigger)
+        expect(linkSpy.click).toHaveBeenCalled();
+        
+        // Verify Success Toast
+        expect(toastSpy).toHaveBeenCalledWith(expect.objectContaining({ severity: 'success' }));
+        
+      } finally {
+        // Always restore mocks to avoid breaking other tests (like Modals Integration)
+        createElementSpy.mockRestore();
+        appendChildSpy.mockRestore();
+        removeChildSpy.mockRestore();
+      }
+    });
+
+    it('shows warning toast if no items selected', async () => {
+      wrapper = createWrapper();
+      const vm = wrapper.vm as any;
+      vm.selectedItems = [];
+      
+      const toastSpy = vi.spyOn(vm.toast, 'add');
+      
+      // Get action from DataTable props
+      const dataTable = wrapper.findComponent({ name: 'DataTable' });
+      const actions = dataTable.props('actions');
+      const exportAction = actions.find((a: any) => a.label === 'Export to CSV');
+      
+      await exportAction.action();
+      
+      expect(toastSpy).toHaveBeenCalledWith(expect.objectContaining({ severity: 'warn' }));
+    });
+  });
+
+  describe('Duplicate Functionality', () => {
+    it('duplicates selected items successfully', async () => {
+      wrapper = createWrapper();
+      const vm = wrapper.vm as any;
+      
+      // Select items
+      vm.selectedItems = [mockItems[0]];
+      
+      // Mock API success
+      vi.mocked(axios.post).mockResolvedValueOnce({ data: { count: 1 } });
+      const toastSpy = vi.spyOn(vm.toast, 'add');
+      const { router } = await import('@inertiajs/vue3');
+      
+      // Get action from DataTable props
+      const dataTable = wrapper.findComponent({ name: 'DataTable' });
+      const actions = dataTable.props('actions');
+      const duplicateAction = actions.find((a: any) => a.label === 'Duplicate Items');
+      
+      expect(duplicateAction).toBeDefined();
+      
+      // Execute action
+      await duplicateAction.action();
+      
+      // Verify API call
+      expect(axios.post).toHaveBeenCalledWith(
+        expect.stringContaining('items.duplicate'),
+        expect.objectContaining({ items: [mockItems[0]] })
+      );
+      
+      // Verify Success
+      expect(toastSpy).toHaveBeenCalledWith(expect.objectContaining({ 
+        severity: 'success',
+        detail: '1 items duplicated'
+      }));
+      
+      // Verify Reload
+      expect(router.reload).toHaveBeenCalledWith({ only: ['items'] });
+    });
+
+    it('shows warning if no items selected for duplication', async () => {
+      wrapper = createWrapper();
+      const vm = wrapper.vm as any;
+      vm.selectedItems = [];
+      
+      const toastSpy = vi.spyOn(vm.toast, 'add');
+      
+      // Get action
+      const dataTable = wrapper.findComponent({ name: 'DataTable' });
+      const actions = dataTable.props('actions');
+      const duplicateAction = actions.find((a: any) => a.label === 'Duplicate Items');
+      
+      // Execute
+      await duplicateAction.action();
+      
+      // Verify Warning
+      expect(toastSpy).toHaveBeenCalledWith(expect.objectContaining({ severity: 'warn' }));
+      expect(axios.post).not.toHaveBeenCalled();
     });
   });
 
