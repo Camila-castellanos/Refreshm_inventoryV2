@@ -239,8 +239,43 @@ function handleScannerInput(event: KeyboardEvent) {
   if (timeDiff > 500) {
     scanDetection.startTime = now;
     scanDetection.chars = [event.key];
-    return;
+    // Clear any pending timeout
+    if (scanDetection.timeout) clearTimeout(scanDetection.timeout);
+    scanDetection.timeout = null;
   }
+  
+  // Clear any existing timeout (debounce)
+  if (scanDetection.timeout) {
+    clearTimeout(scanDetection.timeout);
+  }
+
+  // Set a timeout to process the buffer after a short pause (end of scan)
+  scanDetection.timeout = setTimeout(() => {
+    // Detect scanner: minimum 10 characters + fast typing (< 30ms average)
+    const totalTime = Date.now() - (scanDetection.startTime || 0);
+    const avgTime = totalTime / scanDetection.chars.length;
+    
+    // Check if it looks like a barcode scan (fast input)
+    if (scanDetection.chars.length >= 10 && avgTime < 100) {
+      const scannedCode = scanDetection.chars.join('');
+      
+      // Assign to cell
+      handleBarcodeScanned(scannedCode);
+  
+      // Show toast at the top
+      toast.add({
+        severity: 'success',
+        summary: 'Barcode successfully scanned',
+        detail: scannedCode,
+        life: 3000
+      });
+    }
+    
+    // Reset after processing attempt
+    scanDetection.startTime = null;
+    scanDetection.chars = [];
+    scanDetection.timeout = null;
+  }, 100); // Wait 100ms for the stream to finish
   
   // Detect scanner: minimum 10 characters + fast typing (< 30ms average)
   if (scanDetection.chars.length >= 10 && timeDiff < 500) {
@@ -248,14 +283,6 @@ function handleScannerInput(event: KeyboardEvent) {
     
     // Assign to cell
     handleBarcodeScanned(scannedCode);
-
-    // Show toast at the top
-    toast.add({
-      severity: 'success',
-      summary: 'Barcode successfully scanned',
-      detail: scannedCode,
-      life: 3000
-    });
     
     // console.log('[Scanner] Physical scanner detected:', scannedCode);
     
