@@ -218,7 +218,7 @@ const total = computed(() => {
 
 // Total con crédito aplicado
 const totalWithCredit = computed(() => {
-  const baseTotal = Number(total) || 0;
+  const baseTotal = Number(total.value) || 0;
   const creditValue = parseFloat(String(final_credit_with_tax.value) || '0');
   return Math.max(0, baseTotal - (isNaN(creditValue) ? 0 : creditValue));
 });

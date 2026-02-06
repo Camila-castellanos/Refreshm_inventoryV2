@@ -246,6 +246,9 @@ function handleScannerInput(event: KeyboardEvent) {
   if (scanDetection.chars.length >= 10 && timeDiff < 500) {
     const scannedCode = scanDetection.chars.join('');
     
+    // Assign to cell
+    handleBarcodeScanned(scannedCode);
+
     // Show toast at the top
     toast.add({
       severity: 'success',
