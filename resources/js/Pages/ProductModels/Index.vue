@@ -303,8 +303,14 @@ const handleFilter = () => {
 }
 
 const deleteModel = (model) => {
-  if (confirm(`Are you sure you want to delete "${model.name}"?`)) {
-    router.delete(route('product-models.destroy', model.id))
-  }
+  confirm.require({
+    message: `Are you sure you want to delete "${model.name}"?`,
+    header: 'Delete Confirmation',
+    icon: 'pi pi-exclamation-triangle',
+    acceptClass: 'p-button-danger',
+    accept: () => {
+      router.delete(route('product-models.destroy', model.id))
+    }
+  })
 }
 </script>
