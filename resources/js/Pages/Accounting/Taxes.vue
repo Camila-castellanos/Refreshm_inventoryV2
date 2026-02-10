@@ -8,6 +8,7 @@
           :items="tableData"
           :headers="taxHeaders"
           :actions="actions"
+          :selected="selectedTaxes"
           @update:selected="handleSelection">
                 <DatePicker
                 v-model="dateRange"
