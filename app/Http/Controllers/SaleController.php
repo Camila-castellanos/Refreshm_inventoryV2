@@ -4,17 +4,16 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\SaleForm;
 use App\Http\Requests\SaleFormEdit;
-use App\Models\Payment;
-use App\Models\CustomField;
 use App\Models\CashOnHand;
 use App\Models\Customer;
+use App\Models\CustomField;
 use App\Models\Item;
-use App\Models\ReturnItems;
-use App\Models\Tab;
-use App\Models\TabItem;
+use App\Models\Payment;
 use App\Models\Sale;
 use App\Models\Storage;
 use App\Models\Store;
+use App\Models\Tab;
+use App\Models\TabItem;
 use App\Models\User;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
@@ -38,41 +37,41 @@ class SaleController extends Controller
     public function store(SaleForm $request)
     {
         $form = $request->validated();
-        $form["user_id"] = Auth::user()->id;
-        $form["balance_remaining"] = $request->balance_remaining;
+        $form['user_id'] = Auth::user()->id;
+        $form['balance_remaining'] = $request->balance_remaining;
         // Convertir payment_date (Y-m-d) a datetime con hora actual y asignar al form
         $paymentDateTime = Carbon::createFromFormat('Y-m-d', $request->payment_date)
             ->setTimeFromTimeString(Carbon::now()->toTimeString());
-        $form["date"] = $paymentDateTime->format('Y-m-d H:i:s');
-        
+        $form['date'] = $paymentDateTime->format('Y-m-d H:i:s');
+
         // NUEVA LÓGICA: Calcular total en el backend antes de crear la venta
         // Fórmula:
         // 1. Tax = (subtotal - crédito) * porcentaje / 100
         // 2. Total = subtotal - (crédito - tax)
-        $subtotal = (float) $form["subtotal"];
-        $credit = max(0.0, (float) ($form["credit"] ?? 0));
-        $taxPercentage = (float) $form["tax"];
-        
+        $subtotal = (float) $form['subtotal'];
+        $credit = max(0.0, (float) ($form['credit'] ?? 0));
+        $taxPercentage = (float) $form['tax'];
+
         // Calcular tax: (subtotal - crédito) * porcentaje / 100
         $subtotalAfterCredit = max(0.0, $subtotal - $credit);
         $calculatedTax = ($subtotalAfterCredit * $taxPercentage) / 100;
-        
+
         // Total final: subtotal - (crédito - tax), si es negativo queda en 0
         $creditMinusTax = $credit - $calculatedTax;
         $calculatedTotal = max(0.0, $subtotal - $creditMinusTax);
-        
+
         // Actualizar el form con los valores calculados
-        $form["flatTax"] = round($calculatedTax, 2);
-        $form["total"] = round($calculatedTotal, 2);
-        
+        $form['flatTax'] = round($calculatedTax, 2);
+        $form['total'] = round($calculatedTotal, 2);
+
         // Calculate balance_remaining based on calculated total and amount paid
         $amountPaidStore = max(0.0, (float) ($request->amount_paid ?? 0));
-        $form["balance_remaining"] = round($calculatedTotal - $amountPaidStore, 2);
-        if ($form["balance_remaining"] < 0) {
-            $form["balance_remaining"] = 0;
+        $form['balance_remaining'] = round($calculatedTotal - $amountPaidStore, 2);
+        if ($form['balance_remaining'] < 0) {
+            $form['balance_remaining'] = 0;
         }
-        
-        Log::info("Total calculation in store", [
+
+        Log::info('Total calculation in store', [
             'subtotal' => $subtotal,
             'credit' => $credit,
             'tax_percentage' => $taxPercentage,
@@ -81,25 +80,25 @@ class SaleController extends Controller
             'credit_minus_tax' => $creditMinusTax,
             'calculated_total' => $calculatedTotal,
         ]);
-        
+
         // Crear la venta con datetime completo
         $sale = Sale::create($form);
 
         // Manejar lógica de crédito
         $creditAdded = (float) ($request->credit_added ?? 0);
         $totalCredit = (float) ($request->credit ?? 0);
-        
+
         // Si hay crédito agregado, actualizar el crédito del cliente
         if ($creditAdded > 0) {
             // Buscar el customer ID desde los items o newItems
             $customerId = null;
-            
-            if (!empty($form["items"])) {
-                $customerId = $form["items"][0]['customer'] ?? null;
-            } elseif (!empty($request->newItems)) {
+
+            if (! empty($form['items'])) {
+                $customerId = $form['items'][0]['customer'] ?? null;
+            } elseif (! empty($request->newItems)) {
                 $customerId = $request->newItems[0]['customer'] ?? null;
             }
-            
+
             if ($customerId) {
                 $customer = Customer::find($customerId);
                 if ($customer) {
@@ -108,8 +107,8 @@ class SaleController extends Controller
                     Customer::where('id', $customer->id)->update([
                         'credit' => max(0, $newCustomerCredit), // Asegurar que no sea negativo
                     ]);
-                    
-                    Log::info("Credit applied in store", [
+
+                    Log::info('Credit applied in store', [
                         'sale_id' => $sale->id,
                         'credit_added' => $creditAdded,
                         'total_credit' => $totalCredit,
@@ -118,66 +117,67 @@ class SaleController extends Controller
                         'new_customer_credit' => $newCustomerCredit,
                     ]);
                 } else {
-                    Log::warning("Customer not found for credit application", [
+                    Log::warning('Customer not found for credit application', [
                         'sale_id' => $sale->id,
                         'customer_id' => $customerId,
                         'credit_added' => $creditAdded,
                     ]);
                 }
             } else {
-                Log::warning("No customer ID found for credit application", [
+                Log::warning('No customer ID found for credit application', [
                     'sale_id' => $sale->id,
                     'credit_added' => $creditAdded,
                 ]);
             }
         }
 
-        foreach ($form["items"] as $sale_item) {
-            $sale_item["sale_id"] = $sale->id;
-            $sale_item["type"] = $sale_item["type"];
-            $sale_item['sold_position'] = $sale_item['position'];
-            $sale_item['sold_storage_id'] = $sale_item['storage_id'];
-            $sale_item['sold_storage_name'] = Storage::find($sale_item['storage_id'])?->name;
-            $sale_item['sold'] = Carbon::now();
-            unset($sale_item["selected"]);
-            $item = Item::find($sale_item["id"]);
+        foreach ($form['items'] as $sale_item) {
+            $item = Item::find($sale_item['id']);
+
+            if ($item) {
+                $sale_item['sale_id'] = $sale->id;
+                $sale_item['type'] = $sale_item['type'];
+                // Capture location from DB before it's cleared
+                $sale_item['sold_position'] = $item->position;
+                $sale_item['sold_storage_id'] = $item->storage_id;
+                $sale_item['sold_storage_name'] = $item->storage?->name;
+                $sale_item['sold'] = Carbon::now();
+                unset($sale_item['selected']);
+
+                $item->update($sale_item);
+                $item->update([
+                    'position' => null,
+                    'storage_id' => null,
+                ]);
+            }
 
             if ($request->paid == 1) {
                 Payment::insert([
                     'sale_id' => $sale->id,
-                    'amount_paid' => $form["total"],
-                    'balance_remaining' => $form["balance_remaining"],
-                    'payment_method' => $form["payment_method"],
-                    'payment_account' => $form["payment_account"],
+                    'amount_paid' => $form['total'],
+                    'balance_remaining' => $form['balance_remaining'],
+                    'payment_method' => $form['payment_method'],
+                    'payment_account' => $form['payment_account'],
                     'payment_date' => $paymentDateTime->format('Y-m-d H:i:s'),
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
             }
-            
-            if ($item) {
-                $item->update($sale_item);
-                $item->update([
-                    'position' => null,
-                    'storage_id' => null,
 
-                ]);
-            }
-
-            TabItem::where('item_id', $sale_item["id"])->delete();
+            TabItem::where('item_id', $sale_item['id'])->delete();
         }
 
         if ($request->paid == 1) {
-            if ($request->payment_account == "Cash on Hand") {
-                $old_cash = CashOnHand::where('user_id', $form["user_id"])->value("balance");
-                CashOnHand::where('user_id', $form["user_id"])->update([
-                    'balance' => $old_cash + $form["total"],
+            if ($request->payment_account == 'Cash on Hand') {
+                $old_cash = CashOnHand::where('user_id', $form['user_id'])->value('balance');
+                CashOnHand::where('user_id', $form['user_id'])->update([
+                    'balance' => $old_cash + $form['total'],
                 ]);
             }
         }
 
         foreach ($request->newItems as $new_item) {
-            $total = $new_item["selling_price"] + (($form["tax"] / 100) * $new_item["selling_price"]);
+            $total = $new_item['selling_price'] + (($form['tax'] / 100) * $new_item['selling_price']);
 
             $item = Item::create([
                 'date' => $request->payment_date,
@@ -191,7 +191,7 @@ class SaleController extends Controller
                 'discount' => $request->discount,
                 'tax' => $request->tax,
                 'sold' => Carbon::now(),
-                'user_id' => $form["user_id"],
+                'user_id' => $form['user_id'],
                 'profit' => $new_item['profit'],
                 'created_at' => now(),
                 'updated_at' => now(),
@@ -200,24 +200,25 @@ class SaleController extends Controller
             if ($request->paid == 1) {
                 Payment::insert([
                     'sale_id' => $sale->id,
-                    'amount_paid' => $form["total"],
-                    'balance_remaining' => $form["balance_remaining"],
-                    'payment_method' => $form["payment_method"],
-                    'payment_account' => $form["payment_account"],
+                    'amount_paid' => $form['total'],
+                    'balance_remaining' => $form['balance_remaining'],
+                    'payment_method' => $form['payment_method'],
+                    'payment_account' => $form['payment_account'],
                     'payment_date' => $paymentDateTime->format('Y-m-d H:i:s'),
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
-                if ($request->payment_account == "Cash on Hand") {
-                    $old_cash = CashOnHand::where('user_id', $form["user_id"])->value("balance");
-                    CashOnHand::where('user_id', $form["user_id"])->update([
-                        'balance' => $old_cash + $form["total"],
+                if ($request->payment_account == 'Cash on Hand') {
+                    $old_cash = CashOnHand::where('user_id', $form['user_id'])->value('balance');
+                    CashOnHand::where('user_id', $form['user_id'])->update([
+                        'balance' => $old_cash + $form['total'],
                     ]);
                 }
             }
         }
 
-        $receiptUrl = route("sales.receipt", $sale);
+        $receiptUrl = route('sales.receipt', $sale);
+
         return response()->json($receiptUrl, 201);
     }
 
@@ -225,8 +226,8 @@ class SaleController extends Controller
      *  Returns JSON listing the updates on sale
      *  date range ($start - $end).
      *
-     *  @param SaleForm $request
-     *  @return JsonResponse
+     * @param  SaleForm  $request
+     * @return JsonResponse
      */
     public function update(SaleFormEdit $request)
     {
@@ -249,7 +250,7 @@ class SaleController extends Controller
                 $total += $item['selling_price'];
             }
 
-            if (!empty($request->newItems)) {
+            if (! empty($request->newItems)) {
                 foreach ($request->newItems as $item) {
                     Item::insert([
                         'date' => $request->date,
@@ -273,7 +274,7 @@ class SaleController extends Controller
             $creditAdded = (float) ($request->credit_added ?? 0.0);
             $currentSaleCredit = max(0.0, (float) $sale->credit);
             $finalCredit = max(0.0, $currentSaleCredit + $creditAdded);
-            
+
             // Si hay crédito agregado, actualizar el crédito del cliente
             if ($creditAdded != 0.0) {
                 $customer = Customer::where('customer', $request->customer)->first();
@@ -283,8 +284,8 @@ class SaleController extends Controller
                     Customer::where('id', $customer->id)->update([
                         'credit' => max(0, $newCustomerCredit), // Asegurar que no sea negativo
                     ]);
-                    
-                    Log::info("Credit update with credit_added", [
+
+                    Log::info('Credit update with credit_added', [
                         'credit_added' => $creditAdded,
                         'current_sale_credit' => $currentSaleCredit,
                         'final_credit' => $finalCredit,
@@ -296,11 +297,11 @@ class SaleController extends Controller
             }
 
             // Si NO se envía credit_added pero cambia el total, usar diferencia total como delta
-            if (!$request->has('credit_added') && $request->has('credit') && $request->credit != $currentSaleCredit) {
+            if (! $request->has('credit_added') && $request->has('credit') && $request->credit != $currentSaleCredit) {
                 // Forzar crédito solicitado a no negativo
                 $requestCredit = max(0.0, (float) $request->credit);
                 $creditDifference = $requestCredit - $currentSaleCredit;
-                
+
                 if ($creditDifference != 0) {
                     $customer = Customer::where('customer', $request->customer)->first();
                     if ($customer) {
@@ -309,11 +310,11 @@ class SaleController extends Controller
                         Customer::where('id', $customer->id)->update([
                             'credit' => max(0, $newCustomerCredit),
                         ]);
-                        
+
                         // Asegurar que el crédito final no sea negativo
                         $finalCredit = max(0.0, $requestCredit);
-                        
-                        Log::info("Credit update with total credit change", [
+
+                        Log::info('Credit update with total credit change', [
                             'request_credit' => $requestCredit,
                             'current_sale_credit' => $currentSaleCredit,
                             'credit_difference' => $creditDifference,
@@ -333,16 +334,16 @@ class SaleController extends Controller
             $subtotal = (float) $request->subtotal;
             $credit = max(0.0, (float) $finalCredit);
             $taxPercentage = (float) $request->tax;
-            
+
             // Calcular tax: (subtotal - crédito) * porcentaje / 100
             $subtotalAfterCredit = max(0.0, $subtotal - $credit);
             $calculatedTax = ($subtotalAfterCredit * $taxPercentage) / 100;
-            
+
             // Total final: subtotal - (crédito - tax), si es negativo queda en 0
             $creditMinusTax = $credit - $calculatedTax;
             $calculatedTotal = max(0.0, $subtotal - $creditMinusTax);
-            
-            Log::info("Total calculation in backend", [
+
+            Log::info('Total calculation in backend', [
                 'subtotal' => $subtotal,
                 'credit' => $credit,
                 'tax_percentage' => $taxPercentage,
@@ -356,12 +357,12 @@ class SaleController extends Controller
             // Calculate balance_remaining based on calculated total and amount paid
             // Formula: balance_remaining = total - amount_paid
             $amountPaidUpdate = max(0.0, (float) ($request->amount_paid ?? 0));
-            Log::info(["Amount paid for balance calculation: " . $amountPaidUpdate . " calculatedTotal: " . $calculatedTotal]);
+            Log::info(['Amount paid for balance calculation: '.$amountPaidUpdate.' calculatedTotal: '.$calculatedTotal]);
             $balance = round($calculatedTotal - $amountPaidUpdate, 2);
             if ($balance < 0) {
                 $balance = 0;
             }
-            
+
             $paid = 0;
             if ($balance == 0) {
                 $paid = 1;
@@ -389,15 +390,14 @@ class SaleController extends Controller
 
             return response()->json($request, 201);
         } catch (Exception $e) {
-            Log::error('Error updating sale: ' . $e->getMessage());
+            Log::error('Error updating sale: '.$e->getMessage());
+
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
 
     /**
      * Generate a pdf receipt for the given Sale.
-     * @param Sale $sale
-     * @return
      */
     public function receipt(Sale $sale)
     {
@@ -408,10 +408,11 @@ class SaleController extends Controller
         $customer = $sale->items[0]->customer;
         if (is_numeric($customer)) {
             $customer = Customer::whereId($sale->items[0]->customer)->select('customer', 'billing_address', 'billing_address_country', 'billing_address_state', 'billing_address_city', 'billing_address_postal', 'email', 'phone')->first();
-            if ($customer)
+            if ($customer) {
                 $customer = $customer;
-            else
+            } else {
                 $customer = $sale->items[0]->customer;
+            }
         }
 
         $header = null;
@@ -419,13 +420,13 @@ class SaleController extends Controller
         $logo = null;
         $sales = collect([$sale]);
         $returned_items = collect([]);
-        if ($user_role == "OWNER") {
+        if ($user_role == 'OWNER') {
             $header = $user_data->invoice_header;
             $footer = $user_data->invoice_footer;
-            if (!is_null($user_data->invoice_logo) && file_exists(storage_path("app/" . $user_data->invoice_logo))) {
-                $logo = base64_encode(file_get_contents(storage_path("app/" . $user_data->invoice_logo)));
+            if (! is_null($user_data->invoice_logo) && file_exists(storage_path('app/'.$user_data->invoice_logo))) {
+                $logo = base64_encode(file_get_contents(storage_path('app/'.$user_data->invoice_logo)));
             } else {
-                $logo = base64_encode(file_get_contents(public_path("img/_REFRESHMOBILE.png")));
+                $logo = base64_encode(file_get_contents(public_path('img/_REFRESHMOBILE.png')));
             }
         } else {
 
@@ -433,15 +434,15 @@ class SaleController extends Controller
             if ($store) {
                 $header = $store->header;
                 $footer = $store->footer;
-                if (!is_null($store->logo)) {
-                    $logo = base64_encode(file_get_contents(storage_path() . "/app/" . $store->logo));
+                if (! is_null($store->logo)) {
+                    $logo = base64_encode(file_get_contents(storage_path().'/app/'.$store->logo));
                 } else {
-                    $logo = base64_encode(file_get_contents(public_path() . "/img/_REFRESHMOBILE.png"));
+                    $logo = base64_encode(file_get_contents(public_path().'/img/_REFRESHMOBILE.png'));
                 }
             }
         }
 
-        $pdf = Pdf::loadView("sale-receipt-invoice", compact("sales", "customer", "header", "footer", "logo", "returned_items"))
+        $pdf = Pdf::loadView('sale-receipt-invoice', compact('sales', 'customer', 'header', 'footer', 'logo', 'returned_items'))
             ->setOptions([
                 'defaultFont' => 'sans-serif',
                 'isRemoteEnabled' => 'true',
@@ -449,7 +450,7 @@ class SaleController extends Controller
             ->setPaper('a4', 'portrait');
 
         $customer_name = $customer->customer;
-        
+
         return $pdf->download("$customer_name invoice #$sale->id.pdf");
     }
 
@@ -457,23 +458,21 @@ class SaleController extends Controller
      * Show report for Sale - Unified version with optional date range
      */
     public function showReport(Request $request): Response|JsonResponse
-    { 
+    {
         try {
             // Si se pasan fechas por request, usarlas; sino usar últimos 7 días
             $start = $request->start ? Carbon::parse($request->start)->startOfDay() : Carbon::now()->subDays(7)->startOfDay();
             $end = $request->end ? Carbon::parse($request->end)->endOfDay() : Carbon::now()->endOfDay();
             $user = Auth::user();
 
-            
-            
-                $tabs = Tab::where('user_id', $user->id)->orderBy('order', 'asc')->get();
-                $fields = CustomField::where('user_id', $user->id)->get();
+            $tabs = Tab::where('user_id', $user->id)->orderBy('order', 'asc')->get();
+            $fields = CustomField::where('user_id', $user->id)->get();
 
             $sales = Sale::select([
-                    'sales.id',
-                    'sales.tax',
-                    'sales.created_at'
-                ])
+                'sales.id',
+                'sales.tax',
+                'sales.created_at',
+            ])
                 ->join('items', 'sales.id', '=', 'items.sale_id')
                 ->where(function ($query) use ($start, $end) {
                     $query->where(function ($q) use ($start, $end) {
@@ -488,20 +487,20 @@ class SaleController extends Controller
                 ->with([
                     'items' => function ($query) {
                         $query->select([
-                            'id', 'sale_id', 'customer', 'battery', 'cost', 
+                            'id', 'sale_id', 'customer', 'battery', 'cost',
                             'selling_price', 'sold', 'vendor_id', 'model',
                             'manufacturer', 'colour', 'grade', 'issues', 'imei',
-                            'date', 'type', 'sold_position', 'sold_storage_name', 
-                            'sold_storage_id', 'custom_values'
+                            'date', 'type', 'sold_position', 'sold_storage_name',
+                            'sold_storage_id', 'custom_values',
                         ]);
                     },
-                    'items.vendor:id,vendor'
+                    'items.vendor:id,vendor',
                 ])
                 ->get();
 
             $customerIds = $sales->flatMap(function ($sale) {
-                    return $sale->items->pluck('customer');
-                })
+                return $sale->items->pluck('customer');
+            })
                 ->filter(function ($customer) {
                     return is_numeric($customer);
                 })
@@ -514,13 +513,13 @@ class SaleController extends Controller
                 ->keyBy('id');
 
             $formatted_items = [];
-            
+
             foreach ($sales as $sale) {
                 $tax = intval($sale->tax) / 100;
-                
+
                 foreach ($sale->items as $item) {
                     $battery = is_numeric($item->battery) ? "{$item->battery} %" : $item->battery;
-                    
+
                     if (is_numeric($item->customer) && isset($customers[$item->customer])) {
                         $item->customer = $customers[$item->customer]->customer;
                     }
@@ -551,10 +550,10 @@ class SaleController extends Controller
                         'sold' => Carbon::parse($item->sold)->format('Y-m-d'),
                         'date' => Carbon::parse($item->date)->format('Y-m-d'),
                         'type' => $item->type,
-                        'cost' => '$ ' . number_format($cost, 2),
-                        'subtotal' => '$ ' . number_format($selling_price, 2),
-                        'total' => '$ ' . number_format($total, 2),
-                        'profit' => '$ ' . number_format($profit, 2),
+                        'cost' => '$ '.number_format($cost, 2),
+                        'subtotal' => '$ '.number_format($selling_price, 2),
+                        'total' => '$ '.number_format($total, 2),
+                        'profit' => '$ '.number_format($profit, 2),
                         'vendor' => $item->vendor,
                         'sold_position' => $item->sold_position,
                         'sold_storage_name' => $item->sold_storage_name,
@@ -563,31 +562,33 @@ class SaleController extends Controller
                     ], $customFields);
                 }
             }
-            Log::info("items: ", $formatted_items);
-            Log::info("items count: " . count($formatted_items));
+            Log::info('items: ', $formatted_items);
+            Log::info('items count: '.count($formatted_items));
+
             // Si es vista inicial, devolver Inertia con todos los datos
-            return Inertia::render("Inventory/Sold", [
+            return Inertia::render('Inventory/Sold', [
                 'tabs' => $tabs,
                 'fields' => $fields,
                 'items' => $formatted_items,
             ]);
-            
+
         } catch (Exception $e) {
-            Log::error('Error in showReport: ' . $e->getMessage());
+            Log::error('Error in showReport: '.$e->getMessage());
             if ($request->wantsJson()) {
                 return response()->json(['error' => $e->getMessage()], 500);
             }
+
             return Inertia::render('Error', ['message' => $e->getMessage()]);
         }
     }
 
-    
     public function soldItems($id): JsonResponse
     {
 
-        $soldItems = Item::where("sale_id", $id)->get();
+        $soldItems = Item::where('sale_id', $id)->get();
         $soldItems = $soldItems->map(function ($item) {
             $item['selected'] = false; // You can set the value to whatever you need
+
             return $item;
         });
 
