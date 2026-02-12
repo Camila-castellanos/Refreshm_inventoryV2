@@ -2,54 +2,46 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Shop;
-
-use App\Http\Requests\ItemForm;
-use App\Http\Requests\RequestItemsForm;
-use App\Http\Requests\ItemExcelForm;
-use App\Models\Item;
-use App\Models\Tab;
-use App\Models\Models;
-use App\Models\Manufacturer;
-use App\Models\TabItem;
-use App\Models\TabHistory;
-use App\Models\CustomField;
-use App\Models\User;
-use App\Models\Sale;
-use App\Models\Customer;
-use App\Models\ReturnItems;
-use App\Models\Storage;
-use App\Mail\RequestItems;
-use Exception;
-use Illuminate\Http\Request;
-use Inertia\Inertia;
-use Barryvdh\DomPDF\Facade\Pdf;
-use Carbon\Carbon;
 use App\Exports\ItemsExample;
-use Illuminate\Support\Facades\Auth;
+use App\Http\Requests\ItemExcelForm;
+use App\Http\Requests\ItemForm;
+use App\Http\Requests\ItemsWithBillForm;
+use App\Http\Requests\RequestItemsForm;
 use App\Imports\ItemsImport;
-use App\Exports\ItemDemoExport;
-use Illuminate\Support\Facades\Mail;
-use App\Models\Vendor;
+use App\Mail\RequestItems;
+use App\Models\Bill;
+use App\Models\Customer;
+use App\Models\CustomField;
 use App\Models\IncomingRequest;
 use App\Models\IncomingRequestItem;
-use Illuminate\Http\RedirectResponse;
+use App\Models\Item;
+use App\Models\Manufacturer;
+use App\Models\Models;
+use App\Models\ReturnItems;
+use App\Models\Sale;
+use App\Models\Storage;
+use App\Models\Tab;
+use App\Models\TabHistory;
+use App\Models\TabItem;
+use App\Models\Tax;
+use App\Models\User;
+use App\Models\Vendor;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\Carbon;
+use Exception;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use Inertia\Inertia;
 use Maatwebsite\Excel\Facades\Excel;
-use Response;
-use Illuminate\Support\Collection;
-use Illuminate\Http\JsonResponse;
-use App\Http\Requests\ItemsWithBillForm;
-use App\Models\Tax;
-use App\Models\Bill;
 
 class ItemController extends Controller
 {
     /**
      * Display a listing of the resource.
-     *
-     * @return \Inertia\Response
      */
     public function index(): \Inertia\Response
     {
@@ -62,18 +54,19 @@ class ItemController extends Controller
         $context = [
             'items' => Item::with(['storage' => function ($query) {
                 $query->select('id', 'name', 'limit') // other columns
-                ->withCount('items'); // current count of items in storage
+                    ->withCount('items'); // current count of items in storage
             }, 'vendor:id,vendor'])
-            ->whereIn('type', ['device', 'accessory'])
-            ->whereNull("sold")
-            ->whereNull("hold")
-            ->whereNotIn('id', TabItem::pluck('item_id'))
-            ->get(),
+                ->whereIn('type', ['device', 'accessory'])
+                ->whereNull('sold')
+                ->whereNull('hold')
+                ->whereNotIn('id', TabItem::pluck('item_id'))
+                ->get(),
             'tabs' => $tabs,
             'fields' => $customFields,
         ];
 
         $context['customers'] = Customer::all();
+
         return Inertia::render('Inventory/Index', $context);
     }
 
@@ -84,13 +77,13 @@ class ItemController extends Controller
         // Con el nuevo scope global, ya no necesitamos filtrar por user_id
         $items = Item::with(['storage' => function ($query) {
             $query->select('id', 'name', 'limit') // other columns
-            ->withCount('items'); // current count of items in storage
+                ->withCount('items'); // current count of items in storage
         }, 'vendor:id,vendor'])
-        ->whereIn('type', ['device', 'accessory'])
-        ->whereNull("sold")
-        ->whereNull("hold")
-        ->whereNotIn('id', TabItem::pluck('item_id'))
-        ->get();
+            ->whereIn('type', ['device', 'accessory'])
+            ->whereNull('sold')
+            ->whereNull('hold')
+            ->whereNotIn('id', TabItem::pluck('item_id'))
+            ->get();
 
         return response()->json($items);
     }
@@ -99,9 +92,6 @@ class ItemController extends Controller
      * Get specific items by their IDs to check their current status (e.g., if they're sold)
      * Expects payload: { ids: [1, 2, 3, ...] }
      * Returns items with all their data including sold status
-     * 
-     * @param Request $request
-     * @return JsonResponse
      */
     public function getSpecificItems(Request $request): JsonResponse
     {
@@ -118,10 +108,10 @@ class ItemController extends Controller
 
         $items = Item::with(['storage' => function ($query) {
             $query->select('id', 'name', 'limit')
-            ->withCount('items');
+                ->withCount('items');
         }, 'vendor:id,vendor'])
-        ->whereIn('id', $ids)
-        ->get();
+            ->whereIn('id', $ids)
+            ->get();
 
         return response()->json($items);
     }
@@ -131,9 +121,6 @@ class ItemController extends Controller
      * Expects payload: { manufacturers: ["Apple", "Samsung"] }
      * Normalizes manufacturer matching (case-insensitive) and model normalization
      * (removes storage sizes like "128GB" so "iPhone 15 128GB" and "iPhone 15 256GB" collapse to "iPhone 15").
-     *
-     * @param Request $request
-     * @return JsonResponse
      */
     public function getUniqueModelsByManufacturer(Request $request): JsonResponse
     {
@@ -142,7 +129,7 @@ class ItemController extends Controller
             'manufacturers.*' => 'string',
         ]);
 
-        $manufacturers = array_map(fn($m) => mb_strtolower(trim($m)), $data['manufacturers']);
+        $manufacturers = array_map(fn ($m) => mb_strtolower(trim($m)), $data['manufacturers']);
 
         if (empty($manufacturers)) {
             return response()->json(['models' => []]);
@@ -159,7 +146,7 @@ class ItemController extends Controller
 
         // Normalize models: remove storage sizes like '128GB', parentheses content, punctuation and collapse whitespace
         $normalized = collect($models)->map(function ($model) {
-            $m = trim((string)$model);
+            $m = trim((string) $model);
             // Remove parenthetical notes: "(Unlocked)", etc.
             $m = preg_replace('/\(.+?\)/u', ' ', $m);
             // Remove storage sizes like '128GB', '256 GB', case-insensitive
@@ -171,6 +158,7 @@ class ItemController extends Controller
             // Collapse multiple spaces into one
             $m = preg_replace('/\s+/u', ' ', $m);
             $m = trim($m);
+
             return mb_strtolower($m);
         })->filter()->unique()->values()->sort()->map(function ($m) {
             return ['label' => mb_convert_case($m, MB_CASE_TITLE, 'UTF-8'), 'value' => $m];
@@ -178,7 +166,6 @@ class ItemController extends Controller
 
         return response()->json(['models' => $normalized]);
     }
-
 
     public function assignStorage(Request $request)
     {
@@ -215,10 +202,9 @@ class ItemController extends Controller
 
             if ($itemsToUpdate->isEmpty()) {
                 return response()->json([
-                    'message' => 'All selected items are already assigned to this storage.'
+                    'message' => 'All selected items are already assigned to this storage.',
                 ], 400);
             }
-
 
             $updatedItems = [];
             foreach ($itemsToUpdate as $item) {
@@ -231,7 +217,7 @@ class ItemController extends Controller
                 $newPosition = Item::getNextAvailablePosition($storageId);
                 $item->update([
                     'storage_id' => $storageId,
-                    'position' => $newPosition
+                    'position' => $newPosition,
                 ]);
 
                 $updatedItems[] = $item->id;
@@ -246,6 +232,7 @@ class ItemController extends Controller
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'message' => 'Error while assigning items.',
                 'error' => $e->getMessage(),
@@ -253,15 +240,12 @@ class ItemController extends Controller
         }
     }
 
-
     /**
      * Display a listing of the resource.
-     *
-     * @return \Inertia\Response
      */
     public function public(): \Inertia\Response
     {
-        $role = "GUEST";
+        $role = 'GUEST';
 
         if (Auth::user() != null) {
             $role = Auth::user()->role;
@@ -270,10 +254,10 @@ class ItemController extends Controller
         $user = User::where('role', 'OWNER')->pluck('id')->toarray();
         $tabs = Tab::where('user_id', $user)->orderBy('order', 'asc')->get();
 
-        $items = Item::where("user_id", $user)
-            ->whereNull("sold")
+        $items = Item::where('user_id', $user)
+            ->whereNull('sold')
             ->whereIn('type', ['device', 'accessory'])
-            ->whereNull("hold")
+            ->whereNull('hold')
             ->get();
 
         $items = Item::where('user_id', $user)->whereNull('sold')->whereNull('hold')->get();
@@ -282,31 +266,31 @@ class ItemController extends Controller
 
         foreach ($items as $item) {
             $manufacturerName = trim($item->manufacturer);
-            if (!empty($manufacturerName)) {
+            if (! empty($manufacturerName)) {
                 $count++;
                 $manufacturerExists = false;
                 foreach ($manufacturers as $existingManufacturer) {
-                    if ($existingManufacturer["name"] === $manufacturerName) {
+                    if ($existingManufacturer['name'] === $manufacturerName) {
                         $manufacturerExists = true;
                         break;
                     }
                 }
                 // If the manufacturer doesn't exist, add it to the $manufacturers array
-                if (!$manufacturerExists) {
+                if (! $manufacturerExists) {
                     $count++; // Increments the count
                     $manufacturers[] = [
-                        "id" => $count, // Assigns the value of the variable $count to the key "id"
-                        "name" => $manufacturerName, // Assigns the value of the variable $manufacturerName to the key "name"
+                        'id' => $count, // Assigns the value of the variable $count to the key "id"
+                        'name' => $manufacturerName, // Assigns the value of the variable $manufacturerName to the key "name"
                     ];
                 }
             }
             if ($item->model && strpos($item->model, 'Housing') !== false) {
-                $item->tab = "Housing";
-            } else if ($item->model && strpos($item->model, 'Digitizer') !== false) {
-                $item->tab = "Digitizer";
+                $item->tab = 'Housing';
+            } elseif ($item->model && strpos($item->model, 'Digitizer') !== false) {
+                $item->tab = 'Digitizer';
             } else {
                 $tabItem = TabItem::where('item_id', $item->id)->get();
-                if (!$tabItem->isEmpty()) {
+                if (! $tabItem->isEmpty()) {
                     $item->tab = $tabItem[0]->getTab($tabItem[0]->tab_id)->name;
                 }
             }
@@ -330,14 +314,14 @@ class ItemController extends Controller
         $store = $data['store'] ?? null;
         $notes = $data['notes'] ?? null;
         $itemsInput = $data['items'] ?? [];
-        
+
         // Normalize items - merge with full item data from database
         $itemsNormalized = collect($itemsInput)->map(function ($it) {
             // Convert to array if needed
             if (is_object($it)) {
                 $it = (array) $it;
             }
-            
+
             // If item has an id, fetch the full item data from DB
             if (isset($it['id']) && is_numeric($it['id'])) {
                 $dbItem = Item::find((int) $it['id']);
@@ -346,10 +330,11 @@ class ItemController extends Controller
                     // Override with the frontend data (selling_price and currency)
                     $fullItem['selling_price'] = $it['selling_price'] ?? $fullItem['selling_price'];
                     $fullItem['currency'] = $it['currency'] ?? 'CAD';
+
                     return $fullItem;
                 }
             }
-            
+
             return is_array($it) ? $it : null;
         })->filter()->values();
 
@@ -404,7 +389,7 @@ class ItemController extends Controller
 
         // Determine email destination from items' users or use default
         $destinationEmail = 'will@refreshmobile.ca'; // Default email
-        
+
         // Try to get email from the first item's user
         foreach ($uniqueItems as $item) {
             if (isset($item['user_id']) && $item['user_id']) {
@@ -419,19 +404,19 @@ class ItemController extends Controller
         // Send email with proper error handling
         try {
             Mail::to($destinationEmail)->send(new RequestItems($name, $email, $store, $notes, $uniqueItems));
-            
+
             Log::info('RequestItems email sent successfully', [
                 'incoming_request_id' => $incoming->id,
                 'destination_email' => $destinationEmail,
-                'items_count' => count($uniqueItems)
+                'items_count' => count($uniqueItems),
             ]);
 
             return response()->json([
-                'saved' => true, 
+                'saved' => true,
                 'id' => $incoming->id,
                 'email_sent' => true,
                 'message' => 'Request saved and email sent successfully',
-                'destination_email' => $destinationEmail
+                'destination_email' => $destinationEmail,
             ], 201);
 
         } catch (\Exception $e) {
@@ -439,24 +424,22 @@ class ItemController extends Controller
                 'error' => $e->getMessage(),
                 'incoming_request_id' => $incoming->id,
                 'destination_email' => $destinationEmail,
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
 
             return response()->json([
-                'saved' => true, 
+                'saved' => true,
                 'id' => $incoming->id,
                 'email_sent' => false,
-                'message' => 'Request saved but failed to send email: ' . $e->getMessage(),
-                'destination_email' => $destinationEmail
+                'message' => 'Request saved but failed to send email: '.$e->getMessage(),
+                'destination_email' => $destinationEmail,
             ], 500);
         }
-     
+
     }
 
     /**
      * Return all incoming requests where processed = false
-     *
-     * @return \Illuminate\Http\JsonResponse
      */
     public function incomingRequests(Request $request): \Illuminate\Http\JsonResponse
     {
@@ -498,6 +481,7 @@ class ItemController extends Controller
     {
         $item = IncomingRequestItem::findOrFail($id);
         $item->delete();
+
         return response()->json(['deleted' => true]);
     }
 
@@ -524,6 +508,7 @@ class ItemController extends Controller
         ]);
 
         $receiptUrl = route('sales.receipt', $sale);
+
         return response()->json(['created' => true, 'receipt' => $receiptUrl, 'sale_id' => $sale->id], 201);
     }
 
@@ -534,6 +519,7 @@ class ItemController extends Controller
     {
         $req = IncomingRequest::findOrFail($id);
         $req->delete();
+
         return response()->json(['deleted' => true]);
     }
 
@@ -541,10 +527,10 @@ class ItemController extends Controller
     {
         $user = User::where('role', 'OWNER')->pluck('id')->toarray();
         $tabs = Tab::where('user_id', $user)->orderBy('order', 'asc')->get();
-        $searchTerm = "Digitizer";
+        $searchTerm = 'Digitizer';
 
         $context = [
-            'items' => Item::where("user_id", $user)->whereNull("sold")->whereNull("hold")->where("user_id", $user)->where("model", "LIKE", "%" . $searchTerm . "%")->get(),
+            'items' => Item::where('user_id', $user)->whereNull('sold')->whereNull('hold')->where('user_id', $user)->where('model', 'LIKE', '%'.$searchTerm.'%')->get(),
         ];
 
         return response()->json($context);
@@ -554,10 +540,10 @@ class ItemController extends Controller
     {
         $user = User::where('role', 'OWNER')->pluck('id')->toarray();
         $tabs = Tab::where('user_id', $user)->orderBy('order', 'asc')->get();
-        $searchTerm = "Housing";
+        $searchTerm = 'Housing';
 
         $context = [
-            'items' => Item::where("user_id", $user)->whereNull("sold")->whereNull("hold")->where("model", "LIKE", "%" . $searchTerm . "%")->get(),
+            'items' => Item::where('user_id', $user)->whereNull('sold')->whereNull('hold')->where('model', 'LIKE', '%'.$searchTerm.'%')->get(),
         ];
 
         return response()->json($context);
@@ -568,7 +554,7 @@ class ItemController extends Controller
         $user = User::where('role', 'OWNER')->pluck('id')->toarray();
         $tabItems = TabItem::where('tab_id', $id)->pluck('item_id');
         $context = [
-            'items' => Item::whereNull("sold")->whereNull("hold")->whereIn("id", $tabItems)->get(),
+            'items' => Item::whereNull('sold')->whereNull('hold')->whereIn('id', $tabItems)->get(),
         ];
 
         return response()->json($context);
@@ -582,26 +568,22 @@ class ItemController extends Controller
     public function list(): \Illuminate\Http\JsonResponse
     {
         // Con el nuevo scope global, ya no necesitamos filtrar por user_id
-        return response()->json(Item::whereNull("sold")->whereNull("hold")->get());
+        return response()->json(Item::whereNull('sold')->whereNull('hold')->get());
     }
 
     /**
      * Show the form for creating a new resource.
-     *
-     * @return \Inertia\Response
      */
     public function create(): \Inertia\Response
     {
         $user = Auth::user();
         $customFields = CustomField::where('user_id', $user->id)->get();
-        return Inertia::render("Items/CreateEdit", ['fields' => $customFields]);
+
+        return Inertia::render('Items/CreateEdit', ['fields' => $customFields]);
     }
 
     /**
      * Store a newly created resource in storage.
-     *
-     * @param ItemForm $request
-     * @return \Illuminate\Http\JsonResponse
      */
     public function store(ItemForm $request): \Illuminate\Http\JsonResponse
     {
@@ -609,14 +591,15 @@ class ItemController extends Controller
 
         $items = $request->input('items');
         $draftId = $request->input('draft_id');
-        
+
         // Convert items to arrays if they are objects (e.g., DraftItem models)
         $items = collect($items)->map(function ($item) {
             if (is_object($item)) {
-                return is_a($item, 'Illuminate\Database\Eloquent\Model') 
-                    ? $item->toArray() 
+                return is_a($item, 'Illuminate\Database\Eloquent\Model')
+                    ? $item->toArray()
                     : (array) $item;
             }
+
             return $item;
         })->toArray();
 
@@ -628,14 +611,14 @@ class ItemController extends Controller
 
         // Build occupied positions map and check for conflicts
         $result = $this->buildOccupiedMapAndCheckConflicts($items, $draftId);
-        
+
         if ($result['has_conflicts']) {
             return response()->json([
                 'message' => 'Storage position conflicts detected',
                 'conflicts' => $result['conflicts'],
             ], 422);
         }
-        
+
         if ($result['error']) {
             return response()->json(['message' => $result['error']], 422);
         }
@@ -644,53 +627,54 @@ class ItemController extends Controller
         $items = $result['items'];
 
         $created = [];
-        
+
         try {
             DB::beginTransaction();
-            
+
             foreach ($items as $item) {
                 $item['user_id'] = Auth::user()->id;
                 $item['shop_id'] = $shopId;
-                
+
                 // Set default type if null
                 if (empty($item['type'])) {
                     $item['type'] = 'device';
                 }
-                
+
                 // Append current time to date if only Y-m-d format
-                if (!empty($item['date']) && strlen($item['date']) === 10) {
+                if (! empty($item['date']) && strlen($item['date']) === 10) {
                     $item['date'] = Carbon::createFromFormat('Y-m-d', $item['date'])
                         ->setTimeFromTimeString(Carbon::now()->toTimeString())
                         ->format('Y-m-d H:i:s');
                 }
-                
+
                 $created[] = Item::create($item);
             }
-            
+
             DB::commit();
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error("Error creating items", ['error' => $e->getMessage()]);
+            Log::error('Error creating items', ['error' => $e->getMessage()]);
+
             return response()->json([
                 'message' => 'Error creating items',
                 'error' => $e->getMessage(),
             ], 500);
         }
-        
+
         return response()->json($created, 201);
     }
 
     /**
      * Build a map of occupied positions and check for conflicts.
-     * 
+     *
      * Logic:
      * 1. Get all occupied positions from active items in inventory
      * 2. Get occupied positions from other drafts (excluding current draft_id)
      * 3. For each incoming item, check if its position conflicts
      * 4. If conflict, suggest a new available position
-     * 
-     * @param array $items Items to check
-     * @param int|null $draftId Current draft ID to exclude from conflict check
+     *
+     * @param  array  $items  Items to check
+     * @param  int|null  $draftId  Current draft ID to exclude from conflict check
      * @return array ['items' => processed items, 'has_conflicts' => bool, 'conflicts' => array, 'error' => string|null]
      */
     private function buildOccupiedMapAndCheckConflicts(array $items, ?int $draftId = null): array
@@ -698,7 +682,7 @@ class ItemController extends Controller
         $storageIds = collect($items)->pluck('storage_id')->filter()->unique()->toArray();
         $conflicts = [];
 
-        if (!empty($storageIds)) {
+        if (! empty($storageIds)) {
             // Clean up sold items that still have active positions
             Item::whereIn('storage_id', $storageIds)
                 ->whereNotNull('position')
@@ -707,13 +691,13 @@ class ItemController extends Controller
                     'sold_storage_id' => DB::raw('storage_id'),
                     'sold_position' => DB::raw('position'),
                     'storage_id' => null,
-                    'position' => null
+                    'position' => null,
                 ]);
         }
 
         // Use unified method to get all occupied positions
         $occupiedByStorage = Storage::getOccupiedPositionsBatch($storageIds, $draftId);
-        
+
         // Convert to flip format for O(1) lookup
         $occupiedFlipped = [];
         foreach ($occupiedByStorage as $sid => $positions) {
@@ -728,28 +712,30 @@ class ItemController extends Controller
 
         // Process items and check for conflicts
         foreach ($items as $idx => &$item) {
-            if (empty($item['storage_id'])) continue;
+            if (empty($item['storage_id'])) {
+                continue;
+            }
 
             $sid = $item['storage_id'];
             $pos = $item['position'] ?? null;
             $limit = $storageLimits[$sid] ?? 999999;
 
             // Initialize tracking for this storage if needed
-            if (!isset($occupiedFlipped[$sid])) {
+            if (! isset($occupiedFlipped[$sid])) {
                 $occupiedFlipped[$sid] = [];
             }
-            if (!isset($batchAssigned[$sid])) {
+            if (! isset($batchAssigned[$sid])) {
                 $batchAssigned[$sid] = [];
             }
 
             $hasConflict = false;
-            
+
             // Check if position is occupied (from DB or from batch)
             if ($pos && (isset($occupiedFlipped[$sid][$pos]) || isset($batchAssigned[$sid][$pos]))) {
                 $hasConflict = true;
             }
 
-            if ($hasConflict || !$pos) {
+            if ($hasConflict || ! $pos) {
                 // Find next available position
                 $found = false;
                 $newSid = $sid;
@@ -757,7 +743,7 @@ class ItemController extends Controller
 
                 // 1. Try same storage first
                 for ($p = 1; $p <= $limit; $p++) {
-                    if (!isset($occupiedFlipped[$sid][$p]) && !isset($batchAssigned[$sid][$p])) {
+                    if (! isset($occupiedFlipped[$sid][$p]) && ! isset($batchAssigned[$sid][$p])) {
                         $newPos = $p;
                         $found = true;
                         break;
@@ -765,7 +751,7 @@ class ItemController extends Controller
                 }
 
                 // 2. If storage is full, try other storages using unified method
-                if (!$found) {
+                if (! $found) {
                     // Build additional occupied from batch assignments
                     $additionalOccupied = [];
                     foreach ($batchAssigned as $sId => $positions) {
@@ -773,19 +759,19 @@ class ItemController extends Controller
                             $additionalOccupied[] = ['storage_id' => $sId, 'position' => $pPos];
                         }
                     }
-                    
+
                     $suggestion = Storage::findFirstAvailablePosition($draftId, $additionalOccupied);
 
                     if ($suggestion) {
                         $newSid = $suggestion['storage_id'];
                         $newPos = $suggestion['position'];
                         $found = true;
-                        
+
                         // Initialize tracking for the new storage if needed
-                        if (!isset($occupiedFlipped[$newSid])) {
+                        if (! isset($occupiedFlipped[$newSid])) {
                             $occupiedFlipped[$newSid] = [];
                         }
-                        if (!isset($batchAssigned[$newSid])) {
+                        if (! isset($batchAssigned[$newSid])) {
                             $batchAssigned[$newSid] = [];
                         }
                     }
@@ -794,12 +780,12 @@ class ItemController extends Controller
                 if ($found) {
                     // Mark the new position as assigned in batch
                     $batchAssigned[$newSid][$newPos] = true;
-                    
+
                     // Get storage name for message
                     $suggestedStorageName = Storage::find($newSid)->name ?? "Storage {$newSid}";
                     $originalStorageName = Storage::find($sid)->name ?? "Storage {$sid}";
-                    
-                    $msg = $hasConflict 
+
+                    $msg = $hasConflict
                         ? "Position {$pos} in {$originalStorageName} is occupied. Suggested: {$suggestedStorageName} position {$newPos}"
                         : "No position assigned. Suggested: {$suggestedStorageName} position {$newPos}";
 
@@ -811,15 +797,16 @@ class ItemController extends Controller
                         'original_position' => $pos,
                         'suggested_storage_id' => $newSid,
                         'suggested_position' => $newPos,
-                        'message' => $msg
+                        'message' => $msg,
                     ];
                 } else {
                     $itemModel = $item['model'] ?? 'Unknown';
+
                     return [
                         'items' => $items,
                         'has_conflicts' => false,
                         'conflicts' => [],
-                        'error' => "All storages are full. Cannot find available position for item #{$idx} ({$itemModel})."
+                        'error' => "All storages are full. Cannot find available position for item #{$idx} ({$itemModel}).",
                     ];
                 }
             } else {
@@ -831,9 +818,9 @@ class ItemController extends Controller
 
         return [
             'items' => $items,
-            'has_conflicts' => !empty($conflicts),
+            'has_conflicts' => ! empty($conflicts),
             'conflicts' => $conflicts,
-            'error' => null
+            'error' => null,
         ];
     }
 
@@ -843,20 +830,20 @@ class ItemController extends Controller
         $validated = $request->validated();
         $billData = $request->input('bill');
         $itemsData = $request->input('items');
-        
+
         // Get draft_id if provided (for excluding from conflict check)
         $draftId = $request->has('draft_id') ? $request->draft_id : null;
 
         // Use the reusable method for conflict detection
         $conflictResult = $this->buildOccupiedMapAndCheckConflicts($itemsData, $draftId);
-        
+
         // Handle error (all storages full)
         if ($conflictResult['error']) {
             return response()->json([
                 'message' => $conflictResult['error'],
             ], 422);
         }
-        
+
         // Return conflicts to frontend if any
         if ($conflictResult['has_conflicts']) {
             return response()->json([
@@ -864,26 +851,25 @@ class ItemController extends Controller
                 'conflicts' => $conflictResult['conflicts'],
             ], 422);
         }
-        
+
         // Use the updated items data from conflict check
         $itemsData = $conflictResult['items'];
 
-
-        
-         // sum subtotals of items
-        $sumSubtotals = collect($itemsData)->sum(fn($i) => $i['subtotal'] ?? 0);
+        // sum subtotals of items
+        $sumSubtotals = collect($itemsData)->sum(fn ($i) => $i['subtotal'] ?? 0);
 
         // sum of totals of items
-        $sumTotals = collect($itemsData)->sum(function($i) use ($billData) {
-        if (isset($i['cost'])) {
-            return $i['cost'];
-        }
-        // if cost is not set, calculate it based on tax + subtotal
-        $taxPerc = $billData['tax_id']
-            ? Tax::find($billData['tax_id'])->percentage
-            : 0;
-        return ($i['subtotal'] ?? 0) * (1 + $taxPerc / 100);
-    });
+        $sumTotals = collect($itemsData)->sum(function ($i) use ($billData) {
+            if (isset($i['cost'])) {
+                return $i['cost'];
+            }
+            // if cost is not set, calculate it based on tax + subtotal
+            $taxPerc = $billData['tax_id']
+                ? Tax::find($billData['tax_id'])->percentage
+                : 0;
+
+            return ($i['subtotal'] ?? 0) * (1 + $taxPerc / 100);
+        });
         // Convertir fecha (Y-m-d) a datetime agregando la hora actual
         $billDateTime = Carbon::createFromFormat('Y-m-d', $billData['date'])
             ->setTimeFromTimeString(Carbon::now()->toTimeString());
@@ -905,38 +891,39 @@ class ItemController extends Controller
         DB::beginTransaction();
         try {
 
-        $user = $request->user(); 
-        $company = $user->company;
-        $shops = $company?->shops;
+            $user = $request->user();
+            $company = $user->company;
+            $shops = $company?->shops;
 
-        $firstShop = $shops[0] ?? null;
+            $firstShop = $shops[0] ?? null;
 
-        $shopId = $firstShop ? $firstShop->id : null;
+            $shopId = $firstShop ? $firstShop->id : null;
 
-        $itemsCreated = [];
-        foreach ($itemsData as $item) {
-            $item['user_id'] = Auth::user()->id;
-            $item['shop_id'] = $shopId;
-            
-            // Establecer type por defecto si es null
-            if (empty($item['type'])) {
-                $item['type'] = 'device';
+            $itemsCreated = [];
+            foreach ($itemsData as $item) {
+                $item['user_id'] = Auth::user()->id;
+                $item['shop_id'] = $shopId;
+
+                // Establecer type por defecto si es null
+                if (empty($item['type'])) {
+                    $item['type'] = 'device';
+                }
+
+                $itemsCreated[] = Item::create($item);
             }
-            
-            $itemsCreated[] = Item::create($item);
-        }
-        $createdBill = Bill::create($newBill);
+            $createdBill = Bill::create($newBill);
 
-        DB::commit();
+            DB::commit();
 
-        return response()->json([
-            'bill'  => $createdBill,
-            'items' => $itemsCreated,
-        ], 201);
-    } catch (\Throwable $e) {
-        DB::rollBack();
-        return response()->json([
-                'error'   => 'Error al crear Bill + Items',
+            return response()->json([
+                'bill' => $createdBill,
+                'items' => $itemsCreated,
+            ], 201);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'error' => 'Error al crear Bill + Items',
                 'message' => $e->getMessage(),
             ], 500);
         }
@@ -946,160 +933,139 @@ class ItemController extends Controller
      * Show the form for editing the specified resource.
      *
      * @param  \App\Models\Item  $item
-     * @return \Inertia\Response
      */
     public function edit($item): \Inertia\Response
     {
         $user = Auth::user();
         $customFields = CustomField::where('user_id', $user->id)->get();
         $ids = base64_decode(urldecode($item));
-        $ids = explode(";", $ids);
-        $items = Item::whereIn("id", $ids)->get();
+        $ids = explode(';', $ids);
+        $items = Item::whereIn('id', $ids)->get();
+
         return Inertia::render('Inventory/Edit', [
-            "editing" => $items,
-            "fields" => $customFields,
+            'editing' => $items,
+            'fields' => $customFields,
         ]);
     }
 
     /**
      * Update the specified resource in storage.
-     *
-     * @param  Request  $request
-     * @return \Illuminate\Http\JsonResponse
      */
     public function update(Request $request): \Illuminate\Http\JsonResponse
     {
-        $items = $request->input("items");
+        $items = $request->input('items');
         $updated = [];
 
         foreach ($items as $item) {
             $item['user_id'] = Auth::user()->id;
 
-            $object = Item::updateOrCreate(['id' => @$item["id"]], $item);
+            $object = Item::updateOrCreate(['id' => @$item['id']], $item);
             $updated[] = $object;
         }
 
         return response()->json($updated);
     }
 
-
     /**
      * Deletes multiple resource.
-     *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
      */
     public function obliterate(Request $request): \Illuminate\Http\JsonResponse
     {
-        $items = collect($request->input())->pluck("id");
+        $items = collect($request->input())->pluck('id');
         $tabitem = TabItem::whereIn('item_id', $items->toArray())->delete();
         $tabhistory = TabHistory::whereIn('item_id', $items->toArray())->delete();
         $deleted = Item::destroy($items->toArray());
+
         return response()->json($deleted);
     }
 
     /**
      * Updates multiple resource.
-     *
-     * @param Request $request
-     * @return \Inertia\Response
      */
     public function correct(Request $request): \Inertia\Response
     {
         $ids = collect($request->input())->toArray();
-        $items = Item::whereIn("id", $ids)->get();
+        $items = Item::whereIn('id', $ids)->get();
+
         return Inertia::render('Items/CreateEdit', [
-            "editing" => $items
+            'editing' => $items,
         ]);
     }
 
-
     /**
      * Generates a pdf label for a single resource.
-     *
-     * @param Item $item
-     * @return \Illuminate\Http\Response
      */
     public function label(Item $item): \Illuminate\Http\Response
     {
-        $pdf = Pdf::loadView("label", compact("item"))->setOptions(["defaultFont" => "sans-serif", "isRemoteEnabled" => "true"])->setPaper("a5", "portrait");
+        $pdf = Pdf::loadView('label', compact('item'))->setOptions(['defaultFont' => 'sans-serif', 'isRemoteEnabled' => 'true'])->setPaper('a5', 'portrait');
+
         return $pdf->stream();
     }
 
     public function getLabels(string $items): \Illuminate\Http\Response
-{
-    // “1,2,5” → [1,2,5]
-    $ids = array_filter(explode(',', $items), fn($id) => is_numeric($id));
-    $records = Item::whereIn('id', $ids)->get();
+    {
+        // “1,2,5” → [1,2,5]
+        $ids = array_filter(explode(',', $items), fn ($id) => is_numeric($id));
+        $records = Item::whereIn('id', $ids)->get();
 
-    // Cargamos una vista que incluye cada etiqueta + salto de página
-    $pdf = Pdf::loadView('labels', compact('records'));
+        // Cargamos una vista que incluye cada etiqueta + salto de página
+        $pdf = Pdf::loadView('labels', compact('records'));
 
-    return $pdf->stream('labels.pdf');
-}
+        return $pdf->stream('labels.pdf');
+    }
 
-public function getLabelsNewItems(Request $request): \Illuminate\Http\Response
-{
-    $data = $request->validate([
-      'records'       => 'required|array',
-      // etc.
-    ]);
-    Log::info("Generating labels for new items", ['data' => $data]);
-    // Usa directamente los datos de draft items, sin buscar en DB
-    $items = collect($data['records'])->map(function($r) {
-        return (object)$r;
-    });
+    public function getLabelsNewItems(Request $request): \Illuminate\Http\Response
+    {
+        $data = $request->validate([
+            'records' => 'required|array',
+            // etc.
+        ]);
+        Log::info('Generating labels for new items', ['data' => $data]);
+        // Usa directamente los datos de draft items, sin buscar en DB
+        $items = collect($data['records'])->map(function ($r) {
+            return (object) $r;
+        });
 
-    Log::info("Generating labels for new items", ['records' => $items]);
-    // PASA un array asociativo:
-    $pdf = Pdf::loadView('labels', ['records' => $items]);
+        Log::info('Generating labels for new items', ['records' => $items]);
+        // PASA un array asociativo:
+        $pdf = Pdf::loadView('labels', ['records' => $items]);
 
-    return $pdf->stream('labels.pdf');
-}
-
-
-
+        return $pdf->stream('labels.pdf');
+    }
 
     /**
      * Puts on hold every given item.
-     *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
      */
     public function hold(Request $request): \Illuminate\Http\JsonResponse
     {
-        $ids = collect($request->input("data"))->pluck("id");
-        $customer = $request->input("customer");
+        $ids = collect($request->input('data'))->pluck('id');
+        $customer = $request->input('customer');
         $tabItems = TabItem::whereIn('item_id', $ids)->get();
         foreach ($tabItems as $tI) {
-            $tabHistory = new TabHistory();
+            $tabHistory = new TabHistory;
             $tabHistory->tab_id = $tI->tab_id;
             $tabHistory->item_id = $tI->item_id;
             $tabHistory->save();
         }
         $removeTabItem = TabItem::whereIn('item_id', $ids)->delete();
-        $items = Item::whereIn("id", $ids)
+        $items = Item::whereIn('id', $ids)
             ->with(['storage:id,name,limit'])
-            ->update(["hold" => Carbon::now(), "customer" => $customer]);
+            ->update(['hold' => Carbon::now(), 'customer' => $customer]);
 
         return response()->json($items);
     }
 
-
     /**
      * removes on hold every given item.
-     *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
      */
     public function unhold(Request $request): \Illuminate\Http\JsonResponse
     {
-        $ids = collect($request->input("data"))->pluck("id");
-        $items = Item::whereIn("id", $ids)->update(["hold" => null]);
+        $ids = collect($request->input('data'))->pluck('id');
+        $items = Item::whereIn('id', $ids)->update(['hold' => null]);
 
         $tabHistories = TabHistory::whereIn('item_id', $ids)->get();
         foreach ($tabHistories as $tH) {
-            $tabItem = new TabItem();
+            $tabItem = new TabItem;
             $tabItem->tab_id = $tH->tab_id;
             $tabItem->item_id = $tH->item_id;
             $tabItem->save();
@@ -1121,7 +1087,7 @@ public function getLabelsNewItems(Request $request): \Illuminate\Http\Response
 
         // Con el nuevo scope global, ya no necesitamos filtrar por user_id
         $context = [
-            'items' => Item::with(['storage:id,name,limit', 'vendor:id,vendor'])->whereNull("sold")->whereNotNull("hold")->get(),
+            'items' => Item::with(['storage:id,name,limit', 'vendor:id,vendor'])->whereNull('sold')->whereNotNull('hold')->get(),
             'tabs' => $tabs,
             'fields' => $customFields,
         ];
@@ -1142,14 +1108,12 @@ public function getLabelsNewItems(Request $request): \Illuminate\Http\Response
             $neworder = 1;
         }
 
-
         $tab = $request->tab;
         $tabenter = new Tab;
         $tabenter->user_id = $user->id;
         $tabenter->name = $tab;
         $tabenter->order = $neworder;
         $tabenter->save();
-
 
         $tabs = Tab::where('user_id', $user->id)->get();
         // if (Auth::user()->role == 'USER') {
@@ -1175,14 +1139,14 @@ public function getLabelsNewItems(Request $request): \Illuminate\Http\Response
         try {
             $tab = $request->tab;
             $itemId = $request->item;
-            
+
             // Clear the hold status when moving an item to a tab
             $item = Item::find($itemId);
             if ($item && $item->hold !== null) {
                 $item->hold = null;
                 $item->save();
             }
-            
+
             $tabitem = TabItem::where('item_id', $itemId)->first();
             if ($tabitem) {
                 $tabitem->item_id = $itemId;
@@ -1203,7 +1167,7 @@ public function getLabelsNewItems(Request $request): \Illuminate\Http\Response
 
     public function tabMoveAll(Request $request)
     {
-        $items = collect($request->input('item'))->pluck("id");
+        $items = collect($request->input('item'))->pluck('id');
         $tab = $request->tab;
         foreach ($items as $item) {
             $check = TabItem::where('item_id', $item)->where('tab_id', $tab)->count();
@@ -1215,7 +1179,6 @@ public function getLabelsNewItems(Request $request): \Illuminate\Http\Response
                 $tabitem->save();
             }
         }
-
 
         // if (Auth::user()->role == 'USER') {
         //     $context = [
@@ -1233,8 +1196,6 @@ public function getLabelsNewItems(Request $request): \Illuminate\Http\Response
 
     /**
      * Return Item to Active Inventory
-     *
-     *
      */
     public function tabreturnmove(Request $request)
     {
@@ -1250,7 +1211,6 @@ public function getLabelsNewItems(Request $request): \Illuminate\Http\Response
         }
     }
 
-
     public function tabReorder(Request $request)
     {
         $user = Auth::user();
@@ -1258,10 +1218,10 @@ public function getLabelsNewItems(Request $request): \Illuminate\Http\Response
         foreach ($request->tab as $key => $tab) {
             $tabreorder = Tab::where('id', $tab['id'])->update(['order' => $taborder[$key]]);
         }
+
         // dd('yes');
         return response()->json('success');
     }
-
 
     public function tabRemove(Request $request)
     {
@@ -1279,8 +1239,6 @@ public function getLabelsNewItems(Request $request): \Illuminate\Http\Response
 
         return response()->json($context);
     }
-
-
 
     public function tabItems($id)
     {
@@ -1311,7 +1269,7 @@ public function getLabelsNewItems(Request $request): \Illuminate\Http\Response
             'current_tab' => $id,
             'fields' => $customFields,
         ];
-        
+
         $checktab = Tab::where('id', $id)->first();
         // dd($context);
         if ($checktab->user_id == $user->id) {
@@ -1322,21 +1280,21 @@ public function getLabelsNewItems(Request $request): \Illuminate\Http\Response
     public function refundItem(Request $request)
     {
         try {
-            $itemArray = $request->input("item");
-            $item = Item::find($itemArray["id"]);
+            $itemArray = $request->input('item');
+            $item = Item::find($itemArray['id']);
             $customer = Customer::where('customer', $item->customer)->first();
             $sale = Sale::find($item->sale_id);
             $value = $item->selling_price - $sale->discount;
-            //Subtotal Calculation
+            // Subtotal Calculation
             $subtotal = $sale->subtotal - $value;
-            //Tax Calculation
+            // Tax Calculation
             $tax = $value * ($sale->tax / 100);
-            //Total Calculation
+            // Total Calculation
             $total = $sale->total - ($value + $tax);
-            //Balance Calculation
+            // Balance Calculation
             $balance = $sale->balance_remaining - ($value + $tax);
             $balance = $balance <= 0 ? 0 : $balance;
-            //Flat Tax
+            // Flat Tax
             $flatTax = $sale->flatTax - $tax;
             $paid = 0;
             if ($sale->amount_paid >= $total) {
@@ -1344,29 +1302,24 @@ public function getLabelsNewItems(Request $request): \Illuminate\Http\Response
             } else {
                 $paid = 0;
             }
-            Customer::where("id", $customer->id)->update([
-                "credit" => $item->selling_price + $customer->credit,
+            Customer::where('id', $customer->id)->update([
+                'credit' => $item->selling_price + $customer->credit,
             ]);
 
             ReturnItems::create([
-                "item" => $item->id,
-                "customer" => $customer->id,
-                "credit" => $item->selling_price,
-                "model" => $item->model,
-                "imei" => $item->imei,
+                'item' => $item->id,
+                'customer' => $customer->id,
+                'credit' => $item->selling_price,
+                'model' => $item->model,
+                'imei' => $item->imei,
             ]);
 
-            Item::where("id", $item->id)->update([
-                "sale_id" => null,
-                "sold" => null,
-            ]);
-
-            Sale::where("id", $item->sale_id)->update([
-                "subtotal" => $subtotal,
-                "total" => $total,
-                "flatTax" => $flatTax,
-                "balance_remaining" => $balance,
-                "paid" => $paid,
+            Sale::where('id', $item->sale_id)->update([
+                'subtotal' => $subtotal,
+                'total' => $total,
+                'flatTax' => $flatTax,
+                'balance_remaining' => $balance,
+                'paid' => $paid,
             ]);
 
             if ($item->removeSale()) {
@@ -1381,9 +1334,6 @@ public function getLabelsNewItems(Request $request): \Illuminate\Http\Response
 
     /**
      * Removes a resource from a Sale and back into the inventory
-     *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
      */
     public function returnItem(Request $request): \Illuminate\Http\JsonResponse
     {
@@ -1398,16 +1348,16 @@ public function getLabelsNewItems(Request $request): \Illuminate\Http\Response
                 $sale = Sale::find($item->sale_id);
                 if ($sale != null) {
                     $value = $item->selling_price - $sale->discount;
-                    //Subtotal Calculation
+                    // Subtotal Calculation
                     $subtotal = $sale->subtotal - $value;
-                    //Tax Calculation
+                    // Tax Calculation
                     $tax = $value * ($sale->tax / 100);
-                    //Total Calculation
+                    // Total Calculation
                     $total = $sale->total - ($value + $tax);
-                    //Balance Calculation
+                    // Balance Calculation
                     $balance = $sale->balance_remaining - ($value + $tax);
                     $balance = $balance <= 0 ? 0 : $balance;
-                    //Flat Tax
+                    // Flat Tax
                     $flatTax = $sale->flatTax - $tax;
                     $paid = 0;
                     if ($sale->amount_paid >= $total) {
@@ -1416,17 +1366,16 @@ public function getLabelsNewItems(Request $request): \Illuminate\Http\Response
                         $paid = 0;
                     }
 
-                    Sale::where("id", $item->sale_id)->update([
-                        "subtotal" => $subtotal,
-                        "total" => $total,
-                        "flatTax" => $flatTax,
-                        "balance_remaining" => $balance,
-                        "paid" => $paid,
+                    Sale::where('id', $item->sale_id)->update([
+                        'subtotal' => $subtotal,
+                        'total' => $total,
+                        'flatTax' => $flatTax,
+                        'balance_remaining' => $balance,
+                        'paid' => $paid,
                     ]);
                 }
 
-
-                if ($item->user_id == NULL) {
+                if ($item->user_id == null) {
                     $item->user_id = Auth::user()->id;
                     $item->save(['user_id']);
                 }
@@ -1442,7 +1391,7 @@ public function getLabelsNewItems(Request $request): \Illuminate\Http\Response
 
     public function excelCreate()
     {
-        return Inertia::render("Inventory/BulkCreate/ItemsBulkCreate");
+        return Inertia::render('Inventory/BulkCreate/ItemsBulkCreate');
     }
 
     public function excelStore(ItemExcelForm $request)
@@ -1450,6 +1399,7 @@ public function getLabelsNewItems(Request $request): \Illuminate\Http\Response
         try {
             $check = $request->validated();
             $test = Excel::import(new ItemsImport, $check['file']);
+
             return response()->json($test, 201);
         } catch (Exception $e) {
             return response()->json($e->getMessage(), 500);
@@ -1463,6 +1413,7 @@ public function getLabelsNewItems(Request $request): \Illuminate\Http\Response
             ->selectRaw('CONCAT(vendor, "#", id) as formatted_vendor')
             ->pluck('formatted_vendor')
             ->toArray();
+
         return Excel::download(new ItemsExample($vendors), 'items.xlsx');
     }
 
@@ -1471,16 +1422,16 @@ public function getLabelsNewItems(Request $request): \Illuminate\Http\Response
      */
     public function search(Request $request): JsonResponse
     {
-        $q    = $request->query('q', '');
+        $q = $request->query('q', '');
         $user = Auth::user();
         $limit = (int) $request->query('limit', 10);
 
         // Con el nuevo scope global, ya no necesitamos filtrar por user_id
         $items = Item::with(['storage:id,name', 'vendor:id,vendor'])
-            ->when($q, fn($query) => $query->where(function($q2) use ($q) {
-                $q2->where('model',  'like', "%{$q}%")
-                   ->orWhere('imei',   'like', "%{$q}%")
-                   ->orWhere('colour', 'like', "%{$q}%");
+            ->when($q, fn ($query) => $query->where(function ($q2) use ($q) {
+                $q2->where('model', 'like', "%{$q}%")
+                    ->orWhere('imei', 'like', "%{$q}%")
+                    ->orWhere('colour', 'like', "%{$q}%");
             }))
             ->limit($limit)
             ->get();
@@ -1496,7 +1447,7 @@ public function getLabelsNewItems(Request $request): \Illuminate\Http\Response
     public function generateSellingPrice(Request $request)
     {
         $data = $request->input('items', []);
-        if (!is_array($data)) {
+        if (! is_array($data)) {
             return response()->json(['error' => 'Invalid payload'], 400);
         }
 
@@ -1519,25 +1470,33 @@ public function getLabelsNewItems(Request $request): \Illuminate\Http\Response
             // and only from the last 6 months (by created_at or updated_at)
             $sixMonthsAgo = now()->subMonths(6);
             $baseQuery = Item::whereNotNull('selling_price')
-                ->where(function($query) use ($sixMonthsAgo) {
+                ->where(function ($query) use ($sixMonthsAgo) {
                     $query->where('created_at', '>=', $sixMonthsAgo)
-                          ->orWhere('updated_at', '>=', $sixMonthsAgo);
+                        ->orWhere('updated_at', '>=', $sixMonthsAgo);
                 });
             // If the incoming item has no `issues` value (null), restrict matches
             // to items that also have `issues` set to null (exclude items with any issues).
             if ($issues === null) {
                 $baseQuery->whereNull('issues');
-            }    
+            }
 
             // Build dynamic list of available fields for this item
             $available = [];
-            if ($model) $available[] = 'model';
-            if ($battery) $available[] = 'battery';
-            if ($grade) $available[] = 'grade';
-            if ($issues) $available[] = 'issues';
+            if ($model) {
+                $available[] = 'model';
+            }
+            if ($battery) {
+                $available[] = 'battery';
+            }
+            if ($grade) {
+                $available[] = 'grade';
+            }
+            if ($issues) {
+                $available[] = 'issues';
+            }
 
             // No available fields -> cannot match
-            if (!empty($available)) {
+            if (! empty($available)) {
                 // Search using exactly the fields that the incoming item provides
                 $q = clone $baseQuery;
 
@@ -1549,18 +1508,18 @@ public function getLabelsNewItems(Request $request): \Illuminate\Http\Response
                         // try to extract numeric portion (e.g., "85%" or "85")
                         $num = null;
                         if (is_numeric($batteryValue)) {
-                            $num = (int)$batteryValue;
+                            $num = (int) $batteryValue;
                         } else {
                             // strip non-digits
                             preg_match('/(\d{1,3})/', $batteryValue ?? '', $m);
-                            if (!empty($m[1])) {
-                                $num = (int)$m[1];
+                            if (! empty($m[1])) {
+                                $num = (int) $m[1];
                             }
                         }
 
                         if ($num === null) {
                             // fallback to LIKE if we cannot parse a number
-                            $q->where($field, 'like', '%' . ${$field} . '%');
+                            $q->where($field, 'like', '%'.${$field}.'%');
                         } else {
                             if ($num <= 79) {
                                 $q->where($field, '<=', 79);
@@ -1573,23 +1532,23 @@ public function getLabelsNewItems(Request $request): \Illuminate\Http\Response
                         }
                     } else {
                         $value = ${$field};
-                        $q->where($field, 'like', '%' . $value . '%');
+                        $q->where($field, 'like', '%'.$value.'%');
                     }
                 }
 
                 // Clone the query before consuming it with first()/get()
                 $qForMatch = (clone $q)
-                ->orderByRaw('CASE WHEN sold IS NULL THEN 0 ELSE 1 END ASC')
-                ->orderByDesc('date');
+                    ->orderByRaw('CASE WHEN sold IS NULL THEN 0 ELSE 1 END ASC')
+                    ->orderByDesc('date');
 
                 $qForList = (clone $qForMatch);
 
-                $match = $qForMatch->first(['id','selling_price', 'model']);
-                $completelist = $qForList->get(['id','selling_price', 'model', 'battery', 'grade', 'issues', 'created_at', 'updated_at', 'sold']);
-                
+                $match = $qForMatch->first(['id', 'selling_price', 'model']);
+                $completelist = $qForList->get(['id', 'selling_price', 'model', 'battery', 'grade', 'issues', 'created_at', 'updated_at', 'sold']);
+
                 Log::info('generateSellingPrice all matches found', [
                     'total_matches' => $completelist->count(),
-                    'matches' => $completelist->toArray()
+                    'matches' => $completelist->toArray(),
                 ]);
 
                 if ($match) {
@@ -1612,20 +1571,20 @@ public function getLabelsNewItems(Request $request): \Illuminate\Http\Response
             $item['selling_price'] = $foundPrice;
             $updated[] = $item;
         }
+
         return response()->json(['items' => $updated]);
     }
 
     /**
      * API: devuelve solo los IDs de los items que pertenecen a la tab indicada.
      *
-     * @param int|string $id
-     * @return \Illuminate\Http\JsonResponse
+     * @param  int|string  $id
      */
     public function getTabItems($id): JsonResponse
     {
         try {
             $tab = Tab::find($id);
-            if (!$tab) {
+            if (! $tab) {
                 return response()->json(['error' => 'Tab not found'], 404);
             }
 
@@ -1641,7 +1600,8 @@ public function getLabelsNewItems(Request $request): \Illuminate\Http\Response
 
             return response()->json(['items' => $items], 200);
         } catch (\Throwable $e) {
-            Log::error('getTabItems error: ' . $e->getMessage(), ['tab_id' => $id]);
+            Log::error('getTabItems error: '.$e->getMessage(), ['tab_id' => $id]);
+
             return response()->json(['error' => 'Could not retrieve tab items'], 500);
         }
     }

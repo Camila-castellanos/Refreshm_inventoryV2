@@ -2,14 +2,12 @@
 
 namespace App\Models;
 
+use App\Models\Scopes\CompanyItemScope;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\DB;
-use App\Models\DraftItem;
-use Carbon\Carbon;
-use Illuminate\Support\Facades\Log;
-use App\Models\Scopes\CompanyItemScope;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
@@ -19,15 +17,15 @@ class Item extends Model implements HasMedia
     use HasFactory, InteractsWithMedia;
 
     protected $fillable = [
-        "date", "sale_id", "supplier", "manufacturer", "storage_id", "position",
-        "model", "colour", "battery", "grade",
-        "issues", "cost", "imei", "selling_price",
-        "customer", "sold", "hold", "discount", "tax",
-        "subtotal", "profit", 'user_id', 'vendor_id', "custom_values",
-        "sold_storage_id", "sold_position", "sold_storage_name", 'shop_id',
-        'type', 'product_model_id'
+        'date', 'sale_id', 'supplier', 'manufacturer', 'storage_id', 'position',
+        'model', 'colour', 'battery', 'grade',
+        'issues', 'cost', 'imei', 'selling_price',
+        'customer', 'sold', 'hold', 'discount', 'tax',
+        'subtotal', 'profit', 'user_id', 'vendor_id', 'custom_values',
+        'sold_storage_id', 'sold_position', 'sold_storage_name', 'shop_id',
+        'type', 'product_model_id',
     ];
-    
+
     // Cast date and sold attributes as full datetime
     protected $casts = [
         'date' => 'datetime',
@@ -44,7 +42,7 @@ class Item extends Model implements HasMedia
 
     protected static function booted()
     {
-        static::addGlobalScope(new CompanyItemScope());
+        static::addGlobalScope(new CompanyItemScope);
     }
 
     public function shop(): BelongsTo
@@ -57,12 +55,13 @@ class Item extends Model implements HasMedia
         return $this->belongsTo(Sale::class);
     }
 
-    public function vendor(): BelongsTo 
+    public function vendor(): BelongsTo
     {
         return $this->belongsTo(Vendor::class);
     }
 
-    public function storage() {
+    public function storage()
+    {
         return $this->belongsTo(Storage::class);
     }
 
@@ -85,13 +84,13 @@ class Item extends Model implements HasMedia
                     ->height(300)
                     ->sharpen(10)
                     ->nonQueued();
-                    
+
                 $this->addMediaConversion('preview')
                     ->width(800)
                     ->height(600)
                     ->sharpen(10)
                     ->nonQueued();
-                    
+
                 $this->addMediaConversion('detail')
                     ->width(1200)
                     ->height(900)
@@ -184,9 +183,41 @@ class Item extends Model implements HasMedia
     {
         return $this->vendor ? $this->vendor->vendor : null;
     }
-    
+
     public function removeSale(): bool
     {
+        // Attempt to restore original location if available
+        if ($this->sold_storage_id && $this->sold_position) {
+            // Check if that position is currently free (check both items and drafts)
+            $isOccupiedByItem = self::where('storage_id', $this->sold_storage_id)
+                ->where('position', $this->sold_position)
+                ->where('id', '!=', $this->id) // Exclude self just in case
+                ->exists();
+
+            $isOccupiedByDraft = DraftItem::where('storage_id', $this->sold_storage_id)
+                ->where('storage_position', $this->sold_position)
+                ->exists();
+
+            if (! $isOccupiedByItem && ! $isOccupiedByDraft) {
+                // If free, restore location
+                $this->storage_id = $this->sold_storage_id;
+                $this->position = $this->sold_position;
+
+                // Clear sold history as it is successfully restored
+                $this->sold_storage_id = null;
+                $this->sold_position = null;
+                $this->sold_storage_name = null;
+            } else {
+                // If occupied, ensure active location is null
+                $this->storage_id = null;
+                $this->position = null;
+                // We KEEP sold_storage_id/sold_position for history reference/display
+            }
+        } else {
+            $this->storage_id = null;
+            $this->position = null;
+        }
+
         $this->sale_id = null;
         $this->customer = null;
         $this->sold = null;
@@ -207,21 +238,21 @@ class Item extends Model implements HasMedia
     protected static function boot()
     {
         parent::boot();
-    
+
         static::updating(function ($item) {
             $originalStorageId = $item->getOriginal('storage_id');
             // auto-assign only if newly assigned to storage and no explicit position
             if (is_null($originalStorageId)
-                && !is_null($item->storage_id)
+                && ! is_null($item->storage_id)
                 && is_null($item->position)
             ) {
                 $item->position = self::getNextAvailablePosition($item->storage_id);
             }
             // if the item is being sold and the sale_id is set, set the sold date
-        $originalSaleId = $item->getOriginal('sale_id');
-        if (is_null($originalSaleId) && $item->sale_id) {
-            $item->sold = now();
-        }
+            $originalSaleId = $item->getOriginal('sale_id');
+            if (is_null($originalSaleId) && $item->sale_id) {
+                $item->sold = now();
+            }
         });
         static::creating(function ($item) {
             // auto-assign only if storage set and no position provided
@@ -232,54 +263,55 @@ class Item extends Model implements HasMedia
             }
             // if the item is being sold and the sale_id is set, set the sold date
             if ($item->sale_id && is_null($item->sold)) {
-            $item->sold = now();
+                $item->sold = now();
             }
         });
-
-            
 
     }
 
     public static function getNextAvailablePosition($storageId)
-{
-    
-    // gather occupied positions from saved items and draft items
-    $itemPositions = self::where('storage_id', $storageId)
-        ->whereNotNull('position')
-        ->pluck('position')
-        ->toArray();
-    $draftPositions = DraftItem::where('storage_id', $storageId)
-        ->whereNotNull('storage_position')
-        ->pluck('storage_position')
-        ->toArray();
-    $occupied = array_unique(array_merge($itemPositions, $draftPositions));
-    // find first available starting from 1
-    $position = 1;
-    while (in_array($position, $occupied)) {
-        $position++;
-    }
-    return $position;
-}
+    {
 
-public function getSoldAttributeFallback($value)
-{
-    // Si sold ya tiene valor, retorna ese valor
-    if (!is_null($value)) {
-        return $value;
-    }
-    // Si sold es null y hay relación sale, retorna sale->created_at
-    return $this->sale ? $this->sale->created_at : null;
-}
+        // gather occupied positions from saved items and draft items
+        $itemPositions = self::where('storage_id', $storageId)
+            ->whereNotNull('position')
+            ->pluck('position')
+            ->toArray();
+        $draftPositions = DraftItem::where('storage_id', $storageId)
+            ->whereNotNull('storage_position')
+            ->pluck('storage_position')
+            ->toArray();
+        $occupied = array_unique(array_merge($itemPositions, $draftPositions));
+        // find first available starting from 1
+        $position = 1;
+        while (in_array($position, $occupied)) {
+            $position++;
+        }
 
-/**
- * Serialize dates to ISO8601 in user's timezone.
- */
-protected function serializeDate(\DateTimeInterface $date): string
-{
-    $userTimezone = config('app.user_timezone', config('app.timezone'));
-    $date = Carbon::instance($date)
-        ->setTimezone($userTimezone)
-        ->format('Y-m-d H:i');    
-    return $date;
-}
+        return $position;
+    }
+
+    public function getSoldAttributeFallback($value)
+    {
+        // Si sold ya tiene valor, retorna ese valor
+        if (! is_null($value)) {
+            return $value;
+        }
+
+        // Si sold es null y hay relación sale, retorna sale->created_at
+        return $this->sale ? $this->sale->created_at : null;
+    }
+
+    /**
+     * Serialize dates to ISO8601 in user's timezone.
+     */
+    protected function serializeDate(\DateTimeInterface $date): string
+    {
+        $userTimezone = config('app.user_timezone', config('app.timezone'));
+        $date = Carbon::instance($date)
+            ->setTimezone($userTimezone)
+            ->format('Y-m-d H:i');
+
+        return $date;
+    }
 }

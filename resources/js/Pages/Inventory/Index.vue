@@ -15,10 +15,26 @@
     v-model:visible="showAddItemsToSale"
     @add="addItemsToSale"
   />
+  <Dialog v-model:visible="showHistoryModal" header="Items History" :modal="true" :style="{ width: '50vw' }">
+    <PrimeDataTable :value="historyItems" stripedRows>
+        <Column field="model" header="Model"></Column>
+        <Column field="imei" header="IMEI"></Column>
+        <Column field="location" header="Current Location"></Column>
+        <Column field="history" header="Historical Location">
+            <template #body="slotProps">
+                <span :class="{'text-gray-400 italic': slotProps.data.history === 'No history'}">
+                    {{ slotProps.data.history }}
+                </span>
+            </template>
+        </Column>
+    </PrimeDataTable>
+  </Dialog>
 </template>
 
 <script setup lang="ts">
 import DataTable from "@/Components/DataTable.vue";
+import PrimeDataTable from "primevue/datatable";
+import Column from "primevue/column";
 import ItemsTabs from "@/Components/ItemsTabs.vue";
 import { CustomField, Field, Tab as ITab, Item } from "@/Lib/types";
 import { router } from "@inertiajs/vue3";
@@ -40,6 +56,9 @@ const toast = useToast();
 const dialog = useDialog();
 const showCustomFields = ref(false);
 const showAddItemsToSale = ref(false);
+const showHistoryModal = ref(false);
+const historyItems = ref<any[]>([]);
+
 const props = defineProps({
   items: Array<Item>,
   customers: Array,
@@ -59,6 +78,28 @@ const { getDefaultTableActions } = useInventoryActions(
   assignStorageVisible
 );
 
+const openHistoryModal = () => {
+    historyItems.value = selectedItems.value.map((item: any) => {
+        let history = 'No history';
+        if (item.sold_storage_name && item.sold_position) {
+            history = `${item.sold_storage_name} - ${item.sold_position}`;
+        }
+        
+        let currentLocation = 'N/A';
+        if (item.storage) {
+             currentLocation = `${item.storage.name} - ${item.position}/${item.storage.limit}`;
+        }
+
+        return {
+            model: item.model,
+            imei: item.imei,
+            location: currentLocation,
+            history: history
+        };
+    });
+    showHistoryModal.value = true;
+};
+
 const tableActions = getDefaultTableActions({
   showCustomFields: () => {
     showCustomFields.value = true;
@@ -66,6 +107,14 @@ const tableActions = getDefaultTableActions({
   showAddItemsToSale: () => {
     showAddItemsToSale.value = true;
   },
+  customActions: [
+      {
+          label: 'Check History',
+          icon: 'pi pi-history',
+          action: () => openHistoryModal(),
+          disable: (selectedItems: Item[]) => selectedItems.length === 0
+      }
+  ]
 });
 
 const handleSelection = (selected: Item[]) => {
