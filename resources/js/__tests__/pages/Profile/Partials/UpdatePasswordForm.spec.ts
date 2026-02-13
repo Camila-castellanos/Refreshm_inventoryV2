@@ -120,7 +120,7 @@ describe('Profile/Partials/UpdatePasswordForm.vue', () => {
       const vm = wrapper.vm as any;
       
       const mockFocus = vi.fn();
-      vm.currentPasswordInput = { value: { focus: mockFocus } };
+      vm.currentPasswordInput = { focus: mockFocus };
       
       vm.form.errors.current_password = 'Current password is incorrect';
       
@@ -143,7 +143,7 @@ describe('Profile/Partials/UpdatePasswordForm.vue', () => {
       const vm = wrapper.vm as any;
       
       const mockFocus = vi.fn();
-      vm.passwordInput = { value: { focus: mockFocus } };
+      vm.passwordInput = { focus: mockFocus };
       
       vm.form.errors.password = 'Password must be at least 8 characters';
       

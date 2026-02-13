@@ -65,9 +65,12 @@ describe('Ecommerce/MarketEdit.vue', () => {
   const mockShops = [{ id: 1, name: 'Main Shop' }];
 
   const createWrapper = () => {
+    // Deep clone mockMarket to avoid state pollution between tests
+    const clonedMarket = JSON.parse(JSON.stringify(mockMarket));
+    
     return mount(MarketEdit, {
       props: {
-        market: mockMarket,
+        market: clonedMarket,
         shops: mockShops,
         appUrl: 'http://test.app'
       },
@@ -116,8 +119,9 @@ describe('Ecommerce/MarketEdit.vue', () => {
   });
 
   describe('Banner Management', () => {
-    it('renders existing banners', () => {
+    it('renders existing banners', async () => {
       wrapper = createWrapper();
+      await nextTick();
       const images = wrapper.findAll('img');
       // Should find at least 2 images (banners)
       expect(images.length).toBeGreaterThanOrEqual(2);
