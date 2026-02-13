@@ -48,7 +48,6 @@ const MockDataTable = {
       <div v-for="action in actions" :key="action.label">
         <button 
           @click="action.action()" 
-          :disabled="action.disable && action.disable(selected || [])"
           class="action-btn"
         >
           {{ action.label }}

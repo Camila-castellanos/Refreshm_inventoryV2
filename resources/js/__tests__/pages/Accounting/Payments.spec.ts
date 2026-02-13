@@ -45,6 +45,18 @@ vi.mock('primevue', async () => {
   };
 });
 
+vi.mock('primevue/useconfirm', () => ({
+  useConfirm: () => ({ require: confirmRequireMock })
+}));
+
+vi.mock('primevue/usedialog', () => ({
+  useDialog: () => ({ open: dialogOpenMock })
+}));
+
+vi.mock('primevue/usetoast', () => ({
+  useToast: () => ({ add: vi.fn() })
+}));
+
 const routeMock = vi.fn((name, params) => {
   if (params) return `/${name}/${params}`;
   return `/${name}`;
@@ -89,8 +101,8 @@ describe('Accounting/Payments.vue (Invoices)', () => {
   let wrapper: VueWrapper;
 
   const mockItems = [
-    { id: 1, customer: 'John Doe', total: 500, status: 'Paid' },
-    { id: 2, customer: 'Jane Smith', total: 1200, status: 'Unpaid' }
+    { id: 1, customer: 'John Doe', total: 500, status: 'Paid', sale_id: 101, payments: [], customer_email: [] },
+    { id: 2, customer: 'Jane Smith', total: 1200, status: 'Unpaid', sale_id: 102, payments: [], customer_email: [] }
   ];
 
   const createWrapper = (propsOverride = {}) => {
@@ -283,6 +295,9 @@ describe('Accounting/Payments.vue (Invoices)', () => {
       expect(btn).toBeDefined();
       
       await btn?.trigger('click');
+      
+      // Force next tick to allow dialog to open
+      await nextTick();
       
       expect(confirmRequireMock).toHaveBeenCalled();
       

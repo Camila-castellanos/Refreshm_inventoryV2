@@ -224,7 +224,7 @@ const deleteAndReturn = (item: IPaymentResponse) => {
     accept: () => {
       // request to controller
       axios
-        .post(route("payments.delete", {invoices: [item]}))
+        .post(route("payments.delete"), {invoices: [item]})
         .then(() => {
           toast.add({
             severity: "success",

@@ -519,7 +519,7 @@ onMounted(async () => {
         location: `${storage?.name} - ${item.position}/${storage?.limit}`,
         vendor: vendors.data.find((v: Vendor) => v.id === item.vendor_id)?.vendor || "",
         vendor_id: item.vendor_id || null,
-        date: format(item.date, "yyyy-MM-dd"),
+        date: item.date ? format(item.date, "yyyy-MM-dd") : null,
       };
     })
     : [{}] as ItemWithLocation[];
@@ -1274,6 +1274,7 @@ const pasteOrder = [
 
 // helper to check if a row is "empty"
 function isEmptyRow(row: Record<string, any>): boolean {
+  if (!row) return true;
   return pasteOrder.every(prop => {
     const v = row[prop]
     return v === undefined || v === null || v === ''
@@ -1732,7 +1733,11 @@ function getRangeLimits(range: any) {
     maxCol: maxCol === -Infinity ? null : maxCol,
   };
 }
-      
+
+defineExpose({
+  undo,
+  history
+});
 </script>
 
 <style>

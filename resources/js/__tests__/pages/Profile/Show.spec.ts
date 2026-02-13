@@ -67,7 +67,7 @@ const MockAppLayout = {
 describe('Profile/Show.vue', () => {
   let wrapper: VueWrapper;
 
-  const createWrapper = (props = {}) => {
+  const createWrapper = (props = {}, pageProps = {}) => {
     return mount(Show, {
       props: {
         confirmsTwoFactorAuthentication: false,
@@ -98,7 +98,8 @@ describe('Profile/Show.vue', () => {
                 canManageTwoFactorAuthentication: true,
                 hasAccountDeletionFeatures: true,
                 managesProfilePhotos: true,
-                hasEmailVerification: true
+                hasEmailVerification: true,
+                ...pageProps
               },
               auth: {
                 user: {
@@ -183,22 +184,19 @@ describe('Profile/Show.vue', () => {
     });
 
     it('hides UpdateProfileInformationForm when canUpdateProfileInformation is false', () => {
-      wrapper = createWrapper();
-      wrapper.vm.$page.props.jetstream.canUpdateProfileInformation = false;
+      wrapper = createWrapper({}, { canUpdateProfileInformation: false });
       
       expect(wrapper.findComponent({ name: 'UpdateProfileInformationForm' }).exists()).toBe(false);
     });
 
     it('hides UpdatePasswordForm when canUpdatePassword is false', () => {
-      wrapper = createWrapper();
-      wrapper.vm.$page.props.jetstream.canUpdatePassword = false;
+      wrapper = createWrapper({}, { canUpdatePassword: false });
       
       expect(wrapper.findComponent({ name: 'UpdatePasswordForm' }).exists()).toBe(false);
     });
 
     it('hides DeleteUserForm when hasAccountDeletionFeatures is false', () => {
-      wrapper = createWrapper();
-      wrapper.vm.$page.props.jetstream.hasAccountDeletionFeatures = false;
+      wrapper = createWrapper({}, { hasAccountDeletionFeatures: false });
       
       expect(wrapper.findComponent({ name: 'DeleteUserForm' }).exists()).toBe(false);
     });
