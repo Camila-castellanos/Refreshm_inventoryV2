@@ -113,6 +113,15 @@
                                                 <i class="pi pi-box text-sm"></i>
                                             </Link>
 
+                                            <!-- Orders -->
+                                            <Link
+                                                :href="route('ecommerce.markets.orders', market.id)"
+                                                class="inline-flex items-center justify-center w-8 h-8 rounded-md text-gray-500 hover:text-green-500 transition-colors duration-200 bg-slate-100"
+                                                v-tooltip.top="'Orders'"
+                                            >
+                                                <i class="pi pi-shopping-cart text-sm"></i>
+                                            </Link>
+
                                             <!-- Edit Market -->
                                             <Link
                                                 :href="route('ecommerce.markets.edit', market.id)"

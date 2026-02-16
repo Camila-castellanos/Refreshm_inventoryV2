@@ -289,6 +289,10 @@ Route::middleware([
             Route::post('/{market:id}/item/{item:id}/photos/reorder', [App\Http\Controllers\Ecommerce\MarketItemController::class, 'reorder'])->name('reorder');
         });
 
+        // Ecommerce Orders Routes (under markets)
+        Route::prefix('ecommerce/markets')->name('ecommerce.markets.')->group(function () {
+            Route::get('/{market:id}/orders', [App\Http\Controllers\Ecommerce\OrderController::class, 'index'])->name('orders');
+        });
     });
 });
 
