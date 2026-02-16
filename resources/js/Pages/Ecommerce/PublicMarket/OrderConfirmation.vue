@@ -31,7 +31,30 @@
                         </div>
                         <div>
                             <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mb-1">Customer</h3>
-                            <p class="text-lg font-medium text-gray-900">{{ order.customer }}</p>
+                            <p class="text-lg font-medium text-gray-900">
+                                <span v-if="order.customer_details && order.customer_details.firstName">
+                                    {{ order.customer_details.firstName }} {{ order.customer_details.lastName }}
+                                </span>
+                                <span v-else>{{ order.customer }}</span>
+                            </p>
+                            <div v-if="order.customer_details" class="mt-2 space-y-1">
+                                <p v-if="order.customer_details.email" class="text-sm text-gray-600 flex items-center">
+                                    <i class="pi pi-envelope mr-2 text-gray-400"></i>
+                                    {{ order.customer_details.email }}
+                                </p>
+                                <p v-if="order.customer_details.phone" class="text-sm text-gray-600 flex items-center">
+                                    <i class="pi pi-phone mr-2 text-gray-400"></i>
+                                    {{ order.customer_details.phone }}
+                                </p>
+                            </div>
+                        </div>
+                        <div v-if="order.customer_details && order.customer_details.notes">
+                            <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mb-1">Notes</h3>
+                            <div class="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                                <p class="text-sm text-gray-600 italic">
+                                    "{{ order.customer_details.notes }}"
+                                </p>
+                            </div>
                         </div>
                         <div>
                             <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mb-1">Payment Method</h3>

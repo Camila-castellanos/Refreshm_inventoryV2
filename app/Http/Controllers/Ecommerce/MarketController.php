@@ -659,11 +659,16 @@ class MarketController extends Controller
             // Load sale items and details
             $sale->load(['items.media']);
 
+            // Parse customer info from notes if available
+            $customerName = $sale->customer;
+            $customerDetails = json_decode($sale->notes, true);
+
             return Inertia::render('Ecommerce/PublicMarket/OrderConfirmation', [
                 'market' => $market->getSafeData(),
                 'order' => [
                     'id' => $sale->id,
-                    'customer' => $sale->customer,
+                    'customer' => $customerName,
+                    'customer_details' => $customerDetails,
                     'total' => $sale->total,
                     'subtotal' => $sale->subtotal,
                     'tax' => $sale->tax,

@@ -3,13 +3,14 @@
 namespace App\Http\Controllers\Ecommerce;
 
 use App\Http\Controllers\Controller;
-use App\Models\Customer;
+use App\Mail\OrderConfirmation;
 use App\Models\Ecommerce\Market;
+use App\Models\EcommerceSale;
 use App\Models\Item;
-use App\Models\Sale;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\URL;
 use Stripe\Exception\ApiErrorException;
 use Stripe\StripeClient;
@@ -33,7 +34,27 @@ class CheckoutController extends Controller
         $request->validate([
             'amount' => 'required|numeric|min:1',
             'currency' => 'nullable|string|size:3',
+            'items' => 'required|array|min:1',
+            'items.*.id' => 'required|integer',
+            'customer' => 'required|array',
+            'customer.email' => 'required|email',
+            'customer.firstName' => 'required|string',
+            'customer.lastName' => 'required|string',
+            'customer.phone' => 'required|string',
         ]);
+
+        // Real-time Stock Validation
+        $itemIds = collect($request->items)->pluck('id');
+        $unavailableItems = Item::whereIn('id', $itemIds)
+            ->whereNotNull('sold')
+            ->get();
+
+        if ($unavailableItems->count() > 0) {
+            return response()->json([
+                'error' => 'Some items are no longer available',
+                'unavailable_items' => $unavailableItems->pluck('model'),
+            ], 400);
+        }
 
         $currency = strtolower($market->currency ?? 'usd');
 
@@ -44,6 +65,12 @@ class CheckoutController extends Controller
                 'metadata' => [
                     'market_id' => $market->id,
                     'market_slug' => $slug,
+                    'item_ids' => $itemIds->implode(','),
+                    'customer_email' => $request->customer['email'],
+                    'customer_first_name' => $request->customer['firstName'],
+                    'customer_last_name' => $request->customer['lastName'],
+                    'customer_phone' => $request->customer['phone'],
+                    'customer_notes' => $request->customer['notes'] ?? '',
                 ],
                 'automatic_payment_methods' => [
                     'enabled' => true,
@@ -69,7 +96,6 @@ class CheckoutController extends Controller
      */
     public function storeOrder(Request $request, string $slug)
     {
-        // Load market with shop and its company
         $market = Market::with('shop.company')->where('slug', $slug)->firstOrFail();
 
         $validated = $request->validate([
@@ -97,66 +123,97 @@ class CheckoutController extends Controller
                     'status' => $paymentIntent->status,
                 ], 400);
             }
+
+            // Check if order already exists (to avoid duplicates if webhook already ran)
+            $existingSale = EcommerceSale::where('payment_intent_id', $validated['paymentIntentId'])->first();
+            if ($existingSale) {
+                return $this->orderResponse($slug, $existingSale);
+            }
+
+            $sale = $this->createOrder($market, $paymentIntent, $validated['customer'], collect($validated['items'])->pluck('id')->toArray(), $validated);
+
+            return $this->orderResponse($slug, $sale);
+
         } catch (ApiErrorException $e) {
             Log::error('Stripe Verify Error: '.$e->getMessage());
 
             return response()->json([
                 'error' => 'Failed to verify payment',
             ], 500);
-        }
+        } catch (\Exception $e) {
+            Log::error('Order Finalization Error: '.$e->getMessage());
 
-        return DB::transaction(function () use ($validated, $market, $slug) {
-            // Get the company owner ID
+            return response()->json(['error' => 'Failed to finalize order'], 500);
+        }
+    }
+
+    /**
+     * Core logic to create an order
+     */
+    protected function createOrder($market, $paymentIntent, $customerData, $itemIds, $totals = null)
+    {
+        return DB::transaction(function () use ($market, $paymentIntent, $customerData, $itemIds, $totals) {
             $ownerId = $market->shop->company->owner_id;
 
-            $customer = Customer::updateOrCreate(
-                ['email' => $validated['customer']['email']],
-                [
-                    'first_name' => $validated['customer']['firstName'],
-                    'last_name' => $validated['customer']['lastName'],
-                    'phone' => $validated['customer']['phone'],
-                    'email' => $validated['customer']['email'],
-                    'notes' => $validated['customer']['notes'] ?? null,
-                    'user_id' => $ownerId,
-                    'currency' => $market->currency,
-                ]
-            );
+            $customerInfo = [
+                'firstName' => $customerData['firstName'] ?? $customerData['customer_first_name'] ?? '',
+                'lastName' => $customerData['lastName'] ?? $customerData['customer_last_name'] ?? '',
+                'email' => $customerData['email'] ?? $customerData['customer_email'] ?? '',
+                'phone' => $customerData['phone'] ?? $customerData['customer_phone'] ?? '',
+                'notes' => $customerData['notes'] ?? $customerData['customer_notes'] ?? null,
+            ];
 
-            $sale = Sale::create([
+            // If totals not provided (e.g. in webhook), use PaymentIntent amount
+            $total = $totals['total'] ?? ($paymentIntent->amount / 100);
+            $subtotal = $totals['subtotal'] ?? $total;
+
+            $sale = EcommerceSale::create([
                 'user_id' => $ownerId,
-                'customer' => $validated['customer']['firstName'].' '.$validated['customer']['lastName'],
-                'subtotal' => $validated['subtotal'],
-                'tax' => $validated['tax'] ?? 0,
-                'total' => $validated['total'],
+                'market_id' => $market->id,
+                'subtotal' => $subtotal,
+                'tax' => $totals['tax'] ?? 0,
+                'total' => $total,
                 'payment_method' => 'card',
-                'amount_paid' => $validated['total'],
+                'amount_paid' => $total,
                 'balance_remaining' => 0,
                 'paid' => 1,
                 'date' => now(),
-                'notes' => $validated['customer']['notes'] ?? null,
+                'notes' => json_encode($customerInfo), // Keep in notes for backward compatibility if needed, or remove
+                'extra' => $customerInfo, // Store in extra column as JSON
+                'payment_intent_id' => $paymentIntent->id,
+                'channel' => 'ecommerce', // Channel for ecommerce sales
             ]);
-
-            $itemIds = collect($validated['items'])->pluck('id');
 
             Item::whereIn('id', $itemIds)->update([
                 'sale_id' => $sale->id,
                 'sold' => now(),
-                'customer' => $validated['customer']['firstName'].' '.$validated['customer']['lastName'],
+                'customer' => $customerInfo['firstName'].' '.$customerInfo['lastName'],
             ]);
 
-            // Generate signed URL for order confirmation page
-            $redirectUrl = URL::signedRoute('market.order.confirmation', [
-                'market' => $slug,
-                'sale_id' => $sale->id,
-            ]);
+            // Send Confirmation Email
+            try {
+                Mail::to($customerInfo['email'])->send(new OrderConfirmation($sale));
+            } catch (\Exception $e) {
+                Log::error('Failed to send confirmation email: '.$e->getMessage());
+            }
 
-            return response()->json([
-                'success' => true,
-                'order_id' => $sale->id,
-                'redirect_url' => $redirectUrl, // Return the signed URL
-                'message' => 'Order completed successfully',
-            ]);
+            return $sale;
         });
+    }
+
+    protected function orderResponse($slug, $sale)
+    {
+        $redirectUrl = URL::signedRoute('market.order.confirmation', [
+            'market' => $slug,
+            'sale_id' => $sale->id,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'order_id' => $sale->id,
+            'redirect_url' => $redirectUrl,
+            'message' => 'Order completed successfully',
+        ]);
     }
 
     /**
@@ -180,44 +237,25 @@ class CheckoutController extends Controller
 
         $event = null;
 
-        // Verify webhook signature if secret is configured
         if ($endpointSecret && $sigHeader) {
             try {
-                $event = \Stripe\Webhook::constructEvent(
-                    $payload,
-                    $sigHeader,
-                    $endpointSecret
-                );
-            } catch (\UnexpectedValueException $e) {
-                Log::error('Stripe Webhook: Invalid payload', ['error' => $e->getMessage()]);
-
-                return response()->json(['error' => 'Invalid payload'], 400);
-            } catch (\Stripe\Exception\SignatureVerificationException $e) {
-                Log::error('Stripe Webhook: Invalid signature', ['error' => $e->getMessage()]);
-
+                $event = \Stripe\Webhook::constructEvent($payload, $sigHeader, $endpointSecret);
+            } catch (\Exception $e) {
                 return response()->json(['error' => 'Invalid signature'], 400);
             }
         } else {
-            // If no secret configured, just decode the payload (for development only)
             $event = json_decode($payload, true);
         }
 
-        // Handle the event
-        switch ($event['type']) {
+        $eventType = is_array($event) ? $event['type'] : $event->type;
+        $eventData = is_array($event) ? $event['data']['object'] : $event->data->object;
+
+        switch ($eventType) {
             case 'payment_intent.succeeded':
-                $this->handlePaymentSucceeded($event['data']['object']);
+                $this->handlePaymentSucceeded($eventData);
                 break;
-
             case 'payment_intent.payment_failed':
-                $this->handlePaymentFailed($event['data']['object']);
-                break;
-
-            case 'charge.refunded':
-                $this->handleChargeRefunded($event['data']['object']);
-                break;
-
-            default:
-                Log::info('Stripe Webhook: Unhandled event type', ['type' => $event['type']]);
+                $this->handlePaymentFailed($eventData);
                 break;
         }
 
@@ -225,37 +263,41 @@ class CheckoutController extends Controller
     }
 
     /**
-     * Handle successful payment
+     * Handle successful payment (Webhook)
      */
     protected function handlePaymentSucceeded($paymentIntent)
     {
-        Log::info('Stripe Webhook: Payment succeeded', [
-            'payment_intent_id' => $paymentIntent['id'],
-            'amount' => $paymentIntent['amount'],
-            'metadata' => $paymentIntent['metadata'] ?? [],
-        ]);
+        // Check if order already exists
+        $existingSale = EcommerceSale::where('payment_intent_id', $paymentIntent['id'])->first();
+        if ($existingSale) {
+            Log::info('Stripe Webhook: Order already exists for PaymentIntent '.$paymentIntent['id']);
+
+            return;
+        }
+
+        $metadata = $paymentIntent['metadata'] ?? [];
+        if (empty($metadata['item_ids'])) {
+            Log::warning('Stripe Webhook: No item_ids in metadata for PaymentIntent '.$paymentIntent['id']);
+
+            return;
+        }
+
+        $market = Market::with('shop.company')->find($metadata['market_id']);
+        if (! $market) {
+            Log::error('Stripe Webhook: Market not found for ID '.$metadata['market_id']);
+
+            return;
+        }
+
+        $itemIds = explode(',', $metadata['item_ids']);
+
+        $this->createOrder($market, (object) $paymentIntent, (array) $metadata, $itemIds);
+
+        Log::info('Stripe Webhook: Order created via Webhook for PaymentIntent '.$paymentIntent['id']);
     }
 
-    /**
-     * Handle failed payment
-     */
     protected function handlePaymentFailed($paymentIntent)
     {
-        Log::warning('Stripe Webhook: Payment failed', [
-            'payment_intent_id' => $paymentIntent['id'],
-            'amount' => $paymentIntent['amount'],
-            'last_payment_error' => $paymentIntent['last_payment_error']['message'] ?? 'Unknown error',
-        ]);
-    }
-
-    /**
-     * Handle refunded charge
-     */
-    protected function handleChargeRefunded($charge)
-    {
-        Log::info('Stripe Webhook: Charge refunded', [
-            'charge_id' => $charge['id'],
-            'amount_refunded' => $charge['amount_refunded'],
-        ]);
+        Log::warning('Stripe Webhook: Payment failed', ['id' => $paymentIntent['id']]);
     }
 }

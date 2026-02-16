@@ -1,6 +1,7 @@
 <template>
     <!-- Meta Head -->
     <Head title="Shopping Cart - Review Your Order" />
+    <Toast />
 
     <div class="min-h-screen bg-slate-100">
         <!-- Header Section -->
@@ -385,6 +386,19 @@
                 </div>
             </template>
         </Dialog>
+
+        <!-- Redirecting Overlay -->
+        <div v-if="isRedirecting" class="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-white/95 backdrop-blur-sm transition-opacity duration-300">
+            <div class="p-8 bg-white rounded-2xl shadow-2xl border border-gray-100 flex flex-col items-center text-center max-w-sm mx-4">
+                <div class="w-16 h-16 mb-6 relative flex items-center justify-center">
+                    <div class="absolute inset-0 rounded-full border-4 border-gray-100"></div>
+                    <div class="absolute inset-0 rounded-full border-4 border-gray-900 border-t-transparent animate-spin"></div>
+                    <i class="pi pi-check text-gray-900 text-xl font-bold absolute" v-if="false"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-900 mb-2">Processing Order</h3>
+                <p class="text-gray-500 text-sm">Please wait while we secure your items and redirect you to the confirmation page.</p>
+            </div>
+        </div>
     </div>
 </template>
 
@@ -396,6 +410,8 @@ import MarketLayout from '@/Layouts/Ecommerce/MarketLayout.vue'
 import { useCart } from '@/composables/useCart'
 import { getCurrencySymbol } from '@/utils/currency'
 import StripePayment from '@/Components/Ecommerce/StripePayment.vue'
+import { useToast } from 'primevue/usetoast'
+import Toast from 'primevue/toast'
 
 defineOptions({ layout: MarketLayout })
 
@@ -406,6 +422,8 @@ const props = defineProps({
         required: true
     }
 })
+
+const toast = useToast()
 
 // Use cart composable instead of store directly
 const { 
@@ -422,6 +440,7 @@ const showClearConfirmation = ref(false)
 const showPayment = ref(false)
 const clientSecret = ref(null)
 const isLoadingPayment = ref(false)
+const isRedirecting = ref(false)
 
 // Customer information form
 const customerInfo = ref({
@@ -577,6 +596,8 @@ const proceedToCheckout = async () => {
             body: JSON.stringify({
                 amount: total.value,
                 currency: props.market.currency,
+                items: cartItems.value,
+                customer: customerInfo.value,
             }),
         })
 
@@ -590,7 +611,12 @@ const proceedToCheckout = async () => {
         }
     } catch (error) {
         console.error('Payment initialization error:', error)
-        alert('Failed to initialize payment. Please try again.')
+        toast.add({
+            severity: 'error',
+            summary: 'Initialization Failed',
+            detail: error.message || 'Failed to initialize payment. Please try again.',
+            life: 5000
+        })
     } finally {
         isLoadingPayment.value = false
     }
@@ -599,22 +625,30 @@ const proceedToCheckout = async () => {
 const handlePaymentSuccess = (result) => {
     // Redirect to confirmation page if URL provided
     if (result.redirect_url) {
-        window.location.href = result.redirect_url
-        // Only clear cart AFTER redirect starts to avoid flashing "empty cart" state
-        // But since we use window.location.href (full reload), the state might persist if in localStorage.
-        // It's safer to clear it here, but maybe we should show a loading spinner instead of closing the payment form.
+        isRedirecting.value = true
         clearCartStore()
+        window.location.href = result.redirect_url
     } else {
         // Fallback behavior
         clearCartStore()
         showPayment.value = false
-        alert('Order completed successfully!')
+        toast.add({
+            severity: 'success',
+            summary: 'Order Confirmed',
+            detail: 'Your order has been placed successfully!',
+            life: 5000
+        })
     }
 }
 
 const handlePaymentError = (error) => {
     console.error('Payment error:', error)
-    alert('Payment failed. Please try again.')
+    toast.add({
+        severity: 'error',
+        summary: 'Payment Failed',
+        detail: error || 'Please try again.',
+        life: 5000
+    })
 }
 
 const goBackToCart = () => {
