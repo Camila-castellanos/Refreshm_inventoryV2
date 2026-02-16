@@ -1,17 +1,15 @@
 <?php
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\DocsController;
 use App\Http\Controllers\Api\ItemController;
 use App\Http\Controllers\ExchangeRateController;
 use App\Http\Middleware\ApiAuth;
-use App\Http\Controllers\Api\DocsController;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
-
-use Illuminate\Http\JsonResponse;
 
 Route::get('/csrf-token', function () {
     return response()->json(['csrf_token' => csrf_token()]);
@@ -29,8 +27,8 @@ Route::prefix('exchange-rate')->group(function () {
 
 Route::get('login', function (Request $request) {
     return response()->json([
-        'error'   => 'Method not allowed',
-        'message' => 'This endpoint only accepts POST requests for authentication.'
+        'error' => 'Method not allowed',
+        'message' => 'This endpoint only accepts POST requests for authentication.',
     ], 405);
 });
 Route::post('login', [\App\Http\Controllers\Api\AuthController::class, 'login']);
@@ -40,4 +38,7 @@ Route::post('login', [\App\Http\Controllers\Api\AuthController::class, 'login'])
 // });
 
 // temporary implementation without authentication middleware
-Route::apiResource('items', ItemController::class); 
+Route::apiResource('items', ItemController::class);
+
+// Stripe Webhook (API routes don't have CSRF protection)
+Route::post('/stripe-webhook', [App\Http\Controllers\Ecommerce\CheckoutController::class, 'handleWebhook']);
