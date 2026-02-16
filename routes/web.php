@@ -324,10 +324,21 @@ Route::prefix('market/{market:slug}')->name('market.')->group(function () {
     Route::get('/contact', [App\Http\Controllers\Ecommerce\MarketController::class, 'contact'])->name('contact');
     Route::get('/faq', [App\Http\Controllers\Ecommerce\MarketController::class, 'faq'])->name('faq');
     Route::get('/cart', [App\Http\Controllers\Ecommerce\MarketController::class, 'cart'])->name('cart');
+    // Order Confirmation (Protected by signature)
+    Route::get('/order/{sale_id}', [App\Http\Controllers\Ecommerce\MarketController::class, 'orderConfirmation'])
+        ->name('order.confirmation')
+        ->middleware('signed');
 })->middleware('web');
 
 // Ecommerce API Routes (Public - for AJAX calls)
 Route::prefix('api/market/{market:slug}')->name('market.api.')->group(function () {
     Route::get('/info', [App\Http\Controllers\Ecommerce\MarketController::class, 'info'])->name('info');
     Route::get('/model/{model}/variants', [App\Http\Controllers\Ecommerce\MarketController::class, 'modelVariants'])->name('model-variants');
+});
+
+// Checkout Routes (Public)
+Route::prefix('market/{market:slug}/checkout')->name('market.checkout.')->group(function () {
+    Route::post('/intent', [App\Http\Controllers\Ecommerce\CheckoutController::class, 'createPaymentIntent'])->name('intent');
+    Route::post('/finalize', [App\Http\Controllers\Ecommerce\CheckoutController::class, 'storeOrder'])->name('finalize');
+    Route::get('/stripe-key', [App\Http\Controllers\Ecommerce\CheckoutController::class, 'getStripeKey'])->name('stripe-key');
 });

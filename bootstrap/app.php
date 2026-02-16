@@ -21,7 +21,7 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
             \App\Http\Middleware\SetUserTimezone::class,
         ]);
-        
+
         // // Registrar alias para el middleware de verificación de roles
         $middleware->alias([
             'role' => \App\Http\Middleware\CheckUserRole::class,
@@ -34,7 +34,7 @@ return Application::configure(basePath: dirname(__DIR__))
                     'message' => 'Page expired, please refresh.',
                 ], 419);
             }
-    
+
             return $response;
         });
     })

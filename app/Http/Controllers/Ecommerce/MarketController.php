@@ -23,7 +23,7 @@ class MarketController extends Controller
             $market->load(['shop.company']);
 
             // Verify that the market's shop exists and is accessible
-            if (!$market->shop) {
+            if (! $market->shop) {
                 abort(503, 'This market is temporarily unavailable');
             }
 
@@ -49,11 +49,11 @@ class MarketController extends Controller
                 'initialItems' => $featuredItems, // Featured models grouped
                 'categories' => $categories->values(), // Reset array keys
                 'stats' => $stats,
-                'totalItems' => $totalItemsCount
+                'totalItems' => $totalItemsCount,
             ]);
         } catch (\Exception $e) {
             // Log the error for debugging
-            Log::error('Market index error: ' . $e->getMessage(), [
+            Log::error('Market index error: '.$e->getMessage(), [
                 'market_id' => $market->id ?? null,
                 'market_slug' => $market->slug ?? null,
             ]);
@@ -72,7 +72,7 @@ class MarketController extends Controller
             $market->load(['shop']);
 
             // Verify shop accessibility
-            if (!$market->shop) {
+            if (! $market->shop) {
                 return response()->json(['error' => 'Market unavailable'], 503);
             }
 
@@ -95,7 +95,7 @@ class MarketController extends Controller
                     'per_page' => $models->perPage(),
                     'total' => $models->total(),
                     'has_more_pages' => $models->hasMorePages(),
-                    'grouped_by_model' => true
+                    'grouped_by_model' => true,
                 ]);
             }
 
@@ -107,9 +107,9 @@ class MarketController extends Controller
             if ($search) {
                 $query->where(function ($q) use ($search) {
                     $q->where('model', 'like', "%{$search}%")
-                      ->orWhere('manufacturer', 'like', "%{$search}%")
-                      ->orWhere('type', 'like', "%{$search}%")
-                      ->orWhere('imei', 'like', "%{$search}%");
+                        ->orWhere('manufacturer', 'like', "%{$search}%")
+                        ->orWhere('type', 'like', "%{$search}%")
+                        ->orWhere('imei', 'like', "%{$search}%");
                 });
             }
 
@@ -133,7 +133,7 @@ class MarketController extends Controller
             // Filter items: exclude those with issues unless is_visible = true
             $filteredItems = $items->filter(function ($item) use ($marketItemsMap) {
                 $marketItem = $marketItemsMap[$item->id] ?? null;
-                $hasIssues = !empty($item->issues) && $item->issues !== '{}';
+                $hasIssues = ! empty($item->issues) && $item->issues !== '{}';
 
                 // If item has issues, only include if is_visible is explicitly true
                 if ($hasIssues) {
@@ -145,7 +145,7 @@ class MarketController extends Controller
             });
 
             // Apply sorting to filtered results
-            $sorted = match($sort) {
+            $sorted = match ($sort) {
                 'price_low' => $filteredItems->sortBy('selling_price'),
                 'price_high' => $filteredItems->sortByDesc('selling_price'),
                 'name' => $filteredItems->sortBy('model'),
@@ -177,11 +177,11 @@ class MarketController extends Controller
                 'per_page' => $paginator->perPage(),
                 'total' => $paginator->total(),
                 'has_more_pages' => $paginator->hasMorePages(),
-                'grouped_by_model' => false
+                'grouped_by_model' => false,
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Market products API error: ' . $e->getMessage(), [
+            Log::error('Market products API error: '.$e->getMessage(), [
                 'market_id' => $market->id ?? null,
                 'page' => $request->get('page'),
                 'category' => $request->get('category'),
@@ -203,14 +203,14 @@ class MarketController extends Controller
             $market->load(['shop']);
 
             // Verify shop accessibility
-            if (!$market->shop) {
+            if (! $market->shop) {
                 return response()->json(['error' => 'Market unavailable'], 503);
             }
 
             // Use unified method - includeHidden=false for public view (only visible items)
             $result = $market->getModelsWithVariants($model, false);
 
-            if (!$result) {
+            if (! $result) {
                 return response()->json(['error' => 'Model not found'], 404);
             }
 
@@ -227,7 +227,7 @@ class MarketController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Market model variants error: ' . $e->getMessage(), [
+            Log::error('Market model variants error: '.$e->getMessage(), [
                 'market_id' => $market->id ?? null,
                 'model' => $model,
             ]);
@@ -245,14 +245,14 @@ class MarketController extends Controller
             $market->load(['shop']);
 
             // Verify shop accessibility
-            if (!$market->shop) {
+            if (! $market->shop) {
                 abort(503, 'This market is temporarily unavailable');
             }
 
             // Use unified method - includeHidden=false for public view (only visible items)
             $result = $market->getModelsWithVariants($model, false);
 
-            if (!$result) {
+            if (! $result) {
                 abort(404, 'Model not found');
             }
 
@@ -275,7 +275,7 @@ class MarketController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Market show model variants error: ' . $e->getMessage(), [
+            Log::error('Market show model variants error: '.$e->getMessage(), [
                 'market_id' => $market->id ?? null,
                 'model' => $model,
             ]);
@@ -293,7 +293,7 @@ class MarketController extends Controller
             $market->load(['shop']);
 
             // Verify shop accessibility
-            if (!$market->shop) {
+            if (! $market->shop) {
                 abort(503, 'This market is temporarily unavailable');
             }
 
@@ -325,9 +325,9 @@ class MarketController extends Controller
                 if ($search) {
                     $query->where(function ($q) use ($search) {
                         $q->where('model', 'like', "%{$search}%")
-                          ->orWhere('manufacturer', 'like', "%{$search}%")
-                          ->orWhere('type', 'like', "%{$search}%")
-                          ->orWhere('imei', 'like', "%{$search}%");
+                            ->orWhere('manufacturer', 'like', "%{$search}%")
+                            ->orWhere('type', 'like', "%{$search}%")
+                            ->orWhere('imei', 'like', "%{$search}%");
                     });
                 }
 
@@ -368,7 +368,7 @@ class MarketController extends Controller
                 // Filter items: exclude those with issues unless is_visible = true
                 $filteredItems = $items->filter(function ($item) use ($marketItemsMap) {
                     $marketItem = $marketItemsMap[$item->id] ?? null;
-                    $hasIssues = !empty($item->issues) && $item->issues !== '{}';
+                    $hasIssues = ! empty($item->issues) && $item->issues !== '{}';
 
                     // If item has issues, only include if is_visible is explicitly true
                     if ($hasIssues) {
@@ -396,11 +396,11 @@ class MarketController extends Controller
                     'category' => $category,
                     'brand' => $brand,
                     'sort' => $sort,
-                    'search' => $search
-                ]
+                    'search' => $search,
+                ],
             ]);
         } catch (\Exception $e) {
-            Log::error('Market products list error: ' . $e->getMessage(), [
+            Log::error('Market products list error: '.$e->getMessage(), [
                 'market_id' => $market->id ?? null,
                 'category' => $category ?? null,
                 'brand' => $brand ?? null,
@@ -421,7 +421,7 @@ class MarketController extends Controller
             $market->load(['shop']);
 
             // Verify shop accessibility
-            if (!$market->shop) {
+            if (! $market->shop) {
                 abort(503, 'This market is temporarily unavailable');
             }
 
@@ -435,12 +435,12 @@ class MarketController extends Controller
             ];
 
             return view('ecommerce.market.category', compact(
-                'market', 
-                'items', 
+                'market',
+                'items',
                 'categoryInfo'
             ));
         } catch (\Exception $e) {
-            Log::error('Market category error: ' . $e->getMessage(), [
+            Log::error('Market category error: '.$e->getMessage(), [
                 'market_id' => $market->id ?? null,
                 'category' => $category,
             ]);
@@ -458,7 +458,7 @@ class MarketController extends Controller
             $market->load(['shop']);
 
             // Verify shop accessibility
-            if (!$market->shop) {
+            if (! $market->shop) {
                 abort(503, 'This market is temporarily unavailable');
             }
 
@@ -472,7 +472,7 @@ class MarketController extends Controller
             }
 
             // Ensure the item is available for sale
-            if ($item->sold || $item->hold || !$item->selling_price || $item->selling_price <= 0) {
+            if ($item->sold || $item->hold || ! $item->selling_price || $item->selling_price <= 0) {
                 abort(404, 'Product not available');
             }
 
@@ -488,10 +488,10 @@ class MarketController extends Controller
             return Inertia::render('Ecommerce/PublicMarket/Product', [
                 'market' => $market->getSafeData(),
                 'item' => $item,
-                'relatedItems' => $relatedItems
+                'relatedItems' => $relatedItems,
             ]);
         } catch (\Exception $e) {
-            Log::error('Market product error: ' . $e->getMessage(), [
+            Log::error('Market product error: '.$e->getMessage(), [
                 'market_id' => $market->id ?? null,
                 'item_id' => $item->id ?? null,
             ]);
@@ -510,16 +510,16 @@ class MarketController extends Controller
 
         $items = $market->publishedItems();
 
-        if (!empty($query)) {
+        if (! empty($query)) {
             $items = $items->where(function ($q) use ($query) {
                 $q->where('model', 'like', "%{$query}%")
-                  ->orWhere('manufacturer', 'like', "%{$query}%")
-                  ->orWhere('issues', 'like', "%{$query}%")
-                  ->orWhere('imei', 'like', "%{$query}%");
+                    ->orWhere('manufacturer', 'like', "%{$query}%")
+                    ->orWhere('issues', 'like', "%{$query}%")
+                    ->orWhere('imei', 'like', "%{$query}%");
             });
         }
 
-        if (!empty($category)) {
+        if (! empty($category)) {
             $items = $items->where('type', $category);
         }
 
@@ -542,7 +542,7 @@ class MarketController extends Controller
             $market->load(['shop']);
 
             // Verify shop accessibility
-            if (!$market->shop) {
+            if (! $market->shop) {
                 abort(503, 'This market is temporarily unavailable');
             }
 
@@ -550,10 +550,10 @@ class MarketController extends Controller
             $safeMarketData = $market->getSafeData();
 
             return Inertia::render('Ecommerce/PublicMarket/Contact', [
-                'market' => $safeMarketData
+                'market' => $safeMarketData,
             ]);
         } catch (\Exception $e) {
-            Log::error('Market contact error: ' . $e->getMessage(), [
+            Log::error('Market contact error: '.$e->getMessage(), [
                 'market_id' => $market->id ?? null,
                 'market_slug' => $market->slug ?? null,
             ]);
@@ -571,7 +571,7 @@ class MarketController extends Controller
             $market->load(['shop']);
 
             // Verify shop accessibility
-            if (!$market->shop) {
+            if (! $market->shop) {
                 abort(503, 'This market is temporarily unavailable');
             }
 
@@ -582,15 +582,15 @@ class MarketController extends Controller
             $faqData = $market->faq ?? [
                 'title' => 'Frequently Asked Questions',
                 'description' => '',
-                'questions' => []
+                'questions' => [],
             ];
 
             return Inertia::render('Ecommerce/PublicMarket/Faq', [
                 'market' => $safeMarketData,
-                'faqData' => $faqData
+                'faqData' => $faqData,
             ]);
         } catch (\Exception $e) {
-            Log::error('Market FAQ error: ' . $e->getMessage(), [
+            Log::error('Market FAQ error: '.$e->getMessage(), [
                 'market_id' => $market->id ?? null,
                 'market_slug' => $market->slug ?? null,
             ]);
@@ -608,7 +608,7 @@ class MarketController extends Controller
             $market->load(['shop']);
 
             // Verify shop accessibility
-            if (!$market->shop) {
+            if (! $market->shop) {
                 abort(503, 'This market is temporarily unavailable');
             }
 
@@ -616,10 +616,10 @@ class MarketController extends Controller
             $safeMarketData = $market->getSafeData();
 
             return Inertia::render('Ecommerce/PublicMarket/OrderReview', [
-                'market' => $safeMarketData
+                'market' => $safeMarketData,
             ]);
         } catch (\Exception $e) {
-            Log::error('Market cart error: ' . $e->getMessage(), [
+            Log::error('Market cart error: '.$e->getMessage(), [
                 'market_id' => $market->id ?? null,
                 'market_slug' => $market->slug ?? null,
             ]);
@@ -629,12 +629,70 @@ class MarketController extends Controller
     }
 
     /**
+     * Display order confirmation page
+     */
+    public function orderConfirmation(Request $request, Market $market, $sale_id)
+    {
+        try {
+            // Find sale ignoring global scopes (like CompanyUsersSharedScope)
+            // This is safe because we use 'signed' middleware and check ownership below
+            $sale = \App\Models\Sale::withoutGlobalScopes()->findOrFail($sale_id);
+
+            // Security check: Ensure the sale belongs to this market's shop company owner
+            $market->load(['shop.company']);
+
+            // The sale's user_id is the owner of the company (from CheckoutController)
+            // The market's shop belongs to a company, which has an owner_id.
+            $ownerId = $market->shop->company->owner_id;
+
+            if ($sale->user_id !== $ownerId) {
+                // Debugging log before aborting
+                Log::warning('Unauthorized order access attempt', [
+                    'sale_id' => $sale->id,
+                    'sale_user_id' => $sale->user_id,
+                    'market_owner_id' => $ownerId,
+                    'market_shop_user_id' => $market->shop->user_id ?? 'N/A', // Old logic check
+                ]);
+                abort(403, 'Unauthorized access to order details.');
+            }
+
+            // Load sale items and details
+            $sale->load(['items.media']);
+
+            return Inertia::render('Ecommerce/PublicMarket/OrderConfirmation', [
+                'market' => $market->getSafeData(),
+                'order' => [
+                    'id' => $sale->id,
+                    'customer' => $sale->customer,
+                    'total' => $sale->total,
+                    'subtotal' => $sale->subtotal,
+                    'tax' => $sale->tax,
+                    'date' => $sale->date->format('F j, Y, g:i a'),
+                    'items' => $sale->items->map(function ($item) {
+                        return [
+                            'id' => $item->id,
+                            'model' => $item->model,
+                            'manufacturer' => $item->manufacturer,
+                            'price' => $item->selling_price,
+                            'imei' => $item->imei,
+                            'image_url' => $item->getFirstMediaUrl('item-photos', 'thumb'),
+                        ];
+                    }),
+                ],
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Order confirmation error: '.$e->getMessage());
+            abort(404, 'Order not found');
+        }
+    }
+
+    /**
      * Get market info for API
      */
     public function info(Market $market)
     {
         $market->load(['shop.company']);
-        
+
         return response()->json([
             'market' => [
                 'name' => $market->name,
@@ -650,7 +708,7 @@ class MarketController extends Controller
                 'company' => [
                     'name' => $market->shop->company->name ?? null,
                 ],
-            ]
+            ],
         ]);
     }
 }

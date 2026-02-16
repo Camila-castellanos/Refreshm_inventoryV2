@@ -267,15 +267,44 @@
 
                             <!-- Checkout Button -->
                             <button
+                                v-if="!showPayment"
                                 @click="proceedToCheckout"
-                                class="w-full inline-flex items-center justify-center px-6 py-4 rounded-lg bg-gray-800 text-white hover:bg-gray-900 font-semibold text-lg transition-all duration-200 shadow-lg hover:shadow-xl mb-4"
+                                :disabled="isLoadingPayment"
+                                class="w-full inline-flex items-center justify-center px-6 py-4 rounded-lg bg-gray-800 text-white hover:bg-gray-900 font-semibold text-lg transition-all duration-200 shadow-lg hover:shadow-xl mb-4 disabled:opacity-50"
                             >
-                                Proceed to Checkout
-                                <i class="pi pi-arrow-right text-sm ml-2"></i>
+                                <i v-if="isLoadingPayment" class="pi pi-spin pi-spinner text-lg mr-2"></i>
+                                <i v-else class="pi pi-credit-card text-lg mr-2"></i>
+                                {{ isLoadingPayment ? 'Processing...' : 'Proceed to Checkout' }}
                             </button>
 
+                            <!-- Back Button (when showing payment) -->
+                            <button
+                                v-if="showPayment"
+                                @click="goBackToCart"
+                                class="w-full inline-flex items-center justify-center px-6 py-3 rounded-lg bg-slate-100 text-gray-700 hover:text-gray-900 border border-gray-200 hover:border-gray-300 font-medium transition-all duration-200 mb-4"
+                            >
+                                <i class="pi pi-arrow-left text-sm mr-2"></i>
+                                Back to Cart
+                            </button>
+
+                            <!-- Stripe Payment Form -->
+                            <div v-show="showPayment && clientSecret" class="mt-4">
+                                <StripePayment
+                                    :market="market"
+                                    :client-secret="clientSecret"
+                                    :subtotal="subtotal"
+                                    :tax="tax"
+                                    :shipping="shipping"
+                                    :items="cartItems"
+                                    :customer="customerInfo"
+                                    :is-visible="showPayment && clientSecret"
+                                    @payment-success="handlePaymentSuccess"
+                                    @payment-error="handlePaymentError"
+                                />
+                            </div>
+
                             <!-- Security Badge -->
-                            <div class="flex items-center justify-center text-sm text-gray-500 mt-4">
+                            <div v-if="!showPayment" class="flex items-center justify-center text-sm text-gray-500 mt-4">
                                 <i class="pi pi-lock mr-2"></i>
                                 <span>Secure Checkout</span>
                             </div>
@@ -366,6 +395,7 @@ import Dialog from 'primevue/dialog'
 import MarketLayout from '@/Layouts/Ecommerce/MarketLayout.vue'
 import { useCart } from '@/composables/useCart'
 import { getCurrencySymbol } from '@/utils/currency'
+import StripePayment from '@/Components/Ecommerce/StripePayment.vue'
 
 defineOptions({ layout: MarketLayout })
 
@@ -389,6 +419,9 @@ const {
 
 // Reactive state
 const showClearConfirmation = ref(false)
+const showPayment = ref(false)
+const clientSecret = ref(null)
+const isLoadingPayment = ref(false)
 
 // Customer information form
 const customerInfo = ref({
@@ -434,8 +467,9 @@ const shipping = computed(() => {
 })
 
 const tax = computed(() => {
-    // TODO: Calculate tax based on location
-    return 0
+    // Calculate tax based on market's tax rate
+    const taxRate = props.market?.tax_rate || 0
+    return Math.round(subtotal.value * taxRate * 100) / 100
 })
 
 const total = computed(() => {
@@ -523,24 +557,69 @@ const validateCustomerInfo = () => {
     return isValid
 }
 
-const proceedToCheckout = () => {
+const proceedToCheckout = async () => {
     // Validate customer information first
     if (!validateCustomerInfo()) {
         alert('Please fill in all required customer information fields correctly.')
         return
     }
 
-    // TODO: Navigate to checkout page with customer info
-    // router.visit(`/market/${props.market.slug}/checkout`, {
-    //     data: {
-    //         customerInfo: customerInfo.value,
-    //         items: cartItems.value
-    //     }
-    // })
+    // Initialize payment intent
+    isLoadingPayment.value = true
     
-    console.log('Customer Info:', customerInfo.value)
-    console.log('Cart Items:', cartItems.value)
-    alert('Checkout functionality will be implemented next!')
+    try {
+        const response = await fetch(`/market/${props.market.slug}/checkout/intent`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            },
+            body: JSON.stringify({
+                amount: total.value,
+                currency: props.market.currency,
+            }),
+        })
+
+        const data = await response.json()
+
+        if (data.clientSecret) {
+            clientSecret.value = data.clientSecret
+            showPayment.value = true
+        } else {
+            throw new Error(data.error || 'Failed to initialize payment')
+        }
+    } catch (error) {
+        console.error('Payment initialization error:', error)
+        alert('Failed to initialize payment. Please try again.')
+    } finally {
+        isLoadingPayment.value = false
+    }
+}
+
+const handlePaymentSuccess = (result) => {
+    // Redirect to confirmation page if URL provided
+    if (result.redirect_url) {
+        window.location.href = result.redirect_url
+        // Only clear cart AFTER redirect starts to avoid flashing "empty cart" state
+        // But since we use window.location.href (full reload), the state might persist if in localStorage.
+        // It's safer to clear it here, but maybe we should show a loading spinner instead of closing the payment form.
+        clearCartStore()
+    } else {
+        // Fallback behavior
+        clearCartStore()
+        showPayment.value = false
+        alert('Order completed successfully!')
+    }
+}
+
+const handlePaymentError = (error) => {
+    console.error('Payment error:', error)
+    alert('Payment failed. Please try again.')
+}
+
+const goBackToCart = () => {
+    showPayment.value = false
+    clientSecret.value = null
 }
 </script>
 

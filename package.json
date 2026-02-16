@@ -41,6 +41,7 @@
         "@revolist/revogrid-column-numeral": "^2.0.8",
         "@revolist/revogrid-column-select": "^3.1.9",
         "@revolist/vue3-datagrid": "^4.14.5",
+        "@stripe/stripe-js": "^8.7.0",
         "@zxing/library": "^0.21.3",
         "html5-qrcode": "^2.3.8",
         "jspreadsheet-ce": "^4.15.0",
