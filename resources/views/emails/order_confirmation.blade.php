@@ -20,7 +20,7 @@
         </div>
 
         <div class="order-info">
-            <p>Hi {{ $sale->customer }},</p>
+            <p>Hi {{ $sale->extra['firstName'] ?? 'Customer' }},</p>
             <p>Thank you for your purchase! We've received your order and are processing it.</p>
         </div>
 
