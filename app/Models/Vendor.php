@@ -2,13 +2,16 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use App\Models\Scopes\CompanyUsersSharedScope;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class Vendor extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
-        "user_id", "vendor", "first_name", "last_name", "email", "phone", "phone_optional", "website", "notes", "currency", "address", "address_optional", "address_country", "address_state", "address_city", "address_postal"
+        'user_id', 'vendor', 'first_name', 'last_name', 'email', 'phone', 'phone_optional', 'website', 'notes', 'currency', 'address', 'address_optional', 'address_country', 'address_state', 'address_city', 'address_postal',
     ];
 
     protected static function booted()
@@ -21,10 +24,11 @@ class Vendor extends Model
         'last_name' => 'array',
         'email' => 'array',
         'phone' => 'array',
-        'phone_optional' => 'array'
+        'phone_optional' => 'array',
     ];
 
-    public function items(): hasMany {
+    public function items(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
         return $this->hasMany(Item::class);
     }
 }

@@ -2,8 +2,8 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -18,12 +18,18 @@ return new class extends Migration
         });
 
         // Actualizar los registros existentes para establecer company_id basado en user_id
-        DB::statement('
-            UPDATE storages s
-            JOIN users u ON s.user_id = u.id
-            SET s.company_id = u.company_id
-            WHERE u.company_id IS NOT NULL
-        ');
+        // Use Laravel query builder for cross-database compatibility
+        $storages = DB::table('storages')->get();
+        foreach ($storages as $storage) {
+            if ($storage->user_id) {
+                $user = DB::table('users')->where('id', $storage->user_id)->first();
+                if ($user && $user->company_id) {
+                    DB::table('storages')
+                        ->where('id', $storage->id)
+                        ->update(['company_id' => $user->company_id]);
+                }
+            }
+        }
     }
 
     /**

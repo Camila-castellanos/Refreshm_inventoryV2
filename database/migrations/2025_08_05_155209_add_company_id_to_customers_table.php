@@ -2,8 +2,8 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -18,17 +18,18 @@ return new class extends Migration
             $table->index('company_id'); // Add index for better performance
         });
 
-        // 2. Update existing records based on user_id
-        DB::statement('
-            UPDATE customers 
-            SET company_id = (
-            SELECT company_id 
-            FROM users 
-            WHERE users.id = customers.user_id
-            AND users.company_id IS NOT NULL
-            )
-            WHERE user_id IS NOT NULL
-        ');
+        // 2. Update existing records based on user_id (cross-database compatible)
+        $customers = DB::table('customers')->get();
+        foreach ($customers as $customer) {
+            if ($customer->user_id) {
+                $user = DB::table('users')->where('id', $customer->user_id)->first();
+                if ($user && $user->company_id) {
+                    DB::table('customers')
+                        ->where('id', $customer->id)
+                        ->update(['company_id' => $user->company_id]);
+                }
+            }
+        }
 
         // 3. Add the foreign key constraint after updating the data
         Schema::table('customers', function (Blueprint $table) {

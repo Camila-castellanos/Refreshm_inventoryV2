@@ -2,23 +2,30 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-     public function up(): void
+    public function up(): void
     {
+        // Skip if running in SQLite or if column already exists as primary key
+        if (Schema::hasColumn('customers', 'old_id')) {
+            return;
+        }
 
-        // Paso 2: Renombrar id -> old_id
-        Schema::table('customers', function (Blueprint $table) {
-            $table->renameColumn('id', 'old_id');
-        });
+        // Only run for MySQL - SQLite doesn't support adding primary keys this way
+        if (DB::connection()->getDriverName() !== 'sqlite') {
+            // Paso 2: Renombrar id -> old_id
+            Schema::table('customers', function (Blueprint $table) {
+                $table->renameColumn('id', 'old_id');
+            });
 
-        // Paso 3: Agregar nueva columna id con auto_increment y establecer como primary
-        Schema::table('customers', function (Blueprint $table) {
-            $table->bigIncrements('id')->first(); // o increments('id') si prefieres INT
-        });
+            // Paso 3: Agregar nueva columna id con auto_increment y establecer como primary
+            Schema::table('customers', function (Blueprint $table) {
+                $table->bigIncrements('id')->first(); // o increments('id') si prefieres INT
+            });
+        }
     }
 
     public function down(): void

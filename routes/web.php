@@ -116,7 +116,7 @@ Route::middleware([
         Route::post('sales/update', [SaleController::class, 'update'])->name('sales.update');
 
         Route::get('report', [SaleController::class, 'showReport'])->name('sales.report');
-        Route::post('report', [SaleController::class, 'generateReport'])->name('sales.generate_report');
+        Route::post('report', [SaleController::class, 'showReport'])->name('sales.generate_report');
     });
 
     Route::post('/storages/assign-positions', [StorageController::class, 'assignPositions'])->name('storages.assignPositions');
