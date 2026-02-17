@@ -131,7 +131,9 @@ class SaleController extends Controller
             }
         }
 
-        foreach ($form['items'] as $sale_item) {
+        // Process existing items (items that were already in inventory)
+        $items = $form['items'] ?? [];
+        foreach ($items as $sale_item) {
             $item = Item::find($sale_item['id']);
 
             if ($item) {
@@ -176,43 +178,46 @@ class SaleController extends Controller
             }
         }
 
-        foreach ($request->newItems as $new_item) {
-            $total = $new_item['selling_price'] + (($form['tax'] / 100) * $new_item['selling_price']);
+        // Process new items (items created during the sale)
+        if ($request->newItems) {
+            foreach ($request->newItems as $new_item) {
+                $total = $new_item['selling_price'] + (($form['tax'] / 100) * $new_item['selling_price']);
 
-            $item = Item::create([
-                'date' => $request->payment_date,
-                'type' => $new_item['type'],
-                'model' => $new_item['model'],
-                'issues' => $new_item['issues'],
-                'imei' => $new_item['imei'],
-                'selling_price' => $new_item['selling_price'],
-                'sale_id' => $sale->id,
-                'customer' => $new_item['customer'],
-                'discount' => $request->discount,
-                'tax' => $request->tax,
-                'sold' => Carbon::now(),
-                'user_id' => $form['user_id'],
-                'profit' => $new_item['profit'],
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-
-            if ($request->paid == 1) {
-                Payment::insert([
+                $item = Item::create([
+                    'date' => $request->payment_date,
+                    'type' => $new_item['type'] ?? 'device',
+                    'model' => $new_item['model'] ?? 'Unknown',
+                    'issues' => $new_item['issues'] ?? null,
+                    'imei' => $new_item['imei'] ?? null,
+                    'selling_price' => $new_item['selling_price'] ?? 0,
                     'sale_id' => $sale->id,
-                    'amount_paid' => $form['total'],
-                    'balance_remaining' => $form['balance_remaining'],
-                    'payment_method' => $form['payment_method'],
-                    'payment_account' => $form['payment_account'],
-                    'payment_date' => $paymentDateTime->format('Y-m-d H:i:s'),
+                    'customer' => $new_item['customer'] ?? null,
+                    'discount' => $request->discount ?? 0,
+                    'tax' => $request->tax ?? 0,
+                    'sold' => Carbon::now(),
+                    'user_id' => $form['user_id'],
+                    'profit' => $new_item['profit'] ?? 0,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
-                if ($request->payment_account == 'Cash on Hand') {
-                    $old_cash = CashOnHand::where('user_id', $form['user_id'])->value('balance');
-                    CashOnHand::where('user_id', $form['user_id'])->update([
-                        'balance' => $old_cash + $form['total'],
+
+                if ($request->paid == 1) {
+                    Payment::insert([
+                        'sale_id' => $sale->id,
+                        'amount_paid' => $form['total'],
+                        'balance_remaining' => $form['balance_remaining'] ?? 0,
+                        'payment_method' => $form['payment_method'] ?? 'cash',
+                        'payment_account' => $form['payment_account'] ?? '',
+                        'payment_date' => $paymentDateTime->format('Y-m-d H:i:s'),
+                        'created_at' => now(),
+                        'updated_at' => now(),
                     ]);
+                    if (($request->payment_account ?? null) == 'Cash on Hand') {
+                        $old_cash = CashOnHand::where('user_id', $form['user_id'])->value('balance');
+                        CashOnHand::where('user_id', $form['user_id'])->update([
+                            'balance' => $old_cash + $form['total'],
+                        ]);
+                    }
                 }
             }
         }

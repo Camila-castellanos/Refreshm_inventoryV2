@@ -1280,39 +1280,43 @@ class ItemController extends Controller
     public function refundItem(Request $request)
     {
         try {
-            $itemArray = $request->input('item');
+            $itemArray = $request->input('item') ?? ($request->data[0] ?? null);
+            if (! $itemArray) {
+                return response()->json(['error' => 'No item provided'], 400);
+            }
             $item = Item::find($itemArray['id']);
             $customer = Customer::where('customer', $item->customer)->first();
             $sale = Sale::find($item->sale_id);
-            $value = $item->selling_price - $sale->discount;
-            // Subtotal Calculation
+
+            if (! $sale) {
+                return response()->json(['error' => 'Sale not found'], 400);
+            }
+
+            $value = $item->selling_price - ($sale->discount ?? 0);
             $subtotal = $sale->subtotal - $value;
-            // Tax Calculation
-            $tax = $value * ($sale->tax / 100);
-            // Total Calculation
+            $tax = $value * (($sale->tax ?? 0) / 100);
             $total = $sale->total - ($value + $tax);
-            // Balance Calculation
             $balance = $sale->balance_remaining - ($value + $tax);
             $balance = $balance <= 0 ? 0 : $balance;
-            // Flat Tax
-            $flatTax = $sale->flatTax - $tax;
+            $flatTax = ($sale->flatTax ?? 0) - $tax;
             $paid = 0;
-            if ($sale->amount_paid >= $total) {
+            if (($sale->amount_paid ?? 0) >= $total) {
                 $paid = 1;
-            } else {
-                $paid = 0;
             }
-            Customer::where('id', $customer->id)->update([
-                'credit' => $item->selling_price + $customer->credit,
-            ]);
 
-            ReturnItems::create([
-                'item' => $item->id,
-                'customer' => $customer->id,
-                'credit' => $item->selling_price,
-                'model' => $item->model,
-                'imei' => $item->imei,
-            ]);
+            if ($customer) {
+                Customer::where('id', $customer->id)->update([
+                    'credit' => $item->selling_price + $customer->credit,
+                ]);
+
+                ReturnItems::create([
+                    'item' => $item->id,
+                    'customer' => $customer->id,
+                    'credit' => $item->selling_price,
+                    'model' => $item->model,
+                    'imei' => $item->imei,
+                ]);
+            }
 
             Sale::where('id', $item->sale_id)->update([
                 'subtotal' => $subtotal,
@@ -1341,6 +1345,12 @@ class ItemController extends Controller
             if ($request->item) {
                 $request->selectedItems = [];
                 $request->selectedItems[] = $request->item;
+            } elseif ($request->data) {
+                $request->selectedItems = $request->data;
+            }
+
+            if (empty($request->selectedItems)) {
+                return response()->json(['error' => 'No items provided'], 400);
             }
 
             foreach ($request->selectedItems as $item) {

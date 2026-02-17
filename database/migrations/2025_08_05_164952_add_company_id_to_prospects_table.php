@@ -2,8 +2,8 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -18,12 +18,17 @@ return new class extends Migration
         });
 
         // Actualizar registros existentes para establecer company_id basado en user_id
-        DB::statement('
-            UPDATE prospects p
-            JOIN users u ON p.user_id = u.id
-            SET p.company_id = u.company_id
-            WHERE u.company_id IS NOT NULL
-        ');
+        $prospects = DB::table('prospects')->get();
+        foreach ($prospects as $prospect) {
+            if ($prospect->user_id) {
+                $user = DB::table('users')->where('id', $prospect->user_id)->first();
+                if ($user && $user->company_id) {
+                    DB::table('prospects')
+                        ->where('id', $prospect->id)
+                        ->update(['company_id' => $user->company_id]);
+                }
+            }
+        }
     }
 
     /**
