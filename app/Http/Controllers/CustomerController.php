@@ -226,7 +226,7 @@ class CustomerController extends Controller
             $contact = new Contact;
             $contact->name = $form['customer_name'];
             $contact->email = is_array($customer->email) ? $customer->email[0] : $customer->email;
-            $contact->type = 1;
+            $contact->type = 'customer';
             $contact->user_id = Auth::user()->id;
             $contact->customer_id = $customer->id;
             $contact->save();
