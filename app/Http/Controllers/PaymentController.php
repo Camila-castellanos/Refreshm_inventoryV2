@@ -171,6 +171,31 @@ class PaymentController extends Controller
     }
 
     /**
+     * View payment details
+     */
+    public function view(Request $request, $id)
+    {
+        try {
+            $sale = Sale::with('items')->find($id);
+
+            if (! $sale) {
+                return response()->json(['error' => 'Sale not found'], 404);
+            }
+
+            $payments = Payment::where('sale_id', $id)->get();
+
+            return Inertia::render('Accounting/PaymentView', [
+                'sale' => $sale,
+                'payments' => $payments,
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Error viewing payment: '.$e->getMessage());
+
+            return response()->json(['error' => 'Error loading payment'], 500);
+        }
+    }
+
+    /**
      * Send an email with the invoice attached
      */
     public function sendInvoice(InvoiceSentForm $request)

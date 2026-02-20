@@ -15,8 +15,8 @@ class CustomerFactory extends Factory
     {
         return [
             'customer' => fake()->name(),
-            'user_id' => null,
-            'company_id' => null,
+            'user_id' => User::factory(),
+            'company_id' => Company::factory(),
             'first_name' => fake()->firstName(),
             'last_name' => fake()->lastName(),
             'email' => fake()->safeEmail(),
