@@ -2,20 +2,19 @@
 
 namespace Database\Factories;
 
-use App\Models\Tab;
+use App\Models\CashOnHand;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
-class TabFactory extends Factory
+class CashOnHandFactory extends Factory
 {
-    protected $model = Tab::class;
+    protected $model = CashOnHand::class;
 
     public function definition(): array
     {
         return [
             'user_id' => User::factory(),
-            'name' => fake()->randomElement(['iPhone', 'Samsung', 'Google', 'Accessories', 'Repair Parts', 'Display', 'Battery']),
-            'order' => 1,
+            'balance' => fake()->randomFloat(2, 100, 10000),
         ];
     }
 
@@ -26,17 +25,10 @@ class TabFactory extends Factory
         ]);
     }
 
-    public function withName(string $name): static
+    public function withBalance(float $balance): static
     {
         return $this->state(fn (array $attributes) => [
-            'name' => $name,
-        ]);
-    }
-
-    public function withOrder(int $order): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'order' => $order,
+            'balance' => $balance,
         ]);
     }
 }

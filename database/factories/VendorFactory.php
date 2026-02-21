@@ -13,7 +13,7 @@ class VendorFactory extends Factory
     public function definition(): array
     {
         return [
-            'user_id' => null,
+            'user_id' => User::factory(),
             'vendor' => fake()->company(),
             'first_name' => fake()->firstName(),
             'last_name' => fake()->lastName(),
@@ -36,6 +36,17 @@ class VendorFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'user_id' => $user?->id ?? User::factory(),
+        ]);
+    }
+
+    public function forOwner(?User $owner = null): static
+    {
+        $owner = $owner ?? User::factory()->create([
+            'company_id' => 1,
+        ]);
+
+        return $this->state(fn (array $attributes) => [
+            'user_id' => $owner->id,
         ]);
     }
 

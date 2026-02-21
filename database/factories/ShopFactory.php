@@ -18,16 +18,16 @@ class ShopFactory extends Factory
         return [
             'name' => $name,
             'slug' => Str::slug($name).'-'.fake()->unique()->numberBetween(1, 999),
-            'company_id' => null,
+            'company_id' => Company::factory(),
             'address' => fake()->address(),
             'public_tabs' => [],
         ];
     }
 
-    public function forCompany(?Company $company = null): static
+    public function forOwner($owner = null): static
     {
         return $this->state(fn (array $attributes) => [
-            'company_id' => $company?->id ?? Company::factory(),
+            'company_id' => $owner?->company_id ?? 1,
         ]);
     }
 
