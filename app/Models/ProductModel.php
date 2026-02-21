@@ -20,13 +20,11 @@ class ProductModel extends Model implements HasMedia
         'colours',
         'capacities',
         'description',
-        'is_active',
     ];
 
     protected $casts = [
         'colours' => 'array',
         'capacities' => 'array',
-        'is_active' => 'boolean',
     ];
 
     protected $appends = [
@@ -119,7 +117,7 @@ class ProductModel extends Model implements HasMedia
     {
         $photo = $this->getPhotoByColour($colour);
 
-        if (!$photo) {
+        if (! $photo) {
             return asset('images/item-placeholder.svg');
         }
 

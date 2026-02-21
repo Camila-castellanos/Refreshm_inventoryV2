@@ -203,7 +203,7 @@ class ProductModelController extends Controller
         $query = $request->input('q', '');
         $type = $request->input('type');
 
-        $models = ProductModel::where('is_active', true)
+        $models = ProductModel::query()
             ->where('name', 'like', "%{$query}%")
             ->when($type, function ($q) use ($type) {
                 $q->where('type', $type);

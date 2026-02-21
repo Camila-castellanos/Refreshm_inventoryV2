@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Inventory;
 
+use App\Models\Tab;
 use App\Models\TabItem;
 use Tests\TestCaseWithCompany;
 
@@ -181,5 +182,33 @@ class ItemTabTest extends TestCaseWithCompany
             ->get('/inventory/items/tab/'.$tab->id);
 
         $response->assertStatus(200);
+    }
+
+    public function test_can_get_user_tabs(): void
+    {
+        Tab::factory()->forOwner($this->owner)->count(3)->create();
+
+        $response = $this->actingAs($this->owner)
+            ->get('/user/tabs');
+
+        $response->assertStatus(200);
+    }
+
+    public function test_can_update_tab_name(): void
+    {
+        $tab = Tab::factory()->forOwner($this->owner)->create([
+            'name' => 'Old Name',
+        ]);
+
+        $response = $this->actingAs($this->owner)
+            ->post('/user/tab-name', [
+                'tab_id' => $tab->id,
+                'name' => 'Updated Tab Name',
+            ]);
+
+        $response->assertStatus(200);
+
+        $tab->refresh();
+        $this->assertEquals('Updated Tab Name', $tab->name);
     }
 }

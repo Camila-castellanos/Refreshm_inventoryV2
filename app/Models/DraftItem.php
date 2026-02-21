@@ -2,15 +2,14 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use App\Models\Draft;
-use App\Models\Vendor;
-use App\Models\Tax;
-use App\Models\Storage;
 
 class DraftItem extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
         'draft_id',
         'vendor_id',

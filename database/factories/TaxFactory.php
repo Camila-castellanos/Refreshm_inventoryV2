@@ -2,20 +2,20 @@
 
 namespace Database\Factories;
 
-use App\Models\Tab;
+use App\Models\Tax;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
-class TabFactory extends Factory
+class TaxFactory extends Factory
 {
-    protected $model = Tab::class;
+    protected $model = Tax::class;
 
     public function definition(): array
     {
         return [
+            'name' => fake()->randomElement(['HST', 'GST', 'PST', 'VAT', 'Sales Tax']),
+            'percentage' => fake()->randomElement([5, 7, 13, 15, 20]),
             'user_id' => User::factory(),
-            'name' => fake()->randomElement(['iPhone', 'Samsung', 'Google', 'Accessories', 'Repair Parts', 'Display', 'Battery']),
-            'order' => 1,
         ];
     }
 
@@ -26,17 +26,10 @@ class TabFactory extends Factory
         ]);
     }
 
-    public function withName(string $name): static
+    public function withPercentage(float $percentage): static
     {
         return $this->state(fn (array $attributes) => [
-            'name' => $name,
-        ]);
-    }
-
-    public function withOrder(int $order): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'order' => $order,
+            'percentage' => $percentage,
         ]);
     }
 }

@@ -15,16 +15,16 @@ class StorageFactory extends Factory
         return [
             'name' => fake()->randomElement(['Main Storage', 'Warehouse A', 'Display Area', 'Back Room', 'Repair Station']),
             'limit' => fake()->randomElement([50, 100, 200, 500]),
-            'company_id' => null,
+            'company_id' => Company::factory(),
             'priority' => 1,
             'is_default' => false,
         ];
     }
 
-    public function forCompany(?Company $company = null): static
+    public function forOwner($owner = null): static
     {
         return $this->state(fn (array $attributes) => [
-            'company_id' => $company?->id ?? Company::factory(),
+            'company_id' => $owner?->company_id ?? 1,
         ]);
     }
 

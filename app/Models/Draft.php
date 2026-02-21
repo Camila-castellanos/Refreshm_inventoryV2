@@ -2,15 +2,18 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use App\Models\Scopes\CompanyUsersSharedScope;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
 class Draft extends Model
 {
-     protected $fillable = ['user_id','title', 'vendor', 'date', 'items'];
+    use HasFactory;
 
-      protected $casts = [
+    protected $fillable = ['user_id', 'title', 'vendor', 'date'];
+
+    protected $casts = [
         'date' => 'date',
-        'items' => 'array',
     ];
 
     protected static function booted()
@@ -20,7 +23,7 @@ class Draft extends Model
 
     public function user()
     {
-      return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class);
     }
 
     public function items()
