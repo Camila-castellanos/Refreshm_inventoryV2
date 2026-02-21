@@ -8,6 +8,6 @@ use Illuminate\Database\Eloquent\Model;
 class CashOnHand extends Model
 {
     use HasFactory;
-    protected $fillable = ["user_id", "balance_remaing"];
 
+    protected $fillable = ['user_id', 'balance'];
 }
