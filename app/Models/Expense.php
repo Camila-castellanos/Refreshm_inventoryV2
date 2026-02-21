@@ -7,16 +7,17 @@ use Illuminate\Database\Eloquent\Model;
 
 class Expense extends Model
 {
-  use HasFactory;
-  protected $fillable = [
-    "date",
-    "name",
-    "category",
-    "amount",
-    "tax",
-    "tax_id",
-    'subtotal',
-    "total",
-    "user_id",
-  ];
+    use HasFactory;
+
+    protected $fillable = [
+        'date',
+        'name',
+        'category',
+        'amount',
+        'tax',
+        'tax_id',
+        'subtotal',
+        'total',
+        'user_id',
+    ];
 }

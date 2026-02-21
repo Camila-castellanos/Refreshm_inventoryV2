@@ -19,6 +19,7 @@ class ExpenseFactory extends Factory
             'amount' => fake()->randomFloat(2, 10, 1000),
             'tax' => 0,
             'tax_id' => null,
+            'subtotal' => fake()->randomFloat(2, 10, 1000),
             'total' => fake()->randomFloat(2, 10, 1000),
             'user_id' => User::factory(),
         ];
