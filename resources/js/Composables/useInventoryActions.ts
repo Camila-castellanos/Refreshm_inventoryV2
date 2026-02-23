@@ -241,14 +241,14 @@ export function useInventoryActions(
     ];
 
     // Agregar Export si no está oculto
-    if (!options.hideExport) {
-      baseActions.push({
-        label: 'Export to CSV',
-        icon: 'pi pi-download',
-        action: () => exportToCSV(),
-        disable: (selectedItems: Item[]) => selectedItems.length == 0,
-      });
-    }
+    // if (!options.hideExport) {
+    //   baseActions.push({
+    //     label: 'Export to CSV',
+    //     icon: 'pi pi-download',
+    //     action: () => exportToCSV(),
+    //     disable: (selectedItems: Item[]) => selectedItems.length == 0,
+    //   });
+    // }
 
     // Agregar Duplicate si no está oculto
     if (!options.hideDuplicate) {
