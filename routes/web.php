@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\BillController;
+use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\CustomFieldsController;
@@ -154,6 +155,19 @@ Route::middleware([
     // Printable invoice fields
     Route::get('user/printable-invoice-fields', [UserController::class, 'getPrintableInvoiceFields'])->name('user.printableInvoiceFields');
     Route::put('user/printable-invoice-fields', [UserController::class, 'updatePrintableInvoiceFields'])->name('user.updatePrintableInvoiceFields');
+
+    // Invoice Logo (User specific)
+    Route::get('user/invoice-logo', [UserController::class, 'getInvoiceLogo'])->name('user.invoice-logo.get');
+    Route::post('user/invoice-logo', [UserController::class, 'updateInvoiceLogo'])->name('user.invoice-logo.update');
+    Route::delete('user/invoice-logo', [UserController::class, 'deleteInvoiceLogo'])->name('user.invoice-logo.delete');
+
+    // Company Logo (Company wide)
+    Route::get('company/invoice-logo', [CompanyController::class, 'getLogo'])->name('company.invoice-logo.get');
+    Route::middleware(['role:OWNER'])->group(function () {
+        Route::post('company/invoice-logo', [CompanyController::class, 'updateLogo'])->name('company.invoice-logo.update');
+        Route::delete('company/invoice-logo', [CompanyController::class, 'deleteLogo'])->name('company.invoice-logo.delete');
+    });
+
     Route::resource('stores.locations', LocationController::class)->shallow();
     Route::get('locations/{location}/users', [LocationController::class, 'listUsers'])->name('locations.usersList');
     Route::post('locations/{location}/users', [LocationController::class, 'users'])->name('locations.users');

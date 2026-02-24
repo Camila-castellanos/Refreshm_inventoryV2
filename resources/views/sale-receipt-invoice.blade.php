@@ -232,8 +232,6 @@
                     <div class="logo-block">
                         @if(in_array('logo', $userActiveFields) && isset($logo))
                             <img src="data:image/png;base64,{{ $logo }}" alt="logo" />
-                        @else
-                            <div style="font-weight:700; font-size:16px;">{{ config('app.name', 'Company') }}</div>
                         @endif
                     </div>
                     <table class="invoice-meta-inline" role="presentation">

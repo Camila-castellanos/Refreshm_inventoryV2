@@ -3,237 +3,238 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\UserForm;
+use App\Models\Tab;
 use App\Models\User;
+use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Inertia\Inertia;
-use Exception;
 use Illuminate\Support\Facades\Log;
-use App\Models\Tab;
+use Illuminate\Support\Facades\Storage;
+use Inertia\Inertia;
 
 class UserController extends Controller
 {
-  /**
-   * Display a listing of the resource.
-   *
-   * @return \Illuminate\Http\Response
-   */
-  public function index(Request $request)
-{
-    $users = [];
-    $filter = $request->query('filter', 'own'); // obtain the filter from the query string, default to 'own'
-    $authUser = Auth::user();
-    $storeId = $authUser->store_id;
-    $companyId = $authUser->company_id;
+    /**
+     * Display a listing of the resource.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function index(Request $request)
+    {
+        $users = [];
+        $filter = $request->query('filter', 'own'); // obtain the filter from the query string, default to 'own'
+        $authUser = Auth::user();
+        $storeId = $authUser->store_id;
+        $companyId = $authUser->company_id;
 
-    switch (Auth::user()->role) {
-        case "ADMIN":
-            $users = User::where(function($q) use ($storeId, $companyId) {
+        switch (Auth::user()->role) {
+            case 'ADMIN':
+                $users = User::where(function ($q) use ($storeId, $companyId) {
                     $q->where('store_id', $storeId)
-                      ->orWhere('company_id', $companyId);
+                        ->orWhere('company_id', $companyId);
                 })
-                ->get();
-            break;
-        case "OWNER":
-            if ($filter === 'own') {
-                $users = User::where(function($q) use ($storeId, $companyId) {
-                    $q->where('store_id', $storeId)
-                      ->orWhere('company_id', $companyId);
-                })
-                ->get();
-            } else if ($filter === 'all') {
-                // The owner wants to see all users (default behavior)
-                $users = User::all();
+                    ->get();
+                break;
+            case 'OWNER':
+                if ($filter === 'own') {
+                    $users = User::where(function ($q) use ($storeId, $companyId) {
+                        $q->where('store_id', $storeId)
+                            ->orWhere('company_id', $companyId);
+                    })
+                        ->get();
+                } elseif ($filter === 'all') {
+                    // The owner wants to see all users (default behavior)
+                    $users = User::all();
+                }
+                break;
+            default:
+                abort(403, 'Unauthorized.');
+                break;
+        }
+
+        return Inertia::render('Users/Index', [
+            'users' => $users,
+        ]);
+    }
+
+    /**
+     * Show the form for creating a new resource.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function create()
+    {
+        return Inertia::render('Users/CreateEdit');
+    }
+
+    /**
+     * Store a newly created resource in storage.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function store(UserForm $request)
+    {
+        $form = $request->validated();
+        $user = User::create([
+            'name' => $form['name'],
+            'email' => $form['email'],
+            'password' => Hash::make($form['password']),
+        ]);
+        // safeguard to avoid user association with store
+        $global_user = $request->global_user ?? false;
+        if ($global_user) {
+            return response()->json($user, 201);
+        }
+        // user association with store
+        if (Auth::user()->role == 'ADMIN' || Auth::user()->role == 'OWNER') {
+            $user->store_id = @Auth::user()->store->id;
+            $user->company_id = @Auth::user()->company->id;
+            $user->save();
+
+            return response()->json($user, 201);
+        }
+
+        return response()->json($user, 201);
+    }
+
+    /**
+     * Update authenticated user's timezone.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function updateTimezone(Request $request)
+    {
+        $request->validate([
+            'timezone' => 'required|timezone',
+        ]);
+        // Persist new timezone for authenticated user
+        User::where('id', Auth::id())->update([
+            'timezone' => $request->timezone,
+        ]);
+
+        return back();
+    }
+
+    /**
+     * Fetch authenticated user's timezone.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function getTimezone()
+    {
+        $tz = Auth::user()->timezone;
+
+        return response()->json(['timezone' => $tz], 200);
+    }
+
+    /**
+     * Display the specified resource.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function show(User $user)
+    {
+        //
+    }
+
+    /**
+     * Show the form for editing the specified resource.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function edit(User $user)
+    {
+        return Inertia::render('Users/CreateEdit', [
+            'userEdit' => $user,
+        ]);
+    }
+
+    /**
+     * Update the specified resource in storage.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function update(UserForm $request, User $user)
+    {
+        $form = $request->validated();
+        $form['password'] = Hash::make($form['password']);
+        if ($user->update($form)) {
+            return response()->json($user, 200);
+        } else {
+            return response()->json('', 500);
+        }
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function destroy(User $user)
+    {
+        if ($user->delete()) {
+            return response()->json('OK', 200);
+        } else {
+            return response()->json('', 500);
+        }
+    }
+
+    public function changeRole(User $user)
+    {
+        return Inertia::render('Users/Roles', [
+            'userEdit' => $user,
+            'currentUserRole' => Auth::user()->role,
+        ]);
+    }
+
+    public function updateRole(Request $request, User $user)
+    {
+        $newRole = $request->role;
+        $user->role = $newRole;
+        $user->save();
+
+        return response()->json('OK');
+    }
+
+    public function ownerInvoiceUpdate(Request $request, User $user)
+    {
+        $header = $request->header ?: null;
+        $footer = $request->footer ?: null;
+        $logo = $user->invoice_logo;
+        if ($request->logo != 'null') {
+            $logo = $request['logo']->store('logos');
+        }
+
+        $user->invoice_header = $header;
+        $user->invoice_footer = $footer;
+        $user->invoice_logo = $logo;
+        $user->save();
+
+        return response()->json('OK');
+    }
+
+    public function updateHeaders(User $user, Request $request)
+    {
+        try {
+            if ($request->tab == 'sold') {
+                $user->sold_headers = json_encode($request->fields);
+                $save = $user->save();
+            } else {
+                $user->headers = json_encode($request->fields);
+                $save = $user->save();
             }
-            break;
-        default:
-            abort(403, 'Unauthorized.');
-            break;
-    }
-    
-    return Inertia::render('Users/Index', [
-        "users" => $users,
-    ]);
-}
 
-  /**
-   * Show the form for creating a new resource.
-   *
-   * @return \Illuminate\Http\Response
-   */
-  public function create()
-  {
-    return Inertia::render('Users/CreateEdit');
-  }
-
-
-
-  /**
-   * Store a newly created resource in storage.
-   *
-   * @param  \Illuminate\Http\Request  $request
-   * @return \Illuminate\Http\Response
-   */
-  public function store(UserForm $request)
-  {
-    $form = $request->validated();
-    $user = User::create([
-      "name" => $form["name"],
-      "email" => $form["email"],
-      "password" => Hash::make($form["password"]),
-    ]);
-    // safeguard to avoid user association with store
-    $global_user = $request->global_user ?? false;
-    if($global_user){
-      return response()->json($user, 201);
-    }
-    // user association with store
-    if (Auth::user()->role == "ADMIN" || Auth::user()->role == "OWNER") {
-      $user->store_id = @Auth::user()->store->id;
-      $user->company_id = @Auth::user()->company->id;
-      $user->save();
-      return response()->json($user, 201);
-    }
-    return response()->json($user, 201);
-  }
-  
-  /**
-   * Update authenticated user's timezone.
-   *
-   * @param  \Illuminate\Http\Request  $request
-   * @return \Illuminate\Http\Response
-   */
-  public function updateTimezone(Request $request)
-  {
-      $request->validate([
-          'timezone' => 'required|timezone',
-      ]);
-      // Persist new timezone for authenticated user
-      User::where('id', Auth::id())->update([
-          'timezone' => $request->timezone,
-      ]);
-      return back();
-  }
-  
-  /**
-   * Fetch authenticated user's timezone.
-   *
-   * @return \Illuminate\Http\Response
-   */
-  public function getTimezone()
-  {
-      $tz = Auth::user()->timezone;
-      return response()->json(['timezone' => $tz], 200);
-  }
-
-  /**
-   * Display the specified resource.
-   *
-   * @param  \App\Models\User  $user
-   * @return \Illuminate\Http\Response
-   */
-  public function show(User $user)
-  {
-    //
-  }
-
-  /**
-   * Show the form for editing the specified resource.
-   *
-   * @param  \App\Models\User  $user
-   * @return \Illuminate\Http\Response
-   */
-  public function edit(User $user)
-  {
-    return Inertia::render('Users/CreateEdit', [
-      "userEdit" => $user
-    ]);
-  }
-
-  /**
-   * Update the specified resource in storage.
-   *
-   * @param  \Illuminate\Http\Request  $request
-   * @param  \App\Models\User  $user
-   * @return \Illuminate\Http\Response
-   */
-  public function update(UserForm $request, User $user)
-  {
-    $form = $request->validated();
-    $form["password"] = Hash::make($form["password"]);
-    if ($user->update($form)) {
-      return response()->json($user, 200);
-    } else {
-      return response()->json('', 500);
-    }
-  }
-
-  /**
-   * Remove the specified resource from storage.
-   *
-   * @param  \App\Models\User  $user
-   * @return \Illuminate\Http\Response
-   */
-  public function destroy(User $user)
-  {
-    if ($user->delete()) {
-      return response()->json('OK', 200);
-    } else {
-      return response()->json('', 500);
-    }
-  }
-
-  public function changeRole(User $user)
-  {
-    return Inertia::render('Users/Roles', [
-      "userEdit" => $user,
-      "currentUserRole" => Auth::user()->role,
-    ]);
-  }
-
-  public function updateRole(Request $request, User $user)
-  {
-    $newRole = $request->role;
-    $user->role = $newRole;
-    $user->save();
-    return response()->json("OK");
-  }
-
-  public function ownerInvoiceUpdate(Request $request, User $user)
-  {
-    $header = $request->header ?: NULL;
-    $footer = $request->footer ?: NULL;
-    $logo = $user->invoice_logo;
-    if ($request->logo != "null") {
-      $logo = $request["logo"]->store("logos");
+            return response()->json($save, 200);
+        } catch (Exception $e) {
+            return response()->json($e->getMessage(), 500);
+        }
     }
 
-    $user->invoice_header = $header;
-    $user->invoice_footer = $footer;
-    $user->invoice_logo = $logo;
-    $user->save();
-    return response()->json("OK");
-  }
-
-  public function updateHeaders(User $user, Request $request)
-  {
-    try {
-      if ($request->tab == "sold") {
-        $user->sold_headers = json_encode($request->fields);
-        $save = $user->save();
-      } else {
-        $user->headers = json_encode($request->fields);
-        $save = $user->save();
-      }
-      return response()->json($save, 200);
-    } catch (Exception $e) {
-      return response()->json($e->getMessage(), 500);
-    }
-  }
-
-  // Get the printable tag fields for the current user
-  public function getPrintableTagFields()
+    // Get the printable tag fields for the current user
+    public function getPrintableTagFields()
     {
         try {
             $user = Auth::user();
@@ -250,11 +251,12 @@ class UserController extends Controller
             ], 500);
         }
     }
+
     public function updatePrintableTagFields(Request $request)
     {
         // Validate that we received an array of allowed keys
         $data = $request->validate([
-            'fields'   => 'required|array',
+            'fields' => 'required|array',
         ]);
 
         $user = Auth::user();
@@ -264,7 +266,7 @@ class UserController extends Controller
 
         return response()->json([
             'success' => true,
-            'fields'  => $user->printable_tag_fields,
+            'fields' => $user->printable_tag_fields,
         ], 200);
     }
 
@@ -310,14 +312,13 @@ class UserController extends Controller
     /**
      * Return tabs that belong to the authenticated user.
      *
-     * @param \Illuminate\Http\Request $request
      * @return \Illuminate\Http\Response
      */
     public function userTabs(Request $request)
     {
         try {
             $user = Auth::user();
-            if (!$user) {
+            if (! $user) {
                 return response()->json(['tabs' => []], 200);
             }
 
@@ -327,7 +328,8 @@ class UserController extends Controller
 
             return response()->json(['tabs' => $tabs], 200);
         } catch (Exception $e) {
-            Log::error('UserController@userTabs error: ' . $e->getMessage());
+            Log::error('UserController@userTabs error: '.$e->getMessage());
+
             return response()->json(['error' => 'Could not retrieve tabs'], 500);
         }
     }
@@ -335,14 +337,13 @@ class UserController extends Controller
     /**
      * Update a custom tab name.
      *
-     * @param \Illuminate\Http\Request $request
      * @return \Illuminate\Http\Response
      */
     public function updateTabName(Request $request)
     {
         try {
             $user = Auth::user();
-            
+
             $data = $request->validate([
                 'tab_id' => 'required|exists:tabs,id',
                 'name' => 'required|string|max:255',
@@ -352,7 +353,7 @@ class UserController extends Controller
                 ->where('user_id', $user->id)
                 ->first();
 
-            if (!$tab) {
+            if (! $tab) {
                 return response()->json(['error' => 'Tab not found'], 404);
             }
 
@@ -360,11 +361,96 @@ class UserController extends Controller
 
             return response()->json([
                 'success' => true,
-                'tab' => $tab
+                'tab' => $tab,
             ], 200);
         } catch (Exception $e) {
-            Log::error('UserController@updateTabName error: ' . $e->getMessage());
+            Log::error('UserController@updateTabName error: '.$e->getMessage());
+
             return response()->json(['error' => 'Could not update tab name'], 500);
         }
+    }
+
+    /**
+     * Get the authenticated user's invoice logo.
+     */
+    public function getInvoiceLogo(Request $request)
+    {
+        $user = Auth::user();
+
+        // 1. Check Personal User Logo
+        if ($user->invoice_logo && Storage::disk('local')->exists($user->invoice_logo)) {
+            return response()->file(Storage::disk('local')->path($user->invoice_logo));
+        }
+
+        // If strict mode is requested, stop here if no personal logo
+        if ($request->has('strict')) {
+            return response()->json(['url' => null], 404);
+        }
+
+        // 2. Check Company Logo (Fallback)
+        $company = $user->company;
+        if ($company && $company->logo && Storage::disk('local')->exists($company->logo)) {
+            return response()->file(Storage::disk('local')->path($company->logo));
+        }
+
+        // 3. Check Store Logo (Fallback)
+        $store = $user->store;
+        if ($store && $store->logo) {
+            if (Storage::disk('local')->exists($store->logo)) {
+                return response()->file(Storage::disk('local')->path($store->logo));
+            } elseif (file_exists(storage_path('app/'.$store->logo))) {
+                return response()->file(storage_path('app/'.$store->logo));
+            }
+        }
+
+        // 4. Default System Logo (Fallback for image src)
+        return response()->file(public_path('img/_REFRESHMOBILE.png'));
+    }
+
+    /**
+     * Update the authenticated user's invoice logo.
+     */
+    public function updateInvoiceLogo(Request $request)
+    {
+        $request->validate([
+            'photo' => ['nullable', 'mimes:jpg,jpeg,png,png', 'max:1024'],
+        ]);
+
+        $user = Auth::user();
+
+        if ($request->hasFile('photo')) {
+            // Delete old logo if exists
+            if ($user->invoice_logo && Storage::disk('local')->exists($user->invoice_logo)) {
+                Storage::disk('local')->delete($user->invoice_logo);
+            }
+
+            // Store new logo
+            $path = $request->file('photo')->store('logos', 'local');
+
+            // Update user record
+            $user->forceFill([
+                'invoice_logo' => $path,
+            ])->save();
+        }
+
+        return back(303);
+    }
+
+    /**
+     * Delete the authenticated user's invoice logo.
+     */
+    public function deleteInvoiceLogo()
+    {
+        $user = Auth::user();
+
+        if ($user->invoice_logo && Storage::disk('local')->exists($user->invoice_logo)) {
+            Storage::disk('local')->delete($user->invoice_logo);
+        }
+
+        $user->forceFill([
+            'invoice_logo' => null,
+        ])->save();
+
+        return back(303);
     }
 }

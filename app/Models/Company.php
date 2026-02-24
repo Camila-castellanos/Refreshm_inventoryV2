@@ -25,6 +25,7 @@ class Company extends Model
     protected $fillable = [
         'name',
         'owner_id',
+        'logo',
         // Add other company fields here if they should be mass assignable
         // 'address', 'phone', 'vat_number',
     ];

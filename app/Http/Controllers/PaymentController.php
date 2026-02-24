@@ -23,6 +23,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage as StorageFacade;
 use Inertia\Inertia;
 
 class PaymentController extends Controller
@@ -59,7 +60,9 @@ class PaymentController extends Controller
             // $response = Cache::remember($cacheKey, 300, function() use ($user, $dataStatus) {
             //         return $this->getPaymentsData($user->id, $dataStatus);
             // });
-            $response = $this->getPaymentsData($user->id, $dataStatus, $startDate, $endDate);
+
+            $userIdToFilter = in_array($user->role, ['ADMIN', 'OWNER']) ? null : $user->id;
+            $response = $this->getPaymentsData($userIdToFilter, $dataStatus, $startDate, $endDate);
 
             $email_templates = EmailTemplate::where('user_id', $user->id)->get();
 
@@ -125,24 +128,47 @@ class PaymentController extends Controller
         if ($user_role == 'OWNER') {
             $header = $user_data->invoice_header;
             $footer = $user_data->invoice_footer;
-            if (! is_null($user_data->invoice_logo) && file_exists(storage_path().'/app/'.$user_data->invoice_logo)) {
-                $logo = base64_encode(file_get_contents(storage_path().'/app/'.$user_data->invoice_logo));
-            } elseif (file_exists(public_path().'/img/_REFRESHMOBILE.png')) {
-                $logo = base64_encode(file_get_contents(public_path().'/img/_REFRESHMOBILE.png'));
-            } else {
-                $logo = null; // Fallback if no logo is available
-            }
         } else {
-
             if ($store) {
                 $header = $store->header;
                 $footer = $store->footer;
-                if (! is_null($store->logo) && $store->logo != '') {
-                    $logo = base64_encode(file_get_contents(storage_path().'/app/'.$store->logo));
-                } else {
-                    $logo = base64_encode(file_get_contents(public_path().'/img/_REFRESHMOBILE.png'));
+            }
+        }
+
+        // Logic for Logo Selection (User -> Company -> Store -> Default)
+        $logo = null;
+
+        // 1. User Personal Logo
+        if (! is_null($user_data->invoice_logo) && StorageFacade::disk('local')->exists($user_data->invoice_logo)) {
+            $logo = base64_encode(StorageFacade::disk('local')->get($user_data->invoice_logo));
+        }
+
+        // 2. Company Logo (Fallback)
+        if (! $logo) {
+            // Explicitly load company relationship to be sure
+            $user_data->load('company');
+
+            if ($user_data->company) {
+                if ($user_data->company->logo) {
+                    if (StorageFacade::disk('local')->exists($user_data->company->logo)) {
+                        $logo = base64_encode(StorageFacade::disk('local')->get($user_data->company->logo));
+                    }
                 }
             }
+        }
+
+        // 3. Store Logo (Fallback for non-owners or if store has logo)
+        if (! $logo && $store && ! is_null($store->logo) && $store->logo != '') {
+            if (StorageFacade::disk('local')->exists($store->logo)) {
+                $logo = base64_encode(StorageFacade::disk('local')->get($store->logo));
+            } elseif (file_exists(storage_path().'/app/'.$store->logo)) {
+                $logo = base64_encode(file_get_contents(storage_path().'/app/'.$store->logo));
+            }
+        }
+
+        // 4. System Default
+        if (! $logo) {
+            $logo = base64_encode(file_get_contents(public_path().'/img/_REFRESHMOBILE.png'));
         }
 
         if ($item) {
@@ -558,7 +584,8 @@ class PaymentController extends Controller
             }
 
             // Usar el helper con el parámetro de búsqueda
-            $response = $this->getPaymentsData($user->id, $dataStatus, $search);
+            $userIdToFilter = in_array($user->role, ['ADMIN', 'OWNER']) ? null : $user->id;
+            $response = $this->getPaymentsData($userIdToFilter, $dataStatus, null, null, $search);
 
             return response()->json($response);
 
@@ -617,7 +644,8 @@ class PaymentController extends Controller
     private function getPaymentsData($userId, $dataStatus, $startDate = null, $endDate = null, $search = null)
     {
         // Consulta inicial por ventas (más eficiente)
-        $salesQuery = Sale::where('user_id', $userId)
+        $salesQuery = Sale::query()
+            ->when($userId, fn ($q) => $q->where('user_id', $userId))
             ->when($startDate && $endDate, function ($q) use ($startDate, $endDate) {
                 $q->whereBetween('created_at', [$startDate->startOfDay(), $endDate->endOfDay()]);
             })
