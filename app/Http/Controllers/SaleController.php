@@ -23,6 +23,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage as StorageFacade;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -71,16 +72,6 @@ class SaleController extends Controller
             $form['balance_remaining'] = 0;
         }
 
-        Log::info('Total calculation in store', [
-            'subtotal' => $subtotal,
-            'credit' => $credit,
-            'tax_percentage' => $taxPercentage,
-            'subtotal_after_credit' => $subtotalAfterCredit,
-            'calculated_tax' => $calculatedTax,
-            'credit_minus_tax' => $creditMinusTax,
-            'calculated_total' => $calculatedTotal,
-        ]);
-
         // Crear la venta con datetime completo
         $sale = Sale::create($form);
 
@@ -107,27 +98,11 @@ class SaleController extends Controller
                     Customer::where('id', $customer->id)->update([
                         'credit' => max(0, $newCustomerCredit), // Asegurar que no sea negativo
                     ]);
-
-                    Log::info('Credit applied in store', [
-                        'sale_id' => $sale->id,
-                        'credit_added' => $creditAdded,
-                        'total_credit' => $totalCredit,
-                        'customer_id' => $customer->id,
-                        'old_customer_credit' => $customer->credit,
-                        'new_customer_credit' => $newCustomerCredit,
-                    ]);
                 } else {
-                    Log::warning('Customer not found for credit application', [
-                        'sale_id' => $sale->id,
-                        'customer_id' => $customerId,
-                        'credit_added' => $creditAdded,
-                    ]);
+                    // Customer not found logic if needed
                 }
             } else {
-                Log::warning('No customer ID found for credit application', [
-                    'sale_id' => $sale->id,
-                    'credit_added' => $creditAdded,
-                ]);
+                // No customer ID found logic if needed
             }
         }
 
@@ -289,15 +264,6 @@ class SaleController extends Controller
                     Customer::where('id', $customer->id)->update([
                         'credit' => max(0, $newCustomerCredit), // Asegurar que no sea negativo
                     ]);
-
-                    Log::info('Credit update with credit_added', [
-                        'credit_added' => $creditAdded,
-                        'current_sale_credit' => $currentSaleCredit,
-                        'final_credit' => $finalCredit,
-                        'customer_id' => $customer->id,
-                        'old_customer_credit' => $customer->credit,
-                        'new_customer_credit' => $newCustomerCredit,
-                    ]);
                 }
             }
 
@@ -318,16 +284,6 @@ class SaleController extends Controller
 
                         // Asegurar que el crédito final no sea negativo
                         $finalCredit = max(0.0, $requestCredit);
-
-                        Log::info('Credit update with total credit change', [
-                            'request_credit' => $requestCredit,
-                            'current_sale_credit' => $currentSaleCredit,
-                            'credit_difference' => $creditDifference,
-                            'final_credit' => $finalCredit,
-                            'customer_id' => $customer->id,
-                            'old_customer_credit' => $customer->credit,
-                            'new_customer_credit' => $newCustomerCredit,
-                        ]);
                     }
                 }
             }
@@ -348,21 +304,9 @@ class SaleController extends Controller
             $creditMinusTax = $credit - $calculatedTax;
             $calculatedTotal = max(0.0, $subtotal - $creditMinusTax);
 
-            Log::info('Total calculation in backend', [
-                'subtotal' => $subtotal,
-                'credit' => $credit,
-                'tax_percentage' => $taxPercentage,
-                'subtotal_after_credit' => $subtotalAfterCredit,
-                'calculated_tax' => $calculatedTax,
-                'credit_minus_tax' => $creditMinusTax,
-                'calculated_total' => $calculatedTotal,
-                'balance_remaining' => $balance,
-            ]);
-
             // Calculate balance_remaining based on calculated total and amount paid
             // Formula: balance_remaining = total - amount_paid
             $amountPaidUpdate = max(0.0, (float) ($request->amount_paid ?? 0));
-            Log::info(['Amount paid for balance calculation: '.$amountPaidUpdate.' calculatedTotal: '.$calculatedTotal]);
             $balance = round($calculatedTotal - $amountPaidUpdate, 2);
             if ($balance < 0) {
                 $balance = 0;
@@ -425,26 +369,100 @@ class SaleController extends Controller
         $logo = null;
         $sales = collect([$sale]);
         $returned_items = collect([]);
+
         if ($user_role == 'OWNER') {
             $header = $user_data->invoice_header;
             $footer = $user_data->invoice_footer;
-            if (! is_null($user_data->invoice_logo) && file_exists(storage_path('app/'.$user_data->invoice_logo))) {
-                $logo = base64_encode(file_get_contents(storage_path('app/'.$user_data->invoice_logo)));
-            } else {
-                $logo = base64_encode(file_get_contents(public_path('img/_REFRESHMOBILE.png')));
-            }
         } else {
-
             $store = Store::where('id', $store_id)->first();
             if ($store) {
                 $header = $store->header;
                 $footer = $store->footer;
-                if (! is_null($store->logo)) {
-                    $logo = base64_encode(file_get_contents(storage_path().'/app/'.$store->logo));
-                } else {
-                    $logo = base64_encode(file_get_contents(public_path().'/img/_REFRESHMOBILE.png'));
+            }
+        }
+
+        // Logic for Logo Selection (User -> Company -> Store -> Default)
+        $logo = null;
+
+        // 1. User Personal Logo
+        if (! is_null($user_data->invoice_logo) && StorageFacade::disk('local')->exists($user_data->invoice_logo)) {
+            $logo = base64_encode(StorageFacade::disk('local')->get($user_data->invoice_logo));
+        }
+
+        // 2. Company Logo (Fallback)
+        if (! $logo) {
+            // Explicitly load company relationship to be sure
+            $user_data->load('company');
+
+            if ($user_data->company) {
+                if ($user_data->company->logo) {
+                    if (StorageFacade::disk('local')->exists($user_data->company->logo)) {
+                        $logo = base64_encode(StorageFacade::disk('local')->get($user_data->company->logo));
+                    }
                 }
             }
+        }
+
+        // 3. Store Logo (Fallback for non-owners or if store has logo)
+        $store = Store::where('id', $store_id)->first();
+        if (! $logo && $store && ! is_null($store->logo) && $store->logo != '') {
+            if (StorageFacade::disk('local')->exists($store->logo)) {
+                $logo = base64_encode(StorageFacade::disk('local')->get($store->logo));
+            } elseif (file_exists(storage_path('app/'.$store->logo))) {
+                $logo = base64_encode(file_get_contents(storage_path('app/'.$store->logo)));
+            } elseif (file_exists(storage_path().'/app/'.$store->logo)) {
+                $logo = base64_encode(file_get_contents(storage_path().'/app/'.$store->logo));
+            }
+        }
+
+        // 4. System Default
+        if (! $logo) {
+            $logo = base64_encode(file_get_contents(public_path('img/_REFRESHMOBILE.png')));
+        }
+
+        // 2. Company Logo (Fallback)
+        if (! $logo) {
+            // Explicitly load company relationship to be sure
+            $user_data->load('company');
+
+            if ($user_data->company) {
+                Log::info('User belongs to company: '.$user_data->company->name.' (ID: '.$user_data->company->id.')');
+                if ($user_data->company->logo) {
+                    Log::info('Company has logo path: '.$user_data->company->logo);
+                    if (StorageFacade::disk('local')->exists($user_data->company->logo)) {
+                        Log::info('Using Company Logo');
+                        $logo = base64_encode(StorageFacade::disk('local')->get($user_data->company->logo));
+                    } else {
+                        Log::warning('Company logo file not found at: '.$user_data->company->logo);
+                    }
+                } else {
+                    Log::info('Company has no logo set.');
+                }
+            } else {
+                Log::info('User has no company association loaded.');
+            }
+        }
+
+        // 3. Store Logo (Fallback for non-owners or if store has logo)
+        $store = Store::where('id', $store_id)->first();
+        if (! $logo && $store && ! is_null($store->logo) && $store->logo != '') {
+            Log::info('Checking Store Logo for store ID: '.$store->id);
+            if (StorageFacade::disk('local')->exists($store->logo)) {
+                Log::info('Using Store Logo (Storage): '.$store->logo);
+                $logo = base64_encode(StorageFacade::disk('local')->get($store->logo));
+            } elseif (file_exists(storage_path('app/'.$store->logo))) {
+                Log::info('Using Store Logo (Abs Path 1): '.$store->logo);
+                $logo = base64_encode(file_get_contents(storage_path('app/'.$store->logo)));
+            } elseif (file_exists(storage_path().'/app/'.$store->logo)) {
+                Log::info('Using Store Logo (Abs Path 2): '.$store->logo);
+                $logo = base64_encode(file_get_contents(storage_path().'/app/'.$store->logo));
+            }
+        }
+
+        // 4. System Default
+        if (! $logo) {
+            Log::info('Using System Default Logo');
+            $logo = base64_encode(file_get_contents(public_path('img/_REFRESHMOBILE.png')));
         }
 
         $pdf = Pdf::loadView('sale-receipt-invoice', compact('sales', 'customer', 'header', 'footer', 'logo', 'returned_items'))

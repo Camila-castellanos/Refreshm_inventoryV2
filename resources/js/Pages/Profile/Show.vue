@@ -6,6 +6,8 @@ import SectionBorder from '@/Components/SectionBorder.vue';
 import TwoFactorAuthenticationForm from '@/Pages/Profile/Partials/TwoFactorAuthenticationForm.vue';
 import UpdatePasswordForm from '@/Pages/Profile/Partials/UpdatePasswordForm.vue';
 import UpdateProfileInformationForm from '@/Pages/Profile/Partials/UpdateProfileInformationForm.vue';
+import UpdateInvoiceLogoForm from './Partials/UpdateInvoiceLogoForm.vue';
+import UpdateCompanyLogoForm from './Partials/UpdateCompanyLogoForm.vue';
 import Storage from './Partials/Storage.vue';
 import PrintableLabelActiveFields from './Partials/PrintableLabelActiveFields.vue';
 import PrintableInvoiceActiveFields from './Partials/PrintableInvoiceActiveFields.vue';
@@ -40,6 +42,14 @@ defineProps({
 
                 <div>
                     <PrintableLabelActiveFields />
+                    <SectionBorder />
+                </div>
+                <div>
+                    <UpdateInvoiceLogoForm />
+                    <SectionBorder />
+                </div>
+                <div v-if="$page.props.auth.user.role === 'OWNER'">
+                    <UpdateCompanyLogoForm />
                     <SectionBorder />
                 </div>
                 <div>
