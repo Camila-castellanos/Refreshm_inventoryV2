@@ -25,6 +25,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // // Registrar alias para el middleware de verificación de roles
         $middleware->alias([
             'role' => \App\Http\Middleware\CheckUserRole::class,
+            'page.permission' => \App\Http\Middleware\CheckPagePermissions::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

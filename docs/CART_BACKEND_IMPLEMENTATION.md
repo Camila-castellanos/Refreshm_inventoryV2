@@ -1,27 +1,27 @@
-# Carrito de Compras - Backend Implementation Guide
+# Shopping Cart - Backend Implementation Guide
 
-## 📋 Estado Actual
+## 📋 Current Status
 
-El carrito de compras está implementado completamente en el frontend usando:
-- ✅ **Pinia** como state manager
-- ✅ **pinia-plugin-persistedstate** para persistencia en localStorage
-- ✅ **Eventos globales** para sincronización entre componentes
+The shopping cart is fully implemented on the frontend using:
+- ✅ **Pinia** as state manager
+- ✅ **pinia-plugin-persistedstate** for localStorage persistence
+- ✅ **Global events** for component synchronization
 
-### Archivos Implementados
+### Implemented Files
 
 1. **Store**: `resources/js/stores/cartStore.js`
 2. **Composable**: `resources/js/composables/useCart.js`
-3. **Componentes actualizados**:
+3. **Updated Components**:
    - `resources/js/Components/Ecommerce/Cart.vue`
    - `resources/js/Pages/Ecommerce/PublicMarket/OrderReview.vue`
 
 ---
 
-## 🚀 Backend Implementation (Pendiente)
+## 🚀 Backend Implementation (Pending)
 
-### Paso 1: Crear el Controller
+### Step 1: Create the Controller
 
-Crear: `app/Http/Controllers/Ecommerce/CartController.php`
+Create: `app/Http/Controllers/Ecommerce/CartController.php`
 
 ```php
 <?php
@@ -178,7 +178,7 @@ class CartController extends Controller
 }
 ```
 
-### Paso 2: Registrar las Rutas API
+### Step 2: Register API Routes
 
 En `routes/api.php`:
 
@@ -201,11 +201,11 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 ```
 
-### Paso 3: (Opcional) Crear Modelo de Base de Datos
+### Step 3: (Optional) Create Database Model
 
-Si quieres guardar carritos en la base de datos para usuarios autenticados:
+If you want to save carts in the database for authenticated users:
 
-**Migración**: `database/migrations/xxxx_create_carts_table.php`
+**Migration**: `database/migrations/xxxx_create_carts_table.php`
 
 ```php
 <?php
@@ -239,7 +239,7 @@ return new class extends Migration
 };
 ```
 
-**Modelo**: `app/Models/Ecommerce/Cart.php`
+**Model**: `app/Models/Ecommerce/Cart.php`
 
 ```php
 <?php
@@ -276,12 +276,12 @@ class Cart extends Model
 }
 ```
 
-### Paso 4: Activar Sincronización en el Frontend
+### Step 4: Activate Frontend Synchronization
 
-En `resources/js/stores/cartStore.js`, descomentar las líneas de sincronización:
+In `resources/js/stores/cartStore.js`, uncomment the synchronization lines:
 
 ```javascript
-// Línea ~120
+// Line ~120
 const syncToBackend = async () => {
     if (!marketSlug.value) {
         console.warn('[CartStore] Cannot sync: No market slug set')
@@ -289,7 +289,7 @@ const syncToBackend = async () => {
     }
 
     try {
-        // DESCOMENTAR ESTO:
+        // UNCOMMENT THIS:
         const response = await axios.post(`/api/market/${marketSlug.value}/cart/sync`, {
             items: items.value.map(item => ({
                 id: item.id,
@@ -302,10 +302,10 @@ const syncToBackend = async () => {
     }
 }
 
-// Línea ~140
+// Line ~140
 const loadFromBackend = async (slug) => {
     try {
-        // DESCOMENTAR ESTO:
+        // UNCOMMENT THIS:
         const response = await axios.get(`/api/market/${slug}/cart`)
         if (response.data.items && Array.isArray(response.data.items)) {
             items.value = response.data.items
@@ -318,17 +318,17 @@ const loadFromBackend = async (slug) => {
 }
 ```
 
-### Paso 5: Llamar `loadFromBackend` al Cargar la Página
+### Step 5: Call `loadFromBackend` on Page Load
 
-En los componentes que necesiten cargar el carrito desde el backend:
+In components that need to load the cart from the backend:
 
 ```javascript
-// En OrderReview.vue o MarketLayout.vue
+// In OrderReview.vue or MarketLayout.vue
 onMounted(async () => {
     if (props.market?.slug) {
         cartStore.setMarket(props.market.slug)
         
-        // Cargar desde backend
+        // Load from backend
         await cartStore.loadFromBackend(props.market.slug)
     }
 })
@@ -336,43 +336,43 @@ onMounted(async () => {
 
 ---
 
-## 🎯 Ventajas de Implementar el Backend
+## 🎯 Advantages of Implementing the Backend
 
-1. **Carritos entre dispositivos**: Los usuarios pueden continuar sus compras desde otro dispositivo
-2. **Análisis de carritos abandonados**: Track de qué productos interesan pero no se compran
-3. **Recuperación de carritos**: Email marketing para recuperar ventas
-4. **Validación en tiempo real**: Verificar que los productos aún están disponibles
-5. **Historial de carritos**: Para usuarios registrados
+1. **Multi-device carts**: Users can continue their purchases from another device
+2. **Abandoned cart analysis**: Track which products are interesting but not purchased
+3. **Cart recovery**: Email marketing to recover sales
+4. **Real-time validation**: Verify that products are still available
+5. **Cart history**: For registered users
 
 ---
 
-## 📊 Roadmap de Implementación
+## 📊 Implementation Roadmap
 
-### Fase 1: MVP (Simple Session Storage)
-- [ ] Crear CartController con métodos básicos
-- [ ] Registrar rutas API
-- [ ] Descomentar sincronización en cartStore.js
-- [ ] Probar sincronización
+### Phase 1: MVP (Simple Session Storage)
+- [ ] Create CartController with basic methods
+- [ ] Register API routes
+- [ ] Uncomment synchronization in cartStore.js
+- [ ] Test synchronization
 
-### Fase 2: Database Storage (Para usuarios registrados)
-- [ ] Crear migración y modelo Cart
-- [ ] Actualizar CartController para usar DB
-- [ ] Implementar autenticación
-- [ ] Migrar carritos de session a DB al hacer login
+### Phase 2: Database Storage (For registered users)
+- [ ] Create Cart migration and model
+- [ ] Update CartController to use DB
+- [ ] Implement authentication
+- [ ] Migrate carts from session to DB on login
 
-### Fase 3: Features Avanzados
-- [ ] Carritos abandonados tracking
+### Phase 3: Advanced Features
+- [ ] Abandoned cart tracking
 - [ ] Email notifications
-- [ ] Analytics de productos más agregados
-- [ ] Wishlists separadas del carrito
-- [ ] Compartir carrito (link único)
+- [ ] Analytics of most added products
+- [ ] Wishlists separate from the cart
+- [ ] Share cart (unique link)
 
 ---
 
 ## 🔧 Testing
 
 ```bash
-# Probar sincronización
+# Test synchronization
 POST /api/market/{slug}/cart/sync
 {
   "items": [
@@ -381,19 +381,19 @@ POST /api/market/{slug}/cart/sync
   ]
 }
 
-# Obtener carrito
+# Get cart
 GET /api/market/{slug}/cart
 
-# Limpiar carrito
+# Clear cart
 DELETE /api/market/{slug}/cart
 ```
 
 ---
 
-## 📝 Notas
+## 📝 Notes
 
-- El frontend funciona 100% sin backend (offline-first)
-- localStorage se usa como cache principal
-- Backend es opcional para sincronización y features avanzados
-- La implementación actual permite agregar backend gradualmente sin romper nada
+- The frontend works 100% without a backend (offline-first)
+- localStorage is used as the primary cache
+- Backend is optional for synchronization and advanced features
+- The current implementation allows adding the backend gradually without breaking anything
 

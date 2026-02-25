@@ -2,12 +2,185 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage as StorageFacade;
+use Illuminate\Validation\Rule;
+use Inertia\Inertia;
 
 class CompanyController extends Controller
 {
+    /**
+     * Show the company settings screen.
+     */
+    public function show()
+    {
+        $user = Auth::user();
+
+        // Ensure only OWNER can access
+        if ($user->role !== 'OWNER') {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $company = $user->company;
+
+        if (! $company) {
+            abort(404, 'Company not found.');
+        }
+
+        return Inertia::render('Company/Show', [
+            'company' => $company,
+            'members' => $company->users()->get()->map(function ($member) {
+                return [
+                    'id' => $member->id,
+                    'name' => $member->name,
+                    'email' => $member->email,
+                    'role' => $member->role,
+                    'profile_photo_url' => $member->profile_photo_url,
+                    'page_permissions' => $member->page_permissions,
+                ];
+            }),
+        ]);
+    }
+
+    /**
+     * Update the company's name.
+     */
+    public function update(Request $request)
+    {
+        $user = Auth::user();
+
+        if ($user->role !== 'OWNER') {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $company = $user->company;
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255', Rule::unique('companies')->ignore($company->id)],
+        ]);
+
+        $company->forceFill([
+            'name' => $validated['name'],
+        ])->save();
+
+        return back(303);
+    }
+
+    /**
+     * Add a new member to the company.
+     */
+    public function storeMember(Request $request)
+    {
+        $user = Auth::user();
+
+        if ($user->role !== 'OWNER') {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $company = $user->company;
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'role' => ['required', 'in:ADMIN,USER'],
+        ]);
+
+        User::create([
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'password' => Hash::make($validated['password']),
+            'role' => $validated['role'],
+            'company_id' => $company->id,
+            'store_id' => $user->store_id, // Assign to same store/location by default for now, or make it selectable
+        ]);
+
+        return back(303);
+    }
+
+    /**
+     * Update a member's role.
+     */
+    public function updateMemberRole(Request $request, $memberId)
+    {
+        $user = Auth::user();
+
+        if ($user->role !== 'OWNER') {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $member = User::where('id', $memberId)->where('company_id', $user->company_id)->firstOrFail();
+
+        // Prevent modifying self via this method (although owner shouldn't be in the list as editable member usually)
+        if ($member->id === $user->id) {
+            abort(403, 'Cannot modify your own role here.');
+        }
+
+        $validated = $request->validate([
+            'role' => ['required', 'in:ADMIN,USER'],
+        ]);
+
+        $member->forceFill([
+            'role' => $validated['role'],
+        ])->save();
+
+        return back(303);
+    }
+
+    /**
+     * Update a member's permissions.
+     */
+    public function updateMemberPermissions(Request $request, $memberId)
+    {
+        $user = Auth::user();
+
+        if ($user->role !== 'OWNER') {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $member = User::where('id', $memberId)->where('company_id', $user->company_id)->firstOrFail();
+
+        // Prevent modifying self permissions (Owner should have full access anyway)
+        if ($member->id === $user->id) {
+            abort(403, 'Cannot modify your own permissions here.');
+        }
+
+        $validated = $request->validate([
+            'permissions' => ['required', 'array'],
+        ]);
+
+        $member->forceFill([
+            'page_permissions' => $validated['permissions'],
+        ])->save();
+
+        return back(303);
+    }
+
+    /**
+     * Remove a member from the company.
+     */
+    public function removeMember($memberId)
+    {
+        $user = Auth::user();
+
+        if ($user->role !== 'OWNER') {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $member = User::where('id', $memberId)->where('company_id', $user->company_id)->firstOrFail();
+
+        if ($member->id === $user->id) {
+            abort(403, 'Cannot remove yourself.');
+        }
+
+        $member->delete();
+
+        return back(303);
+    }
+
     /**
      * Get the authenticated user's company logo.
      */

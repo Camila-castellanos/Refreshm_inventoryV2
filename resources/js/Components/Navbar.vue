@@ -110,27 +110,59 @@ const logout = () => {
 };
 
 const navItems = ref([
-  { label: 'Dashboard', icon: 'pi pi-chart-bar', url: '/dashboard', roles: ['OWNER', 'ADMIN'] },
-  { label: 'Inventory', icon: 'pi pi-warehouse', url: '/inventory/items', roles: ['OWNER', 'USER', 'ADMIN'] },
-  { label: 'Markets', icon: 'pi pi-shopping-cart', url: route('ecommerce.markets.index'), roles: ['OWNER', 'ADMIN'] },
-  { label: 'Accounting', icon: 'pi pi-calculator', url: '/accounting/payments', roles: ['ADMIN', 'OWNER'] },
-  { label: 'Contacts', icon: 'pi pi-users', url: '/customer', roles: ['OWNER', 'USER', 'ADMIN'] },
-  { label: 'Stores', icon: 'pi pi-shop', url: route('stores.index', { filter: 'all' }), roles: ['OWNER'] },
-  { label: 'Users', icon: 'pi pi-user', url: route('users.index', { filter: 'all' }), roles: ['OWNER'] },
+  { label: 'Dashboard', icon: 'pi pi-chart-bar', url: '/dashboard', roles: ['OWNER', 'ADMIN', 'USER'], permission: 'Dashboard' },
+  { label: 'Inventory', icon: 'pi pi-warehouse', url: '/inventory/items', roles: ['OWNER', 'USER', 'ADMIN'], permission: 'Inventory' },
+  { label: 'Markets', icon: 'pi pi-shopping-cart', url: route('ecommerce.markets.index'), roles: ['OWNER', 'ADMIN', 'USER'], permission: 'Markets' },
+  { label: 'Accounting', icon: 'pi pi-calculator', url: '/accounting/payments', roles: ['ADMIN', 'OWNER', 'USER'], permission: 'Accounting' },
+  { label: 'Contacts', icon: 'pi pi-users', url: '/customer', roles: ['OWNER', 'USER', 'ADMIN'], permission: 'Contacts' },
+  { label: 'Stores', icon: 'pi pi-shop', url: route('stores.index', { filter: 'all' }), roles: ['OWNER', 'USER'], permission: 'Stores' },
+  { label: 'Company', icon: 'pi pi-building', url: route('company.show'), roles: ['OWNER', 'USER'], permission: 'Company' },
+  { label: 'Users', icon: 'pi pi-user', url: route('users.index', { filter: 'all' }), roles: ['OWNER', 'USER'], permission: 'Users' },
 ]);
 
 const dropdownNavItems = ref([
   { label: 'Profile', icon: 'pi pi-user', url: route('profile.show'), roles: ['OWNER', 'USER', 'ADMIN'] },
-  { label: 'Users', icon: 'pi pi-users', url: route('users.index'), roles: ['ADMIN', 'OWNER'] },
-  { label: 'Locations', icon: 'pi pi-map', url: route('stores.index'), roles: ['ADMIN', 'OWNER'] },
+  { label: 'Users', icon: 'pi pi-users', url: route('users.index'), roles: ['ADMIN', 'OWNER'], permission: 'Users' },
+  { label: 'Locations', icon: 'pi pi-map', url: route('stores.index'), roles: ['ADMIN', 'OWNER'], permission: 'Stores' },
   { label: 'Dark Mode', icon: 'pi pi-moon', command: toggleDarkMode, roles: ['OWNER', 'USER', 'ADMIN'] },
   { label: 'Logout', icon: 'pi pi-sign-out', command: logout, roles: ['OWNER', 'USER', 'ADMIN'] },
 ]);
 
 onMounted(() => {
-  if (user && user.role) {
+  if (user) {
+    // 1. Filter by Role
     navItems.value = navItems.value.filter((item) => item.roles.includes(user.role));
     dropdownNavItems.value = dropdownNavItems.value.filter((item) => item.roles.includes(user.role));
+
+    // 2. Filter by Page Permissions (if not OWNER)
+    if (user.role !== 'OWNER') {
+        let perms = user.page_permissions;
+        
+        // If undefined or null, default to ['Inventory']
+        if (!perms) {
+             perms = ['Inventory'];
+        }
+
+        // Ensure page_permissions is an array (it might come as a string)
+        if (typeof perms === 'string') {
+            try { perms = JSON.parse(perms); } catch (e) { perms = []; }
+        }
+        
+        // Final sanity check
+        if (!Array.isArray(perms)) {
+            perms = [];
+        }
+
+        navItems.value = navItems.value.filter(item => {
+            if (!item.permission) return true; // Items without permission requirement are visible (subject to role)
+            return perms.includes(item.permission);
+        });
+        
+         dropdownNavItems.value = dropdownNavItems.value.filter(item => {
+            if (!item.permission) return true;
+            return perms.includes(item.permission);
+        });
+    }
   }
 
   window.addEventListener('popstate', updateCurrentPath);

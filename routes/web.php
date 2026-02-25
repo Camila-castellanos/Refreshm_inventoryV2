@@ -48,8 +48,30 @@ Route::post('/logout', function (Request $request) {
 })->name('logout');
 
 Route::get('/', function (Request $request) {
-
     if (Auth::check()) {
+        $user = Auth::user();
+        if ($user->role === 'OWNER') {
+            return redirect()->route('dashboard');
+        }
+
+        $permissions = $user->page_permissions;
+        if (is_null($permissions)) {
+            $permissions = ['Inventory'];
+        }
+        if (is_string($permissions)) {
+            $permissions = json_decode($permissions, true) ?? [];
+        }
+        if (! is_array($permissions)) {
+            $permissions = [];
+        }
+
+        if (in_array('Dashboard', $permissions)) {
+            return redirect()->route('dashboard');
+        }
+        if (in_array('Inventory', $permissions)) {
+            return redirect('/inventory/items');
+        }
+
         return redirect()->route('dashboard');
     }
 
@@ -73,7 +95,7 @@ Route::middleware([
     'verified',
 ])->group(function () {
 
-    Route::group(['prefix' => 'inventory', 'name' => 'inventory.'], function () {
+    Route::group(['prefix' => 'inventory', 'name' => 'inventory.', 'middleware' => 'page.permission:Inventory'], function () {
         Route::delete('items/obliterate', [ItemController::class, 'obliterate'])->name('items.obliterate');
         Route::put('items/hold', [ItemController::class, 'hold'])->name('items.hold');
         Route::get('items/hold', [ItemController::class, 'viewHold'])->name('items.viewHold');
@@ -126,22 +148,30 @@ Route::middleware([
     Route::get('/utilities/find-position', [UtilitiesController::class, 'findPositionPage'])->name('utilities.findPosition');
     Route::post('/utilities/search-position', [UtilitiesController::class, 'searchPosition'])->name('utilities.searchPosition');
 
-    Route::resource('prospects', ProspectController::class);
+    Route::middleware('page.permission:Contacts')->group(function () {
+        Route::resource('prospects', ProspectController::class);
 
-    Route::resource('customer', CustomerController::class)->except(['show']);
-    Route::post('customer/datewise', [CustomerController::class, 'datewise'])->name('customer.datewise');
-    Route::get('customer/list', [CustomerController::class, 'customersList'])->name('customer.list');
-    Route::get('customer/email', [CustomerController::class, 'marketingEmail'])->name('marketing.email');
-    Route::post('customer/email/send', [CustomerController::class, 'sendMarketingEmail'])->name('send.marketing.email');
-    Route::get('/customers/by-name/{name}', [CustomerController::class, 'getByName'])->name('customer.getByName');
-    Route::resource('vendor', VendorController::class)->except(['show', 'store']);
-    Route::post('vendor/store', [VendorController::class, 'store'])->name('vendor.store');
-    Route::get('vendor/list', [VendorController::class, 'vendorList'])->name('vendor.list');
-    Route::post('vendor/datewise', [VendorController::class, 'datewise'])->name('vendor.datewise');
+        Route::resource('customer', CustomerController::class)->except(['show']);
+        Route::post('customer/datewise', [CustomerController::class, 'datewise'])->name('customer.datewise');
+        Route::get('customer/list', [CustomerController::class, 'customersList'])->name('customer.list');
+        Route::get('customer/email', [CustomerController::class, 'marketingEmail'])->name('marketing.email');
+        Route::post('customer/email/send', [CustomerController::class, 'sendMarketingEmail'])->name('send.marketing.email');
+        Route::get('/customers/by-name/{name}', [CustomerController::class, 'getByName'])->name('customer.getByName');
+        Route::resource('vendor', VendorController::class)->except(['show', 'store']);
+        Route::post('vendor/store', [VendorController::class, 'store'])->name('vendor.store');
+        Route::get('vendor/list', [VendorController::class, 'vendorList'])->name('vendor.list');
+        Route::post('vendor/datewise', [VendorController::class, 'datewise'])->name('vendor.datewise');
 
-    Route::resource('mailing_list', MailListController::class);
-    Route::post('mailing_list/send', [MailListController::class, 'send'])->name('send.mailing.list');
-    Route::get('accounting/expenses', [ExpensesController::class, 'show'])->name('reports.expenses.show');
+        Route::resource('mailing_list', MailListController::class);
+        Route::post('mailing_list/send', [MailListController::class, 'send'])->name('send.mailing.list');
+    });
+
+    Route::middleware('page.permission:Accounting')->group(function () {
+        Route::get('accounting/expenses', [ExpensesController::class, 'show'])->name('reports.expenses.show');
+        Route::get('accounting/taxes/list', [TaxController::class, 'list'])->name('tax.list');
+        Route::post('accounting/taxes/store', [TaxController::class, 'store'])->name('tax.store');
+        Route::get('accounting/payments/simple', [PaymentController::class, 'getPaymentsSimpleList'])->name('payments.simpleList');
+    });
 
     Route::get('user/locations', [LocationController::class, 'userLocations'])->name('locations.list');
     // Fetch and update user timezone
@@ -164,25 +194,37 @@ Route::middleware([
     // Company Logo (Company wide)
     Route::get('company/invoice-logo', [CompanyController::class, 'getLogo'])->name('company.invoice-logo.get');
     Route::middleware(['role:OWNER'])->group(function () {
+        Route::get('company/settings', [CompanyController::class, 'show'])->name('company.show');
+        Route::put('company/settings', [CompanyController::class, 'update'])->name('company.update');
+
+        Route::post('company/members', [CompanyController::class, 'storeMember'])->name('company.members.store');
+        Route::put('company/members/{member}', [CompanyController::class, 'updateMemberRole'])->name('company.members.update');
+        Route::put('company/members/{member}/permissions', [CompanyController::class, 'updateMemberPermissions'])->name('company.members.permissions.update');
+        Route::delete('company/members/{member}', [CompanyController::class, 'removeMember'])->name('company.members.destroy');
+
         Route::post('company/invoice-logo', [CompanyController::class, 'updateLogo'])->name('company.invoice-logo.update');
         Route::delete('company/invoice-logo', [CompanyController::class, 'deleteLogo'])->name('company.invoice-logo.delete');
     });
 
-    Route::resource('stores.locations', LocationController::class)->shallow();
-    Route::get('locations/{location}/users', [LocationController::class, 'listUsers'])->name('locations.usersList');
-    Route::post('locations/{location}/users', [LocationController::class, 'users'])->name('locations.users');
+    Route::middleware('page.permission:Stores')->group(function () {
+        Route::resource('stores.locations', LocationController::class)->shallow();
+        Route::get('locations/{location}/users', [LocationController::class, 'listUsers'])->name('locations.usersList');
+        Route::post('locations/{location}/users', [LocationController::class, 'users'])->name('locations.users');
+    });
 
-    Route::resource('users', UserController::class)->except(['show'])->middleware(['role:OWNER,ADMIN']);
+    Route::middleware('page.permission:Users')->group(function () {
+        Route::resource('users', UserController::class)->except(['show'])->middleware(['role:OWNER,ADMIN']);
 
-    Route::get(
-        'users/{user}/role',
-        [UserController::class, 'changeRole']
-    )->name('users.changeRole');
+        Route::get(
+            'users/{user}/role',
+            [UserController::class, 'changeRole']
+        )->name('users.changeRole');
 
-    Route::post(
-        'users/{user}/role',
-        [UserController::class, 'updateRole']
-    )->name('users.updateRole');
+        Route::post(
+            'users/{user}/role',
+            [UserController::class, 'updateRole']
+        )->name('users.updateRole');
+    });
 
     Route::post(
         'users/{user}/headers',
@@ -203,18 +245,21 @@ Route::middleware([
     Route::get('drafts/{draft}', [DraftController::class, 'show'])->name('drafts.show');
     Route::post('drafts', [DraftController::class, 'store'])->name('drafts.store');
     Route::delete('drafts/{draft}', [DraftController::class, 'destroy'])->name('drafts.destroy');
-    Route::get('accounting/taxes/list', [TaxController::class, 'list'])->name('tax.list');
-    Route::post('accounting/taxes/store', [TaxController::class, 'store'])->name('tax.store');
-    Route::get('accounting/payments/simple', [PaymentController::class, 'getPaymentsSimpleList'])->name('payments.simpleList');
-    Route::post('payments/addNewItems', [PaymentController::class, 'addNewItems'])->name('payments.addNewItems');
     Route::post('drafts/purge/{draft}', [DraftController::class, 'purgeDraft'])->name('drafts.purge');
-    Route::middleware(['role:ADMIN,OWNER'])->group(function () {
+    Route::post('payments/addNewItems', [PaymentController::class, 'addNewItems'])->name('payments.addNewItems');
+
+    Route::middleware('page.permission:Dashboard')->group(function () {
         Route::get('dashboard', DashboardController::class)->name('dashboard');
         Route::post('dashboard/update_cash', [DashboardController::class, 'updateCashOnHand'])->name('update.cash');
         Route::post('report/datewise', [DashboardController::class, 'reportDatewise'])->name('report.datewise');
         Route::post('report/datewiseByDate', [DashboardController::class, 'repostDatewiseByDate'])->name('report.datewise.date');
+    });
 
+    Route::middleware('page.permission:Inventory')->group(function () {
         Route::post('/items/assign-storage', [ItemController::class, 'assignStorage'])->name('items.assign');
+    });
+
+    Route::middleware('page.permission:Accounting')->group(function () {
         Route::delete('expenses/obliterate', [ExpensesController::class, 'obliterate'])->name('expenses.obliterate');
         Route::resource('expenses', ExpensesController::class)
             ->except(['show', 'update']);
@@ -254,7 +299,9 @@ Route::middleware([
         Route::post('accounting/taxes/remove', [TaxController::class, 'remove'])->name('taxes.remove');
         Route::post('accounting/taxes/datewise', [TaxController::class, 'datewise'])->name('taxes.datewise');
         Route::resource('taxes', TaxController::class)->except(['update']);
+    });
 
+    Route::middleware('page.permission:Stores')->group(function () {
         Route::resource('stores', StoreController::class)->except(['show']);
         Route::get('receipt/detail/{id}', [StoreController::class, 'receiptDetail'])->name('receipt.detail');
 
@@ -262,7 +309,41 @@ Route::middleware([
         Route::post('stores/{store}/users', [StoreController::class, 'users'])->name('stores.users');
         Route::put('stores/{store}/receipt', [StoreController::class, 'storeReceiptSettings'])->name('stores.storeReceiptSettings');
         Route::put('stores/{store}/cut', [StoreController::class, 'updateStorePercent'])->name('stores.updateStorePercent');
+    });
 
+    // Ecommerce Admin Routes (Authenticated and company-specific)
+    Route::prefix('ecommerce/markets')->name('ecommerce.markets.')->middleware('page.permission:Markets')->group(function () {
+        Route::get('/', [App\Http\Controllers\Ecommerce\MarketAdminController::class, 'index'])->name('index');
+        Route::get('/create', [App\Http\Controllers\Ecommerce\MarketAdminController::class, 'create'])->name('create');
+        Route::post('/', [App\Http\Controllers\Ecommerce\MarketAdminController::class, 'store'])->name('store');
+        Route::get('/{market:id}/edit', [App\Http\Controllers\Ecommerce\MarketAdminController::class, 'edit'])->name('edit');
+        Route::put('/{market:id}', [App\Http\Controllers\Ecommerce\MarketAdminController::class, 'update'])->name('update');
+        Route::delete('/{market:id}', [App\Http\Controllers\Ecommerce\MarketAdminController::class, 'destroy'])->name('destroy');
+        Route::get('/{market:id}/analytics', [App\Http\Controllers\Ecommerce\MarketAdminController::class, 'analytics'])->name('analytics');
+        Route::patch('/{market:id}/toggle-status', [App\Http\Controllers\Ecommerce\MarketAdminController::class, 'toggleStatus'])->name('toggle-status');
+    });
+
+    // Ecommerce Item Management Routes (Authenticated and company-specific)
+    Route::prefix('ecommerce/items')->name('ecommerce.items.')->middleware('page.permission:Markets')->group(function () {
+        Route::get('/{market:id}', [App\Http\Controllers\Ecommerce\MarketItemController::class, 'index'])->name('index');
+        Route::get('/{market:id}/model/{model}/details', [App\Http\Controllers\Ecommerce\MarketItemController::class, 'modelDetails'])->name('model-details');
+        Route::get('/{market:id}/item/{item:id}/by-model', [App\Http\Controllers\Ecommerce\MarketItemController::class, 'byModel'])->name('by-model');
+        Route::post('/{market:id}/item/{item:id}/update-price', [App\Http\Controllers\Ecommerce\MarketItemController::class, 'updatePrice'])->name('update-price');
+        Route::post('/{market:id}/item/{item:id}/update-description', [App\Http\Controllers\Ecommerce\MarketItemController::class, 'updateDescription'])->name('update-description');
+        Route::post('/{market:id}/item/{item:id}/toggle-visibility', [App\Http\Controllers\Ecommerce\MarketItemController::class, 'toggleVisibility'])->name('toggle-visibility');
+        Route::post('/{market:id}/set-bulk-visibility', [App\Http\Controllers\Ecommerce\MarketItemController::class, 'setBulkVisibility'])->name('set-bulk-visibility');
+        Route::get('/{market:id}/item/{item:id}/photos', [App\Http\Controllers\Ecommerce\MarketItemController::class, 'edit'])->name('edit');
+        Route::post('/{market:id}/item/{item:id}/photos', [App\Http\Controllers\Ecommerce\MarketItemController::class, 'upload'])->name('upload');
+        Route::delete('/{market:id}/item/{item:id}/photos/{media}', [App\Http\Controllers\Ecommerce\MarketItemController::class, 'delete'])->name('delete');
+        Route::post('/{market:id}/item/{item:id}/photos/reorder', [App\Http\Controllers\Ecommerce\MarketItemController::class, 'reorder'])->name('reorder');
+    });
+
+    // Ecommerce Orders Routes (under markets)
+    Route::prefix('ecommerce/markets')->name('ecommerce.markets.')->middleware('page.permission:Markets')->group(function () {
+        Route::get('/{market:id}/orders', [App\Http\Controllers\Ecommerce\OrderController::class, 'index'])->name('orders');
+    });
+
+    Route::middleware(['role:ADMIN,OWNER'])->group(function () {
         // Product Models (Global - Admin only)
         Route::resource('product-models', ProductModelController::class);
         Route::post('product-models/sync', [ProductModelController::class, 'sync'])->name('product-models.sync');
@@ -275,38 +356,6 @@ Route::middleware([
         Route::get('shops/{shop}', [ShopController::class, 'show'])->name('shops.show');
         Route::put('shops/{shop}', [ShopController::class, 'update'])->name('shops.update');
         Route::get('shops/{shop}/tabs', [ShopController::class, 'getShopTabs'])->name('shops.tabs');
-
-        // Ecommerce Admin Routes (Authenticated and company-specific)
-        Route::prefix('ecommerce/markets')->name('ecommerce.markets.')->group(function () {
-            Route::get('/', [App\Http\Controllers\Ecommerce\MarketAdminController::class, 'index'])->name('index');
-            Route::get('/create', [App\Http\Controllers\Ecommerce\MarketAdminController::class, 'create'])->name('create');
-            Route::post('/', [App\Http\Controllers\Ecommerce\MarketAdminController::class, 'store'])->name('store');
-            Route::get('/{market:id}/edit', [App\Http\Controllers\Ecommerce\MarketAdminController::class, 'edit'])->name('edit');
-            Route::put('/{market:id}', [App\Http\Controllers\Ecommerce\MarketAdminController::class, 'update'])->name('update');
-            Route::delete('/{market:id}', [App\Http\Controllers\Ecommerce\MarketAdminController::class, 'destroy'])->name('destroy');
-            Route::get('/{market:id}/analytics', [App\Http\Controllers\Ecommerce\MarketAdminController::class, 'analytics'])->name('analytics');
-            Route::patch('/{market:id}/toggle-status', [App\Http\Controllers\Ecommerce\MarketAdminController::class, 'toggleStatus'])->name('toggle-status');
-        });
-
-        // Ecommerce Item Management Routes (Authenticated and company-specific)
-        Route::prefix('ecommerce/items')->name('ecommerce.items.')->group(function () {
-            Route::get('/{market:id}', [App\Http\Controllers\Ecommerce\MarketItemController::class, 'index'])->name('index');
-            Route::get('/{market:id}/model/{model}/details', [App\Http\Controllers\Ecommerce\MarketItemController::class, 'modelDetails'])->name('model-details');
-            Route::get('/{market:id}/item/{item:id}/by-model', [App\Http\Controllers\Ecommerce\MarketItemController::class, 'byModel'])->name('by-model');
-            Route::post('/{market:id}/item/{item:id}/update-price', [App\Http\Controllers\Ecommerce\MarketItemController::class, 'updatePrice'])->name('update-price');
-            Route::post('/{market:id}/item/{item:id}/update-description', [App\Http\Controllers\Ecommerce\MarketItemController::class, 'updateDescription'])->name('update-description');
-            Route::post('/{market:id}/item/{item:id}/toggle-visibility', [App\Http\Controllers\Ecommerce\MarketItemController::class, 'toggleVisibility'])->name('toggle-visibility');
-            Route::post('/{market:id}/set-bulk-visibility', [App\Http\Controllers\Ecommerce\MarketItemController::class, 'setBulkVisibility'])->name('set-bulk-visibility');
-            Route::get('/{market:id}/item/{item:id}/photos', [App\Http\Controllers\Ecommerce\MarketItemController::class, 'edit'])->name('edit');
-            Route::post('/{market:id}/item/{item:id}/photos', [App\Http\Controllers\Ecommerce\MarketItemController::class, 'upload'])->name('upload');
-            Route::delete('/{market:id}/item/{item:id}/photos/{media}', [App\Http\Controllers\Ecommerce\MarketItemController::class, 'delete'])->name('delete');
-            Route::post('/{market:id}/item/{item:id}/photos/reorder', [App\Http\Controllers\Ecommerce\MarketItemController::class, 'reorder'])->name('reorder');
-        });
-
-        // Ecommerce Orders Routes (under markets)
-        Route::prefix('ecommerce/markets')->name('ecommerce.markets.')->group(function () {
-            Route::get('/{market:id}/orders', [App\Http\Controllers\Ecommerce\OrderController::class, 'index'])->name('orders');
-        });
     });
 });
 

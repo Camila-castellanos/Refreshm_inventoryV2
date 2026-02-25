@@ -3,14 +3,14 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Laravel\Jetstream\HasProfilePhoto;
 use Laravel\Sanctum\HasApiTokens;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class User extends Authenticatable
 {
@@ -18,8 +18,8 @@ class User extends Authenticatable
     use HasFactory;
     use HasProfilePhoto;
     use Notifiable;
-    use TwoFactorAuthenticatable;
     use SoftDeletes;
+    use TwoFactorAuthenticatable;
 
     /**
      * The attributes that are mass assignable.
@@ -39,6 +39,7 @@ class User extends Authenticatable
         'printable_tag_fields',
         'printable_invoice_fields',
         'timezone',
+        'page_permissions',
     ];
 
     /**
@@ -62,11 +63,12 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'printable_tag_fields' => 'array',
         'printable_invoice_fields' => 'array',
+        'page_permissions' => 'array',
     ];
 
-     protected $attributes = [
+    protected $attributes = [
         'printable_tag_fields' => '["manufacturer","model","storage","colour","battery","imei"]',
-        "printable_invoice_fields" => '["logo",
+        'printable_invoice_fields' => '["logo",
             "header",
             "billing_address",
             "invoice_number",
@@ -83,8 +85,9 @@ class User extends Authenticatable
             "total",
             "credit",
             "footer"]',
-            'role' => 'USER',
-        ];
+        'role' => 'USER',
+        'page_permissions' => '["Inventory"]',
+    ];
 
     protected static function booted()
     {
@@ -106,7 +109,6 @@ class User extends Authenticatable
         'profile_photo_url',
     ];
 
-
     /**
      * A User may belong to one Store.
      */
@@ -115,11 +117,12 @@ class User extends Authenticatable
         return $this->belongsTo(Store::class, 'store_id');
     }
 
-    public function stores(){
+    public function stores()
+    {
         return $this->hasMany(Store::class, 'user_id');
     }
 
-        // ---- NEW RELATIONSHIPS ----
+    // ---- NEW RELATIONSHIPS ----
 
     /**
      * Define the relationship: A User BELONGS TO one Company.
@@ -130,7 +133,7 @@ class User extends Authenticatable
         return $this->belongsTo(Company::class);
     }
 
-      /**
+    /**
      * Define the relationship: A User might own one Company.
      * This looks for the 'owner_id' column on the 'companies' table.
      * Use HasOne if a user can only own one company.
@@ -150,11 +153,8 @@ class User extends Authenticatable
         return $this->belongsTo(Location::class);
     }
 
-    
-
-public function drafts()
-{
-    return $this->hasMany(Draft::class, 'user_id');
-}
-
+    public function drafts()
+    {
+        return $this->hasMany(Draft::class, 'user_id');
+    }
 }
