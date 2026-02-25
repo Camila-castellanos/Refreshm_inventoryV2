@@ -2,16 +2,16 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\User;
 use Illuminate\Http\Request;
-use Inertia\Middleware;
-use App\Models\User; // Import the User model
-use Illuminate\Support\Collection; // Import Collection for type hinting
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Collection; // Import the User model
+use Inertia\Middleware; // Import Collection for type hinting
 
 class HandleInertiaRequests extends Middleware
 {
     /**
      * The root template that's loaded on the first page visit.
+     *
      * @var string
      */
     protected $rootView = 'app';
@@ -40,7 +40,7 @@ class HandleInertiaRequests extends Middleware
         $flashData = function () use ($request) {
             return [
                 'success' => $request->session()->get('success'),
-                'error'   => $request->session()->get('error'),
+                'error' => $request->session()->get('error'),
             ];
         };
 
@@ -54,7 +54,7 @@ class HandleInertiaRequests extends Middleware
     /**
      * Helper function to format user data for sharing, including a list of shops.
      *
-     * @param \App\Models\User $user The authenticated user instance.
+     * @param  \App\Models\User  $user  The authenticated user instance.
      * @return array<string, mixed>
      */
     protected function getUserAuthData(User $user): array
@@ -90,6 +90,7 @@ class HandleInertiaRequests extends Middleware
             // --- UPDATED ---
             'companyName' => $company?->name, // Company name remains
             'role' => $user->role, // User role
+            'page_permissions' => $user->page_permissions,
             'shops' => $shopsArray, // Now an array of shop objects [{id: 1, name: 'Shop A'}, ...]
             // 'company_id' => $company?->id, // Optional: Include company ID if needed
         ];

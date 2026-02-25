@@ -1,6 +1,6 @@
-# Arquitectura de Sincronización del Carrito
+# Shopping Cart Synchronization Architecture
 
-## 🏗️ Flujo de Datos
+## 🏗️ Data Flow
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -39,108 +39,108 @@
 └───────────────┘                    └──────────────────┘
 ```
 
-## 🔄 Cómo Funciona la Sincronización
+## 🔄 How Synchronization Works
 
-### 1. **Al Cargar la Página** (Page Load)
+### 1. **On Page Load**
 
 ```javascript
 // MarketLayout.vue - onMounted()
 onMounted(() => {
-    // Inicializa el store con el market actual
+    // Initialize the store with the current market
     cartStore.setMarket(props.market.slug)
     
-    // El cartCount es computed, por lo que se actualiza automáticamente
-    // desde el store que ya tiene los items persistidos en localStorage
+    // cartCount is computed, so it updates automatically
+    // from the store which already has items persisted in localStorage
     console.log('Initial cart count:', cartStore.itemCount)
 })
 ```
 
-**Secuencia:**
-1. ✅ Pinia carga el store
-2. ✅ Plugin de persistencia restaura items desde localStorage
-3. ✅ `cartCount` (computed) se actualiza automáticamente con el valor correcto
-4. ✅ Badge del header muestra el número correcto
+**Sequence:**
+1. ✅ Pinia loads the store
+2. ✅ Persistence plugin restores items from localStorage
+3. ✅ `cartCount` (computed) automatically updates with the correct value
+4. ✅ Header badge shows the correct number
 
-### 2. **Al Agregar un Item**
+### 2. **On Adding an Item**
 
 ```javascript
-// ProductCard.vue o cualquier componente
+// ProductCard.vue or any component
 const { addItem } = useCart()
 
 const handleAddToCart = () => {
     const success = addItem(product)
-    // ✅ Store actualizado
-    // ✅ localStorage actualizado (automático)
-    // ✅ Todos los computed properties actualizados (automático)
-    // ✅ Badge del header actualizado (automático)
+    // ✅ Store updated
+    // ✅ localStorage updated (automatic)
+    // ✅ All computed properties updated (automatic)
+    // ✅ Header badge updated (automatic)
 }
 ```
 
-**Secuencia:**
-1. ✅ `cartStore.addItem()` modifica el array `items`
-2. ✅ Plugin de persistencia guarda en localStorage (automático)
-3. ✅ `cartStore.itemCount` (computed) se recalcula (automático)
-4. ✅ `MarketLayout.cartCount` (computed) se actualiza (automático)
-5. ✅ UI se actualiza en todos los componentes (automático)
+**Sequence:**
+1. ✅ `cartStore.addItem()` modifies the `items` array
+2. ✅ Persistence plugin saves to localStorage (automatic)
+3. ✅ `cartStore.itemCount` (computed) is recalculated (automatic)
+4. ✅ `MarketLayout.cartCount` (computed) is updated (automatic)
+5. ✅ UI updates in all components (automatic)
 
-### 3. **Al Remover un Item**
+### 3. **On Removing an Item**
 
 ```javascript
-// Cart.vue o OrderReview.vue
+// Cart.vue or OrderReview.vue
 const removeItem = (itemId) => {
     cartStore.removeItem(itemId)
-    // Todo se actualiza automáticamente
+    // Everything updates automatically
 }
 ```
 
-**Secuencia:**
-1. ✅ `cartStore.removeItem()` elimina del array
-2. ✅ Persistencia automática a localStorage
-3. ✅ Todos los computed se recalculan
-4. ✅ UI actualizada en tiempo real
+**Sequence:**
+1. ✅ `cartStore.removeItem()` removes from the array
+2. ✅ Automatic persistence to localStorage
+3. ✅ All computed are recalculated
+4. ✅ UI updated in real-time
 
-### 4. **Al Limpiar el Carrito**
+### 4. **On Clearing the Cart**
 
 ```javascript
 cartStore.clearCart()
 // items = []
 // itemCount = 0
 // cartCount badge = 0
-// Todo actualizado automáticamente
+// Everything updated automatically
 ```
 
-## 🎯 Ventajas de esta Arquitectura
+## 🎯 Advantages of this Architecture
 
 ### ✅ **Single Source of Truth**
-- Solo un lugar donde se guardan los items del carrito
-- No hay riesgo de desincronización entre componentes
+- Only one place where cart items are stored
+- No risk of desynchronization between components
 
-### ✅ **Reactividad Automática**
-- Vue detecta todos los cambios automáticamente
-- No necesitas emitir eventos manualmente
-- No necesitas callbacks complicados
+### ✅ **Automatic Reactivity**
+- Vue detects all changes automatically
+- No need to emit events manually
+- No need for complicated callbacks
 
-### ✅ **Persistencia Transparente**
-- El plugin guarda automáticamente en localStorage
-- No necesitas `watch()` ni `onBeforeUnmount()`
-- Funciona incluso si cierras el navegador
+### ✅ **Transparent Persistence**
+- The plugin saves automatically to localStorage
+- No need for `watch()` or `onBeforeUnmount()`
+- Works even if you close the browser
 
 ### ✅ **Computed Properties**
-- `itemCount`, `subtotal`, `total` se calculan automáticamente
-- Siempre están actualizados
-- Performance optimizada por Vue
+- `itemCount`, `subtotal`, `total` are calculated automatically
+- Always up to date
+- Performance optimized by Vue
 
-### ✅ **Type Safety** (opcional)
-- Puedes agregar TypeScript fácilmente
-- Autocomplete en el IDE
-- Menos bugs
+### ✅ **Type Safety** (optional)
+- You can easily add TypeScript
+- Autocomplete in the IDE
+- Fewer bugs
 
 ## 🔍 Debugging
 
-### Ver el estado actual del store
+### View the current store state
 
 ```javascript
-// En la consola del navegador
+// In the browser console
 const { useCartStore } = await import('/resources/js/stores/cartStore.js')
 const cartStore = useCartStore()
 
@@ -149,111 +149,111 @@ console.log('Count:', cartStore.itemCount)
 console.log('Total:', cartStore.total)
 ```
 
-### Ver localStorage
+### View localStorage
 
 ```javascript
-// En la consola
+// In the console
 const cart = JSON.parse(localStorage.getItem('refreshm-ecommerce-cart'))
 console.log(cart)
 ```
 
 ### Vue DevTools
 
-1. Abre Vue DevTools
-2. Ve a la pestaña "Pinia"
-3. Selecciona el store "cart"
-4. Verás todo el estado en tiempo real
+1. Open Vue DevTools
+2. Go to the "Pinia" tab
+3. Select the store "cart"
+4. You will see the entire state in real-time
 
-## 🚫 Qué NO Hacer
+## 🚫 What NOT to Do
 
-### ❌ No mantengas estado local del carrito
+### ❌ Do not maintain local cart state
 
 ```javascript
-// ❌ MALO
-const items = ref([]) // No hagas tu propia copia
-const count = ref(0)  // No calcules manualmente
+// ❌ BAD
+const items = ref([]) // Do not make your own copy
+const count = ref(0)  // Do not calculate manually
 
-// ✅ BUENO
-const { items, itemCount } = useCart() // Usa el store
+// ✅ GOOD
+const { items, itemCount } = useCart() // Use the store
 ```
 
-### ❌ No emitas eventos innecesarios
+### ❌ Do not emit unnecessary events
 
 ```javascript
-// ❌ MALO
-emit('cart-updated', newCount) // No es necesario
+// ❌ BAD
+emit('cart-updated', newCount) // Not necessary
 
-// ✅ BUENO
-cartStore.addItem(product) // El store maneja todo
+// ✅ GOOD
+cartStore.addItem(product) // The store handles everything
 ```
 
-### ❌ No guardes en localStorage manualmente
+### ❌ Do not save to localStorage manually
 
 ```javascript
-// ❌ MALO
+// ❌ BAD
 localStorage.setItem('cart', JSON.stringify(items))
 
-// ✅ BUENO
-cartStore.addItem(product) // Persistencia automática
+// ✅ GOOD
+cartStore.addItem(product) // Automatic persistence
 ```
 
 ## 📊 Performance
 
-### Optimizaciones Incluidas
+### Included Optimizations
 
-1. **Computed Caching**: Vue cachea valores computed
-2. **Batch Updates**: Vue agrupa múltiples cambios
-3. **Shallow Reactivity**: Solo propiedades usadas disparan re-render
-4. **LocalStorage Throttling**: Plugin optimiza escrituras
+1. **Computed Caching**: Vue caches computed values
+2. **Batch Updates**: Vue batches multiple changes
+3. **Shallow Reactivity**: Only used properties trigger re-render
+4. **LocalStorage Throttling**: Plugin optimizes writes
 
-### Mediciones Típicas
+### Typical Measurements
 
-- Agregar item: < 1ms
-- Calcular total: < 0.1ms
-- Guardar en localStorage: < 5ms
-- Actualizar UI: < 16ms (1 frame)
+- Add item: < 1ms
+- Calculate total: < 0.1ms
+- Save to localStorage: < 5ms
+- Update UI: < 16ms (1 frame)
 
-## 🔐 Seguridad
+## 🔐 Security
 
-### Validación en Backend (Próxima Fase)
+### Backend Validation (Next Phase)
 
-Cuando implementes el backend:
+When you implement the backend:
 
 ```javascript
-// Frontend envía solo IDs
+// Frontend sends only IDs
 await cartStore.syncToBackend()
 // POST /api/market/{slug}/cart/sync
 // { items: [{ id: 1, quantity: 1 }, ...] }
 
-// Backend valida:
-// - Item existe
-// - Item disponible
-// - Precio correcto
-// - Stock disponible
+// Backend validates:
+// - Item exists
+// - Item available
+// - Correct price
+// - Available stock
 ```
 
-### No confíes en localStorage
+### Do not trust localStorage
 
-- Los precios se verifican en el backend
-- La disponibilidad se verifica en el backend
-- localStorage es solo para UX, no para seguridad
+- Prices are verified in the backend
+- Availability is verified in the backend
+- localStorage is only for UX, not for security
 
-## 📚 Recursos
+## 📚 Resources
 
 - [Pinia Docs](https://pinia.vuejs.org/)
 - [Pinia Persistence Plugin](https://prazdevs.github.io/pinia-plugin-persistedstate/)
 - [Vue Reactivity](https://vuejs.org/guide/essentials/reactivity-fundamentals.html)
 
-## 🎓 Ejemplo Completo: Nuevo Componente
+## 🎓 Full Example: New Component
 
 ```vue
 <template>
     <div>
-        <p>Carrito: {{ itemCount }} items</p>
+        <p>Cart: {{ itemCount }} items</p>
         <p>Total: ${{ total }}</p>
         
-        <button @click="add">Agregar</button>
-        <button @click="clear">Limpiar</button>
+        <button @click="add">Add</button>
+        <button @click="clear">Clear</button>
     </div>
 </template>
 
@@ -287,6 +287,6 @@ const clear = () => {
 
 ---
 
-**Última actualización:** Octubre 1, 2025  
-**Autor:** Sistema de Carrito con Pinia  
-**Versión:** 1.0
+**Last Updated:** October 1, 2025  
+**Author:** Shopping Cart System with Pinia  
+**Version:** 1.0
