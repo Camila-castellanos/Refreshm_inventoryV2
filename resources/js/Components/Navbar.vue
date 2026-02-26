@@ -138,29 +138,29 @@ onMounted(() => {
     if (user.role !== 'OWNER') {
         let perms = user.page_permissions;
         
-        // If undefined or null, default to ['Inventory']
+        // If undefined or null, default to Inventory with all tabs
         if (!perms) {
-             perms = ['Inventory'];
+             perms = { 'Inventory': ['Active Inventory', 'On Hold', 'Sold'] };
         }
 
-        // Ensure page_permissions is an array (it might come as a string)
+        // Ensure page_permissions is an object (it might come as a string)
         if (typeof perms === 'string') {
-            try { perms = JSON.parse(perms); } catch (e) { perms = []; }
+            try { perms = JSON.parse(perms); } catch (e) { perms = {}; }
         }
         
         // Final sanity check
-        if (!Array.isArray(perms)) {
-            perms = [];
+        if (typeof perms !== 'object' || perms === null || Array.isArray(perms)) {
+            perms = {};
         }
 
         navItems.value = navItems.value.filter(item => {
             if (!item.permission) return true; // Items without permission requirement are visible (subject to role)
-            return perms.includes(item.permission);
+            return perms.hasOwnProperty(item.permission);
         });
         
          dropdownNavItems.value = dropdownNavItems.value.filter(item => {
             if (!item.permission) return true;
-            return perms.includes(item.permission);
+            return perms.hasOwnProperty(item.permission);
         });
     }
   }

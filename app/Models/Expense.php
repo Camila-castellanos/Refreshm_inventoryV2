@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Scopes\CompanyUsersSharedScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -20,4 +21,9 @@ class Expense extends Model
         'total',
         'user_id',
     ];
+
+    protected static function booted()
+    {
+        static::addGlobalScope(new CompanyUsersSharedScope);
+    }
 }

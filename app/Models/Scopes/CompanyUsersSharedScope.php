@@ -2,14 +2,31 @@
 
 namespace App\Models\Scopes;
 
-use Illuminate\Support\Facades\Auth;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Scope;
-use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 
 class CompanyUsersSharedScope implements Scope
 {
+    /**
+     * Map table names to permission modules
+     */
+    protected $moduleMap = [
+        'sales' => 'Accounting',
+        'expenses' => 'Accounting',
+        'bills' => 'Accounting',
+        'taxes' => 'Accounting',
+        'payments' => 'Accounting',
+        'cash_on_hands' => 'Accounting',
+        'drafts' => 'Accounting',
+        'customers' => 'Contacts',
+        'prospects' => 'Contacts',
+        'vendors' => 'Contacts',
+        'email_templates' => 'Contacts',
+        'items' => 'Inventory',
+    ];
 
     /**
      * Apply the scope to a given Eloquent query builder.
@@ -17,11 +34,34 @@ class CompanyUsersSharedScope implements Scope
     public function apply(Builder $builder, Model $model): void
     {
         if (Auth::check()) {
-            if (Auth::user()->company_id) {
-                $companyId = Auth::user()->company_id;
-                $userIds = User::where('company_id', $companyId)->pluck('id');
+            $user = Auth::user();
+            if ($user->company_id) {
                 $tableName = $model->getTable();
-                $builder->whereIn("{$tableName}.user_id", $userIds);
+                $module = $this->moduleMap[$tableName] ?? null;
+
+                $canViewAll = false;
+
+                if ($user->role === 'OWNER') {
+                    $canViewAll = true;
+                } elseif ($module) {
+                    $permissions = $user->page_permissions;
+                    if (is_string($permissions)) {
+                        $permissions = json_decode($permissions, true) ?? [];
+                    }
+                    if (is_array($permissions) && isset($permissions[$module])) {
+                        $modulePerms = $permissions[$module];
+                        if (is_array($modulePerms) && in_array('View Organization Data', $modulePerms)) {
+                            $canViewAll = true;
+                        }
+                    }
+                }
+
+                if ($canViewAll) {
+                    $userIds = User::where('company_id', $user->company_id)->pluck('id');
+                    $builder->whereIn("{$tableName}.user_id", $userIds);
+                } else {
+                    $builder->where("{$tableName}.user_id", $user->id);
+                }
             } else {
                 // Si no tiene company_id, no devuelve ningún registro
                 $builder->whereRaw('1 = 0');

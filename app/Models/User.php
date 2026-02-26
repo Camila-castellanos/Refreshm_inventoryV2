@@ -86,7 +86,7 @@ class User extends Authenticatable
             "credit",
             "footer"]',
         'role' => 'USER',
-        'page_permissions' => '["Inventory"]',
+        'page_permissions' => '{"Inventory":["Active Inventory","On Hold","Sold"]}',
     ];
 
     protected static function booted()

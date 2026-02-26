@@ -165,8 +165,7 @@ class DashboardController extends Controller
         ?string $endSold = null,
         bool $isAdmin = false
     ): float {
-        $itemQuery = Item::when(! $isAdmin, fn ($q) => $q->where('user_id', $userId))
-            ->whereNotNull('sold')
+        $itemQuery = Item::whereNotNull('sold')
             ->whereNotNull('sale_id');
 
         if ($startSold && $endSold) {
@@ -190,8 +189,7 @@ class DashboardController extends Controller
     private function calculateSalesMetrics($userId, $isAdmin, $startOfMonth, $endOfMonth)
     {
         // Una sola consulta para todas las métricas de ventas usando Eloquent + selectRaw
-        $salesData = Item::when(! $isAdmin, fn ($q) => $q->where('items.user_id', $userId))
-            ->leftJoin('sales', 'items.sale_id', '=', 'sales.id')
+        $salesData = Item::leftJoin('sales', 'items.sale_id', '=', 'sales.id')
             ->whereBetween('items.sold', [$startOfMonth, $endOfMonth])
             ->selectRaw('
             COALESCE(SUM(
@@ -246,8 +244,7 @@ class DashboardController extends Controller
     private function calculateInventoryMetrics($userId, $isAdmin = false)
     {
         // Agregaciones simples para items en inventario
-        $inventoryData = Item::when(! $isAdmin, fn ($q) => $q->where('user_id', $userId))
-            ->whereNull('sold')
+        $inventoryData = Item::whereNull('sold')
             ->whereIn('type', ['device', 'accessory'])
             ->selectRaw('
             COALESCE(SUM(cost), 0) as inventory_value,
@@ -264,8 +261,7 @@ class DashboardController extends Controller
     private function calculateDeviceMetrics($userId, $isAdmin, $startOfMonth, $endOfMonth)
     {
         // optimized aggregations for device items
-        $deviceData = Item::when(! $isAdmin, fn ($q) => $q->where('user_id', $userId))
-            ->whereIn('type', ['device'])
+        $deviceData = Item::whereIn('type', ['device'])
             ->selectRaw('
             COUNT(CASE WHEN (sold IS NULL) THEN 1 END) as devices_in_inventory,
             COUNT(CASE WHEN date >= ? AND date <= ? THEN 1 END) as trades_this_month,
@@ -286,22 +282,18 @@ class DashboardController extends Controller
         $accountsReceivable = $this->sumSalesBalanceRemaining($userId, null, null, $isAdmin);
 
         // Cuentas por pagar usando sum() directo
-        $accountsPayable = Bill::when(! $isAdmin, fn ($q) => $q->where('user_id', $userId))
-            ->where('status', 0)
+        $accountsPayable = Bill::where('status', 0)
             ->sum('balance_remaining');
 
         // Efectivo en mano
-        $cashOnHand = CashOnHand::when(! $isAdmin, fn ($q) => $q->where('user_id', $userId))
-            ->value('balance') ?? 0;
+        $cashOnHand = CashOnHand::value('balance') ?? 0;
 
         // Gastos del mes usando sum() con whereBetween
-        $expensesThisMonth = Expense::when(! $isAdmin, fn ($q) => $q->where('user_id', $userId))
-            ->whereBetween('date', [$startOfMonth, $endOfMonth])
+        $expensesThisMonth = Expense::whereBetween('date', [$startOfMonth, $endOfMonth])
             ->sum('total');
 
         // Impuestos cobrados usando sum() condicional
-        $salesTaxCollected = Sale::when(! $isAdmin, fn ($q) => $q->where('user_id', $userId))
-            ->whereNotNull('tax_id')
+        $salesTaxCollected = Sale::whereNotNull('tax_id')
             ->whereBetween('date', [$startOfMonth, $endOfMonth])
             ->sum('flatTax');
 
@@ -310,17 +302,15 @@ class DashboardController extends Controller
             'endOfMonth' => $endOfMonth,
         ]);
         // Impuestos pagados
-        $salesTaxPaid = Bill::when(! $isAdmin, fn ($q) => $q->where('user_id', $userId))
-            ->where('status', 1)
+        $salesTaxPaid = Bill::where('status', 1)
             ->whereBetween('date', [$startOfMonth, $endOfMonth])
             ->sum('flat_tax');
 
         // Total de compras
         if ($allTime) {
-            $totalPurchases = Bill::when(! $isAdmin, fn ($q) => $q->where('user_id', $userId))->sum('total');
+            $totalPurchases = Bill::sum('total');
         } else {
-            $totalPurchases = Bill::when(! $isAdmin, fn ($q) => $q->where('user_id', $userId))
-                ->whereBetween('date', [$startOfMonth, $endOfMonth])
+            $totalPurchases = Bill::whereBetween('date', [$startOfMonth, $endOfMonth])
                 ->sum('total');
         }
 
