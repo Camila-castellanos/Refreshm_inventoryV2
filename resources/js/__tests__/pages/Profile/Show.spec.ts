@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { mount, VueWrapper } from '@vue/test-utils';
 import Show from '@/Pages/Profile/Show.vue';
 import PrimeVue from 'primevue/config';
+import ToastService from 'primevue/toastservice';
+import ConfirmationService from 'primevue/confirmationservice';
 
 // Mock components
 const MockUpdateProfileInformationForm = {
@@ -75,9 +77,10 @@ describe('Profile/Show.vue', () => {
         ...props
       },
       global: {
-        plugins: [PrimeVue],
+        plugins: [PrimeVue, ToastService, ConfirmationService],
         stubs: {
           UpdateProfileInformationForm: MockUpdateProfileInformationForm,
+          UpdateInvoiceLogoForm: { name: 'UpdateInvoiceLogoForm', template: '<div>UpdateInvoiceLogoForm</div>' },
           Storage: MockStorage,
           PrintableLabelActiveFields: MockPrintableLabelActiveFields,
           PrintableInvoiceActiveFields: MockPrintableInvoiceActiveFields,

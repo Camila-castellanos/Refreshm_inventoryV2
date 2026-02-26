@@ -45,11 +45,15 @@ class PaymentVisibilityTest extends TestCaseWithCompany
         // Create a Store for the admin user (foreign key constraint)
         $store = Store::factory()->create();
 
-        // Create an ADMIN user in the same company
+        // Create an ADMIN user in the same company with explicit permissions
         $admin = User::factory()->create([
             'company_id' => $this->company->id,
             'role' => 'ADMIN',
             'store_id' => $store->id,
+            'page_permissions' => json_encode([
+                'Accounting' => ['View Organization Data', 'Payments'],
+                'Inventory' => ['View Organization Data', 'Active Inventory'],
+            ]),
         ]);
 
         // Create sales for different users
@@ -98,7 +102,7 @@ class PaymentVisibilityTest extends TestCaseWithCompany
             ->get('/accounting/payments');
 
         // Regular users are restricted by middleware (role:ADMIN,OWNER)
-        $response->assertStatus(302);
+        $response->assertStatus(403);
     }
 
     public function test_admin_cannot_view_payments_from_other_company(): void
@@ -111,6 +115,7 @@ class PaymentVisibilityTest extends TestCaseWithCompany
             'company_id' => $this->company->id,
             'role' => 'ADMIN',
             'store_id' => $store->id,
+            'page_permissions' => json_encode(['Accounting' => ['Payments']]),
         ]);
 
         // Create another company and user
