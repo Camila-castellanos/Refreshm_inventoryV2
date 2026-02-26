@@ -61,8 +61,7 @@ class PaymentController extends Controller
             //         return $this->getPaymentsData($user->id, $dataStatus);
             // });
 
-            $userIdToFilter = in_array($user->role, ['ADMIN', 'OWNER']) ? null : $user->id;
-            $response = $this->getPaymentsData($userIdToFilter, $dataStatus, $startDate, $endDate);
+            $response = $this->getPaymentsData($dataStatus, $startDate, $endDate);
 
             $email_templates = EmailTemplate::where('user_id', $user->id)->get();
 
@@ -583,9 +582,7 @@ class PaymentController extends Controller
                 $dataStatus = 'all';
             }
 
-            // Usar el helper con el parámetro de búsqueda
-            $userIdToFilter = in_array($user->role, ['ADMIN', 'OWNER']) ? null : $user->id;
-            $response = $this->getPaymentsData($userIdToFilter, $dataStatus, null, null, $search);
+            $response = $this->getPaymentsData($dataStatus, null, null, $search);
 
             return response()->json($response);
 
@@ -641,11 +638,10 @@ class PaymentController extends Controller
     }
 
     // optimized helper to get payments data
-    private function getPaymentsData($userId, $dataStatus, $startDate = null, $endDate = null, $search = null)
+    private function getPaymentsData($dataStatus, $startDate = null, $endDate = null, $search = null)
     {
         // Consulta inicial por ventas (más eficiente)
         $salesQuery = Sale::query()
-            ->when($userId, fn ($q) => $q->where('user_id', $userId))
             ->when($startDate && $endDate, function ($q) use ($startDate, $endDate) {
                 $q->whereBetween('created_at', [$startDate->startOfDay(), $endDate->endOfDay()]);
             })

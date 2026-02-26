@@ -20,7 +20,7 @@ class TaxController extends Controller
     {
         try {
             $user = Auth::user();
-            $taxes = Tax::where('user_id', $user->id)->get();
+            $taxes = Tax::all();
             $currentDate = Carbon::now();
             // Default range: last calendar month (start = first day of previous month, end = last day of previous month)
             $start = Carbon::now()->startOfMonth()->startOfDay()->toDateTimeString();
@@ -30,7 +30,6 @@ class TaxController extends Controller
             // Non-taxed sales: use tax_id as the source of truth (tax_id IS NULL)
             $nonTaxedSales = DB::table('items')
                 ->leftJoin('sales', 'items.sale_id', '=', 'sales.id')
-                ->where('items.user_id', $user->id)
                 ->when($start, function ($q) use ($start, $end) {
                     $q->whereBetween('items.sold', [$start, $end]);
                 })
@@ -39,29 +38,25 @@ class TaxController extends Controller
                 ->value('s');
 
             // Also compute totals for records where tax_id IS NULL (aggregate across percentages)
-            $saleFlatNullTotal = (float) Sale::where('user_id', $user->id)
-                ->whereNull('tax_id')
+            $saleFlatNullTotal = (float) Sale::whereNull('tax_id')
                 ->when($start, function ($q) use ($start, $end) {
                     $q->whereBetween('date', [$start, $end]);
                 })
                 ->sum('flatTax');
 
-            $saleSubtotalNullTotal = (float) Sale::where('user_id', $user->id)
-                ->whereNull('tax_id')
+            $saleSubtotalNullTotal = (float) Sale::whereNull('tax_id')
                 ->when($start, function ($q) use ($start, $end) {
                     $q->whereBetween('date', [$start, $end]);
                 })
                 ->sum('subtotal');
 
-            $billFlatNullTotal = (float) Bill::where('user_id', $user->id)
-                ->whereNull('tax_id')
+            $billFlatNullTotal = (float) Bill::whereNull('tax_id')
                 ->when($start, function ($q) use ($start, $end) {
                     $q->whereBetween('date', [$start, $end]);
                 })
                 ->sum('flat_tax');
 
-            $billSubtotalNullTotal = (float) Bill::where('user_id', $user->id)
-                ->whereNull('tax_id')
+            $billSubtotalNullTotal = (float) Bill::whereNull('tax_id')
                 ->when($start, function ($q) use ($start, $end) {
                     $q->whereBetween('date', [$start, $end]);
                 })
@@ -79,29 +74,25 @@ class TaxController extends Controller
                 $pkey = (string) $percentage;
 
                 // Sales/bills where tax_id explicitly references this tax
-                $saleFlatById = (float) Sale::where('user_id', $user->id)
-                    ->where('tax_id', $taxId)
+                $saleFlatById = (float) Sale::where('tax_id', $taxId)
                     ->when($start, function ($q) use ($start, $end) {
                         $q->whereBetween('date', [$start, $end]);
                     })
                     ->sum('flatTax');
 
-                $saleSubtotalById = (float) Sale::where('user_id', $user->id)
-                    ->where('tax_id', $taxId)
+                $saleSubtotalById = (float) Sale::where('tax_id', $taxId)
                     ->when($start, function ($q) use ($start, $end) {
                         $q->whereBetween('date', [$start, $end]);
                     })
                     ->sum('subtotal');
 
-                $billFlatById = (float) Bill::where('user_id', $user->id)
-                    ->where('tax_id', $taxId)
+                $billFlatById = (float) Bill::where('tax_id', $taxId)
                     ->when($start, function ($q) use ($start, $end) {
                         $q->whereBetween('date', [$start, $end]);
                     })
                     ->sum('flat_tax');
 
-                $billSubtotalById = (float) Bill::where('user_id', $user->id)
-                    ->where('tax_id', $taxId)
+                $billSubtotalById = (float) Bill::where('tax_id', $taxId)
                     ->when($start, function ($q) use ($start, $end) {
                         $q->whereBetween('date', [$start, $end]);
                     })

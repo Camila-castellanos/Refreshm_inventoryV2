@@ -47,11 +47,27 @@
     <!-- Edit Permissions Dialog -->
     <Dialog v-model:visible="editPermissionsDialog" modal header="Manage Permissions" :style="{ width: '30rem' }">
         <div class="flex flex-col gap-4">
-             <p>Select the pages <strong>{{ editingPermissionsMember?.name }}</strong> can access.</p>
-             <div class="grid grid-cols-2 gap-4">
-                 <div v-for="perm in availablePermissions" :key="perm" class="flex items-center gap-2">
-                     <Checkbox v-model="permissionForm.permissions" :inputId="perm" :value="perm" />
-                     <label :for="perm" class="cursor-pointer">{{ perm }}</label>
+             <p>Select the pages and tabs <strong>{{ editingPermissionsMember?.name }}</strong> can access.</p>
+             <div class="flex flex-col gap-4">
+                 <div v-for="page in availablePermissions" :key="page.name" class="flex flex-col gap-2">
+                     <div class="flex items-center gap-2">
+                         <Checkbox :modelValue="pageIsSelected(page.name)" :inputId="page.name" :binary="true" @update:modelValue="togglePage(page.name)" />
+                         <label :for="page.name" class="cursor-pointer font-semibold">{{ page.name }}</label>
+                     </div>
+                     <div v-if="page.tabs && pageIsSelected(page.name)" class="ml-6 flex flex-col gap-2 mt-1">
+                         <div v-for="tab in page.tabs" :key="tab" class="flex items-center gap-2">
+                             <Checkbox v-model="permissionForm.permissions[page.name]" :inputId="page.name + '-' + tab" :value="tab" />
+                             
+                             <!-- Special styling for 'View Organization Data' -->
+                             <label v-if="tab === 'View Organization Data'" :for="page.name + '-' + tab" class="cursor-pointer text-sm font-semibold text-blue-600 flex items-center gap-1 bg-blue-50 px-2 py-1 rounded">
+                                 <i class="pi pi-building text-blue-500"></i>
+                                 {{ tab }}
+                             </label>
+                             
+                             <!-- Normal styling for regular tabs -->
+                             <label v-else :for="page.name + '-' + tab" class="cursor-pointer text-sm">{{ tab }}</label>
+                         </div>
+                     </div>
                  </div>
              </div>
         </div>
@@ -143,13 +159,38 @@ const getRoleSeverity = (role) => {
 // --- Permissions ---
 const editPermissionsDialog = ref(false);
 const editingPermissionsMember = ref(null);
+
 const availablePermissions = [
-    'Dashboard', 'Inventory', 'Markets', 'Accounting', 'Contacts', 'Stores', 'Company', 'Users'
+    { name: 'Dashboard', tabs: [] },
+    { name: 'Inventory', tabs: ['Active Inventory', 'On Hold', 'Sold', 'View Organization Data'] },
+    { name: 'Markets', tabs: [] },
+    { name: 'Accounting', tabs: ['Expenses', 'Bills', 'Payments', 'Taxes', 'View Organization Data'] },
+    { name: 'Contacts', tabs: ['Customers', 'Prospects', 'Vendors', 'Mailing list', 'Email editor', 'View Organization Data'] },
+    { name: 'Stores', tabs: [] },
+    { name: 'Company', tabs: [] },
+    { name: 'Users', tabs: [] }
 ];
 
 const permissionForm = useForm({
-    permissions: [],
+    permissions: {},
 });
+
+const pageIsSelected = (pageName) => {
+    return permissionForm.permissions && permissionForm.permissions.hasOwnProperty(pageName);
+};
+
+const togglePage = (pageName) => {
+    if (!permissionForm.permissions) {
+        permissionForm.permissions = {};
+    }
+    
+    if (pageIsSelected(pageName)) {
+        delete permissionForm.permissions[pageName];
+    } else {
+        const pageConfig = availablePermissions.find(p => p.name === pageName);
+        permissionForm.permissions[pageName] = pageConfig ? [...pageConfig.tabs] : [];
+    }
+};
 
 const openPermissionsModal = (member) => {
     editingPermissionsMember.value = member;
@@ -159,15 +200,27 @@ const openPermissionsModal = (member) => {
         try {
              currentPerms = JSON.parse(currentPerms);
         } catch(e) {
-             currentPerms = [];
+             currentPerms = {};
         }
     }
     
-    // Default to all permissions if none set (or empty array if strict?)
-    // If null, it means no restrictions set yet, so maybe default to all?
-    // Based on User model default: `["Inventory"]`
-    if (!currentPerms) {
-         currentPerms = ['Inventory'];
+    // Default to all permissions if none set (or flat array for backward compat)
+    // If null or empty object
+    if (!currentPerms || typeof currentPerms !== 'object') {
+         currentPerms = {};
+    }
+
+    // Backward compatibility: If array (old format), convert to object
+    if (Array.isArray(currentPerms)) {
+        const newPerms = {};
+        currentPerms.forEach(p => {
+            if (p === 'Inventory') {
+                newPerms[p] = ['Active Inventory', 'On Hold', 'Sold'];
+            } else {
+                newPerms[p] = [];
+            }
+        });
+        currentPerms = newPerms;
     }
     
     permissionForm.permissions = currentPerms;

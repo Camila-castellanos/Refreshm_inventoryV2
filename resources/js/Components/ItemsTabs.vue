@@ -5,7 +5,12 @@
       <Tabs v-model:value="currentTab" scrollable>
         <TabList class="bg-white">
           <!-- Tabs fijas -->
-          <Tab v-for="tab in staticTabs" :key="'static-' + tab.order" :value="tab.order" @click="redirectToTab(tab)">
+          <Tab 
+            v-for="(tab, index) in staticTabs" 
+            :key="'static-' + tab.order" 
+            :value="tab.order" 
+            @click="redirectToTab(tab)"
+          >
             <span>{{ tab.name }}</span>
           </Tab>
 
@@ -13,7 +18,7 @@
           <Tab
             v-for="(tab, index) in customTabsDraggable"
             :key="'custom-' + tab.id"
-            :value="staticTabs.length + index"
+            :value="allStaticTabs.length + index"
             @click="redirectToTab(tab)"
             @contextmenu.prevent="openTabMenu($event, tab, index)"
             class="!relative"
@@ -29,7 +34,7 @@
 
           <!-- Zona dinámica de eliminar / agregar -->
           <Tab
-            :value="staticTabs.length + customTabsDraggable.length + 1"
+            :value="allStaticTabs.length + customTabsDraggable.length + 1"
             :class="[dropZoneActive || dragging ? 'bg-red-100 border border-red-500' : '', shakeDropZone ? 'shake' : '']"
             @click="addTabDialog = dragging ? false : true"
             @dragover.prevent="dropZoneActive = true"
@@ -80,14 +85,14 @@
 
 <script setup lang="ts">
 import { Tab as ITab } from "@/Lib/types";
-import { router } from "@inertiajs/vue3";
+import { router, usePage } from "@inertiajs/vue3";
 import axios from "axios";
 import { Button, Dialog, Toast, useConfirm, useToast, ContextMenu } from "primevue";
 import InputText from "primevue/inputtext";
 import Tab from "primevue/tab";
 import TabList from "primevue/tablist";
 import Tabs from "primevue/tabs";
-import { defineProps, onMounted, reactive, ref, Ref, watch, nextTick } from "vue";
+import { defineProps, onMounted, reactive, ref, Ref, watch, nextTick, computed } from "vue";
 
 const props = defineProps({
   customTabs: {
@@ -96,11 +101,34 @@ const props = defineProps({
   },
 });
 
-const staticTabs = ref<ITab[]>([
+const page = usePage();
+const userPermissions = computed(() => page.props.auth?.user?.page_permissions);
+
+const allStaticTabs = [
   { name: "Active Inventory", order: 0 },
   { name: "On Hold", order: 1 },
   { name: "Sold", order: 2 },
-]);
+];
+
+// Helper to check if a static tab is allowed
+const isTabAllowed = (tabName) => {
+    if (!tabName) return true;
+    
+    let perms = userPermissions.value;
+    // If permissions is not an object, allow all (backward compat)
+    if (!perms || typeof perms !== 'object' || Array.isArray(perms)) {
+        return true;
+    }
+    const inventoryPerms = perms['Inventory'];
+    if (!inventoryPerms || !Array.isArray(inventoryPerms)) {
+        return true; // No specific restriction
+    }
+    return inventoryPerms.includes(tabName);
+};
+
+const staticTabs = computed(() => {
+  return allStaticTabs.filter(tab => isTabAllowed(tab.name));
+});
 
 const customTabsDraggable = ref<ITab[]>([]);
 
@@ -155,7 +183,7 @@ onMounted(async () => {
     default:
       let tabId = endpoint.split("/tab/")[1];
       let customIndex = customTabsDraggable.value.findIndex((tab) => tab.id == Number(tabId));
-      currentTab.value = customIndex !== -1 ? staticTabs.value.length + customIndex : 0;
+      currentTab.value = customIndex !== -1 ? allStaticTabs.length + customIndex : 0;
       break;
   }
   await nextTick();
@@ -227,7 +255,7 @@ function deleteContextTab() {
 }
 
 watch(currentTab, (value) => {
-  if (value != staticTabs.value.length + customTabsDraggable.value.length + 1) {
+  if (value != allStaticTabs.length + customTabsDraggable.value.length + 1) {
     lastTab.value = value;
   }
 });
@@ -330,7 +358,7 @@ function onDragEnd() {
 
 // API reorder
 function reorderTabs() {
-  const offset = staticTabs.value.length;
+  const offset = allStaticTabs.length;
 
   // Revisamos si alguna tab cambió de posición real
   const reordered = customTabsDraggable.value.some((tab, index) => {

@@ -55,23 +55,111 @@ Route::get('/', function (Request $request) {
         }
 
         $permissions = $user->page_permissions;
+
+        // If permissions is null or flat array (old format), convert or default
         if (is_null($permissions)) {
-            $permissions = ['Inventory'];
+            $permissions = ['Inventory' => ['Active Inventory', 'On Hold', 'Sold']];
         }
+
         if (is_string($permissions)) {
             $permissions = json_decode($permissions, true) ?? [];
         }
-        if (! is_array($permissions)) {
-            $permissions = [];
+
+        // Backward compatibility: Flat array check
+        if (is_array($permissions) && ! empty($permissions) && array_keys($permissions) !== range(0, count($permissions) - 1)) {
+            // It is an associative array (new format), check keys
+        } elseif (is_array($permissions) && ! empty($permissions)) {
+            // It is a flat array (old format), convert
+            $newPerms = [];
+            foreach ($permissions as $p) {
+                if ($p === 'Inventory') {
+                    $newPerms[$p] = ['Active Inventory', 'On Hold', 'Sold'];
+                } else {
+                    $newPerms[$p] = [];
+                }
+            }
+            $permissions = $newPerms;
         }
 
-        if (in_array('Dashboard', $permissions)) {
-            return redirect()->route('dashboard');
-        }
-        if (in_array('Inventory', $permissions)) {
-            return redirect('/inventory/items');
+        if (! is_array($permissions) || empty($permissions)) {
+            // If empty object, default to inventory
+            $permissions = ['Inventory' => ['Active Inventory', 'On Hold', 'Sold']];
         }
 
+        $routeMap = [
+            'Dashboard' => '/dashboard',
+            'Inventory' => function ($tabs) {
+                if (empty($tabs)) {
+                    return '/inventory/items';
+                }
+                if (in_array('Active Inventory', $tabs)) {
+                    return '/inventory/items';
+                }
+                if (in_array('On Hold', $tabs)) {
+                    return '/inventory/items/hold';
+                }
+                if (in_array('Sold', $tabs)) {
+                    return '/inventory/report';
+                }
+
+                return '/inventory/items';
+            },
+            'Markets' => '/ecommerce/markets',
+            'Accounting' => function ($tabs) {
+                if (empty($tabs)) {
+                    return '/accounting/payments';
+                }
+                if (in_array('Payments', $tabs)) {
+                    return '/accounting/payments';
+                }
+                if (in_array('Expenses', $tabs)) {
+                    return '/accounting/expenses';
+                }
+                if (in_array('Bills', $tabs)) {
+                    return '/accounting/bills';
+                }
+                if (in_array('Taxes', $tabs)) {
+                    return '/accounting/taxes';
+                }
+
+                return '/accounting/payments';
+            },
+            'Contacts' => function ($tabs) {
+                if (empty($tabs)) {
+                    return '/customer';
+                }
+                if (in_array('Customers', $tabs)) {
+                    return '/customer';
+                }
+                if (in_array('Prospects', $tabs)) {
+                    return '/prospects';
+                }
+                if (in_array('Vendors', $tabs)) {
+                    return '/vendor';
+                }
+                if (in_array('Mailing list', $tabs)) {
+                    return '/mailing_list';
+                }
+                if (in_array('Email editor', $tabs)) {
+                    return '/email_templates';
+                }
+
+                return '/customer';
+            },
+            'Stores' => '/stores',
+            'Company' => '/company',
+            'Users' => '/users',
+        ];
+
+        foreach ($routeMap as $page => $resolver) {
+            if (array_key_exists($page, $permissions)) {
+                $url = is_callable($resolver) ? $resolver($permissions[$page] ?? []) : $resolver;
+
+                return redirect($url);
+            }
+        }
+
+        // Fallback if none match
         return redirect()->route('dashboard');
     }
 
@@ -95,51 +183,62 @@ Route::middleware([
     'verified',
 ])->group(function () {
 
+    // Inventory Group (Base Page Permission)
     Route::group(['prefix' => 'inventory', 'name' => 'inventory.', 'middleware' => 'page.permission:Inventory'], function () {
-        Route::delete('items/obliterate', [ItemController::class, 'obliterate'])->name('items.obliterate');
-        Route::put('items/hold', [ItemController::class, 'hold'])->name('items.hold');
-        Route::get('items/hold', [ItemController::class, 'viewHold'])->name('items.viewHold');
-        Route::get('items/tab/{id}', [ItemController::class, 'tabItems'])->name('items.tab');
-        Route::post('items/tab/store', [ItemController::class, 'tabStore'])->name('tab.store');
-        Route::post('items/tabmove', [ItemController::class, 'tabMove'])->name('tab.move');
-        Route::post('items/tabmoveall', [ItemController::class, 'tabMoveAll'])->name('tab.move.all');
-        Route::post('items/tabreturnmove', [ItemController::class, 'tabreturnmove'])->name('tab.returnmove');
-        Route::post('items/tabreorder', [ItemController::class, 'tabReorder'])->name('tab.reorder');
-        Route::post('items/tabremove', [ItemController::class, 'tabRemove'])->name('tab.remove');
-        Route::put('items/unhold', [ItemController::class, 'unhold'])->name('items.unhold');
-        Route::put('items/return', [ItemController::class, 'returnItem'])->name('items.return');
-        Route::put('items/refund', [ItemController::class, 'refundItem'])->name('items.refund');
-        Route::post('items/correct', [ItemController::class, 'correct'])->name('items.correct');
-        Route::post('items/update', [ItemController::class, 'update'])->name('items.update');
-        Route::get('items/{item}/label', [ItemController::class, 'label'])->name('items.label');
-        Route::get('items/labels/{items}', [ItemController::class, 'getLabels'])->name('items.labels');
-        Route::post('items/newlabels', [ItemController::class, 'getLabelsNewItems'])->name('items.newlabels');
-        // Auto-generate selling prices for a set of items (returns updated items)
-        Route::post('items/generate-selling-prices', [ItemController::class, 'generateSellingPrice'])->name('items.generateSellingPrices');
-        Route::post('items/storeWithBill', [ItemController::class, 'storeWithBill'])->name('items.storeWithBill');
-        Route::post('items/get_unique_models_by_manufacturer', [ItemController::class, 'getUniqueModelsByManufacturer'])->name('Items.getUniqueModelsByManufacturer');
-        Route::get('items/getItems', [ItemController::class, 'getItems'])->name('items.getItems');
-        Route::post('items/get-specific-items', [ItemController::class, 'getSpecificItems'])->name('items.getSpecificItems');
-        Route::get('items/incoming-requests', [ItemController::class, 'incomingRequests'])->name('items.incomingRequests');
-        Route::post('items/incoming-requests/{id}/create-invoice', [ItemController::class, 'createInvoiceFromRequest'])->name('items.incomingRequests.createInvoice');
-        Route::delete('items/incoming-requests/items/{id}', [ItemController::class, 'deleteIncomingRequestItem'])->name('items.incomingRequests.deleteItem');
-        Route::delete('items/incoming-requests/{id}', [ItemController::class, 'deleteIncomingRequest'])->name('items.incomingRequests.delete');
-        Route::resource('items', ItemController::class)
-            ->except(['show', 'update', 'edit']);
 
-        Route::get('items/{item}/edit', [ItemController::class, 'edit'])->name('items.edit');
-        Route::get('items/search', [ItemController::class, 'search'])->name('items.search');
-        Route::get('items/excel/create', [ItemController::class, 'excelCreate'])->name('items.excel.create');
-        Route::post('items/excel/store', [ItemController::class, 'excelStore'])->name('items.excel.store');
-        Route::get('items/excelDemo/download', [ItemController::class, 'excelDemoDownload'])->name('items.excel.demo.download');
-        Route::post('sales', [SaleController::class, 'store'])->name('sales.store');
-        Route::get('sale/{sale}/receipt', [SaleController::class, 'receipt'])->name('sales.receipt');
-        Route::get('sale/{sale}/items', [SaleController::class, 'soldItems'])->name('sales.sold');
+        // Active Inventory Tab
+        Route::middleware('page.permission:Inventory,Active Inventory')->group(function () {
+            Route::delete('items/obliterate', [ItemController::class, 'obliterate'])->name('items.obliterate');
+            Route::put('items/hold', [ItemController::class, 'hold'])->name('items.hold');
+            Route::get('items/tab/{id}', [ItemController::class, 'tabItems'])->name('items.tab');
+            Route::post('items/tab/store', [ItemController::class, 'tabStore'])->name('tab.store');
+            Route::post('items/tabmove', [ItemController::class, 'tabMove'])->name('tab.move');
+            Route::post('items/tabmoveall', [ItemController::class, 'tabMoveAll'])->name('tab.move.all');
+            Route::post('items/tabreturnmove', [ItemController::class, 'tabreturnmove'])->name('tab.returnmove');
+            Route::post('items/tabreorder', [ItemController::class, 'tabReorder'])->name('tab.reorder');
+            Route::post('items/tabremove', [ItemController::class, 'tabRemove'])->name('tab.remove');
+            Route::put('items/return', [ItemController::class, 'returnItem'])->name('items.return');
+            Route::put('items/refund', [ItemController::class, 'refundItem'])->name('items.refund');
+            Route::post('items/correct', [ItemController::class, 'correct'])->name('items.correct');
+            Route::post('items/update', [ItemController::class, 'update'])->name('items.update');
+            Route::get('items/{item}/label', [ItemController::class, 'label'])->name('items.label');
+            Route::get('items/labels/{items}', [ItemController::class, 'getLabels'])->name('items.labels');
+            Route::post('items/newlabels', [ItemController::class, 'getLabelsNewItems'])->name('items.newlabels');
+            Route::post('items/generate-selling-prices', [ItemController::class, 'generateSellingPrice'])->name('items.generateSellingPrices');
+            Route::post('items/storeWithBill', [ItemController::class, 'storeWithBill'])->name('items.storeWithBill');
+            Route::post('items/get_unique_models_by_manufacturer', [ItemController::class, 'getUniqueModelsByManufacturer'])->name('Items.getUniqueModelsByManufacturer');
+            Route::get('items/getItems', [ItemController::class, 'getItems'])->name('items.getItems');
+            Route::post('items/get-specific-items', [ItemController::class, 'getSpecificItems'])->name('items.getSpecificItems');
+            Route::get('items/incoming-requests', [ItemController::class, 'incomingRequests'])->name('items.incomingRequests');
+            Route::post('items/incoming-requests/{id}/create-invoice', [ItemController::class, 'createInvoiceFromRequest'])->name('items.incomingRequests.createInvoice');
+            Route::delete('items/incoming-requests/items/{id}', [ItemController::class, 'deleteIncomingRequestItem'])->name('items.incomingRequests.deleteItem');
+            Route::delete('items/incoming-requests/{id}', [ItemController::class, 'deleteIncomingRequest'])->name('items.incomingRequests.delete');
+            Route::resource('items', ItemController::class)
+                ->except(['show', 'update', 'edit']);
 
-        Route::post('sales/update', [SaleController::class, 'update'])->name('sales.update');
+            Route::get('items/{item}/edit', [ItemController::class, 'edit'])->name('items.edit');
+            Route::get('items/search', [ItemController::class, 'search'])->name('items.search');
+            Route::get('items/excel/create', [ItemController::class, 'excelCreate'])->name('items.excel.create');
+            Route::post('items/excel/store', [ItemController::class, 'excelStore'])->name('items.excel.store');
+            Route::get('items/excelDemo/download', [ItemController::class, 'excelDemoDownload'])->name('items.excel.demo.download');
+            Route::post('sales', [SaleController::class, 'store'])->name('sales.store');
+            Route::get('sale/{sale}/receipt', [SaleController::class, 'receipt'])->name('sales.receipt');
+            Route::get('sale/{sale}/items', [SaleController::class, 'soldItems'])->name('sales.sold');
 
-        Route::get('report', [SaleController::class, 'showReport'])->name('sales.report');
-        Route::post('report', [SaleController::class, 'showReport'])->name('sales.generate_report');
+            Route::post('sales/update', [SaleController::class, 'update'])->name('sales.update');
+        });
+
+        // On Hold Tab
+        Route::middleware('page.permission:Inventory,On Hold')->group(function () {
+            Route::get('items/hold', [ItemController::class, 'viewHold'])->name('items.viewHold');
+            Route::put('items/unhold', [ItemController::class, 'unhold'])->name('items.unhold');
+        });
+
+        // Sold Tab (Report)
+        Route::middleware('page.permission:Inventory,Sold')->group(function () {
+            Route::get('report', [SaleController::class, 'showReport'])->name('sales.report');
+            Route::post('report', [SaleController::class, 'showReport'])->name('sales.generate_report');
+        });
     });
 
     Route::post('/storages/assign-positions', [StorageController::class, 'assignPositions'])->name('storages.assignPositions');
