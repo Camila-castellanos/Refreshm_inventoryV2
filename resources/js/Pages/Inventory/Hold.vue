@@ -99,7 +99,7 @@ function parseItemsData() {
         return {
           ...item,
           location: `${name} - ${position}/${limit}`,
-          vendor: item.vendor.vendor,
+          vendor: item.vendor ? item.vendor.vendor : "",
           actions: [
             {
               label: "Label",
@@ -115,7 +115,7 @@ function parseItemsData() {
       return {
         ...item,
         location: "N/A",
-        vendor: item.vendor.vendor,
+        vendor: item.vendor ? item.vendor.vendor : "",
         actions: [
           {
             label: "Label",
