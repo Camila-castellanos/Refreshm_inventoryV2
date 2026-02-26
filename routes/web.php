@@ -160,7 +160,7 @@ Route::get('/', function (Request $request) {
         }
 
         // Fallback if none match
-        return redirect()->route('dashboard');
+        return redirect('/inventory/items');
     }
 
     return Inertia::render('Auth/Login', [

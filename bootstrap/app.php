@@ -29,11 +29,15 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        $exceptions->respond(function (Response $response, $request) {
+        $exceptions->respond(function (Response $response, \Throwable $e, \Illuminate\Http\Request $request) {
             if ($response->getStatusCode() === 419) {
                 return response()->json([
                     'message' => 'Page expired, please refresh.',
                 ], 419);
+            }
+
+            if ($response->getStatusCode() === 403 && $request->header('X-Inertia')) {
+                return redirect('/');
             }
 
             return $response;
