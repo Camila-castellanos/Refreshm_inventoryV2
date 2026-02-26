@@ -17,7 +17,7 @@ class CheckUserRole
     public function handle(Request $request, Closure $next, ...$roles): Response
     {
         // Verificar si el usuario está autenticado
-        if (!Auth::check()) {
+        if (! Auth::check()) {
             return redirect()->route('login');
         }
 
@@ -25,13 +25,10 @@ class CheckUserRole
         $user = Auth::user();
 
         // Verificar si el usuario tiene uno de los roles permitidos
-        if (!in_array($user->role, $roles)) {
-        // En lugar de redirect()->back(), redirigir a una ruta específica
-        if ($user->role === 'USER') {
-        return redirect('/inventory/items');
+        if (! in_array($user->role, $roles)) {
+            // Redirect to / so the home route resolves the correct first permitted page
+            return redirect('/');
         }
-        return redirect('/')->with('error', 'Unauthorized access.');
-    }
 
         return $next($request);
     }
