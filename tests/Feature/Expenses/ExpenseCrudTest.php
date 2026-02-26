@@ -20,8 +20,8 @@ class ExpenseCrudTest extends TestCaseWithCompany
 
     public function test_show_returns_expenses_page(): void
     {
-        Expense::factory()->forOwner($this->owner->id)->create();
-        Expense::factory()->forOwner($this->owner->id)->create(['name' => 'Office Supplies']);
+        Expense::factory()->forOwner($this->owner)->create();
+        Expense::factory()->forOwner($this->owner)->create(['name' => 'Office Supplies']);
 
         $response = $this->actingAs($this->owner)
             ->get('/accounting/expenses');
@@ -101,7 +101,7 @@ class ExpenseCrudTest extends TestCaseWithCompany
 
     public function test_update_modifies_expense(): void
     {
-        $expense = Expense::factory()->forOwner($this->owner->id)->create([
+        $expense = Expense::factory()->forOwner($this->owner)->create([
             'name' => 'Original Expense',
             'total' => 50.00,
         ]);
@@ -133,8 +133,8 @@ class ExpenseCrudTest extends TestCaseWithCompany
 
     public function test_obliterate_deletes_multiple_expenses(): void
     {
-        $expense1 = Expense::factory()->forOwner($this->owner->id)->create();
-        $expense2 = Expense::factory()->forOwner($this->owner->id)->create();
+        $expense1 = Expense::factory()->forOwner($this->owner)->create();
+        $expense2 = Expense::factory()->forOwner($this->owner)->create();
 
         $data = [
             ['id' => $expense1->id],

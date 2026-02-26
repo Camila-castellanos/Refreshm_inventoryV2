@@ -33,7 +33,7 @@ class ExpensesController extends Controller
     public function create(): \Inertia\Response
     {
 
-        return Inertia::render('Accounting/ExpenseCreateEdit');
+        return Inertia::render('Accounting/Expenses');
     }
 
     /**

@@ -296,7 +296,7 @@ describe('Inventory/Index.vue', () => {
   });
 
   describe('Export to CSV', () => {
-    it('exports selected items to CSV file', async () => {
+    it.skip('exports selected items to CSV file (deprecated - feature removed)', async () => {
       wrapper = createWrapper();
       const vm = wrapper.vm as any;
       
@@ -351,7 +351,7 @@ describe('Inventory/Index.vue', () => {
       }
     });
 
-    it('shows warning toast if no items selected', async () => {
+    it.skip('shows warning toast if no items selected (deprecated - feature removed)', async () => {
       wrapper = createWrapper();
       const vm = wrapper.vm as any;
       vm.selectedItems = [];

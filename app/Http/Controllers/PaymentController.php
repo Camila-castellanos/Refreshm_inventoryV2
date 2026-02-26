@@ -12,6 +12,7 @@ use App\Models\Item;
 use App\Models\Payment;
 use App\Models\ReturnItems;
 use App\Models\Sale;
+use App\Models\Scopes\CompanyItemScope;
 use App\Models\Storage;
 use App\Models\Store;
 use App\Models\User;
@@ -668,15 +669,27 @@ class PaymentController extends Controller
             return [];
         }
 
+        // Determine if the current user has org-wide accounting visibility.
+        // If so, Item queries must bypass CompanyItemScope (which checks Inventory
+        // permissions) so that sold items belonging to other users are not filtered out.
+        $authUser = Auth::user();
+        $authPerms = $authUser->page_permissions ?? [];
+        $hasOrgAccounting = $authUser->role === 'OWNER'
+            || (
+                isset($authPerms['Accounting'])
+                && is_array($authPerms['Accounting'])
+                && in_array('View Organization Data', $authPerms['Accounting'])
+            );
+
         // Obtener solo los IDs de ventas que tienen items vendidos
         $saleIds = $sales->pluck('id')->toArray();
 
         // Verificar qué ventas tienen items vendidos (como en la lógica original)
-        $salesWithSoldItems = Item::whereIn('sale_id', $saleIds)
-            ->whereNotNull('sold')
-            ->pluck('sale_id')
-            ->unique()
-            ->toArray();
+        $soldItemsQuery = Item::whereIn('sale_id', $saleIds)->whereNotNull('sold');
+        if ($hasOrgAccounting) {
+            $soldItemsQuery->withoutGlobalScope(CompanyItemScope::class);
+        }
+        $salesWithSoldItems = $soldItemsQuery->pluck('sale_id')->unique()->toArray();
 
         // Filtrar ventas para mantener solo las que tienen items vendidos
         $validSales = $sales->filter(function ($sale) use ($salesWithSoldItems) {
@@ -688,11 +701,13 @@ class PaymentController extends Controller
         }
 
         // Obtener los primeros items vendidos para cada venta válida
-        $firstItems = Item::whereIn('sale_id', $validSales->pluck('id')->toArray())
+        $firstItemsQuery = Item::whereIn('sale_id', $validSales->pluck('id')->toArray())
             ->whereNotNull('sold')
-            ->select('id', 'sale_id', 'sold', 'customer')
-            ->get()
-            ->groupBy('sale_id');
+            ->select('id', 'sale_id', 'sold', 'customer');
+        if ($hasOrgAccounting) {
+            $firstItemsQuery->withoutGlobalScope(CompanyItemScope::class);
+        }
+        $firstItems = $firstItemsQuery->get()->groupBy('sale_id');
 
         // Obtener todos los customers necesarios de una vez
         $customerNames = $firstItems->pluck('*')->flatten()->pluck('customer')->unique()->filter();

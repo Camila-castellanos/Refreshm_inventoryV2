@@ -64,7 +64,7 @@ class BillController extends Controller
     public function create(): \Inertia\Response
     {
 
-        return Inertia::render('Accounting/BillsCreateEdit');
+        return Inertia::render('Accounting/Bills');
     }
 
     /**

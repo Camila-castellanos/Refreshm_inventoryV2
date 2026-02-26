@@ -65,7 +65,7 @@ class UserController extends Controller
      */
     public function create()
     {
-        return Inertia::render('Users/CreateEdit');
+        return Inertia::render('Users/Index');
     }
 
     /**
@@ -146,7 +146,7 @@ class UserController extends Controller
      */
     public function edit(User $user)
     {
-        return Inertia::render('Users/CreateEdit', [
+        return Inertia::render('Users/Index', [
             'userEdit' => $user,
         ]);
     }
@@ -184,7 +184,7 @@ class UserController extends Controller
 
     public function changeRole(User $user)
     {
-        return Inertia::render('Users/Roles', [
+        return Inertia::render('Users/Index', [
             'userEdit' => $user,
             'currentUserRole' => Auth::user()->role,
         ]);

@@ -28,7 +28,7 @@ class ExpenseFactory extends Factory
     public function forOwner($owner = null): static
     {
         return $this->state(fn (array $attributes) => [
-            'user_id' => $owner?->id ?? User::factory(),
+            'user_id' => is_object($owner) ? $owner->id : ($owner ?? User::factory()),
         ]);
     }
 
