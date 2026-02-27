@@ -149,11 +149,11 @@ class CompanyController extends Controller
         }
 
         $validated = $request->validate([
-            'permissions' => ['required', 'array'],
+            'permissions' => ['nullable', 'array'],
         ]);
 
         $member->forceFill([
-            'page_permissions' => $validated['permissions'],
+            'page_permissions' => $validated['permissions'] ?? [],
         ])->save();
 
         return back(303);

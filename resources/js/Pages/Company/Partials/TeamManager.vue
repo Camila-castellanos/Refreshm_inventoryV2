@@ -185,10 +185,15 @@ const togglePage = (pageName) => {
     }
     
     if (pageIsSelected(pageName)) {
-        delete permissionForm.permissions[pageName];
+        // Use spread instead of delete so Vue 3 reactivity tracks the change
+        const { [pageName]: _removed, ...rest } = permissionForm.permissions;
+        permissionForm.permissions = rest;
     } else {
         const pageConfig = availablePermissions.find(p => p.name === pageName);
-        permissionForm.permissions[pageName] = pageConfig ? [...pageConfig.tabs] : [];
+        permissionForm.permissions = {
+            ...permissionForm.permissions,
+            [pageName]: pageConfig ? [...pageConfig.tabs] : [],
+        };
     }
 };
 
