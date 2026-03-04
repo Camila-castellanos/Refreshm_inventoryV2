@@ -104,6 +104,51 @@
                                 <h3 class="text-lg font-medium text-gray-900 mb-4">Visual Configuration</h3>
                             </div>
 
+                            <!-- Logo -->
+                            <div class="col-span-2">
+                                <label class="block text-sm font-medium text-gray-900 mb-4">
+                                    Market Logo
+                                </label>
+                                <div class="flex items-center space-x-6">
+                                    <div class="w-24 h-24 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center overflow-hidden shrink-0">
+                                        <img v-if="logoPreview" :src="logoPreview" class="w-full h-full object-contain" alt="Logo preview">
+                                        <i v-else class="pi pi-image text-3xl text-gray-400"></i>
+                                    </div>
+                                    <div class="flex-1">
+                                        <div class="flex items-center space-x-3">
+                                            <Button
+                                                type="button"
+                                                label="Choose Logo"
+                                                icon="pi pi-upload"
+                                                severity="secondary"
+                                                outlined
+                                                size="small"
+                                                @click="$refs.logoInput.click()"
+                                            />
+                                            <Button
+                                                v-if="logoPreview"
+                                                type="button"
+                                                icon="pi pi-times"
+                                                severity="danger"
+                                                text
+                                                rounded
+                                                @click="removeLogo"
+                                                title="Remove new logo"
+                                            />
+                                        </div>
+                                        <p class="text-xs text-gray-500 mt-2">Recommended: Square image (e.g. 512x512px), max 2MB.</p>
+                                        <input
+                                            type="file"
+                                            ref="logoInput"
+                                            class="hidden"
+                                            accept="image/*"
+                                            @change="handleLogoUpload"
+                                        />
+                                        <small v-if="form.errors.logo" class="p-error block mt-1">{{ form.errors.logo }}</small>
+                                    </div>
+                                </div>
+                            </div>
+
                             <!-- Banners -->
                             <div class="col-span-2">
                                 <div class="flex items-center justify-between mb-4">
@@ -341,6 +386,8 @@ const props = defineProps({
 // Form
 // Data
 const newBanners = ref([])
+const logoPreview = ref(null)
+
 const currencyOptions = [
     { label: 'USD - US Dollar', value: 'USD' },
     { label: 'EUR - Euro', value: 'EUR' },
@@ -355,6 +402,7 @@ const form = useForm({
     description: '',
     tagline: '',
     currency: 'USD',
+    logo: null,
     banners: [],
     show_inventory_count: false,
     is_active: true,
@@ -375,6 +423,25 @@ const marketSlug = computed(() => {
 })
 
 // Methods
+const handleLogoUpload = (event) => {
+    const file = event.target.files[0]
+    if (!file) return
+
+    form.logo = file
+    logoPreview.value = URL.createObjectURL(file)
+    
+    // Reset input
+    event.target.value = ''
+}
+
+const removeLogo = () => {
+    if (logoPreview.value) {
+        URL.revokeObjectURL(logoPreview.value)
+    }
+    logoPreview.value = null
+    form.logo = null
+}
+
 const handleBannerUpload = (event) => {
     const files = Array.from(event.target.files)
     newBanners.value = [...newBanners.value, ...files]

@@ -92,6 +92,12 @@ class MarketAdminController extends Controller
             }
         }
 
+        // Handle Logo Upload
+        if ($request->hasFile('logo')) {
+            $market->addMediaFromRequest('logo')
+                ->toMediaCollection('logo');
+        }
+
         // Build the public market URL
         $publicMarketUrl = route('market.index', $market->slug);
 
@@ -181,6 +187,12 @@ class MarketAdminController extends Controller
                 $market->addMedia($banner)
                     ->toMediaCollection('banners');
             }
+        }
+
+        // Handle Logo Upload
+        if ($request->hasFile('logo')) {
+            $market->addMediaFromRequest('logo')
+                ->toMediaCollection('logo');
         }
 
         // Handle Banner Removals

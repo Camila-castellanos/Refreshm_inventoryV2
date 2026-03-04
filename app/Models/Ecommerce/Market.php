@@ -955,6 +955,21 @@ class Market extends Model implements HasMedia
     }
 
     /**
+     * Get the logo_url attribute.
+     * Prioritizes Spatie Media Library over the database column.
+     */
+    public function getLogoUrlAttribute($value): ?string
+    {
+        $media = $this->getFirstMedia('logo');
+
+        if ($media) {
+            return $media->getUrl();
+        }
+
+        return $value;
+    }
+
+    /**
      * Get market data with safe defaults
      */
     public function getSafeData(): array

@@ -46,6 +46,7 @@ class MarketForm extends FormRequest
             'address' => 'nullable|string|max:500',
             'meta_title' => 'nullable|string|max:255',
             'meta_description' => 'nullable|string|max:500',
+            'logo' => 'nullable|file|image|max:2048', // Max 2MB for logo
             'banners' => 'nullable|array',
             'banners.*' => 'file|image|max:5120', // Max 5MB per image
             'deleted_banners' => 'nullable|array',
