@@ -1,5 +1,5 @@
 <template>
-    <div class="min-h-screen bg-slate-100 flex flex-col md:flex-row relative">
+    <div class="min-h-screen bg-white flex flex-col md:flex-row relative">
         <!-- Mobile Top Bar (Visible only on small screens) -->
         <div class="md:hidden flex items-center justify-between p-4 bg-white border-b border-gray-200 sticky top-0 z-40">
             <div class="flex items-center space-x-3">
@@ -45,7 +45,7 @@
 
         <!-- Main Content Area -->
         <div class="flex-1 flex flex-col min-w-0">
-            <main class="flex-1 p-4 md:p-8">
+            <main class="flex-1">
                 <slot />
             </main>
 
@@ -119,6 +119,18 @@
                 </div>
             </footer>
         </div>
+
+        <!-- Floating Cart Button (Visible on all screens) -->
+        <button 
+            @click="toggleCart" 
+            class="fixed top-6 right-6 z-[60] hidden md:flex items-center justify-center w-14 h-14 bg-gray-900 text-white rounded-full shadow-lg hover:bg-gray-800 hover:shadow-xl hover:scale-105 transition-all duration-200 group"
+            v-if="!showCart"
+        >
+            <i class="pi pi-shopping-cart text-xl group-hover:animate-wiggle"></i>
+            <span v-if="cartCount > 0" class="absolute -top-1 -right-1 inline-flex items-center justify-center w-6 h-6 text-xs font-bold text-white bg-red-500 rounded-full border-2 border-white">
+                {{ cartCount > 99 ? '99+' : cartCount }}
+            </span>
+        </button>
 
         <!-- Cart Drawer -->
         <Cart

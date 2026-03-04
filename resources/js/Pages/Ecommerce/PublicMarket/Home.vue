@@ -5,6 +5,23 @@
             :description="market.meta_description || `Browse and shop ${market.name} collection of quality refurbished devices and electronics.`"
         />
 
+        <!-- Featured Products Preview (Moved to top) -->
+        <section class="py-4 bg-white border-b border-gray-200">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <!-- Featured Products Grid (Limited to 8 items) -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
+                    <ProductCard
+                        v-for="item in featuredItems" 
+                        :key="item.id"
+                        :item="item"
+                        :market="market"
+                        :compact="false"
+                        @view-product="viewProduct"
+                    />
+                </div>
+            </div>
+        </section>
+
         <!-- Hero Carousel Section -->
         <section class="relative overflow-hidden">
             <Carousel v-model:page="currentSlide" :value="heroSlides" :numVisible="1" :numScroll="1" 
@@ -165,36 +182,6 @@
                         </div>
                         <div class="absolute -right-4 -bottom-4 w-32 h-32 bg-green-200 rounded-full opacity-20"></div>
                     </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Featured Products Preview -->
-        <section class="py-16 bg-gray-50">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="text-center mb-12">
-                    <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Featured Products</h2>
-                    <p class="text-lg text-gray-600">Hand-picked items from our latest inventory</p>
-                </div>
-
-                <!-- Featured Products Grid (Limited to 8 items) -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                    <ProductCard
-                        v-for="item in featuredItems" 
-                        :key="item.id"
-                        :item="item"
-                        :market="market"
-                        :compact="true"
-                        @view-product="viewProduct"
-                    />
-                </div>
-
-                <div class="text-center">
-                    <button @click="browseAllProducts" 
-                            class="inline-flex items-center justify-center px-8 py-4 rounded-lg bg-gray-800 text-white hover:bg-gray-900 font-semibold text-lg transition-all duration-200 shadow-lg hover:shadow-xl">
-                        Browse All Products
-                        <i class="pi pi-arrow-right ml-2"></i>
-                    </button>
                 </div>
             </div>
         </section>
