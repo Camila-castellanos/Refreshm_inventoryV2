@@ -1,105 +1,90 @@
 <template>
-    <div @click="handleViewProduct" class="bg-white rounded-lg border border-gray-200 hover:border-gray-300 overflow-hidden transition-all duration-200 hover:shadow-lg group cursor-pointer">
+    <div @click="handleViewProduct" class="bg-white rounded-lg border border-gray-200 hover:border-gray-300 overflow-hidden transition-all duration-200 hover:shadow-lg group cursor-pointer flex flex-col h-full">
         <!-- Product Image -->
         <div 
-            class="aspect-w-16 aspect-h-12 bg-white flex items-center justify-center transition-colors duration-200 overflow-hidden"
-            :class="compact ? 'h-40' : 'h-48'"
+            class="aspect-square bg-white flex items-center justify-center transition-colors duration-200 overflow-hidden w-full relative"
         >
             <!-- Show actual image if available -->
             <img 
                 v-if="productImage"
                 :src="productImage"
                 :alt="item.model"
-                class="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
+                class="absolute inset-0 w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-300"
             />
             <!-- Fallback placeholder if no image -->
-            <div v-else class="text-center" :class="compact ? 'p-4' : 'p-6'">
+            <div v-else class="text-center absolute inset-0 flex flex-col items-center justify-center p-4">
                 <svg 
                     class="text-gray-400 mx-auto mb-2 group-hover:text-gray-500 transition-colors duration-200" 
-                    :class="compact ? 'w-12 h-12' : 'w-16 h-16'"
+                    :class="compact ? 'w-16 h-16' : 'w-24 h-24'"
                     fill="none" stroke="currentColor" viewBox="0 0 24 24"
                 >
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
                 </svg>
-                <p :class="compact ? 'text-xs' : 'text-sm'" class="text-gray-500">{{ item.manufacturer || 'Device' }}</p>
+                <p :class="compact ? 'text-sm' : 'text-base'" class="text-gray-500">{{ item.manufacturer || 'Device' }}</p>
             </div>
         </div>
 
         <!-- Product Content -->
-        <div :class="compact ? 'p-4' : 'p-6'">
-            <!-- Category Badge -->
-            <div class="mb-3">
-                <span v-if="item.type" 
-                      class="inline-block text-xs font-medium text-gray-700 bg-slate-100 border border-gray-200 rounded-md"
-                      :class="compact ? 'px-2 py-1' : 'px-3 py-1'"
-                >
-                    {{ formatCategoryName(item.type) }}
-                </span>
-            </div>
-            
-            <!-- Product Title -->
-            <h3 
-                class="font-semibold text-gray-900 mb-2 line-clamp-2 group-hover:text-gray-700 transition-colors duration-200"
-                :class="compact ? 'text-sm' : 'text-lg'"
-            >
-                {{ item.model }}
-            </h3>
-            
-            <!-- Manufacturer (only in full mode) -->
-            <p v-if="item.manufacturer && !compact" class="text-sm text-gray-600 mb-3">
-                {{ item.manufacturer }}
-            </p>
-
-            <!-- Issues/Description (only in full mode) -->
-            <p v-if="item.issues && !compact" class="text-sm text-gray-600 mb-4 line-clamp-2">
-                {{ item.issues.length > 100 ? item.issues.substring(0, 100) + '...' : item.issues }}
-            </p>
-
-            <!-- Price and Stock -->
-            <div class="flex items-center justify-between" :class="compact ? 'mb-3' : 'mb-4'">
-                <div class="flex flex-col">
-                    <!-- Show price range for grouped models (with min_price/max_price) -->
-                    <div v-if="isGroupedModel" 
-                         class="font-bold text-gray-800"
-                         :class="compact ? 'text-lg' : 'text-2xl'"
+        <div class="flex flex-col flex-1" :class="compact ? 'p-4' : 'p-5'">
+            <!-- Content Wrapper to push action button to bottom -->
+            <div class="flex-1">
+                <!-- Category Badge -->
+                <div class="mb-2">
+                    <span v-if="item.type" 
+                          class="inline-block text-[10px] font-medium text-gray-500 uppercase tracking-wide bg-slate-50 border border-gray-100 rounded-md px-2 py-1"
                     >
-                        Starting from {{ getCurrencySymbol(market.currency) }}{{ formatPrice(item.min_price) }}
-                    </div>
-                    
-                    <!-- Show single price for individual items -->
-                    <div v-else 
-                         class="font-bold text-gray-800"
-                         :class="compact ? 'text-lg' : 'text-2xl'"
-                    >
-                        {{ getCurrencySymbol(market.currency) }}{{ formatPrice(item.selling_price) }}
-                    </div>
-
-                    <!-- Show color and condition options for grouped models -->
-                    <div v-if="isGroupedModel" class="text-xs text-gray-600 mt-1">
-                        {{ item.color_options }} color(s) • {{ item.grade_options }} condition(s)
-                    </div>
+                        {{ formatCategoryName(item.type) }}
+                    </span>
                 </div>
                 
-                <span v-if="market.show_inventory_count && !compact" class="text-sm text-green-600 font-medium">
-                    {{ isGroupedModel ? `${item.total_stock} in stock` : 'In Stock' }}
-                </span>
+                <!-- Manufacturer -->
+                <p v-if="item.manufacturer" class="text-xs text-gray-500 mb-1 font-medium tracking-wide">
+                    {{ item.manufacturer }}
+                </p>
+
+                <!-- Product Title -->
+                <h3 
+                    class="font-semibold text-gray-900 mb-3 line-clamp-2 group-hover:text-gray-700 transition-colors duration-200 leading-tight"
+                    :class="compact ? 'text-sm' : 'text-base'"
+                >
+                    {{ item.model }}
+                </h3>
+
+                <!-- Price and Stock -->
+                <div class="flex items-end justify-between mb-4 mt-auto">
+                    <div class="flex flex-col">
+                        <!-- Show price range for grouped models (with min_price/max_price) -->
+                        <div v-if="isGroupedModel" 
+                             class="font-bold text-gray-900 leading-none"
+                             :class="compact ? 'text-base' : 'text-xl'"
+                        >
+                            <span class="text-xs text-gray-500 font-normal mr-1">from</span>{{ getCurrencySymbol(market.currency) }}{{ formatPrice(item.min_price) }}
+                        </div>
+                        
+                        <!-- Show single price for individual items -->
+                        <div v-else 
+                             class="font-bold text-gray-900 leading-none"
+                             :class="compact ? 'text-base' : 'text-xl'"
+                        >
+                            {{ getCurrencySymbol(market.currency) }}{{ formatPrice(item.selling_price) }}
+                        </div>
+
+                    </div>
+                    
+                    <span v-if="market.show_inventory_count && !compact" class="text-xs text-green-600 font-medium bg-green-50 px-2 py-1 rounded-md">
+                        {{ isGroupedModel ? `${item.total_stock} in stock` : 'In Stock' }}
+                    </span>
+                </div>
             </div>
 
-            <!-- Action Button -->
-            <div class="flex">
+            <!-- Action Button - Always at bottom -->
+            <div class="mt-auto pt-4 border-t border-gray-100">
                 <button 
                     @click.stop="handleViewProduct" 
-                    class="flex-1 inline-flex items-center justify-center px-4 py-2 rounded-lg bg-slate-100 text-gray-700 hover:text-gray-900 border border-gray-200 hover:border-gray-300 font-medium text-sm transition-all duration-200"
+                    class="w-full inline-flex items-center justify-center px-4 py-2.5 rounded-lg bg-gray-50 text-gray-700 hover:text-gray-900 hover:bg-gray-100 border border-transparent font-medium text-sm transition-all duration-200"
                 >
-                    <i class="pi pi-eye text-xs mr-2"></i> See all options
+                    View Details
                 </button>
-            </div>
-
-            <!-- Additional Info (only in full mode) -->
-            <div v-if="item.imei && !compact" class="mt-4 pt-4 border-t border-gray-100">
-                <p class="text-xs text-gray-500">
-                    IMEI: {{ maskIMEI(item.imei) }}
-                </p>
             </div>
         </div>
     </div>
