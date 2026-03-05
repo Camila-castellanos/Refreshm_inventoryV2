@@ -69,8 +69,8 @@
               v-model="form.personal_phone[index]">
             </InputText>
           </div>
-          <div v-if="form.personal_phone_optional[index]?.length != 0" class="grid grid-cols-6 col-span-6 gap-4 px-6 py-3">
-            <div class="col-span-2 mb-6" id="phone_optional" v-for="(personal_phone, p_index) in phone_optional[index]" :key="p_index">
+          <div v-if="form.optional_number[index]?.length != 0" class="grid grid-cols-6 col-span-6 gap-4 px-6 py-3">
+            <div class="col-span-2 mb-6" id="phone_optional" v-for="(personal_phone, p_index) in form.optional_number[index]" :key="p_index">
               <div class="flex justify-between col-span-2">
                 <label class="mb-2 text-sm font-bold text-gray-700" for="personal_phone_optional"> Phone (Optional)</label>
                 <a href="javascript:;" class="text-red-500" @click="removePhoneField(index, p_index)">
@@ -353,7 +353,10 @@ onMounted(() => {
     form.last_name = toArray(customer.value.last_name);
     form.email = toArray(customer.value.email);
     form.personal_phone = toArray(customer.value.phone);
-    form.optional_number = customer.value.phone_optional != null ? customer.value.phone_optional : [];
+    
+    let parsedOptionalPhones = toArray(customer.value.phone_optional);
+    form.optional_number = parsedOptionalPhones.map(item => Array.isArray(item) ? item : (item ? [item] : []));
+
     form.accnumber = customer.value.account_number;
     form.website = customer.value.website;
     form.note = customer.value.notes;
@@ -472,8 +475,9 @@ async function onFormSubmit(event) {
     return;
   }
 
-  if (phone_optional.value.length > 0) {
-    phone_optional.value.forEach((phones) => {
+  form.personal_phone_optional = [];
+  if (form.optional_number.length > 0) {
+    form.optional_number.forEach((phones) => {
       form.personal_phone_optional.push(phones);
     });
   }
@@ -501,7 +505,10 @@ async function onFormSubmit(event) {
     if (response.status >= 200 && response.status < 400) {
       const newCustomer = response.data;
       cleanForm();
-      toast.add({ severity: "success", summary: "Success", detail: "Customer created succesfully!", life: 3000 });
+      
+      const successMessage = formType.value === "Edit" ? "Customer updated successfully!" : "Customer created successfully!";
+      toast.add({ severity: "success", summary: "Success", detail: successMessage, life: 3000 });
+      
       dialogRef.value.close(newCustomer);
       
       // Reload the customers list after update
@@ -514,18 +521,23 @@ async function onFormSubmit(event) {
 }
 
 function addPhoneField(index) {
-  phone_optional[index].push("");
+  if (!form.optional_number[index]) {
+    form.optional_number[index] = [];
+  }
+  // Añadimos solo al array de form.optional_number, y dejamos que la vista itere sobre él
+  form.optional_number[index].push("");
 }
 
 function removePhoneField(index, re_index) {
-  phone_optional[index].splice(re_index, 1);
+  if (form.optional_number[index]) {
+    form.optional_number[index].splice(re_index, 1);
+  }
 }
 
 function addContactDetails() {
   let contact = "";
-  phone_optional.push([]);
   form.optional_number.push([]);
-  personal_info_content.push(contact);
+  personal_info_content.value.push(contact);
 }
 
 function removeContact(index) {
@@ -533,7 +545,6 @@ function removeContact(index) {
   form.last_name.splice(index, 1);
   form.email.splice(index, 1);
   form.personal_phone.splice(index, 1);
-  phone_optional.value.splice(index, 1);
   form.optional_number.splice(index, 1);
   personal_info_content.value.splice(index, 1);
 }

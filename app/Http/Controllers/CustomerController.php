@@ -156,11 +156,19 @@ class CustomerController extends Controller
         ]);
 
         $personal_phone_optional = $form['personal_phone_optional'] ?? [];
-        foreach ($personal_phone_optional as $key => $value) {
-            if ($value == null) {
-                $personal_phone_optional[$key] = [];
+        $phones_to_save = [];
+        $has_any_phone = false;
+
+        foreach ($personal_phone_optional as $key => $phones) {
+            // Clean empty values and reindex the inner arrays
+            $clean_phones = array_values(array_filter((array) $phones, fn ($p) => ! empty(trim($p ?? ''))));
+            $phones_to_save[$key] = $clean_phones;
+            if (! empty($clean_phones)) {
+                $has_any_phone = true;
             }
         }
+
+        $final_phones_optional = $has_any_phone ? json_encode($phones_to_save) : null;
 
         // DEBUG: Log de los datos recibidos del frontend
         \Log::debug('=== BACKEND DEBUG - DATOS RECIBIDOS ===');
@@ -182,9 +190,7 @@ class CustomerController extends Controller
         $customer->last_name = isset($form['last_name'][0]) ? $form['last_name'][0] : null;
         $customer->email = isset($form['email'][0]) ? $form['email'][0] : null;
         $customer->phone = isset($form['personal_phone'][0]) ? $form['personal_phone'][0] : null;
-        // Filtrar arrays vacíos internos primero, luego verificar si hay datos
-        $filtered_phones = array_filter($personal_phone_optional, fn ($v) => ! empty(array_filter($v)));
-        $customer->phone_optional = ! empty($filtered_phones) ? $filtered_phones : null;
+        $customer->phone_optional = $final_phones_optional;
         $customer->account_number = $form['accnumber'] ?? null;
         $customer->website = $form['website'] ?? null;
         $customer->notes = $form['note'] ?? null;
@@ -278,11 +284,19 @@ class CustomerController extends Controller
             ]);
 
             $personal_phone_optional = $form['personal_phone_optional'] ?? [];
-            foreach ($personal_phone_optional as $key => $value) {
-                if ($value == null) {
-                    $personal_phone_optional[$key] = [];
+            $phones_to_save = [];
+            $has_any_phone = false;
+
+            foreach ($personal_phone_optional as $key => $phones) {
+                // Clean empty values and reindex the inner arrays
+                $clean_phones = array_values(array_filter((array) $phones, fn ($p) => ! empty(trim($p ?? ''))));
+                $phones_to_save[$key] = $clean_phones;
+                if (! empty($clean_phones)) {
+                    $has_any_phone = true;
                 }
             }
+
+            $final_phones_optional = $has_any_phone ? json_encode($phones_to_save) : null;
 
             // DEBUG: Log de los datos recibidos del frontend
             \Log::debug('=== BACKEND DEBUG UPDATE - DATOS RECIBIDOS ===');
@@ -296,9 +310,6 @@ class CustomerController extends Controller
             \Log::debug('shipping_address_optional:', ['value' => $form['shipping_address_optional'] ?? null, 'type' => gettype($form['shipping_address_optional'] ?? null), 'isArray' => is_array($form['shipping_address_optional'] ?? null)]);
             \Log::debug('========================================');
 
-            // Filtrar arrays vacíos internos primero, luego verificar si hay datos
-            $filtered_phones = array_filter($personal_phone_optional, fn ($v) => ! empty(array_filter($v)));
-
             $customer_data = [
                 'customer' => $form['customer_name'],
                 'user_id' => Auth::id(),
@@ -307,7 +318,7 @@ class CustomerController extends Controller
                 'last_name' => isset($form['last_name'][0]) ? $form['last_name'][0] : null,
                 'email' => isset($form['email'][0]) ? $form['email'][0] : null,
                 'phone' => isset($form['personal_phone'][0]) ? $form['personal_phone'][0] : null,
-                'phone_optional' => ! empty($filtered_phones) ? $filtered_phones : null,
+                'phone_optional' => $final_phones_optional,
                 'account_number' => $form['accnumber'] ?? null,
                 'website' => $form['website'] ?? null,
                 'notes' => $form['note'] ?? null,
