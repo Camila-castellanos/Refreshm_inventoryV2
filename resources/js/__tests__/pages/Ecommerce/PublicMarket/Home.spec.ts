@@ -164,16 +164,17 @@ describe('Ecommerce/PublicMarket/Home.vue', () => {
       );
     });
 
-    it('navigates to all products from "View All" footer', async () => {
-      wrapper = createWrapper();
-      
-      const viewAllBtn = wrapper.findAll('button').find(b => b.text().includes('Browse All Products'));
-      
-      await viewAllBtn?.trigger('click');
-      
-      expect(inertiaMocks.visit).toHaveBeenCalledWith(
-        expect.stringContaining('/market/tech-haven/products-list')
-      );
-    });
+// Test disabled since "Browse All Products" button was removed from footer
+    // it('navigates to all products from "View All" footer', async () => {
+    //   wrapper = createWrapper();
+    //   
+    //   const viewAllBtn = wrapper.findAll('button').find(b => b.text().includes('Browse All Products'));
+    //   
+    //   await viewAllBtn?.trigger('click');
+    //   
+    //   expect(inertiaMocks.visit).toHaveBeenCalledWith(
+    //     expect.stringContaining('/market/tech-haven/products-list')
+    //   );
+    // });
   });
 });

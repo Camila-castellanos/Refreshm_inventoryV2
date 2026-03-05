@@ -251,6 +251,63 @@ describe('Customers/CreateEdit.vue', () => {
     });
   });
 
+  describe('Optional Phones', () => {
+    it('loads optional phones correctly from JSON string', async () => {
+      const customerWithJsonPhones = {
+        ...mockCustomer,
+        phone_optional: '[["555-123"], ["555-456"]]'
+      };
+      wrapper = createWrapper(customerWithJsonPhones);
+      const vm = wrapper.vm as any;
+
+      await vi.waitFor(() => {
+        expect(vm.customer).toBeDefined();
+      });
+
+      expect(vm.form.optional_number).toEqual([["555-123"], ["555-456"]]);
+    });
+
+    it('adds exactly one phone field when addPhoneField is called', async () => {
+      wrapper = createWrapper();
+      const vm = wrapper.vm as any;
+
+      // First contact, add phone
+      vm.addPhoneField(0);
+      expect(vm.form.optional_number[0]).toHaveLength(1);
+      expect(vm.form.optional_number[0][0]).toBe("");
+      
+      // Add another
+      vm.addPhoneField(0);
+      expect(vm.form.optional_number[0]).toHaveLength(2);
+    });
+
+    it('removes correct phone field when removePhoneField is called', async () => {
+      wrapper = createWrapper();
+      const vm = wrapper.vm as any;
+
+      vm.form.optional_number[0] = ["phone1", "phone2", "phone3"];
+      
+      vm.removePhoneField(0, 1); // remove "phone2"
+      
+      expect(vm.form.optional_number[0]).toEqual(["phone1", "phone3"]);
+    });
+
+    it('maps optional_number to personal_phone_optional on submit', async () => {
+      wrapper = createWrapper();
+      const vm = wrapper.vm as any;
+
+      vm.form.customer_name = 'Test';
+      vm.form.optional_number = [["123"], ["456"]];
+      
+      vi.mocked(axios.post).mockResolvedValueOnce({ status: 201, data: {} });
+      
+      const mockEvent = { preventDefault: vi.fn() };
+      await vm.onFormSubmit(mockEvent);
+
+      expect(vm.form.personal_phone_optional).toEqual([["123"], ["456"]]);
+    });
+  });
+
   describe('Form Submission', () => {
     it('validates customer_name is required', async () => {
       wrapper = createWrapper();
