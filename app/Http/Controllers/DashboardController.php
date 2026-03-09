@@ -6,7 +6,9 @@ use App\Models\Bill;
 use App\Models\CashOnHand;
 use App\Models\Expense;
 use App\Models\Item;
+use App\Models\LoginActivity;
 use App\Models\Sale;
+use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -24,40 +26,34 @@ class DashboardController extends Controller
      */
     public function __invoke()
     {
+        // Check if the user is authenticated
+        $user = Auth::user();
+        // save user id and role for later use
+        $userId = $user->id;
+        $isAdmin = $user->role === 'ADMIN';
 
-        try {
-            // Check if the user is authenticated
-            $user = Auth::user();
-            // save user id and role for later use
-            $userId = $user->id;
-            $isAdmin = $user->role === 'ADMIN';
+        // initialize the start and end dates
+        $startOfMonth = Carbon::now()->startOfMonth()->startOfDay()->toDateTimeString();
+        $endOfMonth = Carbon::now()->endOfMonth()->endOfDay()->toDateTimeString();
 
-            // initialize the start and end dates
-            $startOfMonth = Carbon::now()->startOfMonth()->startOfDay()->toDateTimeString();
-            $endOfMonth = Carbon::now()->endOfMonth()->endOfDay()->toDateTimeString();
+        // cache and calculate metrics
+        $cacheKey = "dashboard_metrics_{$userId}_{$startOfMonth}_{$endOfMonth}";
 
-            // cache and calculate metrics
-            $cacheKey = "dashboard_metrics_{$userId}_{$startOfMonth}_{$endOfMonth}";
+        $context = Cache::remember($cacheKey, now()->addMinutes(30), function () use ($user, $userId, $isAdmin, $startOfMonth, $endOfMonth) {
 
-            $context = Cache::remember($cacheKey, now()->addMinutes(30), function () use ($userId, $isAdmin, $startOfMonth, $endOfMonth) {
+            $salesMetrics = $this->calculateSalesMetrics($userId, $isAdmin, $startOfMonth, $endOfMonth);
+            $inventoryMetrics = $this->calculateInventoryMetrics($userId, $isAdmin);
+            $deviceMetrics = $this->calculateDeviceMetrics($userId, $isAdmin, $startOfMonth, $endOfMonth);
+            $financialMetrics = $this->calculateFinancialMetrics($userId, $startOfMonth, $endOfMonth);
+            $userMetrics = $user->role === 'OWNER' ? $this->calculateUserMetrics($startOfMonth, $endOfMonth) : [];
 
-                $salesMetrics = $this->calculateSalesMetrics($userId, $isAdmin, $startOfMonth, $endOfMonth);
-                $inventoryMetrics = $this->calculateInventoryMetrics($userId, $isAdmin);
-                $deviceMetrics = $this->calculateDeviceMetrics($userId, $isAdmin, $startOfMonth, $endOfMonth);
-                $financialMetrics = $this->calculateFinancialMetrics($userId, $startOfMonth, $endOfMonth);
+            return array_merge($salesMetrics, $inventoryMetrics, $deviceMetrics, $financialMetrics, $userMetrics, [
+                'startDate' => $startOfMonth,
+                'endDate' => $endOfMonth,
+            ]);
+        });
 
-                return array_merge($salesMetrics, $inventoryMetrics, $deviceMetrics, $financialMetrics, [
-                    'startDate' => $startOfMonth,
-                    'endDate' => $endOfMonth,
-                ]);
-            });
-
-            return Inertia::render('Dashboard', $context);
-        } catch (\Exception $e) {
-            Log::error('Dashboard error: '.$e->getMessage());
-
-            return response()->json(['error' => 'An error occurred while loading the dashboard.'], 500);
-        }
+        return Inertia::render('Dashboard', $context);
     }
 
     public function updateCashOnHand(Request $request)
@@ -100,13 +96,14 @@ class DashboardController extends Controller
         // cache and calculate metrics
         $cacheKey = "dashboard_metrics_{$userId}_{$startOfMonth}_{$endOfMonth}";
 
-        $context = Cache::remember($cacheKey, now()->addMinutes(30), function () use ($userId, $isAdmin, $startOfMonth, $endOfMonth) {
+        $context = Cache::remember($cacheKey, now()->addMinutes(30), function () use ($user, $userId, $isAdmin, $startOfMonth, $endOfMonth) {
             $salesMetrics = $this->calculateSalesMetrics($userId, $isAdmin, $startOfMonth, $endOfMonth);
             $inventoryMetrics = $this->calculateInventoryMetrics($userId, $isAdmin);
             $deviceMetrics = $this->calculateDeviceMetrics($userId, $isAdmin, $startOfMonth, $endOfMonth);
             $financialMetrics = $this->calculateFinancialMetrics($userId, $startOfMonth, $endOfMonth);
+            $userMetrics = $user->role === 'OWNER' ? $this->calculateUserMetrics($startOfMonth, $endOfMonth) : [];
 
-            return array_merge($salesMetrics, $inventoryMetrics, $deviceMetrics, $financialMetrics, [
+            return array_merge($salesMetrics, $inventoryMetrics, $deviceMetrics, $financialMetrics, $userMetrics, [
                 'startDate' => $startOfMonth,
                 'endDate' => $endOfMonth,
             ]);
@@ -137,15 +134,16 @@ class DashboardController extends Controller
         // cache and calculate metrics
         $cacheKey = "dashboard_metrics_{$userId}_{$startOfMonth}_{$endOfMonth}";
 
-        $context = Cache::remember($cacheKey, now()->addMinutes(30), function () use ($userId, $isAdmin, $startOfMonth, $endOfMonth) {
+        $context = Cache::remember($cacheKey, now()->addMinutes(30), function () use ($user, $userId, $isAdmin, $startOfMonth, $endOfMonth) {
 
             // Todos tus cálculos van aquí
             $salesMetrics = $this->calculateSalesMetrics($userId, $isAdmin, $startOfMonth, $endOfMonth);
             $inventoryMetrics = $this->calculateInventoryMetrics($userId, $isAdmin);
             $deviceMetrics = $this->calculateDeviceMetrics($userId, $isAdmin, $startOfMonth, $endOfMonth);
             $financialMetrics = $this->calculateFinancialMetrics($userId, $startOfMonth, $endOfMonth);
+            $userMetrics = $user->role === 'OWNER' ? $this->calculateUserMetrics($startOfMonth, $endOfMonth) : [];
 
-            return array_merge($salesMetrics, $inventoryMetrics, $deviceMetrics, $financialMetrics, [
+            return array_merge($salesMetrics, $inventoryMetrics, $deviceMetrics, $financialMetrics, $userMetrics, [
                 'startDate' => $startOfMonth,
                 'endDate' => $endOfMonth,
             ]);
@@ -322,6 +320,17 @@ class DashboardController extends Controller
             'salesTaxCollected' => round($salesTaxCollected),
             'salesTaxPaid' => round($salesTaxPaid),
             'totalPurchases' => $totalPurchases,
+        ];
+    }
+
+    private function calculateUserMetrics($startOfMonth, $endOfMonth)
+    {
+        $newUsers = User::whereBetween('created_at', [$startOfMonth, $endOfMonth])->count();
+        $totalLogins = LoginActivity::whereBetween('login_at', [$startOfMonth, $endOfMonth])->count();
+
+        return [
+            'newUsers' => $newUsers,
+            'totalLogins' => $totalLogins,
         ];
     }
 }
