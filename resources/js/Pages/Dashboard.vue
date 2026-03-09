@@ -55,6 +55,18 @@
           :currency="'$'" :icon="getStatConfig(stat.label).icon" :color="getStatConfig(stat.label).color"
           @update="handleCashOnHandUpdate" :editable="stat?.editable"/>
       </div>
+
+      <div v-if="user.role === 'OWNER'">
+        <div class="mt-12 -mb-2 font-bold">
+          <h2>Platform Statistics</h2>
+        </div>
+        <Divider />
+
+        <div class="grid grid-cols-2 grow  md:grid-cols-3 lg:grid-cols-4 gap-4 mt-6">
+          <StatCard v-for="stat in userStats" :key="stat.label" :label="stat.label" :value="stat.value"
+            :icon="getStatConfig(stat.label).icon" :color="getStatConfig(stat.label).color" />
+        </div>
+      </div>
     </div>
   <IncomingRequestsDrawer />
   </AppLayout>
@@ -94,6 +106,7 @@ const user = ref(props.auth.user);
 const inventoryStats: Ref<Stat[]> = ref([]);
 const salesStats: Ref<Stat[]> = ref([]);
 const accountingStats: Ref<Stat[]> = ref([]);
+const userStats: Ref<Stat[]> = ref([]);
 
 const quickFilter: Ref<string | null> = ref(null);
 
@@ -297,6 +310,13 @@ function updateDashboardStats(data: Dashboard) {
     { label: "Taxed Sales ($)", value: data.taxedSales, currency: true },
     { label: "Non-taxed Sales ($)", value: data.nonTaxedSales, currency: true },
   ];
+
+  if (user.value.role === 'OWNER') {
+    userStats.value = [
+      { label: "New Registrations", value: data.newUsers || 0 },
+      { label: "System Logins", value: data.totalLogins || 0 },
+    ];
+  }
 }
 
 onMounted(() => {
@@ -340,6 +360,10 @@ function getStatConfig(label: string) {
       return { icon: "pi-check-square", color: "teal" };
     case "Non-taxed Sales ($)":
       return { icon: "pi-times-circle", color: "gray" };
+    case "New Registrations":
+      return { icon: "pi-user-plus", color: "blue" };
+    case "System Logins":
+      return { icon: "pi-sign-in", color: "green" };
     default:
       return { icon: "pi-chart-bar", color: "gray" };
   }
