@@ -57,18 +57,26 @@
       </div>
 
       <div v-if="user.role === 'OWNER'">
-        <div class="mt-12 -mb-2 font-bold">
-          <h2>Platform Statistics</h2>
+        <div class="mt-12 -mb-2 flex items-center justify-between cursor-pointer hover:opacity-80 transition-opacity" @click="showPlatformStats = !showPlatformStats">
+          <h2 class="font-bold">Platform Statistics</h2>
+          <i :class="['pi', showPlatformStats ? 'pi-chevron-up' : 'pi-chevron-down', 'text-gray-400']"></i>
         </div>
         <Divider />
 
-        <div class="grid grid-cols-2 grow  md:grid-cols-3 lg:grid-cols-4 gap-4 mt-6">
-          <StatCard v-for="stat in userStats" :key="stat.label" :label="stat.label" :value="stat.value"
-            :icon="getStatConfig(stat.label).icon" :color="getStatConfig(stat.label).color" />
-        </div>
+        <transition name="expand">
+          <div v-show="showPlatformStats" class="overflow-hidden">
+            <div class="grid grid-cols-2 grow md:grid-cols-3 lg:grid-cols-4 gap-4 mt-6">
+              <StatCard v-for="stat in userStats" :key="stat.label" :label="stat.label" :value="stat.value"
+                :icon="getStatConfig(stat.label).icon" :color="getStatConfig(stat.label).color"
+                :clickable="stat.label === 'System Logins'"
+                @click="stat.label === 'System Logins' ? (showLoginsModal = true) : null" />
+            </div>
+          </div>
+        </transition>
       </div>
     </div>
-  <IncomingRequestsDrawer />
+    <IncomingRequestsDrawer />
+    <RecentLoginsModal v-model="showLoginsModal" :logins="recentLogins" />
   </AppLayout>
 </template>
 
@@ -87,6 +95,7 @@ import { startOfMonth, startOfYear, subMonths, subYears, endOfMonth, format } fr
 import StatCard from "@/Components/StatCard.vue";
 import GlobalSearchBar from "@/Components/GlobalSearchBar.vue";
 import IncomingRequestsDrawer from '@/Components/IncomingRequestsDrawer.vue';
+import RecentLoginsModal from "@/Components/RecentLoginsModal.vue";
 
 const toast = useToast();
 
@@ -107,6 +116,9 @@ const inventoryStats: Ref<Stat[]> = ref([]);
 const salesStats: Ref<Stat[]> = ref([]);
 const accountingStats: Ref<Stat[]> = ref([]);
 const userStats: Ref<Stat[]> = ref([]);
+const recentLogins: Ref<any[]> = ref([]);
+const showPlatformStats = ref(false);
+const showLoginsModal = ref(false);
 
 const quickFilter: Ref<string | null> = ref(null);
 
@@ -316,6 +328,7 @@ function updateDashboardStats(data: Dashboard) {
       { label: "New Registrations", value: data.newUsers || 0 },
       { label: "System Logins", value: data.totalLogins || 0 },
     ];
+    recentLogins.value = data.recentLogins || [];
   }
 }
 
@@ -374,3 +387,19 @@ function handleCashOnHandUpdate(newValue: number) {
   editCashOnHand(); // Reutilizas tu función existente
 }
 </script>
+
+<style scoped>
+.expand-enter-active,
+.expand-leave-active {
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  max-height: 500px;
+  opacity: 1;
+}
+
+.expand-enter-from,
+.expand-leave-to {
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(-10px);
+}
+</style>

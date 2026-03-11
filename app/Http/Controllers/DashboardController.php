@@ -37,21 +37,24 @@ class DashboardController extends Controller
         $endOfMonth = Carbon::now()->endOfMonth()->endOfDay()->toDateTimeString();
 
         // cache and calculate metrics
-        $cacheKey = "dashboard_metrics_{$userId}_{$startOfMonth}_{$endOfMonth}";
+        $cacheKey = "dashboard_metrics_v2_{$userId}_{$startOfMonth}_{$endOfMonth}";
 
-        $context = Cache::remember($cacheKey, now()->addMinutes(30), function () use ($user, $userId, $isAdmin, $startOfMonth, $endOfMonth) {
+        $context = Cache::remember($cacheKey, now()->addMinutes(30), function () use ($userId, $isAdmin, $startOfMonth, $endOfMonth) {
 
             $salesMetrics = $this->calculateSalesMetrics($userId, $isAdmin, $startOfMonth, $endOfMonth);
             $inventoryMetrics = $this->calculateInventoryMetrics($userId, $isAdmin);
             $deviceMetrics = $this->calculateDeviceMetrics($userId, $isAdmin, $startOfMonth, $endOfMonth);
             $financialMetrics = $this->calculateFinancialMetrics($userId, $startOfMonth, $endOfMonth);
-            $userMetrics = $user->role === 'OWNER' ? $this->calculateUserMetrics($startOfMonth, $endOfMonth) : [];
 
-            return array_merge($salesMetrics, $inventoryMetrics, $deviceMetrics, $financialMetrics, $userMetrics, [
+            return array_merge($salesMetrics, $inventoryMetrics, $deviceMetrics, $financialMetrics, [
                 'startDate' => $startOfMonth,
                 'endDate' => $endOfMonth,
             ]);
         });
+
+        // Add user metrics separately without caching to avoid decryption/payload issues
+        $userMetrics = $user->role === 'OWNER' ? $this->calculateUserMetrics($startOfMonth, $endOfMonth) : [];
+        $context = array_merge($context, $userMetrics);
 
         return Inertia::render('Dashboard', $context);
     }
@@ -94,20 +97,23 @@ class DashboardController extends Controller
         }
 
         // cache and calculate metrics
-        $cacheKey = "dashboard_metrics_{$userId}_{$startOfMonth}_{$endOfMonth}";
+        $cacheKey = "dashboard_metrics_v2_{$userId}_{$startOfMonth}_{$endOfMonth}";
 
-        $context = Cache::remember($cacheKey, now()->addMinutes(30), function () use ($user, $userId, $isAdmin, $startOfMonth, $endOfMonth) {
+        $context = Cache::remember($cacheKey, now()->addMinutes(30), function () use ($userId, $isAdmin, $startOfMonth, $endOfMonth) {
             $salesMetrics = $this->calculateSalesMetrics($userId, $isAdmin, $startOfMonth, $endOfMonth);
             $inventoryMetrics = $this->calculateInventoryMetrics($userId, $isAdmin);
             $deviceMetrics = $this->calculateDeviceMetrics($userId, $isAdmin, $startOfMonth, $endOfMonth);
             $financialMetrics = $this->calculateFinancialMetrics($userId, $startOfMonth, $endOfMonth);
-            $userMetrics = $user->role === 'OWNER' ? $this->calculateUserMetrics($startOfMonth, $endOfMonth) : [];
 
-            return array_merge($salesMetrics, $inventoryMetrics, $deviceMetrics, $financialMetrics, $userMetrics, [
+            return array_merge($salesMetrics, $inventoryMetrics, $deviceMetrics, $financialMetrics, [
                 'startDate' => $startOfMonth,
                 'endDate' => $endOfMonth,
             ]);
         });
+
+        // Add user metrics separately without caching
+        $userMetrics = $user->role === 'OWNER' ? $this->calculateUserMetrics($startOfMonth, $endOfMonth) : [];
+        $context = array_merge($context, $userMetrics);
 
         return response()->json($context, 200);
     }
@@ -132,22 +138,25 @@ class DashboardController extends Controller
         ]);
 
         // cache and calculate metrics
-        $cacheKey = "dashboard_metrics_{$userId}_{$startOfMonth}_{$endOfMonth}";
+        $cacheKey = "dashboard_metrics_v2_{$userId}_{$startOfMonth}_{$endOfMonth}";
 
-        $context = Cache::remember($cacheKey, now()->addMinutes(30), function () use ($user, $userId, $isAdmin, $startOfMonth, $endOfMonth) {
+        $context = Cache::remember($cacheKey, now()->addMinutes(30), function () use ($userId, $isAdmin, $startOfMonth, $endOfMonth) {
 
             // Todos tus cálculos van aquí
             $salesMetrics = $this->calculateSalesMetrics($userId, $isAdmin, $startOfMonth, $endOfMonth);
             $inventoryMetrics = $this->calculateInventoryMetrics($userId, $isAdmin);
             $deviceMetrics = $this->calculateDeviceMetrics($userId, $isAdmin, $startOfMonth, $endOfMonth);
             $financialMetrics = $this->calculateFinancialMetrics($userId, $startOfMonth, $endOfMonth);
-            $userMetrics = $user->role === 'OWNER' ? $this->calculateUserMetrics($startOfMonth, $endOfMonth) : [];
 
-            return array_merge($salesMetrics, $inventoryMetrics, $deviceMetrics, $financialMetrics, $userMetrics, [
+            return array_merge($salesMetrics, $inventoryMetrics, $deviceMetrics, $financialMetrics, [
                 'startDate' => $startOfMonth,
                 'endDate' => $endOfMonth,
             ]);
         });
+
+        // Add user metrics separately without caching
+        $userMetrics = $user->role === 'OWNER' ? $this->calculateUserMetrics($startOfMonth, $endOfMonth) : [];
+        $context = array_merge($context, $userMetrics);
 
         return response()->json($context, 200);
     }
@@ -328,9 +337,35 @@ class DashboardController extends Controller
         $newUsers = User::whereBetween('created_at', [$startOfMonth, $endOfMonth])->count();
         $totalLogins = LoginActivity::whereBetween('login_at', [$startOfMonth, $endOfMonth])->count();
 
+        $recentLogins = LoginActivity::with('user:id,name')
+            ->orderBy('login_at', 'desc')
+            ->limit(20)
+            ->get()
+            ->map(function ($login) {
+                // Apply IP masking at the server level for better security
+                $ip = $login->ip_address;
+                if ($ip) {
+                    $parts = explode('.', $ip);
+                    if (count($parts) === 4) {
+                        $login->masked_ip = "{$parts[0]}.{$parts[1]}.***.***";
+                    } else {
+                        // Handle IPv6 or unexpected formats
+                        $login->masked_ip = substr($ip, 0, 8).'...';
+                    }
+                } else {
+                    $login->masked_ip = 'Unknown';
+                }
+
+                // Do not send the full decrypted IP to the frontend
+                unset($login->ip_address);
+
+                return $login;
+            });
+
         return [
             'newUsers' => $newUsers,
             'totalLogins' => $totalLogins,
+            'recentLogins' => $recentLogins,
         ];
     }
 }
