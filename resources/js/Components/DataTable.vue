@@ -52,6 +52,9 @@
         <template #body="slotProps" v-if="header.type === 'number'">
           {{ formatCurrency(slotProps.data[header.name]) }}
         </template>
+        <template #body="slotProps" v-if="header.type === 'int'">
+          {{ formatInt(slotProps.data[header.name]) }}
+        </template>
         <!-- Formatear campo de tipo date para mostrar solo la fecha -->
         <template #body="slotProps" v-if="header.type === 'date'">
           {{ formatDate(slotProps.data[header.name]) }}
@@ -271,6 +274,12 @@ function formatCurrency(value: number | string | undefined): string {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   }).format(num).replace(/^/, '$ ')
+}
+
+function formatInt(value: number | string | undefined): string {
+  const num = Number(value)
+  if (isNaN(num)) return '0'
+  return new Intl.NumberFormat('en-US').format(num)
 }
 
 // Función auxiliar para formatear fechas y eliminar hora

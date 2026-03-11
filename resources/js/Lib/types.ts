@@ -182,6 +182,12 @@ export interface Vendor {
   created_at: string;
   updated_at: string;
   vendor_name: string;
+  devices_count?: number;
+  revenue?: number;
+  profit?: number;
+  margin?: number;
+  balance?: number;
+  total_spend?: number;
 }
 
 export interface Bill {
