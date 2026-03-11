@@ -11,9 +11,10 @@ const props = defineProps({
   color: { type: String, required: true },
   currency: { type: String, required: false, default: "" },
   editable: { type: Boolean, default: false },
+  clickable: { type: Boolean, default: false },
 });
 
-const emit = defineEmits(["update"]);
+const emit = defineEmits(["update", "click"]);
 
 const isEditing = ref(false);
 const editValue = ref(props.value);
@@ -62,7 +63,9 @@ const displayValue = computed(() => {
 <template>
   <section>
     <article
-      class="card mb-0 h-full p-4 rounded-lg shadow-sm bg-white dark:bg-surface-800 transition-all hover:shadow-md">
+      class="card mb-0 h-full p-4 rounded-lg shadow-sm bg-white dark:bg-surface-800 transition-all hover:shadow-md"
+      :class="{ 'cursor-pointer hover:bg-gray-50 dark:hover:bg-surface-700': clickable }"
+      @click="clickable && emit('click')">
       <header class="flex justify-between items-center mb-4">
         <div>
           <h3 class="block text-muted-color font-medium mb-2 text-sm">{{ label }}</h3>
