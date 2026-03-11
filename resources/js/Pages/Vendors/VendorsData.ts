@@ -32,6 +32,11 @@ export const VendorHeaders = [
         "type": "string"
     },
     {
+        "label": "Devices Purchased",
+        "name": "devices_count",
+        "type": "int"
+    },
+    {
         "label": "Balance Payable",
         "name": "balance_payable",
         "type": "number"
