@@ -166,11 +166,6 @@ class PaymentController extends Controller
             }
         }
 
-        // 4. System Default
-        if (! $logo) {
-            $logo = base64_encode(file_get_contents(public_path().'/img/_REFRESHMOBILE.png'));
-        }
-
         if ($item) {
             $sales = Sale::with('items')->whereIn('id', $itm_id_pluck)->get();
             $returned_items_id = ReturnItems::where('sale', $item->sale_id)->pluck('item');

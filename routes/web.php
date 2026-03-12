@@ -58,7 +58,8 @@ Route::get('/', function (Request $request) {
 
         // If permissions is null or flat array (old format), convert or default
         if (is_null($permissions)) {
-            $permissions = ['Inventory' => ['Active Inventory', 'On Hold', 'Sold']];
+            $configKey = ($user->role === 'ADMIN' || $user->role === 'OWNER') ? 'permissions.defaults' : 'permissions.user_defaults';
+            $permissions = config($configKey);
         }
 
         if (is_string($permissions)) {
@@ -82,8 +83,9 @@ Route::get('/', function (Request $request) {
         }
 
         if (! is_array($permissions) || empty($permissions)) {
-            // If empty object, default to inventory
-            $permissions = ['Inventory' => ['Active Inventory', 'On Hold', 'Sold']];
+            // If empty object, default based on role
+            $configKey = ($user->role === 'ADMIN' || $user->role === 'OWNER') ? 'permissions.defaults' : 'permissions.user_defaults';
+            $permissions = config($configKey);
         }
 
         $routeMap = [
@@ -292,7 +294,7 @@ Route::middleware([
 
     // Company Logo (Company wide)
     Route::get('company/invoice-logo', [CompanyController::class, 'getLogo'])->name('company.invoice-logo.get');
-    Route::middleware(['role:OWNER'])->group(function () {
+    Route::middleware(['role:OWNER,ADMIN'])->group(function () {
         Route::get('company/settings', [CompanyController::class, 'show'])->name('company.show');
         Route::put('company/settings', [CompanyController::class, 'update'])->name('company.update');
 

@@ -47,6 +47,16 @@ class HandleInertiaRequests extends Middleware
         return array_merge($parentShare, [
             'layout' => fn () => $request->is('inventory*') ? 'InventoryLayout' : null,
             'auth' => $authData,
+            'permissions_defaults' => function () use ($request) {
+                $user = $request->user();
+                if (! $user) {
+                    return config('permissions.user_defaults');
+                }
+                $configKey = ($user->role === 'ADMIN' || $user->role === 'OWNER') ? 'permissions.defaults' : 'permissions.user_defaults';
+
+                return config($configKey);
+            },
+            'permissions_structure' => config('permissions.structure'),
             'flash' => $flashData,
         ]);
     }

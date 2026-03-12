@@ -134,6 +134,7 @@ import { ref } from 'vue';
 import { useForm, usePage } from '@inertiajs/vue3';
 import { useToast, useConfirm, Button, Card, DataTable, Column, Tag, Dialog, InputText, Password, Select, Checkbox } from 'primevue';
 
+const page = usePage();
 const props = defineProps({
   members: Array,
 });
@@ -160,16 +161,7 @@ const getRoleSeverity = (role) => {
 const editPermissionsDialog = ref(false);
 const editingPermissionsMember = ref(null);
 
-const availablePermissions = [
-    { name: 'Dashboard', tabs: [] },
-    { name: 'Inventory', tabs: ['Active Inventory', 'On Hold', 'Sold', 'View Organization Data'] },
-    { name: 'Markets', tabs: [] },
-    { name: 'Accounting', tabs: ['Expenses', 'Bills', 'Payments', 'Taxes', 'View Organization Data'] },
-    { name: 'Contacts', tabs: ['Customers', 'Prospects', 'Vendors', 'Mailing list', 'Email editor', 'View Organization Data'] },
-    { name: 'Stores', tabs: [] },
-    { name: 'Company', tabs: [] },
-    { name: 'Users', tabs: [] }
-];
+const availablePermissions = page.props.permissions_structure;
 
 const permissionForm = useForm({
     permissions: {},
