@@ -415,56 +415,6 @@ class SaleController extends Controller
             }
         }
 
-        // 4. System Default
-        if (! $logo) {
-            $logo = base64_encode(file_get_contents(public_path('img/_REFRESHMOBILE.png')));
-        }
-
-        // 2. Company Logo (Fallback)
-        if (! $logo) {
-            // Explicitly load company relationship to be sure
-            $user_data->load('company');
-
-            if ($user_data->company) {
-                Log::info('User belongs to company: '.$user_data->company->name.' (ID: '.$user_data->company->id.')');
-                if ($user_data->company->logo) {
-                    Log::info('Company has logo path: '.$user_data->company->logo);
-                    if (StorageFacade::disk('local')->exists($user_data->company->logo)) {
-                        Log::info('Using Company Logo');
-                        $logo = base64_encode(StorageFacade::disk('local')->get($user_data->company->logo));
-                    } else {
-                        Log::warning('Company logo file not found at: '.$user_data->company->logo);
-                    }
-                } else {
-                    Log::info('Company has no logo set.');
-                }
-            } else {
-                Log::info('User has no company association loaded.');
-            }
-        }
-
-        // 3. Store Logo (Fallback for non-owners or if store has logo)
-        $store = Store::where('id', $store_id)->first();
-        if (! $logo && $store && ! is_null($store->logo) && $store->logo != '') {
-            Log::info('Checking Store Logo for store ID: '.$store->id);
-            if (StorageFacade::disk('local')->exists($store->logo)) {
-                Log::info('Using Store Logo (Storage): '.$store->logo);
-                $logo = base64_encode(StorageFacade::disk('local')->get($store->logo));
-            } elseif (file_exists(storage_path('app/'.$store->logo))) {
-                Log::info('Using Store Logo (Abs Path 1): '.$store->logo);
-                $logo = base64_encode(file_get_contents(storage_path('app/'.$store->logo)));
-            } elseif (file_exists(storage_path().'/app/'.$store->logo)) {
-                Log::info('Using Store Logo (Abs Path 2): '.$store->logo);
-                $logo = base64_encode(file_get_contents(storage_path().'/app/'.$store->logo));
-            }
-        }
-
-        // 4. System Default
-        if (! $logo) {
-            Log::info('Using System Default Logo');
-            $logo = base64_encode(file_get_contents(public_path('img/_REFRESHMOBILE.png')));
-        }
-
         $pdf = Pdf::loadView('sale-receipt-invoice', compact('sales', 'customer', 'header', 'footer', 'logo', 'returned_items'))
             ->setOptions([
                 'defaultFont' => 'sans-serif',

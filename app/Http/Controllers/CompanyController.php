@@ -19,8 +19,8 @@ class CompanyController extends Controller
     {
         $user = Auth::user();
 
-        // Ensure only OWNER can access
-        if ($user->role !== 'OWNER') {
+        // Ensure only OWNER or ADMIN can access
+        if ($user->role !== 'OWNER' && $user->role !== 'ADMIN') {
             abort(403, 'Unauthorized action.');
         }
 
@@ -52,7 +52,7 @@ class CompanyController extends Controller
     {
         $user = Auth::user();
 
-        if ($user->role !== 'OWNER') {
+        if ($user->role !== 'OWNER' && $user->role !== 'ADMIN') {
             abort(403, 'Unauthorized action.');
         }
 
@@ -76,7 +76,7 @@ class CompanyController extends Controller
     {
         $user = Auth::user();
 
-        if ($user->role !== 'OWNER') {
+        if ($user->role !== 'OWNER' && $user->role !== 'ADMIN') {
             abort(403, 'Unauthorized action.');
         }
 
@@ -108,7 +108,7 @@ class CompanyController extends Controller
     {
         $user = Auth::user();
 
-        if ($user->role !== 'OWNER') {
+        if ($user->role !== 'OWNER' && $user->role !== 'ADMIN') {
             abort(403, 'Unauthorized action.');
         }
 
@@ -137,7 +137,7 @@ class CompanyController extends Controller
     {
         $user = Auth::user();
 
-        if ($user->role !== 'OWNER') {
+        if ($user->role !== 'OWNER' && $user->role !== 'ADMIN') {
             abort(403, 'Unauthorized action.');
         }
 
@@ -166,7 +166,7 @@ class CompanyController extends Controller
     {
         $user = Auth::user();
 
-        if ($user->role !== 'OWNER') {
+        if ($user->role !== 'OWNER' && $user->role !== 'ADMIN') {
             abort(403, 'Unauthorized action.');
         }
 
@@ -212,8 +212,8 @@ class CompanyController extends Controller
 
         $user = Auth::user();
 
-        // Ensure only OWNER can update company logo
-        if ($user->role !== 'OWNER') {
+        // Ensure only OWNER or ADMIN can update company logo
+        if ($user->role !== 'OWNER' && $user->role !== 'ADMIN') {
             abort(403, 'Unauthorized action.');
         }
 
@@ -247,8 +247,8 @@ class CompanyController extends Controller
     {
         $user = Auth::user();
 
-        // Ensure only OWNER can delete company logo
-        if ($user->role !== 'OWNER') {
+        // Ensure only OWNER or ADMIN can delete company logo
+        if ($user->role !== 'OWNER' && $user->role !== 'ADMIN') {
             abort(403, 'Unauthorized action.');
         }
 

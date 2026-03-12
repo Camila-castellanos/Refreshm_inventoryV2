@@ -22,32 +22,25 @@ class UserController extends Controller
      */
     public function index(Request $request)
     {
-        $users = [];
-        $filter = $request->query('filter', 'own'); // obtain the filter from the query string, default to 'own'
         $authUser = Auth::user();
-        $storeId = $authUser->store_id;
-        $companyId = $authUser->company_id;
+        $filter = $request->query('filter', 'own');
 
-        switch (Auth::user()->role) {
-            case 'ADMIN':
-                $users = User::where(function ($q) use ($storeId, $companyId) {
-                    $q->where('store_id', $storeId)
-                        ->orWhere('company_id', $companyId);
-                })
-                    ->get();
-                break;
+        switch ($authUser->role) {
             case 'OWNER':
-                if ($filter === 'own') {
-                    $users = User::where(function ($q) use ($storeId, $companyId) {
-                        $q->where('store_id', $storeId)
-                            ->orWhere('company_id', $companyId);
-                    })
-                        ->get();
-                } elseif ($filter === 'all') {
-                    // The owner wants to see all users (default behavior)
+                if ($filter === 'all') {
+                    // The owner (Super Admin) wants to see all users in the system
                     $users = User::all();
+                } else {
+                    // Filter by owner's company
+                    $users = User::where('company_id', $authUser->company_id)->get();
                 }
                 break;
+
+            case 'ADMIN':
+                // ADMINs ONLY see users from their own company, regardless of filters
+                $users = User::where('company_id', $authUser->company_id)->get();
+                break;
+
             default:
                 abort(403, 'Unauthorized.');
                 break;
@@ -80,6 +73,7 @@ class UserController extends Controller
         $user = User::create([
             'name' => $form['name'],
             'email' => $form['email'],
+            'role' => 'ADMIN',
             'password' => Hash::make($form['password']),
         ]);
         // safeguard to avoid user association with store
@@ -89,8 +83,8 @@ class UserController extends Controller
         }
         // user association with store
         if (Auth::user()->role == 'ADMIN' || Auth::user()->role == 'OWNER') {
-            $user->store_id = @Auth::user()->store->id;
-            $user->company_id = @Auth::user()->company->id;
+            $user->store_id = Auth::user()->store_id;
+            $user->company_id = Auth::user()->company_id;
             $user->save();
 
             return response()->json($user, 201);
@@ -403,8 +397,8 @@ class UserController extends Controller
             }
         }
 
-        // 4. Default System Logo (Fallback for image src)
-        return response()->file(public_path('img/_REFRESHMOBILE.png'));
+        // 4. No default logo
+        return response()->json(['url' => null], 404);
     }
 
     /**

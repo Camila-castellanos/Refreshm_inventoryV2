@@ -421,4 +421,43 @@ Item::withoutGlobalScopes()->get();
 
 ---
 
-*Last Updated: February 2026*
+## Permissions & Roles Management
+
+### Centralized Permissions System
+
+The system uses a centralized configuration for default user permissions, ensuring consistency across the backend, frontend, and maintenance scripts.
+
+**Configuration File:** `config/permissions.php`
+
+This file defines the `defaults` array, which includes all pages and their corresponding tabs that an `ADMIN` (and by extension, new company owners) should have access to by default.
+
+#### Default Permissions Structure:
+- **ADMIN/OWNER Defaults** (`permissions.defaults`):
+    - **Dashboard**: Full access.
+    - **Inventory**: `Active Inventory`, `On Hold`, `Sold`, `View Organization Data`.
+    - **Accounting**: `Payments`, `Expenses`, `Bills`, `Taxes`, `View Organization Data`.
+    - **Contacts**: `Customers`, `Prospects`, `Vendors`, `Mailing list`, `Email editor`, `View Organization Data`.
+- **Regular USER Defaults** (`permissions.user_defaults`):
+    - **Inventory**: `Active Inventory`, `On Hold`, `Sold`.
+
+### Implementation Details
+
+#### 1. Backend Fallback
+The `CheckPagePermissions` middleware and the root route redirection logic use `config('permissions.defaults')` for administrators and `config('permissions.user_defaults')` for regular users if their `page_permissions` field is `null` or empty.
+
+#### 2. Automatic Assignment
+When a new `User` is created, the `booted` method in the `User` model automatically assigns the role-appropriate centralized default permissions if none are provided.
+
+#### 3. Frontend Sync
+Default permissions are shared with the frontend via Inertia in `HandleInertiaRequests.php`, dynamically choosing the set based on the current user's role. The `Navbar.vue` component uses these shared defaults as a fallback.
+
+#### 4. Maintenance Command
+The Artisan command `php artisan app:fix-user-roles` uses the centralized configuration to update existing users who might have outdated or missing permissions.
+
+#### 5. Verification (Tests)
+- **Backend**: `tests/Feature/Users/UserCrudTest.php` and `tests/Feature/RegistrationTest.php` verify that default permissions are correctly applied upon user creation and registration.
+- **Frontend**: `resources/js/__tests__/components/Navbar.spec.ts` verifies that the navigation menu correctly filters items based on the user's role and permissions, utilizing the centralized defaults as a fallback.
+
+---
+
+*Last Updated: March 2026*

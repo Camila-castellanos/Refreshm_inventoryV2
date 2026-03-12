@@ -19,10 +19,11 @@
             </div>
             
             <div v-else class="mb-4">
-              <div class="block w-40 h-40 bg-contain bg-no-repeat bg-center border border-gray-200 rounded opacity-75"
-                   :style="'background-image: url(\'' + route('user.invoice-logo.get') + '?t=' + new Date().getTime() + '\');'">
+              <div class="flex flex-col items-center justify-center w-40 h-40 border-2 border-dashed border-gray-300 rounded bg-gray-50 opacity-75">
+                <i class="pi pi-image text-gray-400 text-3xl mb-2"></i>
+                <span class="text-gray-500 text-[10px] font-medium uppercase text-center px-2">Your custom logo here</span>
               </div>
-              <p class="text-sm text-gray-500 mt-2">Using System/Company Default</p>
+              <p class="text-sm text-gray-500 mt-2">No personal logo set</p>
             </div>
 
             <div class="flex items-center gap-2">

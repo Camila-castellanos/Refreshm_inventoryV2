@@ -28,9 +28,10 @@ class CheckPagePermissions
 
         $permissions = $user->page_permissions;
 
-        // If permissions are null (not set in DB), use defaults
+        // If permissions are null (not set in DB), use defaults from config based on role
         if (is_null($permissions)) {
-            $permissions = ['Inventory' => ['Active Inventory', 'On Hold', 'Sold']];
+            $configKey = ($user->role === 'ADMIN' || $user->role === 'OWNER') ? 'permissions.defaults' : 'permissions.user_defaults';
+            $permissions = config($configKey);
         }
 
         // If it's a string (e.g. from DB), decode it

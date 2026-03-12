@@ -40,11 +40,12 @@ class UserCrudTest extends TestCaseWithCompany
         $response->assertStatus(200);
     }
 
-    public function test_store_creates_user(): void
+    public function test_store_creates_user_as_admin_by_default(): void
     {
+        $email = 'testuser'.uniqid().'@example.com';
         $data = [
             'name' => 'Test User',
-            'email' => 'testuser'.uniqid().'@example.com',
+            'email' => $email,
             'password' => 'password123',
             'password_confirmation' => 'password123',
         ];
@@ -54,9 +55,12 @@ class UserCrudTest extends TestCaseWithCompany
 
         $response->assertStatus(201);
 
-        $this->assertDatabaseHas('users', [
-            'name' => 'Test User',
-        ]);
+        $user = User::where('email', $email)->first();
+        $this->assertEquals('ADMIN', $user->role);
+        $this->assertEquals('Test User', $user->name);
+
+        // Verify default permissions from config are applied
+        $this->assertEquals(config('permissions.defaults'), $user->page_permissions);
     }
 
     public function test_store_validates_required_fields(): void

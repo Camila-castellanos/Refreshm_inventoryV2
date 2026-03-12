@@ -115,14 +115,14 @@ const navItems = ref([
   { label: 'Markets', icon: 'pi pi-shopping-cart', url: route('ecommerce.markets.index'), roles: ['OWNER', 'ADMIN', 'USER'], permission: 'Markets' },
   { label: 'Accounting', icon: 'pi pi-calculator', url: '/accounting/payments', roles: ['ADMIN', 'OWNER', 'USER'], permission: 'Accounting' },
   { label: 'Contacts', icon: 'pi pi-users', url: '/customer', roles: ['OWNER', 'USER', 'ADMIN'], permission: 'Contacts' },
-  { label: 'Stores', icon: 'pi pi-shop', url: route('stores.index', { filter: 'all' }), roles: ['OWNER', 'USER'], permission: 'Stores' },
-  { label: 'Company', icon: 'pi pi-building', url: route('company.show'), roles: ['OWNER', 'USER'], permission: 'Company' },
+  { label: 'Stores', icon: 'pi pi-shop', url: route('stores.index', { filter: 'all' }), roles: ['OWNER', 'USER', 'ADMIN'], permission: 'Stores' },
+  { label: 'Company', icon: 'pi pi-building', url: route('company.show'), roles: ['OWNER', 'USER', 'ADMIN'], permission: 'Company' },
   { label: 'Users', icon: 'pi pi-user', url: route('users.index', { filter: 'all' }), roles: ['OWNER', 'USER'], permission: 'Users' },
 ]);
 
 const dropdownNavItems = ref([
   { label: 'Profile', icon: 'pi pi-user', url: route('profile.show'), roles: ['OWNER', 'USER', 'ADMIN'] },
-  { label: 'Users', icon: 'pi pi-users', url: route('users.index'), roles: ['ADMIN', 'OWNER'], permission: 'Users' },
+  { label: 'Users', icon: 'pi pi-users', url: route('users.index'), roles: ['OWNER'], permission: 'Users' },
   { label: 'Locations', icon: 'pi pi-map', url: route('stores.index'), roles: ['ADMIN', 'OWNER'], permission: 'Stores' },
   { label: 'Dark Mode', icon: 'pi pi-moon', command: toggleDarkMode, roles: ['OWNER', 'USER', 'ADMIN'] },
   { label: 'Logout', icon: 'pi pi-sign-out', command: logout, roles: ['OWNER', 'USER', 'ADMIN'] },
@@ -138,9 +138,9 @@ onMounted(() => {
     if (user.role !== 'OWNER') {
         let perms = user.page_permissions;
         
-        // If undefined or null, default to Inventory with all tabs
+        // If undefined or null, use centralized defaults from page props
         if (!perms) {
-             perms = { 'Inventory': ['Active Inventory', 'On Hold', 'Sold'] };
+            perms = page.props.permissions_defaults;
         }
 
         // Ensure page_permissions is an object (it might come as a string)

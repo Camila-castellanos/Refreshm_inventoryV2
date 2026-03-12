@@ -86,11 +86,16 @@ class User extends Authenticatable
             "credit",
             "footer"]',
         'role' => 'USER',
-        'page_permissions' => '{"Inventory":["Active Inventory","On Hold","Sold"]}',
     ];
 
     protected static function booted()
     {
+        static::creating(function ($user) {
+            if (is_null($user->page_permissions)) {
+                $configKey = ($user->role === 'ADMIN' || $user->role === 'OWNER') ? 'permissions.defaults' : 'permissions.user_defaults';
+                $user->page_permissions = config($configKey);
+            }
+        });
         // static::created(function ($user) {
         //     // Crear el storage predeterminado para el usuario
         //     $user->storages()->create([
