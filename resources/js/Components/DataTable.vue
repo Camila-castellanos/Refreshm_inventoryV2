@@ -6,7 +6,7 @@
     :class="inventory ? 'text-xs' : ''" :selection-mode="selectionMode":sortField="sortField"
       :sortOrder="sortOrder">
     <template #header>
-      <div class="flex flex-col sm:flex-row sm:flex-no-wrap items-center justify-between gap-2">
+      <div class="flex  sm:flex-row sm:flex-no-wrap items-center justify-between gap-2">
         <div :class="title !== '' ? 'flex flex-col gap-3 sm:flex-row justify-center sm:justify-between items-center sm:gap-12' + ' w-full sm:w-auto' : 'flex justify-start items-center'">
           <IconField class="w-full">
             <InputIcon>
