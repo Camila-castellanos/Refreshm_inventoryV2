@@ -49,12 +49,10 @@
 import { ref, watch, onMounted } from 'vue';
 
 interface Props {
-  items?: any[];
+  // Items no longer needed here
 }
 
-const props = withDefaults(defineProps<Props>(), {
-  items: () => []
-});
+const props = defineProps<Props>();
 
 const emit = defineEmits<{
   exchangeToggled: [value: boolean, exchangeRate: number | null, currency: string];
@@ -65,12 +63,14 @@ const exchangeRate = ref(1);
 const exchangeActive = ref(false);
 const isLoadingExchangeRate = ref(false);
 const isCached = ref(false);
-const originalPrices = new Map(); // Store original CAD prices
 
 const toggleExchange = () => {
   exchangeActive.value = !exchangeActive.value;
-  // Toggle country manually when user clicks
   country.value = country.value === "USA" ? "CA" : "USA";
+  
+  const currency = exchangeActive.value ? 'USD' : 'CAD';
+  const rate = exchangeActive.value ? exchangeRate.value : null;
+  emit('exchangeToggled', exchangeActive.value, rate, currency);
 };
 
 // Detect user's country using GeoIP
@@ -91,28 +91,6 @@ const detectUserCountry = async (): Promise<string> => {
     return 'CA'; // Default to CA
   }
 };
-
-// Watch exchangeActive to update prices and emit event
-watch(exchangeActive, (newValue) => {
-  if (props.items && props.items.length > 0) {
-    props.items.forEach(item => {
-      // Store original price if not already stored
-      if (!originalPrices.has(item.id)) {
-        originalPrices.set(item.id, item.selling_price);
-      }
-      
-      const originalPrice = originalPrices.get(item.id);
-      // Convert based on exchange state
-      item.selling_price = newValue 
-        ? Math.round(originalPrice / parseFloat(exchangeRate.value.toFixed(2))) 
-        : originalPrice;
-    });
-  }
-
-  const currency = newValue ? 'USD' : 'CAD';
-  const rate = newValue ? exchangeRate.value : null;
-  emit('exchangeToggled', newValue, rate, currency);
-});
 
 // Fetch exchange rate from server API
 const fetchExchangeRate = async (): Promise<boolean> => {
@@ -182,25 +160,13 @@ onMounted(async () => {
   // Fetch exchange rate first
   await fetchExchangeRate();
   
-  // Store original prices before any conversion
-  if (props.items && props.items.length > 0) {
-    props.items.forEach(item => {
-      originalPrices.set(item.id, item.selling_price);
-    });
-  }
-  
   // Set initial country based on detection
   if (userCountry === 'USA') {
     country.value = 'USA';
-    // Automatically activate exchange for USA users
     exchangeActive.value = true;
     
-    // Update prices for USA (convert from CAD to USD)
-    if (props.items && props.items.length > 0) {
-      props.items.forEach(item => {
-        item.selling_price = Math.round(item.selling_price / parseFloat(exchangeRate.value.toFixed(2)));
-      });
-    }
+    // Notify parent about initial US state
+    emit('exchangeToggled', true, exchangeRate.value, 'USD');
   }
 });
 

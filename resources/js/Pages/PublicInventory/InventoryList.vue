@@ -183,7 +183,7 @@
 
       <!-- Download all confirmation modal -->
       <Dialog v-model:visible="showDownloadAllConfirmModal" header="Confirm Download" :modal="true">
-        <p>Do you really want to download all {{ filteredItemsWithFilters.length }} items?</p>
+        <p>Do you really want to download all {{ processedItems.length }} items?</p>
         <div class="flex justify-end gap-2 mt-4">
           <Button severity="secondary" @click="showDownloadAllConfirmModal = false">Cancel</Button>
           <Button @click="handleDownloadAll">Download</Button>
@@ -267,6 +267,23 @@
             @request-remove="onRequestRemove"
           >
           <div class="flex flex-col">
+            <!-- Search and Controls (Persistent during loading) -->
+            <div class="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4 mb-6 pt-2">
+              <div class="w-full flex items-center justify-between">
+                <IconField class="w-full md:w-auto pr-6">
+                  <InputIcon>
+                    <i class="pi pi-search" />
+                  </InputIcon>
+                  <InputText v-model="searchQuery" placeholder="Search" class="w-full" />
+                </IconField>
+                <ExchangeRateToggle @exchangeToggled="handleExchangeToggled" />
+              </div>
+
+              <div class="flex items-center gap-2 sm:hidden ">
+                <Button icon="pi pi-filter" label="Filters" @click="showFilterModal = true" />
+              </div>
+            </div>
+
             <!-- Loading indicator -->
             <div v-if="isLoadingTabItems" class="flex flex-col justify-center items-center min-h-[60vh]">
               <div class="loading-phone">
@@ -280,30 +297,12 @@
 
             <!-- Content (hidden while loading) -->
             <div v-else>
-            <div class="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4 mb-6">
-
-              <div class="w-full flex items-center justify-between">
-                <IconField class="w-full md:w-auto pr-6">
-                  <InputIcon>
-                    <i class="pi pi-search" />
-                  </InputIcon>
-                  <InputText v-model="searchQuery" placeholder="Search" class="w-full" />
-                </IconField>
-                <ExchangeRateToggle :items="props.items" @exchangeToggled="handleExchangeToggled" />
-              </div>
-
-
-              <div class="flex items-center gap-2 sm:hidden ">
-                <Button icon="pi pi-filter" label="Filters" @click="showFilterModal = true" />
-              </div>
-            </div>
-
             <div class="mb-4 text-gray-500 text-xl">
-              Displaying {{ filteredItemsWithFilters.length }} Items
+              Displaying {{ processedItems.length }} Items
             </div>
 
             <div class="space-y-4">
-              <div v-for="item in filteredItemsWithFilters" :key="item.id">
+              <div v-for="item in processedItems" :key="item.id">
                 <Card class="hover:shadow-md transition-shadow duration-200">
                   <template #content>
                     <div class="flex flex-col h-full md:flex-row justify-between items-start md:items-center p-2">
@@ -398,11 +397,13 @@ const currentShopSlug = ref(props.shopSlug || '');
 // State to track current exchange rate and currency
 const currentExchangeRate = ref<number | null>(null);
 const currentCurrency = ref<string>('CAD');
+const isExchangeActive = ref(false);
 
 const handleExchangeToggled = (isActive: boolean, exchangeRate: number | null = null, currency: string = 'CAD') => {
   // Update exchange rate and currency when toggle changes
   currentExchangeRate.value = exchangeRate;
   currentCurrency.value = currency;
+  isExchangeActive.value = isActive;
   console.log('Exchange rate toggled:', isActive, 'Rate:', exchangeRate, 'Currency:', currency);
 };
 
@@ -613,9 +614,9 @@ const filteredItemsBeforeFilters = computed(() => {
   );
 });
 
-// apply filters matching
-const filteredItemsWithFilters = computed(() => {
-  return filteredItemsBeforeFilters.value.filter(item => {
+// apply filters matching and price conversion
+const processedItems = computed(() => {
+  const filtered = filteredItemsBeforeFilters.value.filter(item => {
     // Tab filtering is now handled by filteredItemsBeforeFilters
     const manufacturerMatch = filters.value.manufacturer.length === 0 || filters.value.manufacturer.includes(item.manufacturer);
     const gradeMatch = filters.value.grade.length === 0 || filters.value.grade.includes(item.grade);
@@ -626,6 +627,17 @@ const filteredItemsWithFilters = computed(() => {
 
     return manufacturerMatch && gradeMatch && issuesMatch && modelMatch;
   });
+
+  if (!isExchangeActive.value || !currentExchangeRate.value) {
+    return filtered;
+  }
+
+  const rate = parseFloat(currentExchangeRate.value.toFixed(2));
+  
+  return filtered.map(item => ({
+    ...item,
+    selling_price: Math.round(item.selling_price / rate)
+  }));
 });
 
 const selectedItemsTotal = computed(() =>
@@ -724,7 +736,7 @@ const handleDownload = () => {
 const handleDownloadAll = () => {
   const keysToDownload = ["manufacturer", "model", "colour", "battery", "grade", "issues", "selling_price"]
   try {
-    downloadSpreadsheet(filteredItemsWithFilters.value, keysToDownload, "all_items.xlsx")
+    downloadSpreadsheet(processedItems.value, keysToDownload, "all_items.xlsx")
     showDownloadAllConfirmModal.value = false;
   } catch (error) {
     toast.add({ severity: 'warn', summary: 'Alert', detail: error.message, life: 5000 });
