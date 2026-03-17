@@ -327,10 +327,10 @@
                         <div class="text-xl md:text-2xl font-bold text-black w-24">${{
                           item.selling_price?.toFixed(2) }}
                         </div>
-                        <Button v-if="!item?.selected" icon="pi pi-plus"
+                        <Button v-if="!isItemSelected(item)" icon="pi pi-plus"
                           class="p-button-rounded p-button-outlined  p-button-secondary md:self-center self-end cursor"
                           style="border-color: black; color: black;" @click="addItem(item)" />
-                        <Button v-if="item.selected" icon="pi pi-check"
+                        <Button v-if="isItemSelected(item)" icon="pi pi-check"
                           class="p-button-rounded p-button-outlined p-button-secondary md:self-center self-end cursor"
                           style="border-color: green; color: green;" @click="removeItem(item)" />
                       </div>
@@ -644,8 +644,11 @@ const selectedItemsTotal = computed(() =>
   selectedItems.value.reduce((acc, cur) => acc + (Number(cur.selling_price) || 0), 0)
 );
 
+const isItemSelected = (item) => {
+  return selectedItems.value.some(selected => selected.id === item.id);
+};
+
 const addItem = (item) => {
-  item.selected = true;
   selectedItems.value.push(item);
   toast.add({
     severity: 'success',
@@ -657,7 +660,6 @@ const addItem = (item) => {
 
 const removeItem = (item) => {
   selectedItems.value = selectedItems.value.filter(oldItem => oldItem.id !== item.id);
-  delete item.selected;
 };
 
 const getSelectedItems = () => {
@@ -694,7 +696,6 @@ const handleFormSubmit = async () => {
     const response = await axios.post(laravelRoute, request);
     showSelectedItems.value = false;
     toast.add({ severity: 'success', summary: 'Success', detail: response.data.message || 'Request submitted successfully.', life: 3000 });
-    selectedItems.value.forEach(item => delete item.selected); // Clear selected state after successful submission
     selectedItems.value = []; // Clear selected items array
   } catch (error) {
     console.error('terrible error submitting request:', error);
@@ -761,16 +762,7 @@ function initializeUserTabs() {
 }
 
 onMounted(async () => {
-  // Ensure that the 'selected' property is not initially set on the props.items
   console.log("Initial items:", props.items);
-  if (props.items && props.items.length > 0) {
-    props.items.forEach(item => {
-
-      if (item.hasOwnProperty('selected')) {
-        delete item.selected;
-      }
-    });
-  }
 
   // Initialize custom tabs from the shop owner's tabs
   initializeUserTabs();

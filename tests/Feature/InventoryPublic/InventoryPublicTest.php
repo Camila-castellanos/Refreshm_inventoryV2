@@ -188,4 +188,50 @@ class InventoryPublicTest extends TestCaseWithCompany
         $data = $response->json();
         $this->assertNotEmpty($data['models']);
     }
+
+    public function test_items_request_ignores_frontend_prices_to_prevent_tampering(): void
+    {
+        $shop = $this->createShop();
+
+        // Create an item with a real price of 1000 in DB
+        $item = $this->createItem([
+            'shop_id' => $shop->id,
+            'user_id' => $this->owner->id,
+            'selling_price' => 1000.00,
+            'model' => 'iPhone 15 Pro',
+        ]);
+
+        // Attempt to request the item from the frontend, but tampering the price to 0.01
+        $response = $this->postJson('/publicInventory/request', [
+            'name' => 'Hacker User',
+            'email' => 'hacker@example.com',
+            'store' => 'Test Store',
+            'notes' => 'I changed the price!',
+            'items' => [
+                [
+                    'id' => $item->id,
+                    'selling_price' => 0.01, // Tampered price
+                    'currency' => 'CAD',
+                ],
+            ],
+        ]);
+
+        $response->assertStatus(201);
+        $response->assertJson([
+            'saved' => true,
+        ]);
+
+        $responseData = $response->json();
+        $requestId = $responseData['id'];
+
+        // Retrieve the saved incoming request item from DB
+        $savedRequestItem = \App\Models\IncomingRequestItem::where('incoming_request_id', $requestId)
+            ->where('original_item_id', $item->id)
+            ->first();
+
+        $this->assertNotNull($savedRequestItem);
+        // The saved price MUST be the database price (1000), NOT the tampered frontend price (0.01)
+        $this->assertEquals(1000.00, $savedRequestItem->selling_price);
+        $this->assertEquals('CAD', $savedRequestItem->currency);
+    }
 }

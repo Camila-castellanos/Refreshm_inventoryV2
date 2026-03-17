@@ -163,11 +163,11 @@ describe('Pages/PublicInventory/InventoryList.vue', () => {
     vm.addItem(item);
     expect(vm.selectedItems.length).toBe(1);
     expect(vm.selectedItems[0].id).toBe(1);
-    expect(item.selected).toBe(true);
+    expect(vm.isItemSelected(item)).toBe(true);
 
     // Remove
     vm.removeItem(item);
     expect(vm.selectedItems.length).toBe(0);
-    expect(item.selected).toBeUndefined();
+    expect(vm.isItemSelected(item)).toBe(false);
   });
 });

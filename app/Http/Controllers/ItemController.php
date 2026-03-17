@@ -327,9 +327,29 @@ class ItemController extends Controller
                 $dbItem = Item::find((int) $it['id']);
                 if ($dbItem) {
                     $fullItem = $dbItem->toArray();
-                    // Override with the frontend data (selling_price and currency)
-                    $fullItem['selling_price'] = $it['selling_price'] ?? $fullItem['selling_price'];
-                    $fullItem['currency'] = $it['currency'] ?? 'CAD';
+
+                    // Secure price calculation: Ignore frontend price, use database price
+                    $cadPrice = $dbItem->selling_price;
+                    $currency = $it['currency'] ?? 'CAD';
+                    $finalPrice = $cadPrice;
+
+                    // If user requested in USD, recalculate using our server-side rate
+                    if ($currency === 'USD') {
+                        $exchangeResponse = app(\App\Http\Controllers\ExchangeRateController::class)->getExchangeRate();
+                        $rateData = $exchangeResponse->getData();
+
+                        if (isset($rateData->success) && $rateData->success && isset($rateData->rate)) {
+                            // Replicate the exact math used in the frontend
+                            $finalPrice = round($cadPrice / $rateData->rate);
+                        } else {
+                            // Fallback if exchange rate API fails
+                            $currency = 'CAD';
+                        }
+                    }
+
+                    // Apply the secured price and currency to the order snapshot
+                    $fullItem['selling_price'] = $finalPrice;
+                    $fullItem['currency'] = $currency;
 
                     return $fullItem;
                 }
