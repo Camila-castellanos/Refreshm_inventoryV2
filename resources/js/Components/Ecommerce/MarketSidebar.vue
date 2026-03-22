@@ -26,7 +26,7 @@
                         @keyup.enter="performSearch"
                         type="text"
                         placeholder="Search products..."
-                        class="w-full px-4 py-2 pl-10 pr-10 text-sm text-gray-900 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-gray-300 focus:border-gray-300 placeholder-gray-500 transition-all duration-200"
+                        class="w-full px-4 py-2 pl-10 pr-10 text-sm text-gray-900 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-gray-300 focus:border-gray-300 placeholder-gray-500 transition-all duration-200 font-avenir"
                     >
                     <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                         <i class="pi pi-search text-sm text-gray-400"></i>
@@ -45,7 +45,7 @@
             <nav class="p-4 space-y-6">
                 <!-- Brands -->
                 <div>
-                    <h3 class="px-2 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Shop</h3>
+                    <h3 class="px-2 text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 font-avenir">Shop</h3>
                     <div class="space-y-1">
                         <Link 
                             v-for="brand in phoneBrands"
@@ -53,10 +53,9 @@
                             :href="brand.filterValue 
                                 ? route('market.products-list', { market: market.slug, brand: brand.filterValue })
                                 : route('market.products-list', market.slug)"
-                            class="flex items-center space-x-3 px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 text-gray-600 hover:text-gray-900 hover:bg-white"
+                            class="flex items-center px-2 py-2 text-sm font-bold rounded-md transition-colors duration-200 text-gray-600 hover:text-gray-900 hover:bg-white font-avenir"
                             @click="$emit('close-mobile-menu')"
                         >
-                            <i :class="['pi text-gray-400', brand.icon]"></i>
                             <span>{{ brand.name }}</span>
                         </Link>
                     </div>
@@ -136,20 +135,20 @@
             <div class="space-y-3">
                 <Link 
                     :href="route('market.faq', market.slug)"
-                    class="block text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
+                    class="block text-sm font-bold text-gray-600 hover:text-gray-900 transition-colors font-avenir"
                 >
                     FAQ
                 </Link>
                 <!-- Retuns is currently pointing to FAQ as placeholder, update route when Returns page exists -->
                 <Link 
                     :href="route('market.faq', market.slug)" 
-                    class="block text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
+                    class="block text-sm font-bold text-gray-600 hover:text-gray-900 transition-colors font-avenir"
                 >
                     Returns
                 </Link>
                 <Link 
                     :href="route('market.contact', market.slug)"
-                    class="block text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
+                    class="block text-sm font-bold text-gray-600 hover:text-gray-900 transition-colors font-avenir"
                 >
                     Contact
                 </Link>
