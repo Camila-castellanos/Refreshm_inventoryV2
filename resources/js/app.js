@@ -86,7 +86,7 @@ const Noir = definePreset(Aura, {
 
 
 createInertiaApp({
-  title: (title) => `${appName.toLowerCase()}.`,
+  title: (title) => title || `${appName.toLowerCase()}.`,
   resolve: (name) => {
     return resolvePageComponent(`./Pages/${name}.vue`, import.meta.glob("./Pages/**/*.vue")).then((page) => {
       // Validar la estructura de la página resuelta

@@ -111,6 +111,10 @@ class Market extends Model implements HasMedia
         $this->addMediaCollection('logo')
             ->singleFile()
             ->useFallbackUrl('/images/logo-placeholder.png');
+
+        $this->addMediaCollection('favicon')
+            ->singleFile()
+            ->useFallbackUrl('/favicon.ico');
     }
 
     /**
@@ -970,6 +974,22 @@ class Market extends Model implements HasMedia
     }
 
     /**
+     * Get the favicon_url attribute.
+     * Prioritizes Spatie Media Library over the logo or default.
+     */
+    public function getFaviconUrlAttribute(): ?string
+    {
+        $media = $this->getFirstMedia('favicon');
+
+        if ($media) {
+            return $media->getUrl();
+        }
+
+        // Fallback to logo if no favicon is set
+        return $this->logo_url ?: asset('favicon.ico');
+    }
+
+    /**
      * Get market data with safe defaults
      */
     public function getSafeData(): array
@@ -998,6 +1018,7 @@ class Market extends Model implements HasMedia
             'show_inventory_count' => $this->show_inventory_count ?: false,
             'is_active' => $this->is_active ?: false,
             'logo_url' => $this->logo_url,
+            'favicon_url' => $this->favicon_url,
             'banners' => $banners,
             'media_banners' => $this->getMedia('banners')->map(function ($media) {
                 return [
