@@ -140,7 +140,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, provide } from 'vue'
+import { ref, computed, onMounted, provide, watch } from 'vue'
 import { Link, usePage } from '@inertiajs/vue3'
 import Cart from '@/Components/Ecommerce/Cart.vue'
 import MarketSidebar from '@/Components/Ecommerce/MarketSidebar.vue'
@@ -168,6 +168,25 @@ const cartCount = computed(() => cartStore.itemCount)
 const currentYear = computed(() => new Date().getFullYear())
 
 // Methods
+const updateFavicon = (url) => {
+    if (!url) return
+    
+    let link = document.querySelector("link[rel~='icon']")
+    if (!link) {
+        link = document.createElement('link')
+        link.rel = 'icon'
+        document.head.appendChild(link)
+    }
+    link.href = url
+}
+
+// Watch for market favicon changes to update favicon
+watch(() => props.market?.favicon_url, (newFavicon) => {
+    if (newFavicon) {
+        updateFavicon(newFavicon)
+    }
+}, { immediate: true })
+
 const toggleMobileMenu = () => {
     showMobileMenu.value = !showMobileMenu.value
 }

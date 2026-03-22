@@ -98,6 +98,12 @@ class MarketAdminController extends Controller
                 ->toMediaCollection('logo');
         }
 
+        // Handle Favicon Upload
+        if ($request->hasFile('favicon')) {
+            $market->addMediaFromRequest('favicon')
+                ->toMediaCollection('favicon');
+        }
+
         // Build the public market URL
         $publicMarketUrl = route('market.index', $market->slug);
 
@@ -193,6 +199,12 @@ class MarketAdminController extends Controller
         if ($request->hasFile('logo')) {
             $market->addMediaFromRequest('logo')
                 ->toMediaCollection('logo');
+        }
+
+        // Handle Favicon Upload
+        if ($request->hasFile('favicon')) {
+            $market->addMediaFromRequest('favicon')
+                ->toMediaCollection('favicon');
         }
 
         // Handle Banner Removals
