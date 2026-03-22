@@ -6,7 +6,7 @@
         />
 
         <!-- Featured Products Preview (Moved to top) -->
-        <section class="py-4 bg-white border-b border-gray-200">
+        <section class="py-4 md:pt-[220px] bg-white border-b border-gray-200">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <!-- Featured Products Grid (Limited to 8 items) -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">

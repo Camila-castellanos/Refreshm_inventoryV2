@@ -1,10 +1,10 @@
 <template>
-    <aside class="flex flex-col w-64 bg-white min-h-screen sticky top-0 h-screen">
+    <aside class="flex flex-col w-72 md:w-[500px] bg-white min-h-screen sticky top-0 h-screen">
         <!-- Logo -->
-        <div class="p-6 pb-2">
+        <div class="h-[220px] px-8 pt-8 flex items-center justify-center relative">
             <Link :href="route('market.index', market.slug)" class="block w-full">
-                <div v-if="market.logo_url" class="w-full flex items-center justify-center">
-                    <img :src="market.logo_url" :alt="market.name" class="w-full max-w-[180px] object-contain">
+                <div v-if="market.logo_url" class="w-full flex items-center justify-center md:justify-start">
+                    <img :src="market.logo_url" :alt="market.name" class="w-full max-h-[140px] object-contain object-center md:object-left">
                 </div>
                 <div v-else class="w-full flex items-center justify-center py-4 bg-gray-50 rounded-lg border border-gray-100">
                     <i class="pi pi-shop text-3xl text-gray-400"></i>
