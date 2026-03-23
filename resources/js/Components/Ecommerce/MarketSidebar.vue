@@ -134,6 +134,12 @@
         <div class="p-4 bg-white mt-auto">
             <div class="space-y-3">
                 <Link 
+                    :href="route('market.about', market.slug)"
+                    class="block text-sm font-bold text-gray-600 hover:text-gray-900 transition-colors font-avenir"
+                >
+                    About Us
+                </Link>
+                <Link 
                     :href="route('market.faq', market.slug)"
                     class="block text-sm font-bold text-gray-600 hover:text-gray-900 transition-colors font-avenir"
                 >

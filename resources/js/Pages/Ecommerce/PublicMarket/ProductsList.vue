@@ -6,7 +6,7 @@
         />
 
         <!-- Products Header -->
-        <section class="py-12 bg-white">
+        <section class="py-6 bg-white">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <!-- Title Section -->
                 <div class="mb-8">
@@ -31,42 +31,22 @@
                 <!-- Filters and Sort -->
                 <div class="flex flex-col sm:flex-row gap-4 mb-12 items-center justify-between">
                     <div class="flex flex-col sm:flex-row gap-4 w-full sm:w-full">
-                        <!-- Category Filter -->
+                        <!-- Model Filter -->
                         <div class="relative">
                             <Dropdown
-                                v-model="selectedCategory"
-                                :options="categoryOptions"
+                                v-model="selectedModel"
+                                :options="modelOptions"
                                 option-label="label"
                                 option-value="value"
-                                placeholder="All Categories"
+                                placeholder="All Models"
                                 @change="updateFilters"
                                 class="w-full sm:w-48"
+                                filter
                                 :pt="{
                                     root: 'bg-slate-100 border border-gray-200 rounded-lg text-sm hover:border-gray-300 focus:border-gray-300 transition-all duration-200',
                                     input: 'px-4 py-2 text-gray-900 focus:outline-none',
                                     trigger: 'px-2 text-gray-500 hover:text-gray-700',
-                                    panel: 'bg-white border border-gray-200 rounded-lg shadow-lg mt-1 z-50',
-                                    item: 'px-4 py-2 hover:bg-slate-100 text-gray-900 cursor-pointer transition-colors duration-150',
-                                    itemGroup: 'bg-gray-50 px-4 py-2 text-gray-600 text-xs font-medium'
-                                }"
-                            />
-                        </div>
-
-                        <!-- Brand Filter -->
-                        <div class="relative">
-                            <Dropdown
-                                v-model="selectedBrand"
-                                :options="brandOptions"
-                                option-label="label"
-                                option-value="value"
-                                placeholder="All Brands"
-                                @change="updateFilters"
-                                class="w-full sm:w-48"
-                                :pt="{
-                                    root: 'bg-slate-100 border border-gray-200 rounded-lg text-sm hover:border-gray-300 focus:border-gray-300 transition-all duration-200',
-                                    input: 'px-4 py-2 text-gray-900 focus:outline-none',
-                                    trigger: 'px-2 text-gray-500 hover:text-gray-700',
-                                    panel: 'bg-white border border-gray-200 rounded-lg shadow-lg mt-1 z-50',
+                                    panel: 'bg-white border border-gray-200 rounded-lg shadow-lg mt-1 z-50 max-h-60',
                                     item: 'px-4 py-2 hover:bg-slate-100 text-gray-900 cursor-pointer transition-colors duration-150',
                                     itemGroup: 'bg-gray-50 px-4 py-2 text-gray-600 text-xs font-medium'
                                 }"
@@ -93,63 +73,21 @@
                                 }"
                             />
                         </div>
-
-                        <!-- View Mode Toggle -->
-                        <div class="flex items-center bg-slate-100 border border-gray-200 rounded-lg p-1 ml-auto">
-                            <button
-                                @click="toggleViewMode('individual')"
-                                :class="[
-                                    'flex items-center justify-center px-4 py-2 rounded font-medium transition-all duration-200 text-sm ml-auto',
-                                    viewMode === 'individual'
-                                        ? 'bg-white text-gray-900 shadow-sm'
-                                        : 'text-gray-600 hover:text-gray-900'
-                                ]"
-                                title="Show individual items"
-                            >
-                                <i class="pi pi-list mr-2"></i>
-                                Items
-                            </button>
-                            <button
-                                @click="toggleViewMode('grouped')"
-                                :class="[
-                                    'flex items-center justify-center px-4 py-2 rounded font-medium transition-all duration-200 text-sm',
-                                    viewMode === 'grouped'
-                                        ? 'bg-white text-gray-900 shadow-sm'
-                                        : 'text-gray-600 hover:text-gray-900'
-                                ]"
-                                title="Show models grouped"
-                            >
-                                <i class="pi pi-th mr-2"></i>
-                                Models
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Quick Stats -->
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
-                    <div class="bg-slate-100 rounded-lg border border-gray-200 p-6 text-center">
-                        <div class="text-3xl font-bold text-gray-800">{{ stats.total_products }}</div>
-                        <div class="text-sm text-gray-600 mt-2">Total Products</div>
-                    </div>
-                    <div class="bg-slate-100 rounded-lg border border-gray-200 p-6 text-center">
-                        <div class="text-3xl font-bold text-gray-800">{{ stats.categories_count }}</div>
-                        <div class="text-sm text-gray-600 mt-2">Categories</div>
-                    </div>
-                    <div class="bg-slate-100 rounded-lg border border-gray-200 p-6 text-center">
-                        <div class="text-3xl font-bold text-gray-800">{{ getCurrencySymbol(market.currency) }}{{ formatPrice(stats.price_range.min) }}</div>
-                        <div class="text-sm text-gray-600 mt-2">Starting Price</div>
-                    </div>
-                    <div class="bg-slate-100 rounded-lg border border-gray-200 p-6 text-center">
-                        <div class="text-3xl font-bold text-gray-800">{{ getCurrencySymbol(market.currency) }}{{ formatPrice(stats.price_range.max) }}</div>
-                        <div class="text-sm text-gray-600 mt-2">Top Price</div>
                     </div>
                 </div>
             </div>
         </section>
 
         <!-- Products Grid -->
-        <section class="py-8 bg-slate-100">
+        <section class="py-8 bg-white relative min-h-[400px]">
+            <!-- Loading Overlay overlaying the grid area -->
+            <div v-if="loading && items.length === 0" class="absolute inset-0 bg-white/80 z-10 flex items-center justify-center backdrop-blur-sm">
+                <div class="flex flex-col items-center">
+                    <div class="animate-spin w-10 h-10 border-4 border-gray-200 border-t-gray-900 rounded-full mb-4"></div>
+                    <span class="text-gray-900 font-medium">Loading products...</span>
+                </div>
+            </div>
+
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 
                 <!-- Products Grid -->
@@ -163,8 +101,8 @@
                     />
                 </div>
 
-                <!-- Loading State -->
-                <div v-if="loading" class="flex justify-center mt-12">
+                <!-- Infinite Scroll Loading State (Bottom) -->
+                <div v-if="loading && items.length > 0" class="flex justify-center mt-12 mb-8">
                     <div class="inline-flex items-center space-x-2 px-6 py-3 bg-white rounded-lg border border-gray-200 shadow-sm">
                         <div class="animate-spin w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full"></div>
                         <span class="text-gray-600 font-medium">Loading more products...</span>
@@ -202,7 +140,7 @@
                             Clear Search
                         </button>
                         <button 
-                            v-if="currentCategory || selectedBrand.value"
+                            v-if="currentCategory || selectedModel.value || selectedBrand.value"
                             @click="clearFilters"
                             class="inline-flex items-center justify-center px-6 py-3 rounded-lg bg-slate-100 text-gray-700 hover:text-gray-900 border border-gray-200 hover:border-gray-300 font-medium transition-all duration-200"
                         >
@@ -229,6 +167,7 @@ const props = defineProps({
     market: Object,
     initialItems: Array, // Changed from items object to initialItems array
     categories: Array,
+    availableModels: Array,
     stats: Object,
     currentCategory: String,
     currentBrand: String,
@@ -240,41 +179,28 @@ const props = defineProps({
 // Reactive state
 const selectedCategory = ref(props.currentCategory || '')
 const selectedBrand = ref(props.currentBrand || '')
-const selectedSort = ref(props.currentSort || 'latest')
+const selectedModel = ref('')
+const selectedSort = ref(props.currentSort || 'default')
 const items = ref([...props.initialItems]) // Local items array for infinite scroll
 const loading = ref(false)
 const hasMoreItems = ref(true)
 const currentPage = ref(1)
 const viewMode = ref('grouped') // 'grouped' for models, 'individual' for items
 
-// Computed properties for dropdown options
-const categoryOptions = computed(() => [
-    { label: 'All Categories', value: '' },
-    ...props.categories.map(category => ({
-        label: formatCategoryName(category),
-        value: category
-    }))
-])
-
-const brandOptions = computed(() => [
-    { label: 'All Brands', value: '' },
-    { label: 'Apple', value: 'Apple' },
-    { label: 'Samsung', value: 'Samsung' },
-    { label: 'Google', value: 'Google' },
-    { label: 'Xiaomi', value: 'Xiaomi' },
-    { label: 'OnePlus', value: 'OnePlus' },
-    { label: 'Huawei', value: 'Huawei' },
-    { label: 'Sony', value: 'Sony' },
-    { label: 'LG', value: 'LG' },
-    { label: 'Motorola', value: 'Motorola' },
-    { label: 'Nokia', value: 'Nokia' }
-])
+const modelOptions = computed(() => {
+    const options = [{ label: 'All Models', value: '' }];
+    if (props.availableModels && props.availableModels.length) {
+        props.availableModels.forEach(model => {
+            options.push({ label: model, value: model });
+        });
+    }
+    return options;
+});
 
 const sortOptions = computed(() => [
-    { label: 'Latest First', value: 'latest' },
+    { label: 'Newest Models', value: 'default' },
     { label: 'Price: Low to High', value: 'price_low' },
-    { label: 'Price: High to Low', value: 'price_high' },
-    { label: 'Name: A to Z', value: 'name' }
+    { label: 'Price: High to Low', value: 'price_high' }
 ])
 
 // Methods
@@ -309,62 +235,12 @@ const viewProduct = (productId) => {
     window.open(`/market/${props.market.slug}/product/${productId}`, '_blank')
 }
 
-const toggleViewMode = (mode) => {
-    if (viewMode.value === mode) return
-    
-    viewMode.value = mode
-    loading.value = true
-    currentPage.value = 1
-    hasMoreItems.value = true
-    
-    const params = new URLSearchParams()
-    
-    if (selectedCategory.value) {
-        params.append('category', selectedCategory.value)
-    }
-    
-    if (selectedBrand.value) {
-        params.append('brand', selectedBrand.value)
-    }
-    
-    if (selectedSort.value) {
-        params.append('sort', selectedSort.value)
-    }
-
-    if (props.currentSearch) {
-        params.append('search', props.currentSearch)
-    }
-
-    // Add group_by_model parameter based on view mode
-    if (mode === 'grouped') {
-        params.append('group_by_model', 'true')
-    }
-
-    // Make API call to get filtered results
-    const url = `/market/${props.market.slug}/products`
-    
-    axios.get(url, { params: Object.fromEntries(params) })
-        .then(response => {
-            items.value = response.data.data
-            hasMoreItems.value = response.data.has_more_pages
-            loading.value = false
-            
-            // Update URL without page reload
-            const queryString = params.toString()
-            const newUrl = queryString ? `?${queryString}` : ''
-            window.history.pushState({}, '', `/market/${props.market.slug}/products-list${newUrl}`)
-        })
-        .catch(error => {
-            console.error('Error toggling view mode:', error)
-            loading.value = false
-        })
-}
-
 const updateFilters = () => {
     // Reset items and pagination for new filters
     loading.value = true
     currentPage.value = 1
     hasMoreItems.value = true
+    items.value = [] // Clear items to trigger the main loader
     
     const params = new URLSearchParams()
     
@@ -374,6 +250,10 @@ const updateFilters = () => {
     
     if (selectedBrand.value) {
         params.append('brand', selectedBrand.value)
+    }
+
+    if (selectedModel.value) {
+        params.append('model', selectedModel.value)
     }
     
     if (selectedSort.value) {
@@ -419,6 +299,7 @@ const loadMoreItems = () => {
         page: currentPage.value,
         ...(selectedCategory.value && { category: selectedCategory.value }),
         ...(selectedBrand.value && { brand: selectedBrand.value }),
+        ...(selectedModel.value && { model: selectedModel.value }),
         ...(selectedSort.value && { sort: selectedSort.value }),
         ...(props.currentSearch && { search: props.currentSearch }),
         ...(viewMode.value === 'grouped' && { group_by_model: 'true' })
@@ -451,8 +332,9 @@ const handleScroll = () => {
 
 const clearFilters = () => {
     selectedCategory.value = ''
-    selectedBrand.value = ''
-    selectedSort.value = 'latest'
+    selectedBrand.value = '' // Was: props.currentBrand || ''
+    selectedModel.value = ''
+    selectedSort.value = 'default'
     
     // Reset items and reload
     loading.value = true
@@ -488,7 +370,7 @@ const clearSearch = () => {
         params.append('brand', selectedBrand.value)
     }
     
-    if (selectedSort.value && selectedSort.value !== 'latest') {
+    if (selectedSort.value && selectedSort.value !== 'default') {
         params.append('sort', selectedSort.value)
     }
     

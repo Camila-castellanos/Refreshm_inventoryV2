@@ -32,6 +32,12 @@ vi.mock('@inertiajs/vue3', () => ({
   }
 }));
 
+vi.mock('primevue/usetoast', () => ({
+  useToast: () => ({
+    add: vi.fn()
+  })
+}));
+
 // Route Mock
 const routeMock = vi.fn((name, params) => `/${name}/${params}`);
 global.route = routeMock as any;

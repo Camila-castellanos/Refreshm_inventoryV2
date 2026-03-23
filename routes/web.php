@@ -475,6 +475,7 @@ Route::domain('{custom_domain}')
         Route::get('/search', [MarketController::class, 'search'])->name('market.domain.search');
         Route::get('/contact', [MarketController::class, 'contact'])->name('market.domain.contact');
         Route::get('/faq', [MarketController::class, 'faq'])->name('market.domain.faq');
+        Route::get('/about', [MarketController::class, 'about'])->name('market.domain.about');
         Route::get('/cart', [MarketController::class, 'cart'])->name('market.domain.cart');
         // API endpoint for market info on custom domain
         Route::get('/api/info', [MarketController::class, 'info'])->name('market.domain.api.info');
@@ -491,6 +492,7 @@ Route::prefix('market/{market:slug}')->name('market.')->group(function () {
     Route::get('/search', [App\Http\Controllers\Ecommerce\MarketController::class, 'search'])->name('search');
     Route::get('/contact', [App\Http\Controllers\Ecommerce\MarketController::class, 'contact'])->name('contact');
     Route::get('/faq', [App\Http\Controllers\Ecommerce\MarketController::class, 'faq'])->name('faq');
+    Route::get('/about', [App\Http\Controllers\Ecommerce\MarketController::class, 'about'])->name('about');
     Route::get('/cart', [App\Http\Controllers\Ecommerce\MarketController::class, 'cart'])->name('cart');
     // Order Confirmation (Protected by signature)
     Route::get('/order/{sale_id}', [App\Http\Controllers\Ecommerce\MarketController::class, 'orderConfirmation'])

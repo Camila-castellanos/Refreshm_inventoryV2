@@ -3,7 +3,6 @@ import { mount, VueWrapper } from '@vue/test-utils';
 // Move imports that depend on mocks AFTER the mocks
 import PrimeVue from 'primevue/config';
 import axios from 'axios';
-import { nextTick } from 'vue';
 
 // Mocks must be defined before importing the component
 vi.mock('axios');
@@ -31,8 +30,8 @@ vi.mock('@/Layouts/Ecommerce/MarketLayout.vue', () => ({
 import ProductsList from '@/Pages/Ecommerce/PublicMarket/ProductsList.vue';
 
 // Route Mock
-const routeMock = vi.fn((name, params) => `/${name}`);
-global.route = routeMock as any;
+const routeMock = vi.fn((name: string, params: any) => `/${name}`);
+(global as any).route = routeMock;
 
 // Stubs
 const MockDropdown = {
@@ -174,11 +173,11 @@ describe('Ecommerce/PublicMarket/ProductsList.vue', () => {
       
       // Change Brand
       vm.selectedBrand = 'Apple';
-      // Trigger update manually or via event if stub supports it
+      // Trigger update manually
       await vm.updateFilters();
       
       // Verify Loading State
-      expect(vm.loading).toBe(false); // Should be false after await
+      expect(vm.loading).toBe(false);
       
       // Verify API call
       expect(axios.get).toHaveBeenCalledWith(
@@ -215,37 +214,6 @@ describe('Ecommerce/PublicMarket/ProductsList.vue', () => {
     });
   });
 
-  describe('View Mode', () => {
-    it('toggles between individual and grouped view', async () => {
-      wrapper = createWrapper();
-      const vm = wrapper.vm as any;
-      
-      // Initial is grouped
-      expect(vm.viewMode).toBe('grouped');
-      
-      // Toggle to individual
-      await vm.toggleViewMode('individual');
-      
-      expect(vm.viewMode).toBe('individual');
-      expect(axios.get).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.not.objectContaining({ 
-          params: expect.objectContaining({ group_by_model: 'true' }) 
-        })
-      );
-      
-      // Toggle back to grouped
-      await vm.toggleViewMode('grouped');
-      
-      expect(axios.get).toHaveBeenLastCalledWith(
-        expect.any(String),
-        expect.objectContaining({ 
-          params: expect.objectContaining({ group_by_model: 'true' }) 
-        })
-      );
-    });
-  });
-
   describe('Infinite Scroll', () => {
     it('loads more items when scrolling to bottom', async () => {
       // Need enough items to enable infinite scroll (>= 24 items as per component logic)
@@ -267,9 +235,9 @@ describe('Ecommerce/PublicMarket/ProductsList.vue', () => {
       // Mock window dimensions to simulate bottom scroll
       Object.defineProperty(window, 'innerHeight', { value: 1000 });
       Object.defineProperty(window, 'scrollY', { value: 1000 });
-      Object.defineProperty(document.documentElement, 'offsetHeight', { value: 2000 }); // 1000+1000 >= 2000-1000 (threshold)
+      Object.defineProperty(document.documentElement, 'offsetHeight', { value: 2000 });
       
-      // Trigger scroll handler manually since we can't easily scroll jsdom
+      // Trigger scroll handler manually
       vm.handleScroll();
       
       // Wait for async call

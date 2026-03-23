@@ -82,6 +82,7 @@ class MarketAdminController extends Controller
             'meta_title' => $validated['meta_title'] ?? ($validated['name'].' - Online Market'),
             'meta_description' => $validated['meta_description'] ?? ('Browse and shop '.$validated['name'].' collection of quality products.'),
             'faq' => $validated['faq'] ?? null,
+            'about_us' => $validated['about_us'] ?? null,
         ]);
 
         // Handle Banner Uploads
@@ -256,7 +257,7 @@ class MarketAdminController extends Controller
         }
 
         return redirect()
-            ->route('ecommerce.markets.index')
+            ->back()
             ->with('success', 'Market updated successfully!');
     }
 

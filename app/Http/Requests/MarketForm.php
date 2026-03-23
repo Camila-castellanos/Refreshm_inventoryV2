@@ -39,7 +39,6 @@ class MarketForm extends FormRequest
             'description' => 'nullable|string|max:1000',
             'tagline' => 'nullable|string|max:255',
             'currency' => 'required|string|in:USD,EUR,GBP,CAD,AUD',
-            'show_inventory_count' => 'boolean',
             'is_active' => 'boolean',
             'contact_email' => 'nullable|email|max:255',
             'contact_phone' => 'nullable|string|max:50',
@@ -68,6 +67,10 @@ class MarketForm extends FormRequest
             'faq.questions.*.question' => 'nullable|string|max:500',
             'faq.questions.*.answer' => 'nullable|string|max:2000',
             'faq.questions.*.order' => 'nullable|integer',
+            'about_us' => 'nullable|array',
+            'about_us.title' => 'nullable|string|max:255',
+            'about_us.content' => 'nullable|string|max:5000',
+            'about_us.image_url' => 'nullable|string|max:255',
         ];
     }
 }

@@ -124,6 +124,43 @@ class MarketAdminCrudTest extends TestCaseWithCompany
         $this->assertEquals('Updated Name', $market->name);
     }
 
+    public function test_update_modifies_market_with_all_fields(): void
+    {
+        $shop = $this->createShop();
+        $market = Market::factory()->forShop($shop->id)->create([
+            'name' => 'Original Name',
+            'about_us' => ['title' => 'Old Title', 'content' => 'Old Content'],
+            'faq' => ['title' => 'Old FAQ', 'questions' => [['question' => 'Q1', 'answer' => 'A1']]],
+        ]);
+
+        $data = [
+            'name' => 'Updated Name',
+            'shop_id' => $shop->id,
+            'currency' => 'EUR',
+            'contact_email' => 'updated@market.com',
+            'is_active' => false,
+            'custom_domain' => 'new.market.com',
+            'meta_title' => 'New SEO Title',
+            'meta_description' => 'New SEO Description',
+            'about_us' => ['title' => 'New About', 'content' => 'New About Content'],
+            'faq' => ['title' => 'New FAQ', 'description' => 'New FAQ Desc', 'questions' => [['question' => 'Q2', 'answer' => 'A2']]],
+        ];
+
+        $response = $this->actingAs($this->owner)
+            ->put("/ecommerce/markets/{$market->id}", $data);
+
+        $response->assertStatus(302);
+        $response->assertSessionHas('success', 'Market updated successfully!');
+
+        $market->refresh();
+        $this->assertEquals('Updated Name', $market->name);
+        $this->assertEquals('new.market.com', $market->custom_domain);
+        $this->assertEquals('EUR', $market->currency);
+        $this->assertEquals('New SEO Title', $market->meta_title);
+        $this->assertEquals('New About', $market->about_us['title']);
+        $this->assertEquals('Q2', $market->faq['questions'][0]['question']);
+    }
+
     public function test_destroy_deletes_market(): void
     {
         $shop = $this->createShop();

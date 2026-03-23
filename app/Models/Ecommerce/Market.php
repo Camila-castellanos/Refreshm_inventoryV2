@@ -45,6 +45,7 @@ class Market extends Model implements HasMedia
         'shipping_policy',
         'privacy_policy',
         'faq',
+        'about_us',
     ];
 
     /**
@@ -58,6 +59,7 @@ class Market extends Model implements HasMedia
         'theme_colors' => null,
         'meta_keywords' => null,
         'faq' => '{"title":"","description":"","questions":[]}',
+        'about_us' => '{"title":"","content":"","image_url":null}',
     ];
 
     /**
@@ -67,6 +69,7 @@ class Market extends Model implements HasMedia
         'theme_colors' => 'array',
         'meta_keywords' => 'array',
         'faq' => 'array',
+        'about_us' => 'array',
         'is_active' => 'boolean',
         'show_inventory_count' => 'boolean',
         'tax_rate' => 'decimal:4',
@@ -337,15 +340,20 @@ class Market extends Model implements HasMedia
      *
      * @param  bool  $includeHidden  If true, includes hidden items (for admin) - default false (public view only)
      */
-    public function getGroupedModels(?string $search = null, int $perPage = 20, ?string $category = null, ?string $brand = null, string $sort = 'latest', bool $includeHidden = false)
+    public function getGroupedModels(?string $search = null, int $perPage = 20, ?string $category = null, ?string $brand = null, string $sort = 'latest', bool $includeHidden = false, ?string $modelFilter = null)
     {
         // First, get ALL items for photo counting (without price filters)
-        $allItems = Item::where('shop_id', $this->shop_id)
+        $query = Item::where('shop_id', $this->shop_id)
             ->whereNull('sold')
             ->whereNull('hold')
             ->with('media')
-            ->with('productModel.media')
-            ->get();
+            ->with('productModel.media');
+
+        if ($modelFilter) {
+            $query->where('model', 'like', "%{$modelFilter}%");
+        }
+
+        $allItems = $query->get();
 
         // Use all items (no selling_price filter - items without price are still valid)
         $items = $allItems;
@@ -531,7 +539,28 @@ class Market extends Model implements HasMedia
             'price_low' => $grouped->sortBy('min_price'),
             'price_high' => $grouped->sortByDesc('max_price'),
             'name' => $grouped->sortBy('model'),
-            default => $grouped->reverse(), // latest first
+            default => $grouped->sort(function ($a, $b) {
+                $normalize = function ($m) {
+                    if (preg_match('/iPhone (X[RS]?)(.*)/i', $m, $matches)) {
+                        $val = '10';
+                        if (strtoupper($matches[1]) === 'XR') {
+                            $val = '10.1';
+                        }
+                        if (strtoupper($matches[1]) === 'XS') {
+                            $val = '10.2';
+                        }
+
+                        return 'iPhone '.$val.$matches[2];
+                    }
+
+                    return $m;
+                };
+
+                $normA = $normalize($a->model);
+                $normB = $normalize($b->model);
+
+                return strnatcasecmp($normB, $normA);
+            }),
         };
 
         // Create pagination manually
@@ -873,6 +902,32 @@ class Market extends Model implements HasMedia
     }
 
     /**
+     * Get available models (grouped names)
+     */
+    public function getAvailableModels(?string $brand = null)
+    {
+        $query = $this->publishedItems();
+
+        if ($brand) {
+            $query->where('manufacturer', $brand);
+        }
+
+        $items = $query->get();
+        $models = [];
+
+        foreach ($items as $item) {
+            $parsed = $this->parseModelStorage($item->model);
+            if (! empty($parsed['model']) && ! in_array($parsed['model'], $models)) {
+                $models[] = $parsed['model'];
+            }
+        }
+
+        sort($models);
+
+        return collect($models);
+    }
+
+    /**
      * Get items by category
      */
     public function getItemsByCategory(string $category)
@@ -1020,6 +1075,11 @@ class Market extends Model implements HasMedia
             'logo_url' => $this->logo_url,
             'favicon_url' => $this->favicon_url,
             'banners' => $banners,
+            'about_us' => $this->about_us ?: [
+                'title' => 'About Us',
+                'content' => 'Welcome to '.($this->name ?: 'our store').'. We are dedicated to providing the best refurbished devices.',
+                'image_url' => null,
+            ],
             'media_banners' => $this->getMedia('banners')->map(function ($media) {
                 return [
                     'id' => $media->id,

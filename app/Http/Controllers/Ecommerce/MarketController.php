@@ -81,12 +81,13 @@ class MarketController extends Controller
             $search = $request->get('search');
             $category = $request->get('category');
             $brand = $request->get('brand');
-            $sort = $request->get('sort', 'latest');
+            $modelFilter = $request->get('model');
+            $sort = $request->get('sort', 'default');
             $groupByModel = $request->get('group_by_model', false);
 
             // If grouping by model
             if ($groupByModel) {
-                $models = $market->getGroupedModels($search, $perPage, $category, $brand, $sort);
+                $models = $market->getGroupedModels($search, $perPage, $category, $brand, $sort, false, $modelFilter);
 
                 return response()->json([
                     'data' => $models->items(),
@@ -121,6 +122,11 @@ class MarketController extends Controller
             // Filter by brand if provided
             if ($brand) {
                 $query->where('manufacturer', $brand);
+            }
+
+            // Filter by model if provided
+            if ($modelFilter) {
+                $query->where('model', 'like', "%{$modelFilter}%");
             }
 
             // Get items first
@@ -300,13 +306,15 @@ class MarketController extends Controller
             $perPage = 24; // More items per page for list view
             $category = $request->get('category');
             $brand = $request->get('brand');
-            $sort = $request->get('sort', 'latest'); // latest, price_low, price_high, name
+            $modelFilter = $request->get('model');
+            $sort = $request->get('sort', 'default'); // default, price_low, price_high
             $search = $request->get('search'); // Search query
             // Default to grouped view mode
             $groupByModel = $request->get('group_by_model', true);
 
             // Get available categories for filtering
             $categories = $market->getAvailableCategories();
+            $availableModels = $market->getAvailableModels($brand);
 
             // Get market stats
             $stats = $market->getStats();
@@ -316,7 +324,7 @@ class MarketController extends Controller
 
             // If grouping by model (default behavior)
             if ($groupByModel) {
-                $initialItems = $market->getGroupedModels($search, $perPage, $category, $brand, $sort)->items();
+                $initialItems = $market->getGroupedModels($search, $perPage, $category, $brand, $sort, false, $modelFilter)->items();
             } else {
                 // Build query for individual items
                 $query = $market->publishedItems();
@@ -339,6 +347,11 @@ class MarketController extends Controller
                 // Filter by brand if provided
                 if ($brand) {
                     $query->where('manufacturer', $brand);
+                }
+
+                // Filter by model if provided
+                if ($modelFilter) {
+                    $query->where('model', 'like', "%{$modelFilter}%");
                 }
 
                 // Apply sorting
@@ -387,6 +400,7 @@ class MarketController extends Controller
                 'market' => $safeMarketData,
                 'initialItems' => $initialItems,
                 'categories' => $categories->values(),
+                'availableModels' => $availableModels,
                 'stats' => $stats,
                 'currentCategory' => $category,
                 'currentBrand' => $brand,
@@ -559,6 +573,43 @@ class MarketController extends Controller
             ]);
 
             abort(503, 'Contact page is temporarily unavailable. Please try again later.');
+        }
+    }
+
+    /**
+     * Display the About Us page
+     */
+    public function about(Market $market)
+    {
+        try {
+            $market->load(['shop']);
+
+            // Verify shop accessibility
+            if (! $market->shop) {
+                abort(503, 'This market is temporarily unavailable');
+            }
+
+            // Get safe market data
+            $safeMarketData = $market->getSafeData();
+
+            // Get About Us data from market (we'll assume a field exists or just use a default for now)
+            $aboutData = $market->about_us ?? [
+                'title' => 'About Us',
+                'content' => 'Welcome to '.$market->name.'. We are dedicated to providing the best refurbished devices.',
+                'image_url' => null,
+            ];
+
+            return Inertia::render('Ecommerce/PublicMarket/About', [
+                'market' => $safeMarketData,
+                'aboutData' => $aboutData,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Market About Us error: '.$e->getMessage(), [
+                'market_id' => $market->id ?? null,
+                'market_slug' => $market->slug ?? null,
+            ]);
+
+            abort(503, 'About Us page is temporarily unavailable. Please try again later.');
         }
     }
 

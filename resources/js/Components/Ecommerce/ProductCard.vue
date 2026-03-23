@@ -6,21 +6,25 @@
         >
             <!-- Show actual image if available -->
             <img 
-                v-if="productImage"
+                v-if="productImage && !imageError"
                 :src="productImage"
                 :alt="item.model"
                 class="absolute inset-0 w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-300"
+                @error="imageError = true"
             />
-            <!-- Fallback placeholder if no image -->
+            <!-- Fallback placeholder if no image or error -->
             <div v-else class="text-center absolute inset-0 flex flex-col items-center justify-center p-4">
                 <svg 
-                    class="text-gray-400 mx-auto mb-2 group-hover:text-gray-500 transition-colors duration-200" 
-                    :class="compact ? 'w-16 h-16' : 'w-24 h-24'"
+                    class="text-gray-300 mx-auto mb-2" 
+                    :class="compact ? 'w-20 h-28' : 'w-24 h-36'"
                     fill="none" stroke="currentColor" viewBox="0 0 24 24"
                 >
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                    <!-- Celular estilo moderno, más ancho -->
+                    <rect x="5" y="1" width="14" height="22" rx="2" stroke-width="1.5" />
+                    <line x1="12" y1="19" x2="12" y2="19" stroke-width="3" stroke-linecap="round" />
                 </svg>
-                <p :class="compact ? 'text-sm' : 'text-base'" class="text-gray-500">{{ item.manufacturer || 'Device' }}</p>
+
+                <p :class="compact ? 'text-xs' : 'text-sm'" class="text-gray-400">{{ item.manufacturer || 'Device' }}</p>
             </div>
         </div>
 
@@ -28,15 +32,6 @@
         <div class="flex flex-col flex-1" :class="compact ? 'p-4' : 'p-5'">
             <!-- Content Wrapper to push action button to bottom -->
             <div class="flex-1">
-                <!-- Category Badge -->
-                <div class="mb-2">
-                    <span v-if="item.type" 
-                          class="inline-block text-[10px] font-medium text-gray-500 uppercase tracking-wide bg-slate-50 border border-gray-100 rounded-md px-2 py-1"
-                    >
-                        {{ formatCategoryName(item.type) }}
-                    </span>
-                </div>
-                
                 <!-- Manufacturer -->
                 <p v-if="item.manufacturer" class="text-xs text-gray-500 mb-1 font-medium tracking-wide">
                     {{ item.manufacturer }}
@@ -91,7 +86,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { getCurrencySymbol } from '@/utils/currency'
 
 // Props
@@ -109,6 +104,9 @@ const props = defineProps({
         default: false
     }
 })
+
+// State for image errors
+const imageError = ref(false)
 
 // Emits
 const emit = defineEmits(['view-product'])
