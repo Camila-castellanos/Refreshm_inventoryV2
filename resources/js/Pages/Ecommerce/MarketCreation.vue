@@ -10,379 +10,295 @@
             <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
                 <div class="bg-white overflow-hidden shadow-xl sm:rounded-lg">
                     <form @submit.prevent="createMarket" class="p-6">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <!-- Basic Information -->
-                            <div class="col-span-2">
-                                <h3 class="text-lg font-medium text-gray-900 mb-4">Basic Information</h3>
-                            </div>
+                        <Tabs value="0">
+                            <TabList>
+                                <Tab value="0">General</Tab>
+                                <Tab value="1">Branding & Media</Tab>
+                                <Tab value="2">Store Profile</Tab>
+                                <Tab value="3">About Us</Tab>
+                                <Tab value="4">FAQ</Tab>
+                                <Tab value="5">SEO & Contact</Tab>
+                            </TabList>
 
-                            <!-- Market Name -->
-                            <div class="col-span-2">
-                                <label for="name" class="block text-sm font-medium text-gray-900  mb-2">
-                                    Market Name *
-                                </label>
-                                <InputText
-                                    id="name"
-                                    v-model="form.name"
-                                    placeholder="Enter market name"
-                                    :class="{ 'p-invalid': form.errors.name }"
-                                    class="w-full"
-                                />
-                                <small v-if="form.errors.name" class="p-error">{{ form.errors.name }}</small>
-                                <small v-if="marketSlug" class="text-gray-500 mt-1">URL: /market/{{ marketSlug }}</small>
-                            </div>
-
-                            <!-- Shop Selection -->
-                            <div class="col-span-2">
-                                <label for="shop_id" class="block text-sm font-medium text-gray-900  mb-2">
-                                    Associated Shop *
-                                </label>
-                                <Dropdown
-                                    id="shop_id"
-                                    v-model="form.shop_id"
-                                    :options="shops"
-                                    optionLabel="name"
-                                    optionValue="id"
-                                    placeholder="Select a shop"
-                                    :class="{ 'p-invalid': form.errors.shop_id }"
-                                    class="w-full"
-                                />
-                                <small v-if="form.errors.shop_id" class="p-error">{{ form.errors.shop_id }}</small>
-                            </div>
-
-                            <!-- Description -->
-                            <div class="col-span-2">
-                                <label for="description" class="block text-sm font-medium text-gray-900  mb-2">
-                                    Description
-                                </label>
-                                <Textarea
-                                    id="description"
-                                    v-model="form.description"
-                                    placeholder="Describe your market..."
-                                    :class="{ 'p-invalid': form.errors.description }"
-                                    class="w-full"
-                                    rows="3"
-                                />
-                                <small v-if="form.errors.description" class="p-error">{{ form.errors.description }}</small>
-                            </div>
-
-                            <!-- Tagline -->
-                            <div>
-                                <label for="tagline" class="block text-sm font-medium text-gray-900  mb-2">
-                                    Tagline
-                                </label>
-                                <InputText
-                                    id="tagline"
-                                    v-model="form.tagline"
-                                    placeholder="e.g., Premium Quality Products"
-                                    :class="{ 'p-invalid': form.errors.tagline }"
-                                    class="w-full"
-                                />
-                                <small v-if="form.errors.tagline" class="p-error">{{ form.errors.tagline }}</small>
-                            </div>
-
-                            <!-- Currency -->
-                            <div>
-                                <label for="currency" class="block text-sm font-medium text-gray-900  mb-2">
-                                    Currency *
-                                </label>
-                                <Dropdown
-                                    id="currency"
-                                    v-model="form.currency"
-                                    :options="currencyOptions"
-                                    optionLabel="label"
-                                    optionValue="value"
-                                    placeholder="Select currency"
-                                    :class="{ 'p-invalid': form.errors.currency }"
-                                    class="w-full"
-                                />
-                                <small v-if="form.errors.currency" class="p-error">{{ form.errors.currency }}</small>
-                            </div>
-
-                            <!-- Visual Configuration -->
-                            <div class="col-span-2 border-t pt-6">
-                                <h3 class="text-lg font-medium text-gray-900 mb-4">Visual Configuration</h3>
-                            </div>
-
-                            <!-- Logo -->
-                            <div class="col-span-2">
-                                <label class="block text-sm font-medium text-gray-900 mb-4">
-                                    Market Logo
-                                </label>
-                                <div class="flex items-center space-x-6">
-                                    <div class="w-24 h-24 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center overflow-hidden shrink-0">
-                                        <img v-if="logoPreview" :src="logoPreview" class="w-full h-full object-contain" alt="Logo preview">
-                                        <i v-else class="pi pi-image text-3xl text-gray-400"></i>
-                                    </div>
-                                    <div class="flex-1">
-                                        <div class="flex items-center space-x-3">
-                                            <Button
-                                                type="button"
-                                                label="Choose Logo"
-                                                icon="pi pi-upload"
-                                                severity="secondary"
-                                                outlined
-                                                size="small"
-                                                @click="$refs.logoInput.click()"
+                            <TabPanels>
+                                <!-- Tab 0: General -->
+                                <TabPanel value="0">
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+                                        <!-- Market Name -->
+                                        <div class="col-span-2">
+                                            <label for="name" class="block text-sm font-medium text-gray-900 mb-2">
+                                                Market Name *
+                                            </label>
+                                            <InputText
+                                                id="name"
+                                                v-model="form.name"
+                                                placeholder="Enter market name"
+                                                :class="{ 'p-invalid': form.errors.name }"
+                                                class="w-full"
                                             />
-                                            <Button
-                                                v-if="logoPreview"
-                                                type="button"
-                                                icon="pi pi-times"
-                                                severity="danger"
-                                                text
-                                                rounded
-                                                @click="removeLogo"
-                                                title="Remove new logo"
-                                            />
+                                            <small v-if="form.errors.name" class="p-error">{{ form.errors.name }}</small>
+                                            <small v-if="marketSlug" class="text-gray-500 mt-1 block">URL Slug: {{ marketSlug }}</small>
                                         </div>
-                                        <p class="text-xs text-gray-500 mt-2">Recommended: Square image (e.g. 512x512px), max 2MB.</p>
-                                        <input
-                                            type="file"
-                                            ref="logoInput"
-                                            class="hidden"
-                                            accept="image/*"
-                                            @change="handleLogoUpload"
-                                        />
-                                        <small v-if="form.errors.logo" class="p-error block mt-1">{{ form.errors.logo }}</small>
-                                    </div>
-                                </div>
-                            </div>
 
-                            <!-- Favicon -->
-                            <div class="col-span-2">
-                                <label class="block text-sm font-medium text-gray-900 mb-4">
-                                    Market Favicon
-                                </label>
-                                <div class="flex items-center space-x-6">
-                                    <div class="w-16 h-16 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center overflow-hidden shrink-0">
-                                        <img v-if="faviconPreview" :src="faviconPreview" class="w-full h-full object-contain" alt="Favicon preview">
-                                        <i v-else class="pi pi-image text-xl text-gray-400"></i>
-                                    </div>
-                                    <div class="flex-1">
-                                        <div class="flex items-center space-x-3">
-                                            <Button
-                                                type="button"
-                                                label="Choose Favicon"
-                                                icon="pi pi-upload"
-                                                severity="secondary"
-                                                outlined
-                                                size="small"
-                                                @click="$refs.faviconInput.click()"
+                                        <!-- Shop Selection -->
+                                        <div>
+                                            <label for="shop_id" class="block text-sm font-medium text-gray-900 mb-2">
+                                                Associated Shop *
+                                            </label>
+                                            <Dropdown
+                                                id="shop_id"
+                                                v-model="form.shop_id"
+                                                :options="shops"
+                                                optionLabel="name"
+                                                optionValue="id"
+                                                placeholder="Select a shop"
+                                                :class="{ 'p-invalid': form.errors.shop_id }"
+                                                class="w-full"
                                             />
-                                            <Button
-                                                v-if="faviconPreview"
-                                                type="button"
-                                                icon="pi pi-times"
-                                                severity="danger"
-                                                text
-                                                rounded
-                                                @click="removeFavicon"
-                                                title="Remove new favicon"
-                                            />
+                                            <small v-if="form.errors.shop_id" class="p-error">{{ form.errors.shop_id }}</small>
                                         </div>
-                                        <p class="text-xs text-gray-500 mt-2">Recommended: .ico or .png (e.g. 32x32px), max 1MB.</p>
-                                        <input
-                                            type="file"
-                                            ref="faviconInput"
-                                            class="hidden"
-                                            accept="image/*"
-                                            @change="handleFaviconUpload"
-                                        />
-                                        <small v-if="form.errors.favicon" class="p-error block mt-1">{{ form.errors.favicon }}</small>
-                                    </div>
-                                </div>
-                            </div>
 
-                            <!-- Banners -->
-                            <div class="col-span-2">
-                                <div class="flex items-center justify-between mb-4">
-                                    <label class="block text-sm font-medium text-gray-900">
-                                        Market Banners
-                                    </label>
-                                    <div>
-                                        <input
-                                            type="file"
-                                            ref="bannerInput"
-                                            class="hidden"
-                                            multiple
-                                            accept="image/*"
-                                            @change="handleBannerUpload"
-                                        />
-                                        <Button
-                                            type="button"
-                                            label="Upload Banners"
-                                            icon="pi pi-upload"
-                                            severity="info"
-                                            size="small"
-                                            @click="$refs.bannerInput.click()"
-                                        />
-                                    </div>
-                                </div>
+                                        <!-- Currency -->
+                                        <div>
+                                            <label for="currency" class="block text-sm font-medium text-gray-900 mb-2">
+                                                Currency *
+                                            </label>
+                                            <Dropdown
+                                                id="currency"
+                                                v-model="form.currency"
+                                                :options="currencyOptions"
+                                                optionLabel="label"
+                                                optionValue="value"
+                                                placeholder="Select currency"
+                                                :class="{ 'p-invalid': form.errors.currency }"
+                                                class="w-full"
+                                            />
+                                            <small v-if="form.errors.currency" class="p-error">{{ form.errors.currency }}</small>
+                                        </div>
 
-                                <!-- New Uploads Preview -->
-                                <div v-if="newBanners.length > 0" class="mb-4">
-                                    <h4 class="text-sm font-medium text-gray-700 mb-2">New Uploads</h4>
-                                    <div class="space-y-2">
-                                        <div 
-                                            v-for="(file, index) in newBanners" 
-                                            :key="index"
-                                            class="flex items-center justify-between p-3 bg-gray-50 rounded border"
-                                        >
-                                            <div class="flex items-center gap-3">
-                                                <i class="pi pi-image text-gray-500"></i>
-                                                <span class="text-sm text-gray-700 truncate max-w-xs">{{ file.name }}</span>
-                                                <span class="text-xs text-gray-500">({{ (file.size / 1024).toFixed(1) }} KB)</span>
+                                        <!-- Settings -->
+                                        <div class="col-span-2 flex flex-col gap-4 bg-gray-50 p-4 rounded-lg border">
+                                            <h4 class="text-sm font-bold text-gray-700 uppercase tracking-wider">Store Settings</h4>
+                                            <div class="flex flex-col sm:flex-row gap-6">
+                                                <div class="flex items-center gap-2">
+                                                    <Checkbox
+                                                        id="is_active"
+                                                        v-model="form.is_active"
+                                                        :binary="true"
+                                                    />
+                                                    <label for="is_active" class="text-sm text-gray-900">
+                                                        Market is active and publicly accessible
+                                                    </label>
+                                                </div>
                                             </div>
-                                            <Button
-                                                type="button"
-                                                icon="pi pi-times"
-                                                severity="secondary"
-                                                text
-                                                size="small"
-                                                @click="removeNewBanner(index)"
-                                            />
                                         </div>
                                     </div>
-                                </div>
+                                </TabPanel>
 
-                                <div v-if="newBanners.length === 0" class="p-6 border border-dashed border-gray-300 rounded-lg text-center">
-                                    <i class="pi pi-images text-3xl text-gray-400 mb-2"></i>
-                                    <p class="text-gray-500">No banners added yet. Upload images to display in the hero carousel.</p>
-                                </div>
-                                <small v-if="form.errors.banners" class="p-error block mt-2">{{ form.errors.banners }}</small>
-                            </div>
+                                <!-- Tab 1: Branding & Media -->
+                                <TabPanel value="1">
+                                    <div class="flex flex-col gap-8 pt-4">
+                                        <!-- Logo & Favicon -->
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                            <!-- Logo -->
+                                            <div class="p-4 border rounded-xl bg-white shadow-sm">
+                                                <label class="block text-sm font-bold text-gray-700 mb-4">Market Logo</label>
+                                                <div class="flex flex-col items-center gap-4">
+                                                    <div class="w-32 h-32 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center overflow-hidden">
+                                                        <img v-if="logoPreview" :src="logoPreview" class="w-full h-full object-contain" alt="Logo preview">
+                                                        <i v-else class="pi pi-image text-4xl text-gray-400"></i>
+                                                    </div>
+                                                    <div class="flex flex-col items-center w-full">
+                                                        <Button
+                                                            type="button"
+                                                            label="Choose Logo"
+                                                            icon="pi pi-upload"
+                                                            severity="secondary"
+                                                            outlined
+                                                            class="w-full"
+                                                            @click="$refs.logoInput.click()"
+                                                        />
+                                                        <p class="text-[10px] text-gray-500 mt-2">Recommended: Square, max 2MB.</p>
+                                                        <input type="file" ref="logoInput" class="hidden" accept="image/*" @change="handleLogoUpload" />
+                                                        <small v-if="form.errors.logo" class="p-error mt-1">{{ form.errors.logo }}</small>
+                                                    </div>
+                                                </div>
+                                            </div>
 
-                            <!-- Settings -->
-                            <div class="col-span-2 border-t pt-6">
-                                <h3 class="text-lg font-medium text-gray-900 mb-4">Settings</h3>
-                            </div>
+                                            <!-- Favicon -->
+                                            <div class="p-4 border rounded-xl bg-white shadow-sm">
+                                                <label class="block text-sm font-bold text-gray-700 mb-4">Market Favicon</label>
+                                                <div class="flex flex-col items-center gap-4">
+                                                    <div class="w-32 h-32 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center overflow-hidden">
+                                                        <img v-if="faviconPreview" :src="faviconPreview" class="w-full h-full object-contain" alt="Favicon preview">
+                                                        <i v-else class="pi pi-image text-4xl text-gray-400"></i>
+                                                    </div>
+                                                    <div class="flex flex-col items-center w-full">
+                                                        <Button
+                                                            type="button"
+                                                            label="Choose Favicon"
+                                                            icon="pi pi-upload"
+                                                            severity="secondary"
+                                                            outlined
+                                                            class="w-full"
+                                                            @click="$refs.faviconInput.click()"
+                                                        />
+                                                        <p class="text-[10px] text-gray-500 mt-2">Recommended: .ico/.png (32x32px), max 1MB.</p>
+                                                        <input type="file" ref="faviconInput" class="hidden" accept="image/*" @change="handleFaviconUpload" />
+                                                        <small v-if="form.errors.favicon" class="p-error mt-1">{{ form.errors.favicon }}</small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
 
-                            <!-- Show Inventory Count -->
-                            <div class="flex items-center gap-2">
-                                <Checkbox
-                                    id="show_inventory_count"
-                                    v-model="form.show_inventory_count"
-                                    :binary="true"
-                                />
-                                <label for="show_inventory_count" class="text-sm text-gray-900">
-                                    Show inventory count to customers
-                                </label>
-                            </div>
+                                        <!-- Banners -->
+                                        <div class="col-span-2 border-t pt-6">
+                                            <div class="flex items-center justify-between mb-4">
+                                                <label class="block text-sm font-bold text-gray-700">Market Banners</label>
+                                                <Button type="button" label="Add Images" icon="pi pi-plus" severity="info" size="small" @click="$refs.bannerInput.click()" />
+                                            </div>
+                                            
+                                            <div v-if="newBanners.length > 0" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                                                <div v-for="(file, index) in newBanners" :key="index" class="relative group aspect-video bg-gray-100 rounded-lg overflow-hidden border border-blue-200 shadow-sm">
+                                                    <img :src="file.preview || URL.createObjectURL(file)" class="w-full h-full object-cover">
+                                                    <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                        <Button type="button" icon="pi pi-times" severity="danger" rounded @click="removeNewBanner(index)" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div v-else class="p-12 border-2 border-dashed rounded-xl text-center text-gray-400">
+                                                <i class="pi pi-images text-4xl mb-4"></i>
+                                                <p>No banners added yet. Images will appear in the store carousel.</p>
+                                            </div>
+                                            <input type="file" ref="bannerInput" class="hidden" multiple accept="image/*" @change="handleBannerUpload" />
+                                            <small v-if="form.errors.banners" class="p-error">{{ form.errors.banners }}</small>
+                                        </div>
+                                    </div>
+                                </TabPanel>
 
-                            <!-- Active Status -->
-                            <div class="flex items-center gap-2">
-                                <Checkbox
-                                    id="is_active"
-                                    v-model="form.is_active"
-                                    :binary="true"
-                                />
-                                <label for="is_active" class="text-sm text-gray-900">
-                                    Market is active and publicly accessible
-                                </label>
-                            </div>
+                                <!-- Tab 2: Content -->
+                                <TabPanel value="2">
+                                    <div class="flex flex-col gap-6 pt-4">
+                                        <!-- Tagline & Description -->
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <div class="col-span-2">
+                                                <label for="tagline" class="block text-sm font-medium text-gray-900 mb-2">Store Tagline</label>
+                                                <InputText id="tagline" v-model="form.tagline" placeholder="e.g., Premium Quality Products" class="w-full" />
+                                            </div>
+                                            <div class="col-span-2">
+                                                <label for="description" class="block text-sm font-medium text-gray-900 mb-2">Short Description</label>
+                                                <Textarea id="description" v-model="form.description" placeholder="Describe your market..." class="w-full" rows="2" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </TabPanel>
 
-                            <!-- Contact Information -->
-                            <div class="col-span-2 border-t pt-6">
-                                <h3 class="text-lg font-medium text-gray-900 mb-4">Contact Information</h3>
-                            </div>
+                                <!-- Tab 3: About Us -->
+                                <TabPanel value="3">
+                                    <div class="border-t pt-4">
+                                        <h4 class="text-md font-bold text-gray-800 mb-4">About Us Page Content</h4>
+                                        <div class="grid grid-cols-1 gap-4">
+                                            <div>
+                                                <label for="about_title" class="block text-sm font-medium text-gray-700 mb-2">Page Title</label>
+                                                <InputText id="about_title" v-model="form.about_us.title" placeholder="e.g. About Our Shop" class="w-full" />
+                                            </div>
+                                            <div>
+                                                <label for="about_content" class="block text-sm font-medium text-gray-700 mb-2">Content (Supports HTML)</label>
+                                                <Textarea id="about_content" v-model="form.about_us.content" rows="10" placeholder="Tell your story..." class="w-full" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </TabPanel>
 
-                            <!-- Contact Email -->
-                            <div>
-                                <label for="contact_email" class="block text-sm font-medium text-gray-900  mb-2">
-                                    Contact Email
-                                </label>
-                                <InputText
-                                    id="contact_email"
-                                    v-model="form.contact_email"
-                                    type="email"
-                                    placeholder="contact@yourmarket.com"
-                                    :class="{ 'p-invalid': form.errors.contact_email }"
-                                    class="w-full"
-                                />
-                                <small v-if="form.errors.contact_email" class="p-error">{{ form.errors.contact_email }}</small>
-                            </div>
+                                <!-- Tab 4: FAQ -->
+                                <TabPanel value="4">
+                                    <div class="flex flex-col gap-6 pt-4">
+                                        <div class="grid grid-cols-1 gap-4">
+                                            <div>
+                                                <label for="faq_title" class="block text-sm font-medium text-gray-900 mb-2">FAQ Page Title</label>
+                                                <InputText id="faq_title" v-model="form.faq.title" placeholder="e.g., Frequently Asked Questions" class="w-full" />
+                                            </div>
+                                            <div>
+                                                <label for="faq_description" class="block text-sm font-medium text-gray-900 mb-2">FAQ Description</label>
+                                                <Textarea id="faq_description" v-model="form.faq.description" placeholder="Brief FAQ description..." rows="2" class="w-full" />
+                                            </div>
+                                        </div>
 
-                            <!-- Contact Phone -->
-                            <div>
-                                <label for="contact_phone" class="block text-sm font-medium text-gray-900  mb-2">
-                                    Contact Phone
-                                </label>
-                                <InputText
-                                    id="contact_phone"
-                                    v-model="form.contact_phone"
-                                    type="tel"
-                                    placeholder="+1 (555) 123-4567"
-                                    :class="{ 'p-invalid': form.errors.contact_phone }"
-                                    class="w-full"
-                                />
-                                <small v-if="form.errors.contact_phone" class="p-error">{{ form.errors.contact_phone }}</small>
-                            </div>
+                                        <div class="border-t pt-6">
+                                            <div class="flex items-center justify-between mb-4">
+                                                <h4 class="text-md font-bold text-gray-800">Questions & Answers</h4>
+                                                <Button type="button" label="Add Question" icon="pi pi-plus" severity="info" size="small" @click="addQuestion" />
+                                            </div>
 
-                            <!-- Address -->
-                            <div class="col-span-2">
-                                <label for="address" class="block text-sm font-medium text-gray-900  mb-2">
-                                    Business Address
-                                </label>
-                                <Textarea
-                                    id="address"
-                                    v-model="form.address"
-                                    rows="2"
-                                    placeholder="123 Main Street, City, State 12345"
-                                    :class="{ 'p-invalid': form.errors.address }"
-                                    class="w-full"
-                                />
-                                <small v-if="form.errors.address" class="p-error">{{ form.errors.address }}</small>
-                            </div>
+                                            <div v-if="form.faq.questions.length > 0" class="space-y-4">
+                                                <div v-for="(question, index) in form.faq.questions" :key="index" class="p-4 border rounded-xl bg-gray-50 shadow-sm relative">
+                                                    <div class="flex items-center justify-between mb-4">
+                                                        <span class="text-xs font-bold text-gray-500 uppercase">Q&A #{{ index + 1 }}</span>
+                                                        <div class="flex gap-1">
+                                                            <Button v-if="index > 0" type="button" icon="pi pi-arrow-up" severity="secondary" size="small" text @click="moveQuestionUp(index)" />
+                                                            <Button v-if="index < form.faq.questions.length - 1" type="button" icon="pi pi-arrow-down" severity="secondary" size="small" text @click="moveQuestionDown(index)" />
+                                                            <Button type="button" icon="pi pi-trash" severity="danger" size="small" text @click="removeQuestion(index)" />
+                                                        </div>
+                                                    </div>
+                                                    <div class="space-y-4">
+                                                        <InputText v-model="question.question" placeholder="Question" class="w-full" />
+                                                        <Textarea v-model="question.answer" placeholder="Answer" rows="3" class="w-full" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div v-else class="p-12 border-2 border-dashed rounded-xl text-center text-gray-400">
+                                                <i class="pi pi-question-circle text-4xl mb-4"></i>
+                                                <p>No questions added yet.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </TabPanel>
 
-                            <!-- SEO Settings -->
-                            <div class="col-span-2 border-t pt-6">
-                                <h3 class="text-lg font-medium text-gray-900 mb-4">SEO Settings</h3>
-                            </div>
+                                <!-- Tab 5: SEO & Contact -->
+                                <TabPanel value="5">
+                                    <div class="flex flex-col gap-8 pt-4">
+                                        <!-- SEO Section -->
+                                        <div class="space-y-4">
+                                            <h4 class="text-md font-bold text-gray-800 border-b pb-2">Search Engine Optimization (SEO)</h4>
+                                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div>
+                                                    <label for="meta_title" class="block text-sm font-medium text-gray-700 mb-2">Meta Title</label>
+                                                    <InputText id="meta_title" v-model="form.meta_title" placeholder="Leave empty to auto-generate" class="w-full" />
+                                                </div>
+                                                <div>
+                                                    <label for="meta_description" class="block text-sm font-medium text-gray-700 mb-2">Meta Description</label>
+                                                    <Textarea id="meta_description" v-model="form.meta_description" rows="2" placeholder="Leave empty to auto-generate" class="w-full" />
+                                                </div>
+                                            </div>
+                                        </div>
 
-                            <!-- Meta Title -->
-                            <div>
-                                <label for="meta_title" class="block text-sm font-medium text-gray-900  mb-2">
-                                    Meta Title
-                                </label>
-                                <InputText
-                                    id="meta_title"
-                                    v-model="form.meta_title"
-                                    placeholder="Leave empty to auto-generate"
-                                    :class="{ 'p-invalid': form.errors.meta_title }"
-                                    class="w-full"
-                                />
-                                <small v-if="form.errors.meta_title" class="p-error">{{ form.errors.meta_title }}</small>
-                            </div>
-
-                            <!-- Meta Description -->
-                            <div>
-                                <label for="meta_description" class="block text-sm font-medium text-gray-900  mb-2">
-                                    Meta Description
-                                </label>
-                                <Textarea
-                                    id="meta_description"
-                                    v-model="form.meta_description"
-                                    rows="2"
-                                    placeholder="Leave empty to auto-generate"
-                                    :class="{ 'p-invalid': form.errors.meta_description }"
-                                    class="w-full"
-                                />
-                                <small v-if="form.errors.meta_description" class="p-error">{{ form.errors.meta_description }}</small>
-                            </div>
-                        </div>
+                                        <!-- Contact Section -->
+                                        <div class="space-y-4">
+                                            <h4 class="text-md font-bold text-gray-800 border-b pb-2">Public Contact Information</h4>
+                                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div>
+                                                    <label for="contact_email" class="block text-sm font-medium text-gray-700 mb-2">Contact Email</label>
+                                                    <InputText id="contact_email" v-model="form.contact_email" class="w-full" />
+                                                </div>
+                                                <div>
+                                                    <label for="contact_phone" class="block text-sm font-medium text-gray-700 mb-2">Contact Phone</label>
+                                                    <InputText id="contact_phone" v-model="form.contact_phone" class="w-full" />
+                                                </div>
+                                                <div class="col-span-2">
+                                                    <label for="address" class="block text-sm font-medium text-gray-700 mb-2">Physical Address</label>
+                                                    <Textarea id="address" v-model="form.address" rows="2" class="w-full" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </TabPanel>
+                            </TabPanels>
+                        </Tabs>
 
                         <!-- Form Actions -->
                         <div class="flex items-center justify-end gap-4 mt-8 pt-6 border-t">
-                            <Link 
-                                :href="route('ecommerce.markets.index')" 
-                                class=""
-                            >
-                                <Button 
-                                    label="Cancel" 
-                                    severity="secondary"
-                                    outlined
-                                />
+                            <Link :href="route('ecommerce.markets.index')">
+                                <Button label="Cancel" severity="secondary" outlined />
                             </Link>
 
                             <Button
@@ -413,14 +329,18 @@
 
 <script setup>
 import { ref, computed } from 'vue'
-import { useForm } from '@inertiajs/vue3'
+import { useForm, Link } from '@inertiajs/vue3'
 import AppLayout from '@/Layouts/AppLayout.vue'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import Textarea from 'primevue/textarea'
 import Dropdown from 'primevue/dropdown'
 import Checkbox from 'primevue/checkbox'
-import { Link } from '@inertiajs/vue3'
+import Tabs from 'primevue/tabs'
+import TabList from 'primevue/tablist'
+import Tab from 'primevue/tab'
+import TabPanels from 'primevue/tabpanels'
+import TabPanel from 'primevue/tabpanel'
 
 // Props
 const props = defineProps({
@@ -451,13 +371,22 @@ const form = useForm({
     logo: null,
     favicon: null,
     banners: [],
-    show_inventory_count: false,
     is_active: true,
     contact_email: '',
     contact_phone: '',
     address: '',
     meta_title: '',
     meta_description: '',
+    about_us: {
+        title: 'About Us',
+        content: '',
+        image_url: null
+    },
+    faq: {
+        title: 'Frequently Asked Questions',
+        description: 'Find answers to common questions about our products and services.',
+        questions: []
+    }
 })
 
 // Computed
@@ -529,4 +458,42 @@ const createMarket = () => {
         }
     })
 }
+
+const addQuestion = () => {
+    form.faq.questions.push({
+        id: `faq-${Date.now()}`,
+        question: '',
+        answer: '',
+        order: form.faq.questions.length + 1
+    });
+};
+
+const removeQuestion = (index) => {
+    form.faq.questions.splice(index, 1);
+    form.faq.questions.forEach((q, i) => {
+        q.order = i + 1;
+    });
+};
+
+const moveQuestionUp = (index) => {
+    if (index > 0) {
+        const temp = form.faq.questions[index];
+        form.faq.questions[index] = form.faq.questions[index - 1];
+        form.faq.questions[index - 1] = temp;
+        form.faq.questions.forEach((q, i) => {
+            q.order = i + 1;
+        });
+    }
+};
+
+const moveQuestionDown = (index) => {
+    if (index < form.faq.questions.length - 1) {
+        const temp = form.faq.questions[index];
+        form.faq.questions[index] = form.faq.questions[index + 1];
+        form.faq.questions[index + 1] = temp;
+        form.faq.questions.forEach((q, i) => {
+            q.order = i + 1;
+        });
+    }
+};
 </script>

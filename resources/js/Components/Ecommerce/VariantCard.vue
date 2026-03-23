@@ -5,13 +5,15 @@
             <div class="flex-none w-full lg:w-2/5 flex flex-col items-center justify-center p-8 bg-white border-b lg:border-b-0 lg:border-r border-gray-200">
                 <!-- Product Image -->
                 <div class="w-64 h-64 bg-white flex items-center justify-center rounded-lg mb-6 flex-shrink-0 overflow-hidden border border-gray-100 cursor-pointer hover:border-gray-300 transition-all duration-300 hover:shadow-xl hover:scale-105" @click="openImageModal" style="perspective: 1000px;">
-                    <img v-if="item.main_photo_thumb" 
+                    <img v-if="item.main_photo_thumb && !imageError" 
                          :src="item.main_photo_thumb" 
                          :alt="item.model"
                          class="w-full h-full object-contain transition-transform duration-300"
+                         @error="imageError = true"
                     />
-                    <svg v-else class="w-32 h-32 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                    <svg v-else class="w-24 h-36 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <rect x="5" y="1" width="14" height="22" rx="2" stroke-width="1.5" />
+                        <line x1="12" y1="19" x2="12" y2="19" stroke-width="3" stroke-linecap="round" />
                     </svg>
                 </div>
                 <!-- Product Name -->
@@ -160,6 +162,10 @@ const props = defineProps({
         default: false
     }
 })
+
+// State for image errors
+const imageError = ref(false)
+
 
 const emit = defineEmits(['toggle-condition', 'view-product', 'add-to-cart'])
 
