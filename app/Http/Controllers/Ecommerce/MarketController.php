@@ -5,12 +5,15 @@ namespace App\Http\Controllers\Ecommerce;
 use App\Http\Controllers\Controller;
 use App\Models\Ecommerce\Market;
 use App\Models\Item;
+use App\Traits\HasNaturalModelSorting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
 class MarketController extends Controller
 {
+    use HasNaturalModelSorting;
+
     /**
      * Display the market homepage with featured items and basic info.
      */
@@ -155,7 +158,7 @@ class MarketController extends Controller
                 'price_low' => $filteredItems->sortBy('selling_price'),
                 'price_high' => $filteredItems->sortByDesc('selling_price'),
                 'name' => $filteredItems->sortBy('model'),
-                default => $filteredItems->reverse(), // latest first
+                default => $this->applyHierarchicalModelSorting($filteredItems),
             };
 
             // Paginate manually
@@ -354,25 +357,8 @@ class MarketController extends Controller
                     $query->where('model', 'like', "%{$modelFilter}%");
                 }
 
-                // Apply sorting
-                switch ($sort) {
-                    case 'price_low':
-                        $query->orderBy('selling_price', 'asc');
-                        break;
-                    case 'price_high':
-                        $query->orderBy('selling_price', 'desc');
-                        break;
-                    case 'name':
-                        $query->orderBy('model', 'asc');
-                        break;
-                    case 'latest':
-                    default:
-                        $query->latest();
-                        break;
-                }
-
                 // Get items first
-                $items = $query->take($perPage * 2)->get(); // Get more to account for filtering
+                $items = $query->get();
 
                 // Load market items for visibility filtering
                 $marketItems = $market->marketItems()->whereIn('item_id', $items->pluck('id'))->get();
@@ -392,8 +378,16 @@ class MarketController extends Controller
                     return true;
                 });
 
+                // Apply hierarchical sorting if default, otherwise use requested sort
+                $sortedItems = match ($sort) {
+                    'price_low' => $filteredItems->sortBy('selling_price'),
+                    'price_high' => $filteredItems->sortByDesc('selling_price'),
+                    'name' => $filteredItems->sortBy('model'),
+                    default => $this->applyHierarchicalModelSorting($filteredItems),
+                };
+
                 // Get initial items for infinite scroll (first page only)
-                $initialItems = $filteredItems->take($perPage)->values();
+                $initialItems = $sortedItems->take($perPage)->values();
             }
 
             return Inertia::render('Ecommerce/PublicMarket/ProductsList', [

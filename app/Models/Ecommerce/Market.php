@@ -4,6 +4,7 @@ namespace App\Models\Ecommerce;
 
 use App\Models\Item;
 use App\Models\Shop;
+use App\Traits\HasNaturalModelSorting;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -17,7 +18,7 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 class Market extends Model implements HasMedia
 {
-    use HasFactory, InteractsWithMedia;
+    use HasFactory, HasNaturalModelSorting, InteractsWithMedia;
 
     /**
      * The attributes that are mass assignable.
@@ -539,28 +540,7 @@ class Market extends Model implements HasMedia
             'price_low' => $grouped->sortBy('min_price'),
             'price_high' => $grouped->sortByDesc('max_price'),
             'name' => $grouped->sortBy('model'),
-            default => $grouped->sort(function ($a, $b) {
-                $normalize = function ($m) {
-                    if (preg_match('/iPhone (X[RS]?)(.*)/i', $m, $matches)) {
-                        $val = '10';
-                        if (strtoupper($matches[1]) === 'XR') {
-                            $val = '10.1';
-                        }
-                        if (strtoupper($matches[1]) === 'XS') {
-                            $val = '10.2';
-                        }
-
-                        return 'iPhone '.$val.$matches[2];
-                    }
-
-                    return $m;
-                };
-
-                $normA = $normalize($a->model);
-                $normB = $normalize($b->model);
-
-                return strnatcasecmp($normB, $normA);
-            }),
+            default => $this->applyHierarchicalModelSorting($grouped),
         };
 
         // Create pagination manually

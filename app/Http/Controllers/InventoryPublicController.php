@@ -2,17 +2,20 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use App\Models\Company;
 use App\Models\Item;
-use Inertia\Inertia;
-use App\Models\Shop; // Make sure Shop model is imported
-use App\Models\Company; // Potentially needed if accessing company directly
-use App\Models\Tab; // Import Tab model for user tabs
-use Illuminate\Http\JsonResponse;
+use App\Models\Shop;
+use App\Models\Tab; // Make sure Shop model is imported
+use App\Traits\HasNaturalModelSorting; // Potentially needed if accessing company directly
+use Illuminate\Http\JsonResponse; // Import Tab model for user tabs
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Inertia\Inertia;
 
 class InventoryPublicController extends Controller
 {
+    use HasNaturalModelSorting;
+
     /**
      * Display a listing of the resource for a specific shop.
      * Uses shop slug for lookup with fallback to ID.
@@ -21,24 +24,24 @@ class InventoryPublicController extends Controller
     {
         $shop = null; // Initialize $shop
         $userTabs = []; // Initialize user tabs
-        
+
         try {
             // First try to find by slug
             $shop = Shop::where('slug', $shopSlug)->with(['company.owner'])->first();
-            
+
             // If not found and shopSlug looks like an ID (numeric), try by ID
-            if (!$shop && is_numeric($shopSlug)) {
+            if (! $shop && is_numeric($shopSlug)) {
                 $shop = Shop::where('id', $shopSlug)->with(['company.owner'])->first();
             }
-            
+
             // If still not found, try by name (final fallback)
-            if (!$shop) {
+            if (! $shop) {
                 // Convert underscores back to spaces for name lookup
                 $shopName = str_replace('_', ' ', $shopSlug);
                 $shop = Shop::where('name', $shopName)->with(['company.owner'])->first();
             }
-            
-            if (!$shop) {
+
+            if (! $shop) {
                 abort(404);
             }
 
@@ -69,14 +72,16 @@ class InventoryPublicController extends Controller
         }
 
         $items = Item::withoutGlobalScopes()
-            ->where("shop_id", $shop->id)
+            ->where('shop_id', $shop->id)
             // Option 1: Original - Assumes NULL means available
-            ->whereNull("sold")
-            ->whereNull("hold")
+            ->whereNull('sold')
+            ->whereNull('hold')
             ->whereNotNull('model')
             ->whereNotIn('id', \App\Models\TabItem::pluck('item_id')) // Exclude items in tabs
             ->get();
 
+        // Apply hierarchical sorting (Apple -> Samsung -> Google -> Others, Newest models first)
+        $items = $this->applyHierarchicalModelSorting($items)->values();
 
         return Inertia::render('PublicInventory/Index', [
             'items' => $items,
@@ -97,7 +102,7 @@ class InventoryPublicController extends Controller
             'manufacturers.*' => 'string',
         ]);
 
-        $manufacturers = array_map(fn($m) => mb_strtolower(trim($m)), $data['manufacturers']);
+        $manufacturers = array_map(fn ($m) => mb_strtolower(trim($m)), $data['manufacturers']);
 
         if (empty($manufacturers)) {
             return response()->json(['models' => []]);
@@ -116,7 +121,7 @@ class InventoryPublicController extends Controller
 
         // Normalize models: remove storage sizes like '128GB', parentheses content, punctuation and collapse whitespace
         $normalized = collect($models)->map(function ($model) {
-            $m = trim((string)$model);
+            $m = trim((string) $model);
             // Remove parenthetical notes: "(Unlocked)", etc.
             $m = preg_replace('/\(.+?\)/u', ' ', $m);
             // Remove storage sizes like '128GB', '256 GB', case-insensitive
@@ -128,6 +133,7 @@ class InventoryPublicController extends Controller
             // Collapse multiple spaces into one
             $m = preg_replace('/\s+/u', ' ', $m);
             $m = trim($m);
+
             return mb_strtolower($m);
         })->filter()->unique()->values()->sort()->map(function ($m) {
             return ['label' => mb_convert_case($m, MB_CASE_TITLE, 'UTF-8'), 'value' => $m];
@@ -135,6 +141,7 @@ class InventoryPublicController extends Controller
 
         return response()->json(['models' => $normalized]);
     }
+
     /*
      * Show the form for creating a new resource.
      */
