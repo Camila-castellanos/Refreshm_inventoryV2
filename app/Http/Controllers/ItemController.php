@@ -3,9 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Exports\ItemsExample;
-use App\Http\Requests\ItemExcelForm;
 use App\Http\Requests\ItemForm;
-use App\Http\Requests\ItemsWithBillForm;
 use App\Http\Requests\RequestItemsForm;
 use App\Imports\ItemsImport;
 use App\Mail\RequestItems;
@@ -15,8 +13,6 @@ use App\Models\CustomField;
 use App\Models\IncomingRequest;
 use App\Models\IncomingRequestItem;
 use App\Models\Item;
-use App\Models\Manufacturer;
-use App\Models\Models;
 use App\Models\ReturnItems;
 use App\Models\Sale;
 use App\Models\Storage;
@@ -26,9 +22,9 @@ use App\Models\TabItem;
 use App\Models\Tax;
 use App\Models\User;
 use App\Models\Vendor;
+use App\Traits\HasNaturalModelSorting;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
-use Exception;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -40,6 +36,8 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class ItemController extends Controller
 {
+    use HasNaturalModelSorting;
+
     /**
      * Display a listing of the resource.
      */
@@ -1627,6 +1625,9 @@ class ItemController extends Controller
                 ->whereNull('items.hold')
                 ->with(['storage:id,name,limit', 'vendor:id,vendor'])
                 ->get();
+
+            // Apply hierarchical sorting (Apple -> Samsung -> Google -> Others, Newest models first)
+            $items = $this->applyHierarchicalModelSorting($items)->values();
 
             return response()->json(['items' => $items], 200);
         } catch (\Throwable $e) {
