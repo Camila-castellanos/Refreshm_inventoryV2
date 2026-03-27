@@ -68,4 +68,30 @@ class NaturalModelSortingTest extends TestCase
         $this->assertEquals('iPhone 10.1 64GB', $this->normalizeModelName('iPhone XR 64GB'));
         $this->assertEquals('iPhone 10.2 Max', $this->normalizeModelName('iPhone XS Max'));
     }
+
+    public function test_iphone_se_appears_at_end_with_generation_order(): void
+    {
+        $items = collect([
+            ['model' => 'iPhone 15', 'manufacturer' => 'Apple'],
+            ['model' => 'iPhone SE 3rd Gen', 'manufacturer' => 'Apple'],
+            ['model' => 'iPhone 11', 'manufacturer' => 'Apple'],
+            ['model' => 'iPhone SE 2nd Gen', 'manufacturer' => 'Apple'],
+            ['model' => 'iPhone 8', 'manufacturer' => 'Apple'],
+            ['model' => 'iPhone SE', 'manufacturer' => 'Apple'],
+            // Additional variations that might exist in database
+            ['model' => 'iPhone SE 64GB', 'manufacturer' => 'Apple'],
+            ['model' => 'iPhone SE (AT&T)', 'manufacturer' => 'Apple'],
+        ]);
+
+        $sorted = $this->applyNaturalModelSorting($items)->values();
+
+        // Expected order (Newest first, SE at end): 15 -> 11 -> 8 -> SE 3rd -> SE 2nd -> SE (original + variations)
+        $this->assertEquals('iPhone 15', $sorted[0]['model']);
+        $this->assertEquals('iPhone 11', $sorted[1]['model']);
+        $this->assertEquals('iPhone 8', $sorted[2]['model']);
+        $this->assertEquals('iPhone SE 3rd Gen', $sorted[3]['model']);
+        $this->assertEquals('iPhone SE 2nd Gen', $sorted[4]['model']);
+        // All SE variations should be at the end
+        $this->assertStringStartsWith('iPhone SE', $sorted[5]['model']);
+    }
 }
