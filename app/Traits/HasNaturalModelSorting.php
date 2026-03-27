@@ -7,10 +7,29 @@ use Illuminate\Support\Collection;
 trait HasNaturalModelSorting
 {
     /**
-     * Normalize model names for natural sorting (specifically for iPhone X family)
+     * Normalize model names for natural sorting (specifically for iPhone X family and SE)
      */
     protected function normalizeModelName(string $model): string
     {
+        // Handle iPhone SE (push to end with generation priority)
+        // Match "iPhone SE 3rd Gen", "iPhone SE (3rd Gen)", "iPhone SE 2nd Gen", etc.
+        if (preg_match('/iPhone\s+SE\s+(3rd|2nd)/i', $model, $matches)) {
+            $gen = strtolower($matches[1]);
+            $val = '0.3'; // 3rd Gen
+            if ($gen === '2nd') {
+                $val = '0.2'; // 2nd Gen
+            }
+
+            return 'iPhone '.$val;
+        }
+
+        // Handle original iPhone SE (with or without extra text like carriers)
+        // Match "iPhone SE", "iPhone SE 64GB", "iPhone SE (AT&T)", etc. but NOT "iPhone SE 3rd"
+        if (preg_match('/iPhone\s+SE\b/i', $model)) {
+            return 'iPhone 0.1';
+        }
+
+        // Handle iPhone X family
         if (preg_match('/iPhone (X[RS]?)(.*)/i', $model, $matches)) {
             $val = '10';
             if (strtoupper($matches[1]) === 'XR') {
