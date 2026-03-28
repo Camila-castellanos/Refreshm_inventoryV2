@@ -7,5 +7,10 @@ use Illuminate\Database\Eloquent\Model;
 
 class TabHistory extends Model
 {
-  use HasFactory;
+    use HasFactory;
+
+    protected $fillable = [
+        'tab_id',
+        'item_id',
+    ];
 }
