@@ -2,11 +2,20 @@
 
 namespace App\Models;
 
+use Database\Factories\LoginActivityFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Crypt;
 
 class LoginActivity extends Model
 {
+    use HasFactory;
+
+    protected static function newFactory(): LoginActivityFactory
+    {
+        return LoginActivityFactory::new();
+    }
+
     protected $fillable = [
         'user_id',
         'login_at',

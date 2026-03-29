@@ -159,4 +159,47 @@ class UtilitiesTest extends TestCaseWithCompany
         $this->assertFalse($data['found']);
         $this->assertEquals(0, $data['count']);
     }
+
+    public function test_search_position_requires_authentication(): void
+    {
+        $storage = $this->createStorage();
+
+        $response = $this->post('/utilities/search-position', [
+            'storage_id' => $storage->id,
+            'position' => 1,
+        ]);
+
+        $response->assertRedirect('/login');
+    }
+
+    public function test_find_position_page_requires_authentication(): void
+    {
+        $response = $this->get('/utilities/find-position');
+
+        $response->assertRedirect('/login');
+    }
+
+    public function test_search_position_validates_storage_exists(): void
+    {
+        $response = $this->actingAs($this->owner)
+            ->post('/utilities/search-position', [
+                'storage_id' => 99999,
+                'position' => 1,
+            ]);
+
+        $response->assertStatus(302);
+    }
+
+    public function test_search_position_validates_position_integer(): void
+    {
+        $storage = $this->createStorage();
+
+        $response = $this->actingAs($this->owner)
+            ->post('/utilities/search-position', [
+                'storage_id' => $storage->id,
+                'position' => 'not-a-number',
+            ]);
+
+        $response->assertStatus(302);
+    }
 }
