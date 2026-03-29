@@ -317,11 +317,12 @@ class SalesReturnTest extends TestCaseWithCompany
     {
         $sale = Sale::factory()->create([
             'user_id' => $this->owner->id,
-            'subtotal' => 200.00,
-            'total' => 226.00,
+            'subtotal' => 100.00,
+            'total' => 113.00,
             'tax' => 13.00,
-            'flatTax' => 26.00,
-            'balance_remaining' => 226.00,
+            'flatTax' => 13.00,
+            'balance_remaining' => 113.00,
+            'discount' => 0,
         ]);
 
         $item = Item::withoutGlobalScopes()->create([
@@ -331,6 +332,7 @@ class SalesReturnTest extends TestCaseWithCompany
             'sale_id' => $sale->id,
             'sold' => now(),
             'selling_price' => 100.00,
+            'cost' => 50.00,
         ]);
 
         $this->actingAs($this->owner)->put('/inventory/items/return', [
@@ -338,6 +340,7 @@ class SalesReturnTest extends TestCaseWithCompany
         ]);
 
         $sale->refresh();
-        $this->assertEquals(200.00 - 100.00, $sale->subtotal);
+
+        $this->assertEquals(0.00, (float) $sale->subtotal);
     }
 }
