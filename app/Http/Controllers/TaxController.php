@@ -239,7 +239,7 @@ class TaxController extends Controller
                         } else {
                             $newBalance = $newBalance - $bill->amount_paid;
                         }
-                        $sale->update([
+                        $bill->update([
                             'flat_tax' => $newFlatTax,
                             'tax' => $tax['percentage'],
                             'total' => $newTotal,

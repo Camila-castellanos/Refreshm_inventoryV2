@@ -119,6 +119,11 @@ class CompanyController extends Controller
             abort(403, 'Cannot modify your own role here.');
         }
 
+        // Prevent admin from modifying owner
+        if ($member->role === 'OWNER') {
+            abort(403, 'Cannot modify the owner role.');
+        }
+
         $validated = $request->validate([
             'role' => ['required', 'in:ADMIN,USER'],
         ]);
@@ -174,6 +179,11 @@ class CompanyController extends Controller
 
         if ($member->id === $user->id) {
             abort(403, 'Cannot remove yourself.');
+        }
+
+        // Prevent admin from removing owner
+        if ($member->role === 'OWNER') {
+            abort(403, 'Cannot remove the owner.');
         }
 
         $member->delete();

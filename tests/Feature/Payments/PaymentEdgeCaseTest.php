@@ -9,7 +9,7 @@ use Tests\TestCaseWithCompany;
 
 class PaymentEdgeCaseTest extends TestCaseWithCompany
 {
-    public function test_payment_with_zero_amount_fails(): void
+    public function test_payment_with_zero_amount_does_not_process(): void
     {
         $sale = Sale::factory()->create([
             'user_id' => $this->owner->id,
@@ -36,7 +36,10 @@ class PaymentEdgeCaseTest extends TestCaseWithCompany
                 'paidPaymentAccount' => 'Bank Account',
             ]);
 
-        $response->assertStatus(500);
+        $response->assertStatus(200);
+
+        $sale->refresh();
+        $this->assertEquals(100.00, $sale->balance_remaining);
     }
 
     public function test_payment_greater_than_balance(): void
@@ -208,7 +211,7 @@ class PaymentEdgeCaseTest extends TestCaseWithCompany
         $response->assertStatus(302);
     }
 
-    public function test_payment_with_negative_amount(): void
+    public function test_payment_with_negative_amount_does_not_process(): void
     {
         $sale = Sale::factory()->create([
             'user_id' => $this->owner->id,
@@ -234,7 +237,10 @@ class PaymentEdgeCaseTest extends TestCaseWithCompany
                 'paidPaymentAccount' => 'Bank Account',
             ]);
 
-        $response->assertStatus(500);
+        $response->assertStatus(200);
+
+        $sale->refresh();
+        $this->assertEquals(100.00, $sale->balance_remaining);
     }
 
     public function test_payment_with_decimal_amount(): void

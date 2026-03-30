@@ -254,6 +254,7 @@ class PaymentController extends Controller
         $totalAmount = $request->amount;
         $sale = Sale::where('id', $request->sale_id)->first();
         $item = Item::where('sale_id', $request->sale_id)->first();
+
         if ($item && $totalAmount > 0) {
             $amt = $totalAmount + $sale['amount_paid'];
             $amount = $amt;
@@ -279,18 +280,18 @@ class PaymentController extends Controller
                     'balance' => $old_cash + $amount,
                 ]);
             }
-        }
 
-        Payment::insert([
-            'sale_id' => $item->sale_id,
-            'amount_paid' => $request->amount,
-            'balance_remaining' => round($balance, 2),
-            'payment_method' => $request->paidPaymentMethod,
-            'payment_account' => $request->paidPaymentAccount,
-            'payment_date' => $request->paidDate,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+            Payment::insert([
+                'sale_id' => $item->sale_id,
+                'amount_paid' => $request->amount,
+                'balance_remaining' => round($balance, 2),
+                'payment_method' => $request->paidPaymentMethod,
+                'payment_account' => $request->paidPaymentAccount,
+                'payment_date' => $request->paidDate,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
     }
 
     public function removePayment(Request $request)
