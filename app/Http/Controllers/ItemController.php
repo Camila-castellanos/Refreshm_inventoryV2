@@ -1565,15 +1565,43 @@ class ItemController extends Controller
                 }
 
                 // Clone the query before consuming it with first()/get()
-                $qForMatch = (clone $q)
-                    ->orderByRaw('CASE WHEN sold IS NULL THEN 0 ELSE 1 END ASC')
-                    ->orderByDesc('date')
+                $qForMatch = clone $q;
+
+                // 1. Priorizar que no esté vendido
+                $qForMatch->orderByRaw('CASE WHEN sold IS NULL THEN 0 ELSE 1 END ASC');
+
+                // 2. Priorizar coincidencia EXACTA de batería
+                if ($battery) {
+                    $qForMatch->orderByRaw('CASE WHEN battery = ? THEN 0 ELSE 1 END ASC', [$battery]);
+                }
+
+                // 3. Luego sí desempatar por fecha y por último por ID
+                $qForMatch->orderByDesc('date')
                     ->orderByDesc('id');
 
                 $qForList = (clone $qForMatch);
 
                 $match = $qForMatch->first(['id', 'selling_price', 'model']);
-                $completelist = $qForList->get(['id', 'selling_price', 'model', 'battery', 'grade', 'issues', 'created_at', 'updated_at', 'sold']);
+                $completelist = $qForList->get(['id', 'selling_price', 'model', 'battery', 'grade', 'issues', 'date', 'created_at', 'updated_at', 'sold']);
+
+                $foundPricesDebug = $completelist->map(function ($i) {
+                    return [
+                        'id' => $i->id,
+                        'price' => $i->selling_price,
+                        'battery' => $i->battery,
+                        'date' => $i->date,
+                        'sold' => $i->sold ? 'Yes' : 'No',
+                    ];
+                })->toArray();
+
+                /* Log::debug('generateSellingPrice DEBUG prices found for item:', [
+                    'input_item' => [
+                        'model' => $model,
+                        'battery' => $battery,
+                        'grade' => $grade,
+                    ],
+                    'found_prices_list' => $foundPricesDebug,
+                ]); */
 
                 Log::info('generateSellingPrice all matches found', [
                     'total_matches' => $completelist->count(),
@@ -1582,6 +1610,11 @@ class ItemController extends Controller
 
                 if ($match) {
                     $foundPrice = round(floatval($match->selling_price), 2);
+                    /* Log::debug('generateSellingPrice DEBUG FINAL price chosen:', [
+                        'chosen_id' => $match->id,
+                        'chosen_price' => $foundPrice,
+                    ]); */
+
                     Log::info('generateSellingPrice match selected', [
                         'model' => $match->model ?? null,
                         'selling_price' => $foundPrice,
@@ -1589,6 +1622,8 @@ class ItemController extends Controller
                         'matched_item_id' => $match->id ?? null,
                     ]);
                 } else {
+                    /* Log::debug('generateSellingPrice DEBUG FINAL price chosen: NONE (no match)'); */
+
                     Log::info('generateSellingPrice no match found', [
                         'input_item_id' => $item['id'] ?? null,
                         'tried_fields' => implode('+', $available),
