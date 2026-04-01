@@ -1567,7 +1567,8 @@ class ItemController extends Controller
                 // Clone the query before consuming it with first()/get()
                 $qForMatch = (clone $q)
                     ->orderByRaw('CASE WHEN sold IS NULL THEN 0 ELSE 1 END ASC')
-                    ->orderByDesc('date');
+                    ->orderByDesc('date')
+                    ->orderByDesc('id');
 
                 $qForList = (clone $qForMatch);
 
