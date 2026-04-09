@@ -299,6 +299,16 @@ class DashboardController extends Controller
         $expensesThisMonth = Expense::whereBetween('date', [$startOfMonth, $endOfMonth])
             ->sum('total');
 
+        $expenseBreakdown = Expense::whereBetween('date', [$startOfMonth, $endOfMonth])
+            ->selectRaw('category, SUM(total) as total')
+            ->groupBy('category')
+            ->orderBy('total', 'desc')
+            ->get()
+            ->map(fn ($item) => [
+                'category' => $item->category,
+                'total' => round($item->total),
+            ]);
+
         // Impuestos cobrados usando sum() condicional
         $salesTaxCollected = Sale::whereNotNull('tax_id')
             ->whereBetween('date', [$startOfMonth, $endOfMonth])
@@ -324,6 +334,7 @@ class DashboardController extends Controller
         return [
             'cashOnHand' => $cashOnHand,
             'expensesThisMonth' => round($expensesThisMonth),
+            'expenseBreakdown' => $expenseBreakdown,
             'accountsReceivableThisMonth' => round($accountsReceivable),
             'accountsPayableThisMonth' => round($accountsPayable),
             'salesTaxCollected' => round($salesTaxCollected),

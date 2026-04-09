@@ -34,8 +34,9 @@ const MockFloatLabel = defineComponent({
 // Mock para StatCard que verifica props
 const MockStatCard = defineComponent({
   name: 'StatCard',
-  props: ['label', 'value', 'icon', 'color', 'currency', 'editable'],
-  template: '<div class="stat-card-mock" :data-label="label" :data-value="value" :data-currency="currency || \'\'" :data-editable="editable"><span class="label">{{ label }}</span><span class="value">{{ currency }}{{ value }}</span></div>',
+  props: ['label', 'value', 'icon', 'color', 'currency', 'editable', 'clickable'],
+  emits: ['click'],
+  template: '<div class="stat-card-mock" :data-label="label" :data-value="value" :data-currency="currency || \'\'" :data-editable="editable" :data-clickable="clickable" @click="$emit(\'click\')"><span class="label">{{ label }}</span><span class="value">{{ currency }}{{ value }}</span></div>',
 });
 
 const MockGlobalSearchBar = defineComponent({
@@ -51,6 +52,12 @@ const MockIncomingRequestsDrawer = defineComponent({
 const MockAppLayout = defineComponent({
   name: 'AppLayout',
   template: '<div class="app-layout-mock"><slot></slot></div>',
+});
+
+const MockExpenseBreakdownModal = defineComponent({
+  name: 'ExpenseBreakdownModal',
+  props: ['modelValue', 'breakdown'],
+  template: '<div class="expense-breakdown-modal-mock" :data-visible="modelValue"></div>',
 });
 
 // Mock para useToast - factory function sin referencias externas
@@ -108,6 +115,10 @@ describe('Dashboard.vue - Initial Rendering', () => {
     taxedSales: 30000.00,
     nonTaxedSales: 15000.00,
     totalPurchases: 20000.00,
+    expenseBreakdown: [
+      { category: 'Utilities', total: 100 },
+      { category: 'Rent', total: 7900.25 }
+    ]
   };
 
   const createWrapper = () => {
@@ -127,6 +138,7 @@ describe('Dashboard.vue - Initial Rendering', () => {
           GlobalSearchBar: MockGlobalSearchBar,
           IncomingRequestsDrawer: MockIncomingRequestsDrawer,
           AppLayout: MockAppLayout,
+          ExpenseBreakdownModal: MockExpenseBreakdownModal,
           Button: true,
           Card: true,
           InputNumber: true,
@@ -138,6 +150,8 @@ describe('Dashboard.vue - Initial Rendering', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // Default mock for axios.post to prevent errors in applyFilter
+    vi.mocked(axios.post).mockResolvedValue({ data: mockDashboardData, status: 200 });
   });
 
   describe('User Welcome Message', () => {
@@ -1101,6 +1115,41 @@ describe('Dashboard.vue - Initial Rendering', () => {
     it('returns default config for unknown label', () => {
       const config = wrapper.vm.getStatConfig("Unknown Label");
       expect(config).toEqual({ icon: "pi-chart-bar", color: "gray" });
+    });
+  });
+
+  describe('Expense Breakdown Modal Integration', () => {
+    beforeEach(() => {
+      wrapper = createWrapper();
+    });
+
+    it('shows ExpenseBreakdownModal when Expenses card is clicked', async () => {
+      // Find the Expenses card
+      const expensesCard = wrapper.find('[data-label="Expenses ($)"]');
+      expect(expensesCard.exists()).toBe(true);
+      
+      // Initially modal visibility should be false (we need to check if it's defined in vm)
+      expect(wrapper.vm.showExpensesModal).toBe(false);
+      
+      // Click the card
+      await expensesCard.trigger('click');
+      
+      // Visibility should be true
+      expect(wrapper.vm.showExpensesModal).toBe(true);
+      
+      // Check if modal mock is "visible"
+      const modal = wrapper.findComponent(MockExpenseBreakdownModal);
+      expect(modal.props('modelValue')).toBe(true);
+    });
+
+    it('passes expenseBreakdown prop to ExpenseBreakdownModal', () => {
+      const modal = wrapper.findComponent(MockExpenseBreakdownModal);
+      expect(modal.props('breakdown')).toEqual(mockDashboardData.expenseBreakdown);
+    });
+    
+    it('sets clickable prop on Expenses stat card', () => {
+       const expensesCard = wrapper.find('[data-label="Expenses ($)"]');
+       expect(expensesCard.attributes('data-clickable')).toBe('true');
     });
   });
 });

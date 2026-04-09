@@ -311,6 +311,11 @@ export interface Storage {
   items: Item[];
 }
 
+export interface ExpenseBreakdown {
+  category: string | null;
+  total: number;
+}
+
 export interface Dashboard {
   devicesInInventory: number;
   tradesThisMonth: number;
@@ -325,6 +330,7 @@ export interface Dashboard {
   endDate: string;
   cashOnHand: string;
   expensesThisMonth: number;
+  expenseBreakdown: ExpenseBreakdown[];
   accountsReceivableThisMonth: number;
   accountsPayableThisMonth: number;
   salesTaxCollected: number;
