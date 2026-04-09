@@ -31,7 +31,7 @@
       <div class="grid grid-cols-2 grow  md:grid-cols-3 lg:grid-cols-4 gap-4 mt-6">
         <StatCard v-for="stat in inventoryStats" :key="stat.label" :label="stat.label" :value="stat.value"
           :icon="getStatConfig(stat.label).icon" :color="getStatConfig(stat.label).color"
-          :currency="stat.currency ? '$' : ''" />
+          :currency="stat.currency ? '$' : ''" :clickable="stat.clickable" />
       </div>
 
       <div class="mt-12 -mb-2 font-bold">
@@ -42,7 +42,8 @@
       <div class="grid grid-cols-2 grow  md:grid-cols-3 lg:grid-cols-4 gap-4 mt-6">
         <StatCard v-for="stat in salesStats" :key="stat.label" :label="stat.label" :value="stat.value"
           :icon="getStatConfig(stat.label).icon" :color="getStatConfig(stat.label).color"
-          :currency="stat.currency ? '$' : ''" />
+          :currency="stat.currency ? '$' : ''" :clickable="stat.clickable"
+          @click="stat.label === 'Expenses ($)' ? (showExpensesModal = true) : null" />
       </div>
 
       <div class="mt-12 -mb-2 font-bold">
@@ -53,7 +54,7 @@
       <div class="grid grid-cols-2 grow  md:grid-cols-3 lg:grid-cols-4 gap-4 mt-6">
         <StatCard v-for="stat in accountingStats" :key="stat.label" :label="stat.label" :value="stat.value"
           :currency="'$'" :icon="getStatConfig(stat.label).icon" :color="getStatConfig(stat.label).color"
-          @update="handleCashOnHandUpdate" :editable="stat?.editable"/>
+          @update="handleCashOnHandUpdate" :editable="stat?.editable" :clickable="stat.clickable" />
       </div>
 
       <div v-if="user.role === 'OWNER'">
@@ -77,6 +78,7 @@
     </div>
     <IncomingRequestsDrawer />
     <RecentLoginsModal v-model="showLoginsModal" :logins="recentLogins" />
+    <ExpenseBreakdownModal v-model="showExpensesModal" :breakdown="expenseBreakdown" />
   </AppLayout>
 </template>
 
@@ -96,6 +98,7 @@ import StatCard from "@/Components/StatCard.vue";
 import GlobalSearchBar from "@/Components/GlobalSearchBar.vue";
 import IncomingRequestsDrawer from '@/Components/IncomingRequestsDrawer.vue';
 import RecentLoginsModal from "@/Components/RecentLoginsModal.vue";
+import ExpenseBreakdownModal from "@/Components/ExpenseBreakdownModal.vue";
 
 const toast = useToast();
 
@@ -105,8 +108,10 @@ const calendarValue = ref<Date | Date[] | null>(null);
 
 interface Stat {
   label: string;
-  value: number;
+  value: any;
   currency?: boolean;
+  clickable?: boolean;
+  editable?: boolean;
 }
 
 const props = defineProps<{ auth: { user: User } } & Dashboard>();
@@ -119,6 +124,8 @@ const userStats: Ref<Stat[]> = ref([]);
 const recentLogins: Ref<any[]> = ref([]);
 const showPlatformStats = ref(false);
 const showLoginsModal = ref(false);
+const showExpensesModal = ref(false);
+const expenseBreakdown = ref(props.expenseBreakdown || []);
 
 const quickFilter: Ref<string | null> = ref(null);
 
@@ -270,7 +277,6 @@ async function applyFilter() {
     console.error("applyFilter() error", error);
   } finally {
     isLoading.value = false;
-    console.log("applyFilter() completed");
   }
 }
 
@@ -308,7 +314,7 @@ function updateDashboardStats(data: Dashboard) {
   salesStats.value = [
     { label: "Revenue ($)", value: data.soldValueThisMonth, currency: true },
     { label: "Gross Profit ($)", value: data.profitThisMonth, currency: true },
-    { label: "Expenses ($)", value: data.expensesThisMonth, currency: true },
+    { label: "Expenses ($)", value: data.expensesThisMonth, currency: true, clickable: true },
     { label: "Net Profit ($)", value: data.profitThisMonth - data.expensesThisMonth, currency: true },
   ];
 
@@ -316,12 +322,14 @@ function updateDashboardStats(data: Dashboard) {
     { label: "Total Purchases ($)", value: data.totalPurchases, currency: true },
     { label: "Accounts Receivable ($)", value: data.accountsReceivableThisMonth, currency: true },
     { label: "Accounts Payable ($)", value: data.accountsPayableThisMonth, currency: true },
-    { label: "Cash on Hand ($)", value: data?.cashOnHand ? parseFloat(props.cashOnHand).toFixed(2) : 0, currency: true, editable: true },
+    { label: "Cash on Hand ($)", value: data?.cashOnHand ? parseFloat(data.cashOnHand).toFixed(2) : 0, currency: true, editable: true },
     { label: "Sales Tax Paid ($)", value: data.salesTaxPaid, currency: true },
     { label: "Sales Tax Collected ($)", value: data.salesTaxCollected, currency: true },
     { label: "Taxed Sales ($)", value: data.taxedSales, currency: true },
     { label: "Non-taxed Sales ($)", value: data.nonTaxedSales, currency: true },
   ];
+
+  expenseBreakdown.value = data.expenseBreakdown || [];
 
   if (user.value.role === 'OWNER') {
     userStats.value = [
@@ -333,7 +341,6 @@ function updateDashboardStats(data: Dashboard) {
 }
 
 onMounted(() => {
-console.log("Dashboard mounted with props:", props);
   updateDashboardStats(props);
 });
 
