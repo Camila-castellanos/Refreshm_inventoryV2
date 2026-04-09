@@ -14,7 +14,7 @@ class IncomingRequestItem extends Model
     protected $fillable = [
         'incoming_request_id', 'original_item_id', 'date', 'supplier', 'manufacturer',
         'storage_id', 'position', 'model', 'colour', 'battery', 'grade', 'issues', 'cost', 'imei',
-        'selling_price', 'customer', 'user_id', 'vendor_id', 'shop_id', 'type', 'currency'
+        'selling_price', 'customer', 'user_id', 'vendor_id', 'shop_id', 'type', 'currency',
     ];
 
     protected $casts = [
@@ -28,6 +28,6 @@ class IncomingRequestItem extends Model
 
     public function originalItem()
     {
-        return $this->belongsTo(Item::class, 'original_item_id');
+        return $this->belongsTo(Item::class, 'original_item_id')->withoutGlobalScopes();
     }
 }
