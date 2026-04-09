@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Exports\ItemsExample;
+use App\Http\Requests\ItemExcelForm;
 use App\Http\Requests\ItemForm;
+use App\Http\Requests\ItemsWithBillForm;
 use App\Http\Requests\RequestItemsForm;
 use App\Imports\ItemsImport;
 use App\Mail\RequestItems;
@@ -25,6 +27,7 @@ use App\Models\Vendor;
 use App\Traits\HasNaturalModelSorting;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
+use Exception;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -320,43 +323,53 @@ class ItemController extends Controller
                 $it = (array) $it;
             }
 
-            // If item has an id, fetch the full item data from DB
-            if (isset($it['id']) && is_numeric($it['id'])) {
-                $dbItem = Item::find((int) $it['id']);
-                if ($dbItem) {
-                    $fullItem = $dbItem->toArray();
+            // Ensure we have a valid ID to work with
+            if (! isset($it['id']) || ! is_numeric($it['id'])) {
+                return null;
+            }
 
-                    // Secure price calculation: Ignore frontend price, use database price
-                    $cadPrice = $dbItem->selling_price;
-                    $currency = $it['currency'] ?? 'CAD';
-                    $finalPrice = $cadPrice;
+            // Fetch the full item data from DB (ignoring scopes to get details)
+            $dbItem = Item::withoutGlobalScopes()->find((int) $it['id']);
+            if (! $dbItem) {
+                return null;
+            }
 
-                    // If user requested in USD, recalculate using our server-side rate
-                    if ($currency === 'USD') {
-                        $exchangeResponse = app(\App\Http\Controllers\ExchangeRateController::class)->getExchangeRate();
-                        $rateData = $exchangeResponse->getData();
+            $fullItem = $dbItem->toArray();
 
-                        if (isset($rateData->success) && $rateData->success && isset($rateData->rate)) {
-                            // Replicate the exact math used in the frontend
-                            $finalPrice = round($cadPrice / $rateData->rate);
-                        } else {
-                            // Fallback if exchange rate API fails
-                            $currency = 'CAD';
-                        }
-                    }
+            // Secure price calculation: Ignore frontend price, use database price
+            $cadPrice = $dbItem->selling_price;
+            $currency = $it['currency'] ?? 'CAD';
+            $finalPrice = $cadPrice;
 
-                    // Apply the secured price and currency to the order snapshot
-                    $fullItem['selling_price'] = $finalPrice;
-                    $fullItem['currency'] = $currency;
+            // If user requested in USD, recalculate using our server-side rate
+            if ($currency === 'USD') {
+                $exchangeResponse = app(\App\Http\Controllers\ExchangeRateController::class)->getExchangeRate();
+                $rateData = $exchangeResponse->getData();
 
-                    return $fullItem;
+                if (isset($rateData->success) && $rateData->success && isset($rateData->rate)) {
+                    // Replicate the exact math used in the frontend
+                    $finalPrice = round($cadPrice / $rateData->rate);
+                } else {
+                    // Fallback if exchange rate API fails
+                    $currency = 'CAD';
                 }
             }
 
-            return is_array($it) ? $it : null;
+            // Apply the secured price and currency to the order snapshot
+            $fullItem['selling_price'] = $finalPrice;
+            $fullItem['currency'] = $currency;
+
+            return $fullItem;
         })->filter()->values();
 
         $uniqueItems = $itemsNormalized->unique('id')->values()->all();
+
+        if (empty($uniqueItems)) {
+            return response()->json([
+                'saved' => false,
+                'message' => 'No valid items were found for this request.',
+            ], 422);
+        }
 
         // Determine request owner: use the first non-null item's user_id if present, otherwise current user
         $requestUserId = Auth::id();
@@ -367,42 +380,60 @@ class ItemController extends Controller
             }
         }
 
-        // Persist incoming request
-        $shippingData = $data['shipping'] ?? null;
-        $incoming = IncomingRequest::create([
-            'name' => $name,
-            'email' => $email,
-            'store' => $store,
-            'notes' => $notes,
-            'user_id' => $requestUserId,
-            'shipping' => $shippingData,
-        ]);
+        try {
+            DB::beginTransaction();
 
-        // Persist each requested item as a snapshot
-        foreach ($uniqueItems as $it) {
-            IncomingRequestItem::create([
-                'incoming_request_id' => $incoming->id,
-                'original_item_id' => $it['id'] ?? null,
-                'date' => $it['date'] ?? null,
-                'supplier' => $it['supplier'] ?? null,
-                'manufacturer' => $it['manufacturer'] ?? null,
-                'storage_id' => $it['storage_id'] ?? null,
-                'position' => $it['position'] ?? null,
-                'model' => $it['model'] ?? null,
-                'colour' => $it['colour'] ?? null,
-                'battery' => $it['battery'] ?? null,
-                'grade' => $it['grade'] ?? null,
-                'issues' => $it['issues'] ?? null,
-                'cost' => $it['cost'] ?? null,
-                'imei' => $it['imei'] ?? null,
-                'selling_price' => $it['selling_price'] ?? null,
-                'currency' => $it['currency'] ?? 'CAD',
-                'customer' => $it['customer'] ?? null,
-                'user_id' => $it['user_id'] ?? Auth::id(),
-                'vendor_id' => $it['vendor_id'] ?? null,
-                'shop_id' => $it['shop_id'] ?? null,
-                'type' => $it['type'] ?? null,
+            // Persist incoming request
+            $shippingData = $data['shipping'] ?? null;
+            $incoming = IncomingRequest::create([
+                'name' => $name,
+                'email' => $email,
+                'store' => $store,
+                'notes' => $notes,
+                'user_id' => $requestUserId,
+                'shipping' => $shippingData,
             ]);
+
+            // Persist each requested item as a snapshot
+            foreach ($uniqueItems as $it) {
+                IncomingRequestItem::create([
+                    'incoming_request_id' => $incoming->id,
+                    'original_item_id' => $it['id'] ?? null,
+                    'date' => $it['date'] ?? null,
+                    'supplier' => $it['supplier'] ?? null,
+                    'manufacturer' => $it['manufacturer'] ?? null,
+                    'storage_id' => $it['storage_id'] ?? null,
+                    'position' => $it['position'] ?? null,
+                    'model' => $it['model'] ?? null,
+                    'colour' => $it['colour'] ?? null,
+                    'battery' => $it['battery'] ?? null,
+                    'grade' => $it['grade'] ?? null,
+                    'issues' => $it['issues'] ?? null,
+                    'cost' => $it['cost'] ?? null,
+                    'imei' => $it['imei'] ?? null,
+                    'selling_price' => $it['selling_price'] ?? null,
+                    'currency' => $it['currency'] ?? 'CAD',
+                    'customer' => $it['customer'] ?? null,
+                    'user_id' => $it['user_id'] ?? Auth::id(),
+                    'vendor_id' => $it['vendor_id'] ?? null,
+                    'shop_id' => $it['shop_id'] ?? null,
+                    'type' => $it['type'] ?? null,
+                ]);
+            }
+
+            DB::commit();
+
+        } catch (Exception $e) {
+            DB::rollBack();
+            Log::error('Failed to persist IncomingRequest', [
+                'error' => $e->getMessage(),
+                'user' => $name,
+            ]);
+
+            return response()->json([
+                'saved' => false,
+                'message' => 'Database error while saving request: '.$e->getMessage(),
+            ], 500);
         }
 
         // Determine email destination from items' users or use default
@@ -510,7 +541,7 @@ class ItemController extends Controller
     {
         $requestModel = IncomingRequest::with('items')->findOrFail($id);
 
-        $userId = $requestModel->user_id ?? auth()->id();
+        $userId = $requestModel->user_id ?? Auth::id();
 
         $subtotal = 0;
         $items = $requestModel->items ?? [];
@@ -1360,18 +1391,18 @@ class ItemController extends Controller
     public function returnItem(Request $request): \Illuminate\Http\JsonResponse
     {
         try {
+            $selectedItems = [];
             if ($request->item) {
-                $request->selectedItems = [];
-                $request->selectedItems[] = $request->item;
+                $selectedItems[] = $request->item;
             } elseif ($request->data) {
-                $request->selectedItems = $request->data;
+                $selectedItems = $request->data;
             }
 
-            if (empty($request->selectedItems)) {
+            if (empty($selectedItems)) {
                 return response()->json(['error' => 'No items provided'], 400);
             }
 
-            foreach ($request->selectedItems as $item) {
+            foreach ($selectedItems as $item) {
                 $item = Item::find($item['id']);
                 $sale = Sale::find($item->sale_id);
                 if ($sale != null) {
