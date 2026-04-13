@@ -1329,7 +1329,7 @@ class ItemController extends Controller
     public function refundItem(Request $request)
     {
         try {
-            $itemArray = $request->input('item') ?? ($request->data[0] ?? null);
+            $itemArray = $request->input('item') ?? ($request->data[0] ?? ($request->selectedItems[0] ?? null));
             if (! $itemArray) {
                 return response()->json(['error' => 'No item provided'], 400);
             }
@@ -1396,6 +1396,8 @@ class ItemController extends Controller
                 $selectedItems[] = $request->item;
             } elseif ($request->data) {
                 $selectedItems = $request->data;
+            } elseif ($request->selectedItems) {
+                $selectedItems = $request->selectedItems;
             }
 
             if (empty($selectedItems)) {
@@ -1442,7 +1444,7 @@ class ItemController extends Controller
                 $item->removeSale();
             }
 
-            return response()->json($request->selectedItem, 200);
+            return response()->json($selectedItems, 200);
         } catch (Exception $e) {
             return response()->json($e->getMessage(), 500);
         }

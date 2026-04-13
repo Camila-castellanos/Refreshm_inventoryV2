@@ -343,4 +343,24 @@ class SalesReturnTest extends TestCaseWithCompany
 
         $this->assertEquals(0.00, (float) $sale->subtotal);
     }
+
+    public function test_return_accepts_selected_items_payload(): void
+    {
+        $sale = Sale::factory()->create(['user_id' => $this->owner->id]);
+        $item = Item::withoutGlobalScopes()->create([
+            'user_id' => $this->owner->id,
+            'shop_id' => $this->shop->id,
+            'storage_id' => $this->storage->id,
+            'sale_id' => $sale->id,
+            'sold' => now(),
+        ]);
+
+        $response = $this->actingAs($this->owner)->put('/inventory/items/return', [
+            'selectedItems' => [['id' => $item->id]],
+        ]);
+
+        $response->assertStatus(200);
+        $item->refresh();
+        $this->assertNull($item->sold);
+    }
 }
