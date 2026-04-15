@@ -1518,15 +1518,20 @@ class ItemController extends Controller
             $model = isset($item['model']) ? trim($item['model']) : null;
             $battery = isset($item['battery']) ? trim($item['battery']) : null;
             $grade = isset($item['grade']) ? trim($item['grade']) : null;
-            $issues = isset($item['issues']) ? trim($item['issues']) : null;
+            $issues = isset($item['issues']) ? trim((string) $item['issues']) : null;
+            // Normalize blank issues to null so null/""/"   " behave the same.
+            if ($issues === '') {
+                $issues = null;
+            }
 
             $foundPrice = null;
-            Log::info('generateSellingPrice for item: ', [
-                'model' => $model,
-                'battery' => $battery,
-                'grade' => $grade,
-                'issues' => $issues,
-            ]);
+            // Debug log disabled to avoid noisy logs in normal operation.
+            // Log::info('generateSellingPrice for item: ', [
+            //     'model' => $model,
+            //     'battery' => $battery,
+            //     'grade' => $grade,
+            //     'issues' => $issues,
+            // ]);
             // base query: items that have a selling_price and are active (not sold / not on hold)
             // and only from the last 6 months (by created_at or updated_at)
             $sixMonthsAgo = now()->subMonths(6);
@@ -1591,6 +1596,17 @@ class ItemController extends Controller
                                 $q->whereBetween($field, [80, 84]);
                             }
                         }
+                    } elseif ($field === 'grade' || $field === 'model') {
+                        // Exact match for grade/model, normalized with trim + lowercase.
+                        // Avoids mismatches like "B " vs "b" or "iPhone 12 64GB" vs "iphone 12 64gb ".
+                        $value = ${$field};
+                        $normalizedValue = mb_strtolower(trim((string) $value));
+                        $q->whereRaw("LOWER(TRIM({$field})) = ?", [$normalizedValue]);
+                    } elseif ($field === 'issues') {
+                        // Exact normalized match for issues when provided.
+                        $value = ${$field};
+                        $normalizedValue = mb_strtolower(trim((string) $value));
+                        $q->whereRaw('LOWER(TRIM(issues)) = ?', [$normalizedValue]);
                     } else {
                         $value = ${$field};
                         $q->where($field, 'like', '%'.$value.'%');
@@ -1612,34 +1628,30 @@ class ItemController extends Controller
                 $qForMatch->orderByDesc('date')
                     ->orderByDesc('id');
 
-                $qForList = (clone $qForMatch);
+                $qForTopCandidates = (clone $qForMatch);
 
                 $match = $qForMatch->first(['id', 'selling_price', 'model']);
-                $completelist = $qForList->get(['id', 'selling_price', 'model', 'battery', 'grade', 'issues', 'date', 'created_at', 'updated_at', 'sold']);
 
-                $foundPricesDebug = $completelist->map(function ($i) {
-                    return [
-                        'id' => $i->id,
-                        'price' => $i->selling_price,
-                        'battery' => $i->battery,
-                        'date' => $i->date,
-                        'sold' => $i->sold ? 'Yes' : 'No',
-                    ];
+                // Log only first 3 candidates with key attributes used by current filters
+                $candidateColumns = array_values(array_unique(array_merge(['id', 'selling_price'], $available)));
+                $topCandidates = $qForTopCandidates->limit(3)->get($candidateColumns);
+
+                $topCandidatesLog = $topCandidates->map(function ($candidate) use ($candidateColumns) {
+                    $row = [];
+                    foreach ($candidateColumns as $column) {
+                        $row[$column] = $candidate->{$column};
+                    }
+
+                    return $row;
                 })->toArray();
 
-                /* Log::debug('generateSellingPrice DEBUG prices found for item:', [
-                    'input_item' => [
-                        'model' => $model,
-                        'battery' => $battery,
-                        'grade' => $grade,
-                    ],
-                    'found_prices_list' => $foundPricesDebug,
-                ]); */
-
-                Log::info('generateSellingPrice all matches found', [
-                    'total_matches' => $completelist->count(),
-                    'matches' => $completelist->toArray(),
-                ]);
+                // Debug log disabled to avoid noisy logs in normal operation.
+                // Log::info('generateSellingPrice top candidates', [
+                //     'input_item_id' => $item['id'] ?? null,
+                //     'filters_used' => $available,
+                //     'top_candidates_count' => count($topCandidatesLog),
+                //     'top_candidates' => $topCandidatesLog,
+                // ]);
 
                 if ($match) {
                     $foundPrice = round(floatval($match->selling_price), 2);
@@ -1648,19 +1660,21 @@ class ItemController extends Controller
                         'chosen_price' => $foundPrice,
                     ]); */
 
-                    Log::info('generateSellingPrice match selected', [
-                        'model' => $match->model ?? null,
-                        'selling_price' => $foundPrice,
-                        'fields_used' => implode('+', $available),
-                        'matched_item_id' => $match->id ?? null,
-                    ]);
+                    // Debug log disabled to avoid noisy logs in normal operation.
+                    // Log::info('generateSellingPrice match selected', [
+                    //     'model' => $match->model ?? null,
+                    //     'selling_price' => $foundPrice,
+                    //     'fields_used' => implode('+', $available),
+                    //     'matched_item_id' => $match->id ?? null,
+                    // ]);
                 } else {
                     /* Log::debug('generateSellingPrice DEBUG FINAL price chosen: NONE (no match)'); */
 
-                    Log::info('generateSellingPrice no match found', [
-                        'input_item_id' => $item['id'] ?? null,
-                        'tried_fields' => implode('+', $available),
-                    ]);
+                    // Debug log disabled to avoid noisy logs in normal operation.
+                    // Log::info('generateSellingPrice no match found', [
+                    //     'input_item_id' => $item['id'] ?? null,
+                    //     'tried_fields' => implode('+', $available),
+                    // ]);
                 }
             }
 
