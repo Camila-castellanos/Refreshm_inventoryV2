@@ -47,6 +47,13 @@
         </div>
 
         <div class="flex justify-end mb-3 gap-2">
+          <Button
+            v-if="canAppendToInvoice"
+            label="Add to existing invoice"
+            icon="pi pi-plus"
+            class="p-button-sm p-button-outlined"
+            @click="showAppendModal = true"
+          />
           <Button label="Create invoice" icon="pi pi-receipt" class="p-button-sm p-button-outlined create-invoice" @click="createInvoice(activeRequest)" />
           <Button label="Delete request" icon="pi pi-trash" class="p-button-sm p-button-danger p-button-outlined" @click="deleteRequest(activeRequest)" />
         </div>
@@ -94,17 +101,30 @@
         </div>
       </div>
     </Dialog>
+
+    <AppendIncomingRequestToSale
+      v-model:visible="showAppendModal"
+      :submitting="appendSubmitting"
+      @submit="appendToExistingInvoice"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { computed, ref } from 'vue';
 import Sidebar from 'primevue/sidebar';
 import Button from 'primevue/button';
 import Dialog from 'primevue/dialog';
 import { useToast } from 'primevue/usetoast';
 import { useDialog } from 'primevue/usedialog';
+import { usePage } from '@inertiajs/vue3';
 import ItemsSell from '../Pages/Inventory/Modals/ItemsSell.vue';
+import AppendIncomingRequestToSale from '@/Pages/Inventory/Modals/AppendIncomingRequestToSale.vue';
+import {
+  buildAppendErrorToast,
+  buildAppendOutcomeToast,
+  canUserAppendToInvoice,
+} from '@/Utils/incomingRequestAppend';
 import axios from 'axios';
 import { ItemType} from '@/Enums/itemType';
 
@@ -118,11 +138,10 @@ const dialogVisible = ref(false);
 const activeRequest = ref<any | null>(null);
 const toast = useToast();
 const dialog = useDialog();
-
-// log for testing and see ActiveRequest structure
-watch(activeRequest, (newVal) => {
-  console.log('Active request changed:', newVal);
-});
+const page = usePage();
+const showAppendModal = ref(false);
+const appendSubmitting = ref(false);
+const canAppendToInvoice = computed(() => canUserAppendToInvoice(page.props.auth?.user as any));
 
 // Get the dominant currency from items (handles mixed currencies)
 function getItemsCurrency() {
@@ -215,7 +234,6 @@ async function createInvoice(req: any) {
     }
 
     // Open ItemsSell modal with the mapped request items
-    console.log('Opening ItemsSell dialog with items:', mappedItems);
     dialog.open(ItemsSell, {
       data: {
         // ItemsSell expects items as an array/ref similar to Index; pass the mapped items
@@ -252,6 +270,47 @@ async function createInvoice(req: any) {
       life: 4000 
     });
   }
+}
+
+async function appendToExistingInvoice(payload: { sale_id: number; idempotency_key: string }) {
+  if (!activeRequest.value?.id) return;
+
+  appendSubmitting.value = true;
+
+  try {
+    const response = await axios.post(
+      route('items.incomingRequests.appendToInvoice', activeRequest.value.id),
+      payload
+    );
+
+    toast.add(buildAppendOutcomeToast(response.data));
+    showAppendModal.value = false;
+  } catch (error: any) {
+    const status = error?.response?.status;
+    const data = error?.response?.data ?? {};
+    toast.add(buildAppendErrorToast(status, data));
+  } finally {
+    appendSubmitting.value = false;
+    await refreshRequestDataAfterAppend();
+  }
+}
+
+async function refreshRequestDataAfterAppend() {
+  await fetchRequests(false);
+
+  if (!activeRequest.value?.id) {
+    return;
+  }
+
+  const refreshed = requests.value.find((request: any) => request.id === activeRequest.value.id);
+
+  if (!refreshed) {
+    dialogVisible.value = false;
+    activeRequest.value = null;
+    return;
+  }
+
+  activeRequest.value = refreshed;
 }
 
 async function deleteItem(it: any) {

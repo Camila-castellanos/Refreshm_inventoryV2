@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Sales\AppendItemsToSaleAction;
 use App\Http\Requests\InvoiceSentForm;
 use App\Http\Requests\RecordPaymentForm;
 use App\Mail\InvoiceSent;
@@ -29,6 +30,10 @@ use Inertia\Inertia;
 
 class PaymentController extends Controller
 {
+    public function __construct(
+        private readonly AppendItemsToSaleAction $appendItemsToSaleAction,
+    ) {}
+
     /**
      * Show Data Listening of Invoices Data
      */
@@ -483,71 +488,10 @@ class PaymentController extends Controller
 
     public function addNewItems(Request $request)
     {
-        $items = $request->items;
+        $sale = Sale::findOrFail($request->sale_id);
+        $items = $request->items ?? [];
 
-        $sale = Sale::find($request->sale_id);
-        $sale_date = $sale->created_at ? $sale->created_at : Carbon::now()->format('Y-m-d');
-        $tax = intval($sale->tax) / 100;
-        $discount = $sale->discount;
-        $balance = $sale->balance_remaining;
-        $finalTotal = $sale->total;
-        $finaFlatTax = $sale->flatTax;
-        $finalSubTotal = $sale->subtotal;
-
-        // Get customer from the sale's existing items
-        $customer = null;
-        foreach ($sale->items as $item) {
-            if (! empty($item->customer)) {
-                $customer = $item->customer;
-                break;
-            }
-        }
-
-        // If customer is numeric (ID), get the customer name
-        if (is_numeric($customer)) {
-            $customerModel = Customer::find($customer);
-            $customer = $customerModel ? $customerModel->customer : $customer;
-        }
-
-        foreach ($items as $item) {
-            $itemData = Item::find($item['id']);
-            Item::where('id', $item['id'])->update([
-                'sold' => $sale_date ?? Carbon::now(),
-                'selling_price' => $item['selling_price'],
-                'customer' => $customer, // Always use the sale's customer
-                'profit' => $item['selling_price'] - $itemData->cost,
-                'sale_id' => $request->sale_id,
-                'sold_position' => $item['position'],
-                'sold_storage_id' => $item['storage_id'],
-                'sold_storage_name' => Storage::find($item['storage_id'])?->name,
-                'position' => null,
-                'storage_id' => null,
-            ]);
-
-            $subtotal = $item['selling_price'] - $discount;
-            $flatTax = ($subtotal * $tax);
-            $total = ($subtotal + $flatTax);
-            $finalSubTotal += $subtotal;
-            $finaFlatTax += $flatTax;
-            $finalTotal += $total;
-        }
-
-        // Calculate the new balance correctly: total - amount_paid
-        $balance = $finalTotal - $sale->amount_paid;
-
-        $paid = 0;
-        if ($sale->amount_paid >= $finalTotal) {
-            $paid = 1;
-            $balance = 0; // If fully paid, balance should be 0
-        }
-
-        Sale::where('id', $request->sale_id)->update([
-            'flatTax' => $finaFlatTax,
-            'subtotal' => $finalSubTotal,
-            'total' => $finalTotal,
-            'balance_remaining' => $balance,
-            'paid' => $paid,
-        ]);
+        $this->appendItemsToSaleAction->execute($sale, $items);
 
         return response()->json(200);
     }
