@@ -9,6 +9,8 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DraftController;
 use App\Http\Controllers\EmailsController;
 use App\Http\Controllers\ExpensesController;
+use App\Http\Controllers\Inventory\IncomingRequestAppendController;
+use App\Http\Controllers\Inventory\IncomingRequestInvoicePreviewController;
 use App\Http\Controllers\InventoryPublicController;
 use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\ItemController;
@@ -213,6 +215,8 @@ Route::middleware([
             Route::post('items/get-specific-items', [ItemController::class, 'getSpecificItems'])->name('items.getSpecificItems');
             Route::get('items/incoming-requests', [ItemController::class, 'incomingRequests'])->name('items.incomingRequests');
             Route::post('items/incoming-requests/{id}/create-invoice', [ItemController::class, 'createInvoiceFromRequest'])->name('items.incomingRequests.createInvoice');
+            Route::post('items/incoming-requests/{incomingRequest}/append-to-invoice', [IncomingRequestAppendController::class, 'append'])->name('items.incomingRequests.appendToInvoice');
+            Route::get('items/incoming-requests/invoices/{sale}/preview', [IncomingRequestInvoicePreviewController::class, 'show'])->name('items.incomingRequests.invoices.preview');
             Route::delete('items/incoming-requests/items/{id}', [ItemController::class, 'deleteIncomingRequestItem'])->name('items.incomingRequests.deleteItem');
             Route::delete('items/incoming-requests/{id}', [ItemController::class, 'deleteIncomingRequest'])->name('items.incomingRequests.delete');
             Route::resource('items', ItemController::class)
