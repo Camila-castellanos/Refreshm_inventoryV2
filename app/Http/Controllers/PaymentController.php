@@ -330,8 +330,10 @@ class PaymentController extends Controller
 
     public function editPayment(Request $request)
     {
-        Log::info('llego a traer los elementos del sale');
-        Log::info([$request->all()]);
+        if (config('app.debug')) {
+            Log::info('llego a traer los elementos del sale');
+            Log::info([$request->all()]);
+        }
         $payment = Payment::where('id', $request->id)->first();
         $oldAmount = $payment->amount_paid;
         $newAmount = $request->paymentAmount;
@@ -398,8 +400,10 @@ class PaymentController extends Controller
      */
     public function edit($id): \Inertia\Response
     {
-        Log::info('llego a editar el item');
-        Log::info([$id]);
+        if (config('app.debug')) {
+            Log::info('llego a editar el item');
+            Log::info([$id]);
+        }
         $user = Auth::user();
 
         if (Auth::user()->role == ('ADMIN')) {

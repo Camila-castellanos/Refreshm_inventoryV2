@@ -19,7 +19,9 @@ class MarketController extends Controller
      */
     public function index(Request $request, Market $market)
     {
-        Log::debug('MarketController@index: entered', ['host' => $request->getHost(), 'market_id' => $market->id ?? null, 'market_slug' => $market->slug ?? null]);
+        if (config('app.debug')) {
+            Log::debug('MarketController@index: entered', ['host' => $request->getHost(), 'market_id' => $market->id ?? null, 'market_slug' => $market->slug ?? null]);
+        }
 
         try {
             // Load the related shop and company for additional info
@@ -471,10 +473,12 @@ class MarketController extends Controller
             }
 
             // Ensure the item belongs to this market's shop
-            Log::info('Market product check', [
-                'market_shop_id' => $market->shop_id ?? null,
-                'item_shop_id' => $item->shop_id ?? null,
-            ]);
+            if (config('app.debug')) {
+                Log::info('Market product check', [
+                    'market_shop_id' => $market->shop_id ?? null,
+                    'item_shop_id' => $item->shop_id ?? null,
+                ]);
+            }
             if ($item->shop_id !== $market->shop_id) {
                 abort(404, 'Product not found in this market');
             }

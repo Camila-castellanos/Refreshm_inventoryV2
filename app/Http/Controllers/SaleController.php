@@ -535,8 +535,11 @@ class SaleController extends Controller
                     ], $customFields);
                 }
             }
-            Log::info('items: ', $formatted_items);
-            Log::info('items count: '.count($formatted_items));
+
+            if (config('app.debug')) {
+                Log::info('items: ', $formatted_items);
+                Log::info('items count: '.count($formatted_items));
+            }
 
             // Si es vista inicial, devolver Inertia con todos los datos
             return Inertia::render('Inventory/Sold', [

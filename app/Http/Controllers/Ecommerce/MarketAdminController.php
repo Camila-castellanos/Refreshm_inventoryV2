@@ -149,14 +149,16 @@ class MarketAdminController extends Controller
 
         $validated = $request->validated();
 
-        // Log incoming request data for debugging
-        Log::info('Market update request received', [
-            'market_id' => $market->id,
-            'has_banners' => $request->hasFile('banners'),
-            'banner_count' => $request->hasFile('banners') ? count($request->file('banners')) : 0,
-            'has_deleted_banners' => $request->has('deleted_banners'),
-            'deleted_banners' => $request->input('deleted_banners', []),
-        ]);
+        // Log incoming request data for debugging (only in debug mode)
+        if (config('app.debug')) {
+            Log::info('Market update request received', [
+                'market_id' => $market->id,
+                'has_banners' => $request->hasFile('banners'),
+                'banner_count' => $request->hasFile('banners') ? count($request->file('banners')) : 0,
+                'has_deleted_banners' => $request->has('deleted_banners'),
+                'deleted_banners' => $request->input('deleted_banners', []),
+            ]);
+        }
 
         // Update slug if name changed
         if ($market->name !== $validated['name']) {
@@ -212,10 +214,12 @@ class MarketAdminController extends Controller
         if ($request->filled('deleted_banners')) {
             $deletedIds = $request->input('deleted_banners');
 
-            Log::info('Processing banner deletions', [
-                'market_id' => $market->id,
-                'deleted_ids' => $deletedIds,
-            ]);
+            if (config('app.debug')) {
+                Log::info('Processing banner deletions', [
+                    'market_id' => $market->id,
+                    'deleted_ids' => $deletedIds,
+                ]);
+            }
 
             if (is_array($deletedIds) && count($deletedIds) > 0) {
                 // Ensure IDs are integers
@@ -229,11 +233,13 @@ class MarketAdminController extends Controller
                     ->where('collection_name', 'banners')
                     ->get();
 
-                Log::info('Found media items for deletion', [
-                    'requested_count' => count($ids),
-                    'found_count' => $mediaItems->count(),
-                    'found_ids' => $mediaItems->pluck('id')->toArray(),
-                ]);
+                if (config('app.debug')) {
+                    Log::info('Found media items for deletion', [
+                        'requested_count' => count($ids),
+                        'found_count' => $mediaItems->count(),
+                        'found_ids' => $mediaItems->pluck('id')->toArray(),
+                    ]);
+                }
 
                 // Delete each item
                 $deletedCount = 0;
@@ -249,10 +255,12 @@ class MarketAdminController extends Controller
                     }
                 }
 
-                Log::info('Banner deletion completed', [
-                    'deleted_count' => $deletedCount,
-                    'total_requested' => count($ids),
-                ]);
+                if (config('app.debug')) {
+                    Log::info('Banner deletion completed', [
+                        'deleted_count' => $deletedCount,
+                        'total_requested' => count($ids),
+                    ]);
+                }
             }
         }
 

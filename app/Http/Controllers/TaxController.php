@@ -306,7 +306,9 @@ class TaxController extends Controller
             $taxes = Tax::where('user_id', $user->id)->get();
             $response = [];
 
-            Log::info("Start date: $start, End date: $end");
+            if (config('app.debug')) {
+                Log::info("Start date: $start, End date: $end");
+            }
 
             // Non-taxed sales: tax_id is the source of truth
             $nonTaxedSales = DB::table('items')
