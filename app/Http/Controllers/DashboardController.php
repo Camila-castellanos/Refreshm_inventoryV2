@@ -130,12 +130,14 @@ class DashboardController extends Controller
         $startOfMonth = Carbon::parse($request->startDate)->startOfDay()->toDateTimeString();
         $endOfMonth = Carbon::parse($request->endDate)->endOfDay()->toDateTimeString();
 
-        Log::info('Generating report for user: '.$userId, [
-            'startOfMonth' => $startOfMonth,
-            'endOfMonth' => $endOfMonth,
-            'isAdmin' => $isAdmin,
-            'userrole' => $user->role,
-        ]);
+        if (config('app.debug')) {
+            Log::info('Generating report for user: '.$userId, [
+                'startOfMonth' => $startOfMonth,
+                'endOfMonth' => $endOfMonth,
+                'isAdmin' => $isAdmin,
+                'userrole' => $user->role,
+            ]);
+        }
 
         // cache and calculate metrics
         $cacheKey = "dashboard_metrics_v2_{$userId}_{$startOfMonth}_{$endOfMonth}";
@@ -314,10 +316,12 @@ class DashboardController extends Controller
             ->whereBetween('date', [$startOfMonth, $endOfMonth])
             ->sum('flatTax');
 
-        Log::info('Calculating financial metrics for user: '.$userId, [
-            'startOfMonth' => $startOfMonth,
-            'endOfMonth' => $endOfMonth,
-        ]);
+        if (config('app.debug')) {
+            Log::info('Calculating financial metrics for user: '.$userId, [
+                'startOfMonth' => $startOfMonth,
+                'endOfMonth' => $endOfMonth,
+            ]);
+        }
         // Impuestos pagados
         $salesTaxPaid = Bill::where('status', 1)
             ->whereBetween('date', [$startOfMonth, $endOfMonth])

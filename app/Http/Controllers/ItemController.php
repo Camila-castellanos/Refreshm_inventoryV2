@@ -1525,12 +1525,14 @@ class ItemController extends Controller
             }
 
             $foundPrice = null;
-            Log::info('generateSellingPrice for item: ', [
-                'model' => $model,
-                'battery' => $battery,
-                'grade' => $grade,
-                'issues' => $issues,
-            ]);
+            if (config('app.debug')) {
+                Log::info('generateSellingPrice for item: ', [
+                    'model' => $model,
+                    'battery' => $battery,
+                    'grade' => $grade,
+                    'issues' => $issues,
+                ]);
+            }
             // Base query: items with selling_price from last 6 months.
             // Time filter rule:
             // - sold items => use sold date
@@ -1653,33 +1655,33 @@ class ItemController extends Controller
                     return $row;
                 })->toArray();
 
-                Log::info('generateSellingPrice top candidates', [
-                    'input_item_id' => $item['id'] ?? null,
-                    'filters_used' => $available,
-                    'top_candidates_count' => count($topCandidatesLog),
-                    'top_candidates' => $topCandidatesLog,
-                ]);
+                if (config('app.debug')) {
+                    Log::info('generateSellingPrice top candidates', [
+                        'input_item_id' => $item['id'] ?? null,
+                        'filters_used' => $available,
+                        'top_candidates_count' => count($topCandidatesLog),
+                        'top_candidates' => $topCandidatesLog,
+                    ]);
+                }
 
                 if ($match) {
                     $foundPrice = round(floatval($match->selling_price), 2);
-                    /* Log::debug('generateSellingPrice DEBUG FINAL price chosen:', [
-                        'chosen_id' => $match->id,
-                        'chosen_price' => $foundPrice,
-                    ]); */
 
-                    Log::info('generateSellingPrice match selected', [
-                        'model' => $match->model ?? null,
-                        'selling_price' => $foundPrice,
-                        'fields_used' => implode('+', $available),
-                        'matched_item_id' => $match->id ?? null,
-                    ]);
+                    if (config('app.debug')) {
+                        Log::info('generateSellingPrice match selected', [
+                            'model' => $match->model ?? null,
+                            'selling_price' => $foundPrice,
+                            'fields_used' => implode('+', $available),
+                            'matched_item_id' => $match->id ?? null,
+                        ]);
+                    }
                 } else {
-                    /* Log::debug('generateSellingPrice DEBUG FINAL price chosen: NONE (no match)'); */
-
-                    Log::info('generateSellingPrice no match found', [
-                        'input_item_id' => $item['id'] ?? null,
-                        'tried_fields' => implode('+', $available),
-                    ]);
+                    if (config('app.debug')) {
+                        Log::info('generateSellingPrice no match found', [
+                            'input_item_id' => $item['id'] ?? null,
+                            'tried_fields' => implode('+', $available),
+                        ]);
+                    }
                 }
             }
 

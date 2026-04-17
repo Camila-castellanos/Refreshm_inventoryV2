@@ -149,11 +149,13 @@ class CustomerController extends Controller
     {
         $form = $request->validated();
 
-        // Log the incoming data
-        \Log::info('Customer Store - Incoming Request Data:', [
-            'form' => $form,
-            'all_request' => $request->all(),
-        ]);
+        // Log the incoming data (only in debug mode)
+        if (config('app.debug')) {
+            \Log::info('Customer Store - Incoming Request Data:', [
+                'form' => $form,
+                'all_request' => $request->all(),
+            ]);
+        }
 
         $personal_phone_optional = $form['personal_phone_optional'] ?? [];
         $phones_to_save = [];
@@ -170,17 +172,19 @@ class CustomerController extends Controller
 
         $final_phones_optional = $has_any_phone ? json_encode($phones_to_save) : null;
 
-        // DEBUG: Log de los datos recibidos del frontend
-        \Log::debug('=== BACKEND DEBUG - DATOS RECIBIDOS ===');
-        \Log::debug('customer_name:', ['value' => $form['customer_name'] ?? null, 'type' => gettype($form['customer_name'] ?? null)]);
-        \Log::debug('first_name:', ['value' => $form['first_name'] ?? null, 'type' => gettype($form['first_name'] ?? null), 'isArray' => is_array($form['first_name'] ?? null)]);
-        \Log::debug('last_name:', ['value' => $form['last_name'] ?? null, 'type' => gettype($form['last_name'] ?? null), 'isArray' => is_array($form['last_name'] ?? null)]);
-        \Log::debug('email:', ['value' => $form['email'] ?? null, 'type' => gettype($form['email'] ?? null), 'isArray' => is_array($form['email'] ?? null)]);
-        \Log::debug('personal_phone:', ['value' => $form['personal_phone'] ?? null, 'type' => gettype($form['personal_phone'] ?? null), 'isArray' => is_array($form['personal_phone'] ?? null)]);
-        \Log::debug('phone_optional:', ['value' => $personal_phone_optional, 'type' => gettype($personal_phone_optional), 'isArray' => is_array($personal_phone_optional)]);
-        \Log::debug('billing_address_optional:', ['value' => $form['billing_address_optional'] ?? null, 'type' => gettype($form['billing_address_optional'] ?? null), 'isArray' => is_array($form['billing_address_optional'] ?? null)]);
-        \Log::debug('shipping_address_optional:', ['value' => $form['shipping_address_optional'] ?? null, 'type' => gettype($form['shipping_address_optional'] ?? null), 'isArray' => is_array($form['shipping_address_optional'] ?? null)]);
-        \Log::debug('========================================');
+        // DEBUG: Log de los datos recibidos del frontend (only in debug mode)
+        if (config('app.debug')) {
+            \Log::debug('=== BACKEND DEBUG - DATOS RECIBIDOS ===');
+            \Log::debug('customer_name:', ['value' => $form['customer_name'] ?? null, 'type' => gettype($form['customer_name'] ?? null)]);
+            \Log::debug('first_name:', ['value' => $form['first_name'] ?? null, 'type' => gettype($form['first_name'] ?? null), 'isArray' => is_array($form['first_name'] ?? null)]);
+            \Log::debug('last_name:', ['value' => $form['last_name'] ?? null, 'type' => gettype($form['last_name'] ?? null), 'isArray' => is_array($form['last_name'] ?? null)]);
+            \Log::debug('email:', ['value' => $form['email'] ?? null, 'type' => gettype($form['email'] ?? null), 'isArray' => is_array($form['email'] ?? null)]);
+            \Log::debug('personal_phone:', ['value' => $form['personal_phone'] ?? null, 'type' => gettype($form['personal_phone'] ?? null), 'isArray' => is_array($form['personal_phone'] ?? null)]);
+            \Log::debug('phone_optional:', ['value' => $personal_phone_optional, 'type' => gettype($personal_phone_optional), 'isArray' => is_array($personal_phone_optional)]);
+            \Log::debug('billing_address_optional:', ['value' => $form['billing_address_optional'] ?? null, 'type' => gettype($form['billing_address_optional'] ?? null), 'isArray' => is_array($form['billing_address_optional'] ?? null)]);
+            \Log::debug('shipping_address_optional:', ['value' => $form['shipping_address_optional'] ?? null, 'type' => gettype($form['shipping_address_optional'] ?? null), 'isArray' => is_array($form['shipping_address_optional'] ?? null)]);
+            \Log::debug('========================================');
+        }
 
         $customer = new Customer;
         $customer->customer = $form['customer_name'];
@@ -216,8 +220,10 @@ class CustomerController extends Controller
         $customer->delivery_instructions = $form['shipping_delivery_instructions'] ?? null;
         $customer->credit = $form['credit'] ?? 0;
 
-        // Log before saving
-        \Log::info('Customer Before Save:', $customer->toArray());
+        // Log before saving (only in debug mode)
+        if (config('app.debug')) {
+            \Log::info('Customer Before Save:', $customer->toArray());
+        }
 
         $customer->save();
 
@@ -225,8 +231,10 @@ class CustomerController extends Controller
         $user = Auth::user();
         Cache::forget("customers_index_user_{$user->id}");
 
-        // Log after saving
-        \Log::info('Customer After Save:', $customer->toArray());
+        // Log after saving (only in debug mode)
+        if (config('app.debug')) {
+            \Log::info('Customer After Save:', $customer->toArray());
+        }
 
         if (! empty($customer->email)) {
             $contact = new Contact;
@@ -277,11 +285,13 @@ class CustomerController extends Controller
         try {
             $form = $request->validated();
 
-            // Log incoming data
-            \Log::info('Customer Update - Incoming Request Data:', [
-                'form' => $form,
-                'all_request' => $request->all(),
-            ]);
+            // Log incoming data (only in debug mode)
+            if (config('app.debug')) {
+                \Log::info('Customer Update - Incoming Request Data:', [
+                    'form' => $form,
+                    'all_request' => $request->all(),
+                ]);
+            }
 
             $personal_phone_optional = $form['personal_phone_optional'] ?? [];
             $phones_to_save = [];
@@ -298,17 +308,19 @@ class CustomerController extends Controller
 
             $final_phones_optional = $has_any_phone ? json_encode($phones_to_save) : null;
 
-            // DEBUG: Log de los datos recibidos del frontend
-            \Log::debug('=== BACKEND DEBUG UPDATE - DATOS RECIBIDOS ===');
-            \Log::debug('customer_name:', ['value' => $form['customer_name'] ?? null, 'type' => gettype($form['customer_name'] ?? null)]);
-            \Log::debug('first_name:', ['value' => $form['first_name'] ?? null, 'type' => gettype($form['first_name'] ?? null), 'isArray' => is_array($form['first_name'] ?? null)]);
-            \Log::debug('last_name:', ['value' => $form['last_name'] ?? null, 'type' => gettype($form['last_name'] ?? null), 'isArray' => is_array($form['last_name'] ?? null)]);
-            \Log::debug('email:', ['value' => $form['email'] ?? null, 'type' => gettype($form['email'] ?? null), 'isArray' => is_array($form['email'] ?? null)]);
-            \Log::debug('personal_phone:', ['value' => $form['personal_phone'] ?? null, 'type' => gettype($form['personal_phone'] ?? null), 'isArray' => is_array($form['personal_phone'] ?? null)]);
-            \Log::debug('phone_optional:', ['value' => $personal_phone_optional, 'type' => gettype($personal_phone_optional), 'isArray' => is_array($personal_phone_optional)]);
-            \Log::debug('billing_address_optional:', ['value' => $form['billing_address_optional'] ?? null, 'type' => gettype($form['billing_address_optional'] ?? null), 'isArray' => is_array($form['billing_address_optional'] ?? null)]);
-            \Log::debug('shipping_address_optional:', ['value' => $form['shipping_address_optional'] ?? null, 'type' => gettype($form['shipping_address_optional'] ?? null), 'isArray' => is_array($form['shipping_address_optional'] ?? null)]);
-            \Log::debug('========================================');
+            // DEBUG: Log de los datos recibidos del frontend (only in debug mode)
+            if (config('app.debug')) {
+                \Log::debug('=== BACKEND DEBUG UPDATE - DATOS RECIBIDOS ===');
+                \Log::debug('customer_name:', ['value' => $form['customer_name'] ?? null, 'type' => gettype($form['customer_name'] ?? null)]);
+                \Log::debug('first_name:', ['value' => $form['first_name'] ?? null, 'type' => gettype($form['first_name'] ?? null), 'isArray' => is_array($form['first_name'] ?? null)]);
+                \Log::debug('last_name:', ['value' => $form['last_name'] ?? null, 'type' => gettype($form['last_name'] ?? null), 'isArray' => is_array($form['last_name'] ?? null)]);
+                \Log::debug('email:', ['value' => $form['email'] ?? null, 'type' => gettype($form['email'] ?? null), 'isArray' => is_array($form['email'] ?? null)]);
+                \Log::debug('personal_phone:', ['value' => $form['personal_phone'] ?? null, 'type' => gettype($form['personal_phone'] ?? null), 'isArray' => is_array($form['personal_phone'] ?? null)]);
+                \Log::debug('phone_optional:', ['value' => $personal_phone_optional, 'type' => gettype($personal_phone_optional), 'isArray' => is_array($personal_phone_optional)]);
+                \Log::debug('billing_address_optional:', ['value' => $form['billing_address_optional'] ?? null, 'type' => gettype($form['billing_address_optional'] ?? null), 'isArray' => is_array($form['billing_address_optional'] ?? null)]);
+                \Log::debug('shipping_address_optional:', ['value' => $form['shipping_address_optional'] ?? null, 'type' => gettype($form['shipping_address_optional'] ?? null), 'isArray' => is_array($form['shipping_address_optional'] ?? null)]);
+                \Log::debug('========================================');
+            }
 
             $customer_data = [
                 'customer' => $form['customer_name'],
@@ -345,12 +357,16 @@ class CustomerController extends Controller
                 'delivery_instructions' => $form['shipping_delivery_instructions'] ?? null,
             ];
 
-            // Log the data array before update
-            \Log::info('Customer Update - Data to Update:', $customer_data);
+            // Log the data array before update (only in debug mode)
+            if (config('app.debug')) {
+                \Log::info('Customer Update - Data to Update:', $customer_data);
+            }
 
             if ($customer->update($customer_data)) {
-                // Log after update
-                \Log::info('Customer After Update:', $customer->fresh()->toArray());
+                // Log after update (only in debug mode)
+                if (config('app.debug')) {
+                    \Log::info('Customer After Update:', $customer->fresh()->toArray());
+                }
 
                 // Invalidar cache de customers
                 $user = Auth::user();

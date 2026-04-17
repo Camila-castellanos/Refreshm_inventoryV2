@@ -3,9 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Draft;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class DraftController extends Controller
 {
@@ -15,6 +15,7 @@ class DraftController extends Controller
     public function index(Request $req)
     {
         $drafts = Draft::with('items')->get();
+
         return response()->json($drafts);
     }
 
@@ -24,7 +25,7 @@ class DraftController extends Controller
     public function simpleList(Request $req)
     {
         return Draft::orderByDesc('created_at')
-                     ->get(['id','title','created_at']);
+            ->get(['id', 'title', 'created_at']);
     }
 
     /**
@@ -43,15 +44,15 @@ class DraftController extends Controller
         // Preserve full items array including all extra fields
         $allItems = $req->input('items', []);
         $data = $req->validate([
-          'id'                 => 'sometimes|nullable|integer',
-          'date'               => 'required|date',
-          'title'              => 'required|string|max:255',
-          'vendor'             => 'nullable|string|max:255',
-          'items'              => 'required|array',
-          'items.*.storage_id'         => 'nullable|integer|exists:storages,id',
-          'items.*.storage_position'   => 'nullable|integer',
-          'items.*.draft_unassigned'   => 'nullable|boolean',
-          // add other item fields validation as needed
+            'id' => 'sometimes|nullable|integer',
+            'date' => 'required|date',
+            'title' => 'required|string|max:255',
+            'vendor' => 'nullable|string|max:255',
+            'items' => 'required|array',
+            'items.*.storage_id' => 'nullable|integer|exists:storages,id',
+            'items.*.storage_position' => 'nullable|integer',
+            'items.*.draft_unassigned' => 'nullable|boolean',
+            // add other item fields validation as needed
         ]);
 
         $userId = Auth::id();
@@ -62,53 +63,61 @@ class DraftController extends Controller
         if ($draftId) {
             // Build query based on user role
             $query = Draft::where('id', $draftId);
-            
+
             // If user is not OWNER, must also match user_id
             if ($userRole !== 'OWNER') {
                 $query->where('user_id', $userId);
             }
-            
+
             $draft = $query->first();
-            
+
             if ($draft) {
                 // Update existing draft
                 $draft->update([
-                    'date'   => $data['date'],
+                    'date' => $data['date'],
                     'vendor' => $data['vendor'] ?? null,
-                    'title'  => $data['title'],
+                    'title' => $data['title'],
                 ]);
-                Log::info('Updating existing draft:', ['draft_id' => $draft->id, 'user_id' => $userId, 'user_role' => $userRole]);
+                if (config('app.debug')) {
+                    Log::info('Updating existing draft:', ['draft_id' => $draft->id, 'user_id' => $userId, 'user_role' => $userRole]);
+                }
             } else {
                 // Draft not found or unauthorized, create new one
-                Log::warning('Draft not found or unauthorized, creating new:', ['requested_id' => $draftId, 'user_id' => $userId, 'user_role' => $userRole]);
+                if (config('app.debug')) {
+                    Log::warning('Draft not found or unauthorized, creating new:', ['requested_id' => $draftId, 'user_id' => $userId, 'user_role' => $userRole]);
+                }
                 $draft = Draft::create([
                     'user_id' => $userId,
-                    'date'    => $data['date'],
-                    'vendor'  => $data['vendor'] ?? null,
-                    'title'   => $data['title'],
+                    'date' => $data['date'],
+                    'vendor' => $data['vendor'] ?? null,
+                    'title' => $data['title'],
                 ]);
             }
         } else {
             // No ID provided, create new draft
             $draft = Draft::create([
                 'user_id' => $userId,
-                'date'    => $data['date'],
-                'vendor'  => $data['vendor'] ?? null,
-                'title'   => $data['title'],
+                'date' => $data['date'],
+                'vendor' => $data['vendor'] ?? null,
+                'title' => $data['title'],
             ]);
-            Log::info('Creating new draft:', ['draft_id' => $draft->id, 'user_id' => $userId]);
+            if (config('app.debug')) {
+                Log::info('Creating new draft:', ['draft_id' => $draft->id, 'user_id' => $userId]);
+            }
         }
 
         // sync draft items - delete old ones and create new
         $draft->items()->delete();
-        Log::info('Syncing draft items for draft:', ['draft_id' => $draft->id, 'items_count' => count($allItems)]);
-        
+        if (config('app.debug')) {
+            Log::info('Syncing draft items for draft:', ['draft_id' => $draft->id, 'items_count' => count($allItems)]);
+        }
+
         foreach ($allItems as $item) {
             $item['tax_id'] = $item['tax'] ?? null;
-            
+
             // Check if item is marked as unassigned (deactivated)
             $isUnassigned = isset($item['draft_unassigned']) && ($item['draft_unassigned'] === true || $item['draft_unassigned'] === 1 || $item['draft_unassigned'] === '1');
-            
+
             // If item is unassigned, forcefully clear all storage fields
             if ($isUnassigned) {
                 $item['storage_id'] = null;
@@ -118,27 +127,29 @@ class DraftController extends Controller
             } else {
                 // For assigned items, ensure draft_unassigned is false
                 $item['draft_unassigned'] = false;
-                
+
                 // Still handle null storage fields explicitly
-                if (!isset($item['storage_id']) || $item['storage_id'] === null) {
+                if (! isset($item['storage_id']) || $item['storage_id'] === null) {
                     $item['storage_id'] = null;
                 }
-                if (!isset($item['storage_position']) || $item['storage_position'] === null) {
+                if (! isset($item['storage_position']) || $item['storage_position'] === null) {
                     $item['storage_position'] = null;
                 }
-                if (!isset($item['location']) || $item['location'] === null) {
+                if (! isset($item['location']) || $item['location'] === null) {
                     $item['location'] = null;
                 }
             }
-            
-            Log::info('Creating draft item with storage fields:', [
-                'draft_id' => $draft->id,
-                'storage_id' => $item['storage_id'] ?? 'null',
-                'storage_position' => $item['storage_position'] ?? 'null',
-                'location' => $item['location'] ?? 'null',
-                'draft_unassigned' => $item['draft_unassigned'] ? 'true' : 'false'
-            ]);
-            
+
+            if (config('app.debug')) {
+                Log::info('Creating draft item with storage fields:', [
+                    'draft_id' => $draft->id,
+                    'storage_id' => $item['storage_id'] ?? 'null',
+                    'storage_position' => $item['storage_position'] ?? 'null',
+                    'location' => $item['location'] ?? 'null',
+                    'draft_unassigned' => $item['draft_unassigned'] ? 'true' : 'false',
+                ]);
+            }
+
             $draft->items()->create($item);
         }
 
@@ -156,10 +167,7 @@ class DraftController extends Controller
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(Draft $draft)
-    {
-        
-    }
+    public function edit(Draft $draft) {}
 
     /**
      * Update the specified resource in storage.
@@ -167,14 +175,14 @@ class DraftController extends Controller
     public function update(Request $request, Draft $draft)
     {
         $data = $request->validate([
-          'vendor_id'          => 'sometimes|required|integer|exists:vendors,id',
-          'date'               => 'sometimes|required|date',
-          'tax_id'             => 'sometimes|nullable|integer|exists:taxes,id',
-          'title'              => 'sometimes|required|string|max:255',
-          'vendor'             => 'nullable|string|max:255',
-          'items'              => 'sometimes|required|array',
-          'items.*.storage_id'         => 'nullable|integer|exists:storages,id',
-          'items.*.storage_position'   => 'nullable|integer',
+            'vendor_id' => 'sometimes|required|integer|exists:vendors,id',
+            'date' => 'sometimes|required|date',
+            'tax_id' => 'sometimes|nullable|integer|exists:taxes,id',
+            'title' => 'sometimes|required|string|max:255',
+            'vendor' => 'nullable|string|max:255',
+            'items' => 'sometimes|required|array',
+            'items.*.storage_id' => 'nullable|integer|exists:storages,id',
+            'items.*.storage_position' => 'nullable|integer',
         ]);
         // preserve full items for update
         $allItems = $request->input('items', []);
@@ -188,7 +196,7 @@ class DraftController extends Controller
         if (isset($data['title'])) {
             $draft->title = $data['title'];
         }
-         
+
         $draft->save();
         // sync items if provided
         if (isset($data['items'])) {
@@ -226,11 +234,12 @@ class DraftController extends Controller
 
             return response()->json([
                 'message' => 'Draft items purged successfully',
-                'draft' => $draft->load('items')
+                'draft' => $draft->load('items'),
             ], 200);
 
         } catch (\Exception $e) {
-            Log::error('Error purging draft items: ' . $e->getMessage());
+            Log::error('Error purging draft items: '.$e->getMessage());
+
             return response()->json(['error' => 'Failed to purge draft items'], 500);
         }
     }
