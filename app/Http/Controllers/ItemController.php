@@ -1525,20 +1525,29 @@ class ItemController extends Controller
             }
 
             $foundPrice = null;
-            // Debug log disabled to avoid noisy logs in normal operation.
-            // Log::info('generateSellingPrice for item: ', [
-            //     'model' => $model,
-            //     'battery' => $battery,
-            //     'grade' => $grade,
-            //     'issues' => $issues,
-            // ]);
-            // base query: items that have a selling_price and are active (not sold / not on hold)
-            // and only from the last 6 months (by created_at or updated_at)
+            Log::info('generateSellingPrice for item: ', [
+                'model' => $model,
+                'battery' => $battery,
+                'grade' => $grade,
+                'issues' => $issues,
+            ]);
+            // Base query: items with selling_price from last 6 months.
+            // Time filter rule:
+            // - sold items => use sold date
+            // - unsold items (sold is null) => use created_at OR updated_at
             $sixMonthsAgo = now()->subMonths(6);
             $baseQuery = Item::whereNotNull('selling_price')
                 ->where(function ($query) use ($sixMonthsAgo) {
-                    $query->where('created_at', '>=', $sixMonthsAgo)
-                        ->orWhere('updated_at', '>=', $sixMonthsAgo);
+                    $query->where(function ($q) use ($sixMonthsAgo) {
+                        $q->whereNotNull('sold')
+                            ->where('sold', '>=', $sixMonthsAgo);
+                    })->orWhere(function ($q) use ($sixMonthsAgo) {
+                        $q->whereNull('sold')
+                            ->where(function ($q2) use ($sixMonthsAgo) {
+                                $q2->where('created_at', '>=', $sixMonthsAgo)
+                                    ->orWhere('updated_at', '>=', $sixMonthsAgo);
+                            });
+                    });
                 });
             // If the incoming item has no `issues` value (null), restrict matches
             // to items that also have `issues` set to null (exclude items with any issues).
@@ -1568,7 +1577,10 @@ class ItemController extends Controller
 
                 // Apply filters for all available fields (exact match based on what the item brings)
                 foreach ($available as $field) {
-                    // Special handling for battery: use range-based numeric comparisons
+                    // Special handling for battery: use fixed buckets
+                    // - 85% and higher
+                    // - 80% to 84%
+                    // - 79% and less
                     if ($field === 'battery') {
                         $batteryValue = ${$field};
                         // try to extract numeric portion (e.g., "85%" or "85")
@@ -1619,13 +1631,9 @@ class ItemController extends Controller
                 // 1. Priorizar que no esté vendido
                 $qForMatch->orderByRaw('CASE WHEN sold IS NULL THEN 0 ELSE 1 END ASC');
 
-                // 2. Priorizar coincidencia EXACTA de batería
-                if ($battery) {
-                    $qForMatch->orderByRaw('CASE WHEN battery = ? THEN 0 ELSE 1 END ASC', [$battery]);
-                }
-
-                // 3. Luego sí desempatar por fecha y por último por ID
-                $qForMatch->orderByDesc('date')
+                // 2. Priorizar updated_at más reciente (por encima de date)
+                $qForMatch->orderByDesc('updated_at')
+                    ->orderByDesc('date')
                     ->orderByDesc('id');
 
                 $qForTopCandidates = (clone $qForMatch);
@@ -1633,7 +1641,7 @@ class ItemController extends Controller
                 $match = $qForMatch->first(['id', 'selling_price', 'model']);
 
                 // Log only first 3 candidates with key attributes used by current filters
-                $candidateColumns = array_values(array_unique(array_merge(['id', 'selling_price'], $available)));
+                $candidateColumns = array_values(array_unique(array_merge(['id', 'selling_price', 'date', 'created_at', 'updated_at'], $available)));
                 $topCandidates = $qForTopCandidates->limit(3)->get($candidateColumns);
 
                 $topCandidatesLog = $topCandidates->map(function ($candidate) use ($candidateColumns) {
@@ -1645,13 +1653,12 @@ class ItemController extends Controller
                     return $row;
                 })->toArray();
 
-                // Debug log disabled to avoid noisy logs in normal operation.
-                // Log::info('generateSellingPrice top candidates', [
-                //     'input_item_id' => $item['id'] ?? null,
-                //     'filters_used' => $available,
-                //     'top_candidates_count' => count($topCandidatesLog),
-                //     'top_candidates' => $topCandidatesLog,
-                // ]);
+                Log::info('generateSellingPrice top candidates', [
+                    'input_item_id' => $item['id'] ?? null,
+                    'filters_used' => $available,
+                    'top_candidates_count' => count($topCandidatesLog),
+                    'top_candidates' => $topCandidatesLog,
+                ]);
 
                 if ($match) {
                     $foundPrice = round(floatval($match->selling_price), 2);
@@ -1660,21 +1667,19 @@ class ItemController extends Controller
                         'chosen_price' => $foundPrice,
                     ]); */
 
-                    // Debug log disabled to avoid noisy logs in normal operation.
-                    // Log::info('generateSellingPrice match selected', [
-                    //     'model' => $match->model ?? null,
-                    //     'selling_price' => $foundPrice,
-                    //     'fields_used' => implode('+', $available),
-                    //     'matched_item_id' => $match->id ?? null,
-                    // ]);
+                    Log::info('generateSellingPrice match selected', [
+                        'model' => $match->model ?? null,
+                        'selling_price' => $foundPrice,
+                        'fields_used' => implode('+', $available),
+                        'matched_item_id' => $match->id ?? null,
+                    ]);
                 } else {
                     /* Log::debug('generateSellingPrice DEBUG FINAL price chosen: NONE (no match)'); */
 
-                    // Debug log disabled to avoid noisy logs in normal operation.
-                    // Log::info('generateSellingPrice no match found', [
-                    //     'input_item_id' => $item['id'] ?? null,
-                    //     'tried_fields' => implode('+', $available),
-                    // ]);
+                    Log::info('generateSellingPrice no match found', [
+                        'input_item_id' => $item['id'] ?? null,
+                        'tried_fields' => implode('+', $available),
+                    ]);
                 }
             }
 
