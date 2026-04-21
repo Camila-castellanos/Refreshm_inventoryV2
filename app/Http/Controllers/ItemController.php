@@ -1539,6 +1539,7 @@ class ItemController extends Controller
             // - unsold items (sold is null) => use created_at OR updated_at
             $sixMonthsAgo = now()->subMonths(6);
             $baseQuery = Item::whereNotNull('selling_price')
+                ->whereNull('hold')
                 ->where(function ($query) use ($sixMonthsAgo) {
                     $query->where(function ($q) use ($sixMonthsAgo) {
                         $q->whereNotNull('sold')
