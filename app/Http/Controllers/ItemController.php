@@ -1643,7 +1643,7 @@ class ItemController extends Controller
                 $match = $qForMatch->first(['id', 'selling_price', 'model']);
 
                 // Log only first 3 candidates with key attributes used by current filters
-                $candidateColumns = array_values(array_unique(array_merge(['id', 'selling_price', 'date', 'created_at', 'updated_at'], $available)));
+                $candidateColumns = array_values(array_unique(array_merge(['id', 'selling_price', 'date', 'created_at', 'updated_at', 'imei'], $available)));
                 $topCandidates = $qForTopCandidates->limit(3)->get($candidateColumns);
 
                 $topCandidatesLog = $topCandidates->map(function ($candidate) use ($candidateColumns) {
