@@ -67,7 +67,9 @@ class ItemRequestCrossUserTest extends TestCaseWithCompany
             'email' => 'zac@example.com',
         ]);
 
-        $incomingRequest = IncomingRequest::latest()->first();
+        $incomingRequestId = (int) $response->json('id');
+        $incomingRequest = IncomingRequest::withoutGlobalScopes()->find($incomingRequestId);
+        $this->assertNotNull($incomingRequest);
 
         // Verify IncomingRequestItem has the technical details from the DB item
         $this->assertDatabaseHas('incoming_request_items', [

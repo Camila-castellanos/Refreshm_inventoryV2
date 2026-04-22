@@ -2,12 +2,18 @@
 
 namespace App\Models;
 
+use App\Models\Scopes\CompanyUsersSharedScope;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class IncomingRequest extends Model
 {
     use HasFactory;
+
+    protected static function booted()
+    {
+        static::addGlobalScope(new CompanyUsersSharedScope);
+    }
 
     protected $table = 'incoming_requests';
 

@@ -26,6 +26,8 @@ class CompanyUsersSharedScope implements Scope
         'vendors' => 'Contacts',
         'email_templates' => 'Contacts',
         'items' => 'Inventory',
+        'incoming_requests' => 'Inventory',
+        'incoming_request_items' => 'Inventory',
     ];
 
     /**
