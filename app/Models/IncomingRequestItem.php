@@ -2,12 +2,18 @@
 
 namespace App\Models;
 
+use App\Models\Scopes\CompanyUsersSharedScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class IncomingRequestItem extends Model
 {
     use HasFactory;
+
+    protected static function booted()
+    {
+        static::addGlobalScope(new CompanyUsersSharedScope);
+    }
 
     protected $table = 'incoming_request_items';
 
@@ -28,6 +34,6 @@ class IncomingRequestItem extends Model
 
     public function originalItem()
     {
-        return $this->belongsTo(Item::class, 'original_item_id')->withoutGlobalScopes();
+        return $this->belongsTo(Item::class, 'original_item_id');
     }
 }
