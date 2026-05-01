@@ -15,6 +15,7 @@ use App\Models\Store;
 use App\Models\Tab;
 use App\Models\TabItem;
 use App\Models\User;
+use App\Services\DashboardCacheService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use DateTime;
@@ -29,6 +30,13 @@ use Inertia\Response;
 
 class SaleController extends Controller
 {
+    protected DashboardCacheService $cacheService;
+
+    public function __construct(DashboardCacheService $cacheService)
+    {
+        $this->cacheService = $cacheService;
+    }
+
     /**
      * Store a newly created resource in storage.
      *
@@ -199,6 +207,9 @@ class SaleController extends Controller
 
         $receiptUrl = route('sales.receipt', $sale);
 
+        // Invalidate dashboard cache for the authenticated user
+        $this->cacheService->invalidateForUser(Auth::id());
+
         return response()->json($receiptUrl, 201);
     }
 
@@ -212,8 +223,8 @@ class SaleController extends Controller
     public function update(SaleFormEdit $request)
     {
         try {
-            $request->validated();
-            $sale = Sale::find($request->id);
+            $validated = $request->validated();
+            $sale = Sale::find($validated['id']);
             $user = Auth::user();
             $balance = $sale->balance_remaining;
             $total = 0;
@@ -336,6 +347,9 @@ class SaleController extends Controller
                 'tax_id' => $request->tax_id,
                 'credit' => $finalCredit,
             ]);
+
+            // Invalidate dashboard cache for the authenticated user
+            $this->cacheService->invalidateForUser(Auth::id());
 
             return response()->json($request, 201);
         } catch (Exception $e) {

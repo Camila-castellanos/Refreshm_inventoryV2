@@ -24,6 +24,7 @@ class SaleFormEdit extends FormRequest
     public function rules()
     {
         return [
+            "id" => "required|exists:sales,id",
             "subtotal" => "required|numeric",
             "discount" => "required|numeric",
             "flatTax" => "nullable|numeric",

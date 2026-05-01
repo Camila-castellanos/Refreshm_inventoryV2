@@ -7,6 +7,7 @@ use App\Http\Requests\ExpenseForm;
 use App\Imports\ExpensesImport;
 use App\Models\CashOnHand;
 use App\Models\Expense;
+use App\Services\DashboardCacheService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Response;
@@ -15,6 +16,13 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class ExpensesController extends Controller
 {
+    protected DashboardCacheService $cacheService;
+
+    public function __construct(DashboardCacheService $cacheService)
+    {
+        $this->cacheService = $cacheService;
+    }
+
     /**
      * Show Data Listening of Expenses Data
      */
@@ -58,6 +66,8 @@ class ExpensesController extends Controller
             'updated_at' => now(),
         ]);
 
+        $this->cacheService->invalidateForUser(Auth::id());
+
         return response()->json($created, 201);
     }
 
@@ -91,6 +101,8 @@ class ExpensesController extends Controller
             $updated[] = $object;
         }
 
+        $this->cacheService->invalidateForUser(Auth::id());
+
         return response()->json($updated);
     }
 
@@ -101,6 +113,8 @@ class ExpensesController extends Controller
     {
         $items = collect($request->input())->pluck('id');
         $deleted = Expense::whereIn('id', $items->toArray())->delete();
+
+        $this->cacheService->invalidateForUser(Auth::id());
 
         return response()->json($deleted);
     }
