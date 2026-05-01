@@ -6,6 +6,7 @@ use App\Http\Requests\BillExcelForm;
 use App\Http\Requests\BillForm;
 use App\Imports\BillsImport;
 use App\Models\Bill;
+use App\Services\DashboardCacheService;
 use App\Models\CashOnHand;
 use App\Models\PaymentsBills;
 use Carbon\Carbon;
@@ -17,6 +18,13 @@ use Maatwebsite\Excel\Excel;
 
 class BillController extends Controller
 {
+    protected DashboardCacheService $cacheService;
+
+    public function __construct(DashboardCacheService $cacheService)
+    {
+        $this->cacheService = $cacheService;
+    }
+
     /**
      * Show Data Listening of Bills Data
      */
@@ -103,6 +111,8 @@ class BillController extends Controller
             'updated_at' => now(),
         ]);
 
+        $this->cacheService->invalidateForUser(Auth::id());
+
         return response()->json($created, 201);
     }
 
@@ -147,6 +157,8 @@ class BillController extends Controller
             $object = Bill::updateOrCreate(['id' => @$item['id']], $item);
             $updated[] = $object;
         }
+
+        $this->cacheService->invalidateForUser(Auth::id());
 
         return response()->json($updated);
     }
@@ -320,7 +332,10 @@ class BillController extends Controller
     public function destroy(Bill $bill): \Illuminate\Http\JsonResponse
     {
         try {
+            $userId = $bill->user_id;
             $bill->delete();
+
+            $this->cacheService->invalidateForUser($userId);
 
             return response()->json(['message' => 'Bill deleted successfully'], 200);
         } catch (\Exception $e) {

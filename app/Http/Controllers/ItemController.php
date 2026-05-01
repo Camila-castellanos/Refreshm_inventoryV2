@@ -24,6 +24,7 @@ use App\Models\TabItem;
 use App\Models\Tax;
 use App\Models\User;
 use App\Models\Vendor;
+use App\Services\DashboardCacheService;
 use App\Traits\HasNaturalModelSorting;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
@@ -40,6 +41,13 @@ use Maatwebsite\Excel\Facades\Excel;
 class ItemController extends Controller
 {
     use HasNaturalModelSorting;
+
+    protected DashboardCacheService $cacheService;
+
+    public function __construct(DashboardCacheService $cacheService)
+    {
+        $this->cacheService = $cacheService;
+    }
 
     /**
      * Display a listing of the resource.
@@ -710,6 +718,8 @@ class ItemController extends Controller
             ], 500);
         }
 
+        $this->cacheService->invalidateForUser(Auth::id());
+
         return response()->json($created, 201);
     }
 
@@ -964,6 +974,8 @@ class ItemController extends Controller
 
             DB::commit();
 
+            $this->cacheService->invalidateForUser(Auth::id());
+
             return response()->json([
                 'bill' => $createdBill,
                 'items' => $itemsCreated,
@@ -1012,7 +1024,19 @@ class ItemController extends Controller
             $updated[] = $object;
         }
 
+        $this->cacheService->invalidateForUser(Auth::id());
+
         return response()->json($updated);
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     */
+    public function destroy(Item $item): \Illuminate\Http\JsonResponse
+    {
+        $item->delete();
+        $this->cacheService->invalidateForUser(Auth::id());
+        return response()->json(['success' => true]);
     }
 
     /**
@@ -1024,6 +1048,8 @@ class ItemController extends Controller
         $tabitem = TabItem::whereIn('item_id', $items->toArray())->delete();
         $tabhistory = TabHistory::whereIn('item_id', $items->toArray())->delete();
         $deleted = Item::destroy($items->toArray());
+
+        $this->cacheService->invalidateForUser(Auth::id());
 
         return response()->json($deleted);
     }
