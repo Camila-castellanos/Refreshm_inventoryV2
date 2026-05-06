@@ -41,25 +41,31 @@ class DashboardController extends Controller
         $isAdmin = $user->role === 'ADMIN';
 
         // initialize the start and end dates
-        $startOfMonth = Carbon::now()->startOfMonth()->toDateString();
-        $endOfMonth = Carbon::now()->endOfMonth()->toDateString();
+        $start = Carbon::now()->startOfMonth()->startOfDay();
+        $end = Carbon::now()->endOfMonth()->endOfDay();
+
+        $cacheStart = $start->toDateString();
+        $cacheEnd = $end->toDateString();
+
+        $startStr = $start->toDateTimeString();
+        $endStr = $end->toDateTimeString();
 
         // cache and calculate metrics
-        $context = $this->cacheService->remember($userId, $startOfMonth, $endOfMonth, function () use ($userId, $isAdmin, $startOfMonth, $endOfMonth) {
+        $context = $this->cacheService->remember($userId, $cacheStart, $cacheEnd, function () use ($userId, $isAdmin, $startStr, $endStr) {
 
-            $salesMetrics = $this->calculateSalesMetrics($userId, $isAdmin, $startOfMonth, $endOfMonth);
+            $salesMetrics = $this->calculateSalesMetrics($userId, $isAdmin, $startStr, $endStr);
             $inventoryMetrics = $this->calculateInventoryMetrics($userId, $isAdmin);
-            $deviceMetrics = $this->calculateDeviceMetrics($userId, $isAdmin, $startOfMonth, $endOfMonth);
-            $financialMetrics = $this->calculateFinancialMetrics($userId, $startOfMonth, $endOfMonth);
+            $deviceMetrics = $this->calculateDeviceMetrics($userId, $isAdmin, $startStr, $endStr);
+            $financialMetrics = $this->calculateFinancialMetrics($userId, $startStr, $endStr);
 
             return array_merge($salesMetrics, $inventoryMetrics, $deviceMetrics, $financialMetrics, [
-                'startDate' => $startOfMonth,
-                'endDate' => $endOfMonth,
+                'startDate' => $startStr,
+                'endDate' => $endStr,
             ]);
         });
 
         // Add user metrics separately without caching to avoid decryption/payload issues
-        $userMetrics = $user->role === 'OWNER' ? $this->calculateUserMetrics($startOfMonth, $endOfMonth) : [];
+        $userMetrics = $user->role === 'OWNER' ? $this->calculateUserMetrics($startStr, $endStr) : [];
         $context = array_merge($context, $userMetrics);
 
         return Inertia::render('Dashboard', $context);
@@ -95,28 +101,34 @@ class DashboardController extends Controller
         $isAdmin = $user->role === 'ADMIN';
 
         // initialize the start and end dates
-        $startOfMonth = Carbon::parse($request->startDate)->startOfDay()->toDateString();
+        $start = Carbon::parse($request->startDate)->startOfDay();
         if ($request->has('endDate') && $request->endDate) {
-            $endOfMonth = Carbon::parse($request->endDate)->endOfDay()->toDateString();
+            $end = Carbon::parse($request->endDate)->endOfDay();
         } else {
-            $endOfMonth = Carbon::parse($request->startDate)->endOfMonth()->endOfDay()->toDateString();
+            $end = Carbon::parse($request->startDate)->endOfMonth()->endOfDay();
         }
 
+        $cacheStart = $start->toDateString();
+        $cacheEnd = $end->toDateString();
+
+        $startStr = $start->toDateTimeString();
+        $endStr = $end->toDateTimeString();
+
         // cache and calculate metrics
-        $context = $this->cacheService->remember($userId, $startOfMonth, $endOfMonth, function () use ($userId, $isAdmin, $startOfMonth, $endOfMonth) {
-            $salesMetrics = $this->calculateSalesMetrics($userId, $isAdmin, $startOfMonth, $endOfMonth);
+        $context = $this->cacheService->remember($userId, $cacheStart, $cacheEnd, function () use ($userId, $isAdmin, $startStr, $endStr) {
+            $salesMetrics = $this->calculateSalesMetrics($userId, $isAdmin, $startStr, $endStr);
             $inventoryMetrics = $this->calculateInventoryMetrics($userId, $isAdmin);
-            $deviceMetrics = $this->calculateDeviceMetrics($userId, $isAdmin, $startOfMonth, $endOfMonth);
-            $financialMetrics = $this->calculateFinancialMetrics($userId, $startOfMonth, $endOfMonth);
+            $deviceMetrics = $this->calculateDeviceMetrics($userId, $isAdmin, $startStr, $endStr);
+            $financialMetrics = $this->calculateFinancialMetrics($userId, $startStr, $endStr);
 
             return array_merge($salesMetrics, $inventoryMetrics, $deviceMetrics, $financialMetrics, [
-                'startDate' => $startOfMonth,
-                'endDate' => $endOfMonth,
+                'startDate' => $startStr,
+                'endDate' => $endStr,
             ]);
         });
 
         // Add user metrics separately without caching
-        $userMetrics = $user->role === 'OWNER' ? $this->calculateUserMetrics($startOfMonth, $endOfMonth) : [];
+        $userMetrics = $user->role === 'OWNER' ? $this->calculateUserMetrics($startStr, $endStr) : [];
         $context = array_merge($context, $userMetrics);
 
         return response()->json($context, 200);
@@ -131,35 +143,41 @@ class DashboardController extends Controller
         $isAdmin = $user->role === 'ADMIN';
 
         // initialize the start and end dates
-        $startOfMonth = Carbon::parse($request->startDate)->startOfDay()->toDateString();
-        $endOfMonth = Carbon::parse($request->endDate)->endOfDay()->toDateString();
+        $start = Carbon::parse($request->startDate)->startOfDay();
+        $end = Carbon::parse($request->endDate)->endOfDay();
+
+        $cacheStart = $start->toDateString();
+        $cacheEnd = $end->toDateString();
+
+        $startStr = $start->toDateTimeString();
+        $endStr = $end->toDateTimeString();
 
         if (config('app.debug')) {
             Log::info('Generating report for user: '.$userId, [
-                'startOfMonth' => $startOfMonth,
-                'endOfMonth' => $endOfMonth,
+                'start' => $startStr,
+                'end' => $endStr,
                 'isAdmin' => $isAdmin,
                 'userrole' => $user->role,
             ]);
         }
 
         // cache and calculate metrics
-        $context = $this->cacheService->remember($userId, $startOfMonth, $endOfMonth, function () use ($userId, $isAdmin, $startOfMonth, $endOfMonth) {
+        $context = $this->cacheService->remember($userId, $cacheStart, $cacheEnd, function () use ($userId, $isAdmin, $startStr, $endStr) {
 
             // Todos tus cálculos van aquí
-            $salesMetrics = $this->calculateSalesMetrics($userId, $isAdmin, $startOfMonth, $endOfMonth);
+            $salesMetrics = $this->calculateSalesMetrics($userId, $isAdmin, $startStr, $endStr);
             $inventoryMetrics = $this->calculateInventoryMetrics($userId, $isAdmin);
-            $deviceMetrics = $this->calculateDeviceMetrics($userId, $isAdmin, $startOfMonth, $endOfMonth);
-            $financialMetrics = $this->calculateFinancialMetrics($userId, $startOfMonth, $endOfMonth);
+            $deviceMetrics = $this->calculateDeviceMetrics($userId, $isAdmin, $startStr, $endStr);
+            $financialMetrics = $this->calculateFinancialMetrics($userId, $startStr, $endStr);
 
             return array_merge($salesMetrics, $inventoryMetrics, $deviceMetrics, $financialMetrics, [
-                'startDate' => $startOfMonth,
-                'endDate' => $endOfMonth,
+                'startDate' => $startStr,
+                'endDate' => $endStr,
             ]);
         });
 
         // Add user metrics separately without caching
-        $userMetrics = $user->role === 'OWNER' ? $this->calculateUserMetrics($startOfMonth, $endOfMonth) : [];
+        $userMetrics = $user->role === 'OWNER' ? $this->calculateUserMetrics($startStr, $endStr) : [];
         $context = array_merge($context, $userMetrics);
 
         return response()->json($context, 200);
