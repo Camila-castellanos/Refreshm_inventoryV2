@@ -354,6 +354,7 @@ Route::middleware([
     Route::post('payments/addNewItems', [PaymentController::class, 'addNewItems'])->name('payments.addNewItems');
 
     Route::middleware('page.permission:Dashboard')->group(function () {
+        Route::get('dashboard/clear-cache', [DashboardController::class, 'clearCache'])->name('dashboard.clear-cache');
         Route::get('dashboard', DashboardController::class)->name('dashboard');
         Route::post('dashboard/update_cash', [DashboardController::class, 'updateCashOnHand'])->name('update.cash');
         Route::post('report/datewise', [DashboardController::class, 'reportDatewise'])->name('report.datewise');

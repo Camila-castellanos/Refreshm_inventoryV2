@@ -71,6 +71,23 @@ class DashboardController extends Controller
         return Inertia::render('Dashboard', $context);
     }
 
+    public function clearCache()
+    {
+        try {
+            $this->cacheService->invalidateForUser(Auth::id());
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Dashboard cache cleared successfully. You can now refresh the dashboard.'
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to clear dashboard cache: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
     public function updateCashOnHand(Request $request)
     {
         $user = Auth::user();
