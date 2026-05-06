@@ -448,8 +448,8 @@ class SaleController extends Controller
     {
         try {
             // Si se pasan fechas por request, usarlas; sino usar últimos 7 días
-            $start = $request->start ? Carbon::parse($request->start)->startOfDay() : Carbon::now()->subDays(7)->startOfDay();
-            $end = $request->end ? Carbon::parse($request->end)->endOfDay() : Carbon::now()->endOfDay();
+            $start = $request->start ? Carbon::parse($request->start)->startOfDay()->toDateTimeString() : Carbon::now()->subDays(7)->startOfDay()->toDateTimeString();
+            $end = $request->end ? Carbon::parse($request->end)->endOfDay()->toDateTimeString() : Carbon::now()->endOfDay()->toDateTimeString();
             $user = Auth::user();
 
             $tabs = Tab::where('user_id', $user->id)->orderBy('order', 'asc')->get();
