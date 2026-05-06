@@ -140,8 +140,8 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, provide, watch } from 'vue'
-import { Link, usePage } from '@inertiajs/vue3'
+import { ref, computed, onMounted, provide, watch, onUnmounted } from 'vue'
+import { Link, usePage, router } from '@inertiajs/vue3'
 import Cart from '@/Components/Ecommerce/Cart.vue'
 import MarketSidebar from '@/Components/Ecommerce/MarketSidebar.vue'
 import { useCartStore } from '@/stores/cartStore'
@@ -162,6 +162,42 @@ const page = usePage()
 const showMobileMenu = ref(false)
 const showCart = ref(false)
 const cartComponent = ref(null)
+
+// GTAG Tracking logic
+let unregisterRouterListener = null
+
+const injectGtagScript = (id) => {
+    if (!id || typeof window === 'undefined') return
+
+    if (!window.gtag) {
+        // Create script tag for gtag.js
+        const script = document.createElement('script')
+        script.async = true
+        script.src = `https://www.googletagmanager.com/gtag/js?id=${id}`
+        document.head.appendChild(script)
+
+        // Initialize dataLayer and gtag function
+        window.dataLayer = window.dataLayer || []
+        window.gtag = function () {
+            window.dataLayer.push(arguments)
+        }
+        window.gtag('js', new Date())
+    }
+
+    // Configure the tag
+    window.gtag('config', id, {
+        page_path: page.url,
+        send_page_view: true
+    })
+}
+
+const trackPageView = () => {
+    if (props.market?.google_tag_id && window.gtag) {
+        window.gtag('config', props.market.google_tag_id, {
+            page_path: page.url
+        })
+    }
+}
 
 // Computed
 const cartCount = computed(() => cartStore.itemCount)
@@ -184,6 +220,13 @@ const updateFavicon = (url) => {
 watch(() => props.market?.favicon_url, (newFavicon) => {
     if (newFavicon) {
         updateFavicon(newFavicon)
+    }
+}, { immediate: true })
+
+// Watch for GTAG ID changes
+watch(() => props.market?.google_tag_id, (newId, oldId) => {
+    if (newId && newId !== oldId) {
+        injectGtagScript(newId)
     }
 }, { immediate: true })
 
@@ -244,6 +287,17 @@ const handleCartItemRemoved = (data) => {
 onMounted(() => {
     if (props.market?.slug) {
         cartStore.setMarket(props.market.slug)
+    }
+
+    // SPA tracking for Inertia navigations
+    unregisterRouterListener = router.on('finish', () => {
+        trackPageView()
+    })
+})
+
+onUnmounted(() => {
+    if (unregisterRouterListener) {
+        unregisterRouterListener()
     }
 })
 </script>

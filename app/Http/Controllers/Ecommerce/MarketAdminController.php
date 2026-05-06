@@ -81,6 +81,7 @@ class MarketAdminController extends Controller
             'address' => $validated['address'] ?? null,
             'meta_title' => $validated['meta_title'] ?? ($validated['name'].' - Online Market'),
             'meta_description' => $validated['meta_description'] ?? ('Browse and shop '.$validated['name'].' collection of quality products.'),
+            'google_tag_id' => $validated['google_tag_id'] ?? null,
             'faq' => $validated['faq'] ?? null,
             'about_us' => $validated['about_us'] ?? null,
         ]);

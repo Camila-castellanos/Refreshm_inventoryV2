@@ -339,3 +339,35 @@ export interface Dashboard {
   nonTaxedSales: number;
   totalPurchases: number;
 }
+
+export interface Market {
+  id: number | null;
+  shop_id: number | null;
+  slug: string | null;
+  name: string;
+  description: string | null;
+  tagline: string | null;
+  currency: string;
+  show_inventory_count: boolean;
+  is_active: boolean;
+  logo_url: string | null;
+  favicon_url: string | null;
+  banners: string[];
+  about_us: {
+    title: string;
+    content: string;
+    image_url: string | null;
+  };
+  media_banners: any[];
+  theme_colors: any;
+  meta_title: string | null;
+  meta_description: string | null;
+  contact_email: string | null;
+  contact_phone: string | null;
+  address: string | null;
+  return_policy: string | null;
+  shipping_policy: string | null;
+  custom_domain: string | null;
+  google_tag_id: string | null;
+  faq: any;
+}
