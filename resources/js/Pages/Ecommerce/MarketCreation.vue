@@ -269,6 +269,12 @@
                                                     <label for="meta_description" class="block text-sm font-medium text-gray-700 mb-2">Meta Description</label>
                                                     <Textarea id="meta_description" v-model="form.meta_description" rows="2" placeholder="Leave empty to auto-generate" class="w-full" />
                                                 </div>
+                                                <div class="col-span-2">
+                                                    <label for="google_tag_id" class="block text-sm font-medium text-gray-700 mb-2">Google Tag ID (GTAG)</label>
+                                                    <InputText id="google_tag_id" v-model="form.google_tag_id" placeholder="e.g., G-XXXXXXXXXX" class="w-full" :class="{ 'p-invalid': form.errors.google_tag_id }" />
+                                                    <small v-if="form.errors.google_tag_id" class="p-error">{{ form.errors.google_tag_id }}</small>
+                                                    <p class="text-[10px] text-gray-500 mt-1">Enter your Google Analytics 4 Measurement ID to enable tracking.</p>
+                                                </div>
                                             </div>
                                         </div>
 
@@ -377,6 +383,7 @@ const form = useForm({
     address: '',
     meta_title: '',
     meta_description: '',
+    google_tag_id: '',
     about_us: {
         title: 'About Us',
         content: '',

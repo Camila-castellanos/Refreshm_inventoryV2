@@ -45,6 +45,7 @@ class Market extends Model implements HasMedia
         'return_policy',
         'shipping_policy',
         'privacy_policy',
+        'google_tag_id',
         'faq',
         'about_us',
     ];
@@ -1086,6 +1087,7 @@ class Market extends Model implements HasMedia
             'return_policy' => $this->return_policy,
             'shipping_policy' => $this->shipping_policy,
             'custom_domain' => $this->custom_domain,
+            'google_tag_id' => $this->google_tag_id,
             'faq' => $this->faq,
         ];
     }

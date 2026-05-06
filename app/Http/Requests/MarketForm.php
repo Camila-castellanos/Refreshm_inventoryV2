@@ -45,6 +45,7 @@ class MarketForm extends FormRequest
             'address' => 'nullable|string|max:500',
             'meta_title' => 'nullable|string|max:255',
             'meta_description' => 'nullable|string|max:500',
+            'google_tag_id' => ['nullable', 'string', 'max:50', 'regex:/^[A-Z0-9\-]+$/i'],
             'logo' => 'nullable|file|image|max:2048', // Max 2MB for logo
             'favicon' => 'nullable|file|image|max:1024', // Max 1MB for favicon
             'banners' => 'nullable|array',
@@ -71,6 +72,18 @@ class MarketForm extends FormRequest
             'about_us.title' => 'nullable|string|max:255',
             'about_us.content' => 'nullable|string|max:5000',
             'about_us.image_url' => 'nullable|string|max:255',
+        ];
+    }
+
+    /**
+     * Get custom messages for validator errors.
+     *
+     * @return array
+     */
+    public function messages()
+    {
+        return [
+            'google_tag_id.regex' => 'The Google Tag ID must only contain alphanumeric characters and hyphens (e.g., G-XXXXXXXXXX).',
         ];
     }
 }
