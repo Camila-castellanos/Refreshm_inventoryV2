@@ -66,7 +66,7 @@ class ItemController extends Controller
                     ->withCount('items'); // current count of items in storage
             }, 'vendor:id,vendor'])
                 ->whereIn('type', ['device', 'accessory'])
-                ->whereNull('sold')
+                ->where('status', Item::STATUS_AVAILABLE)
                 ->whereNull('hold')
                 ->whereNotIn('id', TabItem::pluck('item_id'))
                 ->get(),
@@ -89,7 +89,7 @@ class ItemController extends Controller
                 ->withCount('items'); // current count of items in storage
         }, 'vendor:id,vendor'])
             ->whereIn('type', ['device', 'accessory'])
-            ->whereNull('sold')
+            ->where('status', Item::STATUS_AVAILABLE)
             ->whereNull('hold')
             ->whereNotIn('id', TabItem::pluck('item_id'))
             ->get();
@@ -145,7 +145,7 @@ class ItemController extends Controller
         }
 
         // Query items active in inventory (not sold, not on hold) and matching manufacturers case-insensitively
-        $models = Item::whereNull('sold')
+        $models = Item::where('status', Item::STATUS_AVAILABLE)
             ->whereNull('hold')
             ->whereIn('type', ['device'])
             ->whereIn(DB::raw('LOWER(manufacturer)'), $manufacturers)
@@ -264,12 +264,12 @@ class ItemController extends Controller
         $tabs = Tab::where('user_id', $user)->orderBy('order', 'asc')->get();
 
         $items = Item::where('user_id', $user)
-            ->whereNull('sold')
+            ->where('status', Item::STATUS_AVAILABLE)
             ->whereIn('type', ['device', 'accessory'])
             ->whereNull('hold')
             ->get();
 
-        $items = Item::where('user_id', $user)->whereNull('sold')->whereNull('hold')->get();
+        $items = Item::where('user_id', $user)->where('status', Item::STATUS_AVAILABLE)->whereNull('hold')->get();
         $count = 0;
         $manufacturers = [];
 
@@ -587,7 +587,7 @@ class ItemController extends Controller
         $searchTerm = 'Digitizer';
 
         $context = [
-            'items' => Item::where('user_id', $user)->whereNull('sold')->whereNull('hold')->where('user_id', $user)->where('model', 'LIKE', '%'.$searchTerm.'%')->get(),
+            'items' => Item::where('user_id', $user)->where('status', Item::STATUS_AVAILABLE)->whereNull('hold')->where('user_id', $user)->where('model', 'LIKE', '%'.$searchTerm.'%')->get(),
         ];
 
         return response()->json($context);
@@ -600,7 +600,7 @@ class ItemController extends Controller
         $searchTerm = 'Housing';
 
         $context = [
-            'items' => Item::where('user_id', $user)->whereNull('sold')->whereNull('hold')->where('model', 'LIKE', '%'.$searchTerm.'%')->get(),
+            'items' => Item::where('user_id', $user)->where('status', Item::STATUS_AVAILABLE)->whereNull('hold')->where('model', 'LIKE', '%'.$searchTerm.'%')->get(),
         ];
 
         return response()->json($context);
@@ -611,7 +611,7 @@ class ItemController extends Controller
         $user = User::where('role', 'OWNER')->pluck('id')->toarray();
         $tabItems = TabItem::where('tab_id', $id)->pluck('item_id');
         $context = [
-            'items' => Item::whereNull('sold')->whereNull('hold')->whereIn('id', $tabItems)->get(),
+            'items' => Item::where('status', Item::STATUS_AVAILABLE)->whereNull('hold')->whereIn('id', $tabItems)->get(),
         ];
 
         return response()->json($context);
@@ -625,7 +625,7 @@ class ItemController extends Controller
     public function list(): \Illuminate\Http\JsonResponse
     {
         // Con el nuevo scope global, ya no necesitamos filtrar por user_id
-        return response()->json(Item::whereNull('sold')->whereNull('hold')->get());
+        return response()->json(Item::where('status', Item::STATUS_AVAILABLE)->whereNull('hold')->get());
     }
 
     /**
@@ -745,7 +745,7 @@ class ItemController extends Controller
             // Clean up sold items that still have active positions
             Item::whereIn('storage_id', $storageIds)
                 ->whereNotNull('position')
-                ->whereNotNull('sold')
+                ->where('status', Item::STATUS_SOLD)
                 ->update([
                     'sold_storage_id' => DB::raw('storage_id'),
                     'sold_position' => DB::raw('position'),
@@ -1333,7 +1333,7 @@ class ItemController extends Controller
         // dd($id);
         $items = Item::whereHas('tabItems', function ($q) use ($id) {
             $q->where('tab_id', $id);
-        })->with(['storage:id,name,limit', 'vendor:id,vendor'])->whereNull('sold')->whereNull('hold');
+        })->with(['storage:id,name,limit', 'vendor:id,vendor'])->where('status', Item::STATUS_AVAILABLE)->whereNull('hold');
 
         $customFields = CustomField::where('user_id', $user->id)->get();
 

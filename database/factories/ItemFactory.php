@@ -62,6 +62,7 @@ class ItemFactory extends Factory
             'sold_storage_id' => null,
             'sold_position' => null,
             'sold_storage_name' => null,
+            'status' => 'available',
         ];
     }
 

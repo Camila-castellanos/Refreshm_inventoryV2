@@ -41,7 +41,7 @@ class UtilitiesController extends Controller
         // Search in active inventory items (using same logic as Storage::getOccupiedPositions)
         $items = Item::where('storage_id', $storageId)
             ->where('position', $position)
-            ->whereNull('sold')
+            ->where('status', '!=', Item::STATUS_SOLD)
             ->get();
 
         foreach ($items as $item) {

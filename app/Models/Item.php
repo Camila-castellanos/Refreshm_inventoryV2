@@ -16,6 +16,11 @@ class Item extends Model implements HasMedia
 {
     use HasFactory, InteractsWithMedia;
 
+    // Constants for status
+    const STATUS_AVAILABLE = 'available';
+    const STATUS_RESERVED = 'reserved';
+    const STATUS_SOLD = 'sold';
+
     protected $fillable = [
         'date', 'sale_id', 'supplier', 'manufacturer', 'storage_id', 'position',
         'model', 'colour', 'battery', 'grade',
@@ -23,7 +28,7 @@ class Item extends Model implements HasMedia
         'customer', 'sold', 'hold', 'discount', 'tax',
         'subtotal', 'profit', 'user_id', 'vendor_id', 'custom_values',
         'sold_storage_id', 'sold_position', 'sold_storage_name', 'shop_id',
-        'type', 'product_model_id',
+        'type', 'product_model_id', 'status',
     ];
 
     // Cast date and sold attributes as full datetime
@@ -40,9 +45,18 @@ class Item extends Model implements HasMedia
         'photo_count',
     ];
 
+    protected $attributes = [
+        'status' => 'available',
+    ];
+
     protected static function booted()
     {
         static::addGlobalScope(new CompanyItemScope);
+    }
+
+    public function scopeAvailable($query)
+    {
+        return $query->where('status', 'available');
     }
 
     public function shop(): BelongsTo
@@ -184,8 +198,44 @@ class Item extends Model implements HasMedia
         return $this->vendor ? $this->vendor->vendor : null;
     }
 
+    public function markAsReserved(): bool
+    {
+        $this->status = self::STATUS_RESERVED;
+        // Position and storage_id are KEPT
+
+        return $this->save();
+    }
+
+    public function markAsSold(): bool
+    {
+        $this->status = self::STATUS_SOLD;
+        $this->storage_id = null;
+        $this->position = null;
+
+        return $this->save();
+    }
+
+    public function markAsAvailable(): bool
+    {
+        return $this->removeSale();
+    }
+
     public function removeSale(): bool
     {
+        if ($this->status === 'reserved') {
+            $this->status = self::STATUS_AVAILABLE;
+            $this->sale_id = null;
+            $this->customer = null;
+            $this->sold = null;
+            $this->hold = null;
+            $this->discount = null;
+            $this->tax = null;
+            $this->subtotal = null;
+            $this->profit = null;
+
+            return $this->saveOrFail();
+        }
+
         // Attempt to restore original location if available
         if ($this->sold_storage_id && $this->sold_position) {
             // Check if that position is currently free (check both items and drafts)
@@ -226,6 +276,7 @@ class Item extends Model implements HasMedia
         $this->tax = null;
         $this->subtotal = null;
         $this->profit = null;
+        $this->status = self::STATUS_AVAILABLE;
 
         return $this->saveOrFail();
     }
@@ -239,6 +290,36 @@ class Item extends Model implements HasMedia
     {
         parent::boot();
 
+        static::saving(function ($item) {
+            // 1. Determine status based on sold date / explicit status / sale_id
+            if (! is_null($item->sold)) {
+                $item->status = self::STATUS_SOLD;
+            } elseif ($item->status === self::STATUS_SOLD) {
+                $item->sold = now();
+            } elseif (! is_null($item->sale_id)) {
+                $item->status = self::STATUS_RESERVED;
+            } else {
+                $item->status = self::STATUS_AVAILABLE;
+            }
+
+            // 2. If item is not sold, ensure sold date is cleared
+            if ($item->status !== self::STATUS_SOLD && ! is_null($item->sold)) {
+                $item->sold = null;
+            }
+
+            // 3. Ensure sold items don't occupy a physical position
+            if ($item->status === self::STATUS_SOLD) {
+                // Record last location if not already recorded
+                if (! is_null($item->storage_id) && is_null($item->sold_storage_id)) {
+                    $item->sold_storage_id = $item->storage_id;
+                    $item->sold_position = $item->position;
+                    $item->sold_storage_name = $item->storage?->name;
+                }
+                $item->storage_id = null;
+                $item->position = null;
+            }
+        });
+
         static::updating(function ($item) {
             $originalStorageId = $item->getOriginal('storage_id');
             // auto-assign only if newly assigned to storage and no explicit position
@@ -248,12 +329,8 @@ class Item extends Model implements HasMedia
             ) {
                 $item->position = self::getNextAvailablePosition($item->storage_id);
             }
-            // if the item is being sold and the sale_id is set, set the sold date
-            $originalSaleId = $item->getOriginal('sale_id');
-            if (is_null($originalSaleId) && $item->sale_id) {
-                $item->sold = now();
-            }
         });
+
         static::creating(function ($item) {
             // auto-assign only if storage set and no position provided
             if ($item->storage_id && is_null($item->position)) {
@@ -261,12 +338,7 @@ class Item extends Model implements HasMedia
                     $item->position = self::getNextAvailablePosition($item->storage_id);
                 });
             }
-            // if the item is being sold and the sale_id is set, set the sold date
-            if ($item->sale_id && is_null($item->sold)) {
-                $item->sold = now();
-            }
         });
-
     }
 
     public static function getNextAvailablePosition($storageId)
@@ -275,6 +347,8 @@ class Item extends Model implements HasMedia
         // gather occupied positions from saved items and draft items
         $itemPositions = self::where('storage_id', $storageId)
             ->whereNotNull('position')
+            ->whereIn('status', [self::STATUS_AVAILABLE, self::STATUS_RESERVED])
+            ->whereNull('sold')
             ->pluck('position')
             ->toArray();
         $draftPositions = DraftItem::where('storage_id', $storageId)

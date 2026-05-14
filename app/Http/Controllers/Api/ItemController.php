@@ -22,10 +22,11 @@ class ItemController extends Controller
         $request->query->set('fields.items', $request->get('fields'));
     }
     //Define allowed and default fields, and allowed filters 
-    $allowedFields = ['id', 'type', 'supplier', 'manufacturer', 'model', 'colour', 'battery', 'grade', 'issues', 'cost', 'imei', 'selling_price', 'customer', 'discount', 'tax', 'subtotal', 'profit', 'hold', 'sold', 'created_at'];
-    $defaultFields = ['id', 'type', 'model', 'colour', 'battery', 'grade', 'cost', 'imei', 'selling_price'];
+    $allowedFields = ['id', 'type', 'supplier', 'manufacturer', 'model', 'colour', 'battery', 'grade', 'issues', 'cost', 'imei', 'selling_price', 'customer', 'discount', 'tax', 'subtotal', 'profit', 'hold', 'sold', 'created_at', 'status'];
+    $defaultFields = ['id', 'type', 'model', 'colour', 'battery', 'grade', 'cost', 'imei', 'selling_price', 'status'];
     $allowedFilters = [
             AllowedFilter::exact('type'),
+            AllowedFilter::exact('status'),
             AllowedFilter::partial('supplier'),
             AllowedFilter::partial('manufacturer'),
             AllowedFilter::partial('model'),
