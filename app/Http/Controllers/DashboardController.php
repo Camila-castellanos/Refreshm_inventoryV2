@@ -211,7 +211,7 @@ class DashboardController extends Controller
         ?string $endSold = null,
         bool $isAdmin = false
     ): float {
-        $itemQuery = Item::whereNotNull('sold')
+        $itemQuery = Item::whereIn('status', [Item::STATUS_SOLD, Item::STATUS_RESERVED])
             ->whereNotNull('sale_id');
 
         if ($startSold && $endSold) {
@@ -235,8 +235,16 @@ class DashboardController extends Controller
     private function calculateSalesMetrics($userId, $isAdmin, $startOfMonth, $endOfMonth)
     {
         // Una sola consulta para todas las métricas de ventas usando Eloquent + selectRaw
+        // Incluye items sold (con fecha) y reserved (usando created_at de la sale)
         $salesData = Item::leftJoin('sales', 'items.sale_id', '=', 'sales.id')
-            ->whereBetween('items.sold', [$startOfMonth, $endOfMonth])
+            ->where(function ($q) use ($startOfMonth, $endOfMonth) {
+                $q->whereBetween('items.sold', [$startOfMonth, $endOfMonth])
+                  ->orWhere(function ($q2) use ($startOfMonth, $endOfMonth) {
+                      $q2->whereNull('items.sold')
+                         ->where('items.status', Item::STATUS_RESERVED)
+                         ->whereBetween('sales.created_at', [$startOfMonth, $endOfMonth]);
+                  });
+            })
             ->selectRaw('
             COALESCE(SUM(
                 CASE 
@@ -307,12 +315,22 @@ class DashboardController extends Controller
     private function calculateDeviceMetrics($userId, $isAdmin, $startOfMonth, $endOfMonth)
     {
         // optimized aggregations for device items
+        // sold_this_month incluye sold (por fecha sold) y reserved (por updated_at)
         $deviceData = Item::whereIn('type', ['device'])
             ->selectRaw('
             COUNT(CASE WHEN (status != "sold") THEN 1 END) as devices_in_inventory,
             COUNT(CASE WHEN date >= ? AND date <= ? THEN 1 END) as trades_this_month,
-            COUNT(CASE WHEN sold >= ? AND sold <= ? THEN 1 END) as sold_this_month
-        ', [$startOfMonth, $endOfMonth, $startOfMonth, $endOfMonth])
+            COUNT(CASE
+                WHEN (sold >= ? AND sold <= ?)
+                     OR (status = ? AND sale_id IS NOT NULL AND updated_at >= ? AND updated_at <= ?)
+                THEN 1
+            END) as sold_this_month
+        ', [
+            $startOfMonth, $endOfMonth,
+            $startOfMonth, $endOfMonth,
+            Item::STATUS_RESERVED,
+            $startOfMonth, $endOfMonth,
+        ])
             ->first();
 
         return [

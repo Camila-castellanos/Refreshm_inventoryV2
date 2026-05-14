@@ -625,11 +625,12 @@ class PaymentController extends Controller
                 && in_array('View Organization Data', $authPerms['Accounting'])
             );
 
-        // Obtener solo los IDs de ventas que tienen items vendidos
+        // Obtener solo los IDs de ventas
         $saleIds = $sales->pluck('id')->toArray();
 
-        // Verificar qué ventas tienen items vendidos (como en la lógica original)
-        $soldItemsQuery = Item::whereIn('sale_id', $saleIds)->whereNotNull('sold');
+        // Verificar qué ventas tienen items (sold O reserved para unpaid)
+        $soldItemsQuery = Item::whereIn('sale_id', $saleIds)
+            ->whereIn('status', [Item::STATUS_SOLD, Item::STATUS_RESERVED]);
         if ($hasOrgAccounting) {
             $soldItemsQuery->withoutGlobalScope(CompanyItemScope::class);
         }
@@ -644,10 +645,12 @@ class PaymentController extends Controller
             return [];
         }
 
-        // Obtener los primeros items vendidos para cada venta válida
+        // Obtener los primeros items (sold o reserved) para cada venta válida
+        // Ordena sold primero (con fecha), reserved al final
         $firstItemsQuery = Item::whereIn('sale_id', $validSales->pluck('id')->toArray())
-            ->whereNotNull('sold')
-            ->select('id', 'sale_id', 'sold', 'customer');
+            ->whereIn('status', [Item::STATUS_SOLD, Item::STATUS_RESERVED])
+            ->orderBy('sold', 'desc')
+            ->select('id', 'sale_id', 'sold', 'customer', 'status');
         if ($hasOrgAccounting) {
             $firstItemsQuery->withoutGlobalScope(CompanyItemScope::class);
         }
@@ -741,7 +744,8 @@ class PaymentController extends Controller
             }
 
             // Formatear la respuesta (como en original)
-            $sold = Carbon::parse($firstItem->sold);
+            // Si el item está reserved (sin sold date), usar la fecha de creación de la venta
+            $sold = Carbon::parse($firstItem->sold ?? $sale->created_at);
 
             // Calculate the correct balance_remaining considering credit and verify data integrity
             $sale_credit = (float) ($sale->credit ?? 0);
