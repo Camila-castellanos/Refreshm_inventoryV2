@@ -119,21 +119,26 @@ class SaleController extends Controller
         foreach ($items as $sale_item) {
             $item = Item::find($sale_item['id']);
 
-            if ($item) {
+            if ($item && $item->status === Item::STATUS_AVAILABLE) {
                 $sale_item['sale_id'] = $sale->id;
                 $sale_item['type'] = $sale_item['type'];
-                // Capture location from DB before it's cleared
+                // Capture location from DB before it's potentially cleared
                 $sale_item['sold_position'] = $item->position;
                 $sale_item['sold_storage_id'] = $item->storage_id;
                 $sale_item['sold_storage_name'] = $item->storage?->name;
-                $sale_item['sold'] = Carbon::now();
                 unset($sale_item['selected']);
 
+                if ($request->paid) {
+                    $sale_item['status'] = Item::STATUS_SOLD;
+                    $sale_item['sold'] = Carbon::now();
+                    $sale_item['position'] = null;
+                    $sale_item['storage_id'] = null;
+                } else {
+                    $sale_item['status'] = Item::STATUS_RESERVED;
+                    $sale_item['sold'] = null;
+                }
+
                 $item->update($sale_item);
-                $item->update([
-                    'position' => null,
-                    'storage_id' => null,
-                ]);
             }
 
             if ($request->paid == 1) {
@@ -166,7 +171,7 @@ class SaleController extends Controller
             foreach ($request->newItems as $new_item) {
                 $total = $new_item['selling_price'] + (($form['tax'] / 100) * $new_item['selling_price']);
 
-                $item = Item::create([
+                $itemData = [
                     'date' => $request->payment_date,
                     'type' => $new_item['type'] ?? 'device',
                     'model' => $new_item['model'] ?? 'Unknown',
@@ -177,14 +182,25 @@ class SaleController extends Controller
                     'customer' => $new_item['customer'] ?? null,
                     'discount' => $request->discount ?? 0,
                     'tax' => $request->tax ?? 0,
-                    'sold' => Carbon::now(),
                     'user_id' => $form['user_id'],
                     'profit' => $new_item['profit'] ?? 0,
                     'created_at' => now(),
                     'updated_at' => now(),
-                ]);
+                ];
 
-                if ($request->paid == 1) {
+                if ($request->paid) {
+                    $itemData['status'] = Item::STATUS_SOLD;
+                    $itemData['sold'] = Carbon::now();
+                    $itemData['position'] = null;
+                    $itemData['storage_id'] = null;
+                } else {
+                    $itemData['status'] = Item::STATUS_RESERVED;
+                    $itemData['sold'] = null;
+                }
+
+                $item = Item::create($itemData);
+
+                if ($request->paid) {
                     Payment::insert([
                         'sale_id' => $sale->id,
                         'amount_paid' => $form['total'],
@@ -226,41 +242,8 @@ class SaleController extends Controller
             $validated = $request->validated();
             $sale = Sale::find($validated['id']);
             $user = Auth::user();
-            $balance = $sale->balance_remaining;
-            $total = 0;
 
-            foreach ($request->items as $item) {
-                $sale_item = Item::find($item['id']);
-                $sale_item->update([
-                    'selling_price' => $item['selling_price'],
-                    'profit' => $item['selling_price'] - $item['cost'],
-                    'customer' => $request->customer,
-                    'sold' => $request->date,
-                ]);
-
-                $total += $item['selling_price'];
-            }
-
-            if (! empty($request->newItems)) {
-                foreach ($request->newItems as $item) {
-                    Item::insert([
-                        'date' => $request->date,
-                        'model' => $item['model'],
-                        'issues' => $item['issues'] ?? '',
-                        'imei' => $item['imei'] ?? '',
-                        'selling_price' => $item['selling_price'],
-                        'sold' => $request->date,
-                        'customer' => $request->customer,
-                        'sale_id' => $request->id,
-                        'user_id' => $user->id,
-                        'type' => $item['type'],
-                    ]);
-
-                    $total += $item['selling_price'];
-                }
-            }
-
-            // Manejar crédito usando SOLO el delta enviado (credit_added)
+            // 1. Manejar crédito usando SOLO el delta enviado (credit_added)
             // credit_added puede ser positivo (agrega) o negativo (remueve)
             $creditAdded = (float) ($request->credit_added ?? 0.0);
             $currentSaleCredit = max(0.0, (float) $sale->credit);
@@ -299,10 +282,7 @@ class SaleController extends Controller
                 }
             }
 
-            // NUEVA LÓGICA: Calcular total en el backend
-            // Fórmula:
-            // 1. Tax = (subtotal - crédito) * porcentaje / 100
-            // 2. Total = subtotal - (crédito - tax)
+            // 2. Calcular total y balance para determinar si está pagada
             $subtotal = (float) $request->subtotal;
             $credit = max(0.0, (float) $finalCredit);
             $taxPercentage = (float) $request->tax;
@@ -316,21 +296,65 @@ class SaleController extends Controller
             $calculatedTotal = max(0.0, $subtotal - $creditMinusTax);
 
             // Calculate balance_remaining based on calculated total and amount paid
-            // Formula: balance_remaining = total - amount_paid
             $amountPaidUpdate = max(0.0, (float) ($request->amount_paid ?? 0));
             $balance = round($calculatedTotal - $amountPaidUpdate, 2);
             if ($balance < 0) {
                 $balance = 0;
             }
 
-            $paid = 0;
-            if ($balance == 0) {
-                $paid = 1;
+            $paid = ($balance == 0) ? 1 : 0;
+            $itemStatus = ($paid == 1) ? Item::STATUS_SOLD : Item::STATUS_RESERVED;
+
+            // 3. Actualizar ítems existentes
+            foreach ($request->items as $item) {
+                $sale_item = Item::find($item['id']);
+                $updateData = [
+                    'selling_price' => $item['selling_price'],
+                    'profit' => $item['selling_price'] - $item['cost'],
+                    'customer' => $request->customer,
+                    'status' => $itemStatus,
+                ];
+
+                if ($paid == 1) {
+                    $updateData['sold'] = $request->date;
+                    $updateData['position'] = null;
+                    $updateData['storage_id'] = null;
+                } else {
+                    $updateData['sold'] = null;
+                }
+
+                $sale_item->update($updateData);
             }
 
-            // Garantizar nuevamente que el crédito guardado no sea negativo
-            $finalCredit = max(0.0, (float) $finalCredit);
+            // 4. Procesar nuevos ítems
+            if (! empty($request->newItems)) {
+                foreach ($request->newItems as $item) {
+                    $newItemData = [
+                        'date' => $request->date,
+                        'model' => $item['model'],
+                        'issues' => $item['issues'] ?? '',
+                        'imei' => $item['imei'] ?? '',
+                        'selling_price' => $item['selling_price'],
+                        'customer' => $request->customer,
+                        'sale_id' => $request->id,
+                        'user_id' => $user->id,
+                        'type' => $item['type'],
+                        'status' => $itemStatus,
+                    ];
 
+                    if ($paid == 1) {
+                        $newItemData['sold'] = $request->date;
+                        $newItemData['position'] = null;
+                        $newItemData['storage_id'] = null;
+                    } else {
+                        $newItemData['sold'] = null;
+                    }
+
+                    Item::create($newItemData);
+                }
+            }
+
+            // 5. Actualizar la venta
             $sale->update([
                 'subtotal' => $subtotal,
                 'discount' => $request->discount,
@@ -345,7 +369,7 @@ class SaleController extends Controller
                 'paid' => $paid,
                 'date' => $request->date,
                 'tax_id' => $request->tax_id,
-                'credit' => $finalCredit,
+                'credit' => max(0.0, (float) $finalCredit),
             ]);
 
             // Invalidate dashboard cache for the authenticated user

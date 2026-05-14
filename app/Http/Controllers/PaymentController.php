@@ -413,7 +413,7 @@ class PaymentController extends Controller
                 'customer' => Item::where('sale_id', $id)->pluck('customer')->first(),
                 'items' => Item::where('user_id', $user->id)
                     ->with(['storage:id,name,limit', 'vendor:id,vendor'])
-                    ->whereNull('sold')->whereNull('hold')->get(),
+                    ->where('status', Item::STATUS_AVAILABLE)->whereNull('hold')->get(),
             ];
         } elseif (Auth::user()->role == ('USER')) {
             // $usersId = User::where('store_id', @$user->store_id)->pluck('id')->toarray();

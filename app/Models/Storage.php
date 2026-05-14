@@ -66,6 +66,7 @@ class Storage extends Model
         // Get positions from active (unsold) items in inventory
         $itemPositions = Item::where('storage_id', $storageId)
             ->whereNotNull('position')
+            ->whereIn('status', [Item::STATUS_AVAILABLE, Item::STATUS_RESERVED])
             ->whereNull('sold')
             ->pluck('position')
             ->toArray();
@@ -105,6 +106,7 @@ class Storage extends Model
         // Get positions from active (unsold) items in inventory
         $itemPositions = Item::whereIn('storage_id', $storageIds)
             ->whereNotNull('position')
+            ->whereIn('status', [Item::STATUS_AVAILABLE, Item::STATUS_RESERVED])
             ->whereNull('sold')
             ->get(['storage_id', 'position']);
 

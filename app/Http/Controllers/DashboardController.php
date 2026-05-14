@@ -290,7 +290,7 @@ class DashboardController extends Controller
     private function calculateInventoryMetrics($userId, $isAdmin = false)
     {
         // Agregaciones simples para items en inventario
-        $inventoryData = Item::whereNull('sold')
+        $inventoryData = Item::where('status', '!=', Item::STATUS_SOLD)
             ->whereIn('type', ['device', 'accessory'])
             ->selectRaw('
             COALESCE(SUM(cost), 0) as inventory_value,
@@ -309,7 +309,7 @@ class DashboardController extends Controller
         // optimized aggregations for device items
         $deviceData = Item::whereIn('type', ['device'])
             ->selectRaw('
-            COUNT(CASE WHEN (sold IS NULL) THEN 1 END) as devices_in_inventory,
+            COUNT(CASE WHEN (status != "sold") THEN 1 END) as devices_in_inventory,
             COUNT(CASE WHEN date >= ? AND date <= ? THEN 1 END) as trades_this_month,
             COUNT(CASE WHEN sold >= ? AND sold <= ? THEN 1 END) as sold_this_month
         ', [$startOfMonth, $endOfMonth, $startOfMonth, $endOfMonth])

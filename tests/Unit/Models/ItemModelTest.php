@@ -127,7 +127,7 @@ class ItemModelTest extends TestCaseWithCompany
         $this->assertNotNull($item->position);
     }
 
-    public function test_item_sets_sold_date_when_sale_id_is_set(): void
+    public function test_item_sets_reserved_status_when_sale_id_is_set(): void
     {
         $sale = \App\Models\Sale::factory()->create([
             'user_id' => $this->owner->id,
@@ -137,7 +137,8 @@ class ItemModelTest extends TestCaseWithCompany
             'sale_id' => $sale->id,
         ]);
 
-        $this->assertNotNull($item->sold);
+        $this->assertEquals('reserved', $item->status);
+        $this->assertNull($item->sold);
     }
 
     public function test_get_sold_attribute_fallback_returns_sold_value_when_set(): void
@@ -242,5 +243,58 @@ class ItemModelTest extends TestCaseWithCompany
         $this->createItem(['sale_id' => $sale->id]);
 
         $this->assertCount(2, $sale->items);
+    }
+
+    public function test_item_has_default_status_available(): void
+    {
+        $item = $this->createItem();
+
+        $this->assertEquals('available', $item->status);
+    }
+
+    public function test_item_status_can_be_reserved_or_sold(): void
+    {
+        $sale = \App\Models\Sale::factory()->create(['user_id' => $this->owner->id]);
+        $item = $this->createItem([
+            'sale_id' => $sale->id,
+            'status' => 'reserved',
+        ]);
+        $this->assertEquals('reserved', $item->status);
+
+        $item->sold = now();
+        $item->save();
+        $this->assertEquals('sold', $item->status);
+    }
+
+    public function test_scope_available_returns_only_available_items(): void
+    {
+        $sale = \App\Models\Sale::factory()->create(['user_id' => $this->owner->id]);
+
+        $this->createItem(['status' => 'available']);
+        $this->createItem(['status' => 'reserved', 'sale_id' => $sale->id]);
+        $this->createItem(['status' => 'sold', 'sold' => now()]);
+
+        $this->assertCount(1, Item::available()->get());
+    }
+
+    public function test_remove_sale_on_reserved_item_resets_status_and_keeps_position(): void
+    {
+        $sale = \App\Models\Sale::factory()->create([
+            'user_id' => $this->owner->id,
+        ]);
+
+        $item = $this->createItem([
+            'status' => 'reserved',
+            'storage_id' => $this->storage->id,
+            'position' => 10,
+            'sale_id' => $sale->id,
+        ]);
+
+        $item->removeSale();
+
+        $this->assertEquals('available', $item->status);
+        $this->assertNull($item->sale_id);
+        $this->assertEquals($this->storage->id, $item->storage_id);
+        $this->assertEquals(10, $item->position);
     }
 }

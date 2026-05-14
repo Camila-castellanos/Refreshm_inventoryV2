@@ -74,7 +74,7 @@ class InventoryPublicController extends Controller
         $items = Item::withoutGlobalScopes()
             ->where('shop_id', $shop->id)
             // Option 1: Original - Assumes NULL means available
-            ->whereNull('sold')
+            ->where('status', Item::STATUS_AVAILABLE)
             ->whereNull('hold')
             ->whereNotNull('model')
             ->whereNotIn('id', \App\Models\TabItem::pluck('item_id')) // Exclude items in tabs
@@ -110,7 +110,7 @@ class InventoryPublicController extends Controller
 
         // Query items active in inventory (not sold, not on hold) and matching manufacturers case-insensitively
         // Exclude items that are in custom tabs
-        $models = Item::whereNull('sold')
+        $models = Item::where('status', Item::STATUS_AVAILABLE)
             ->whereNull('hold')
             ->whereIn('type', ['device'])
             ->whereIn(DB::raw('LOWER(manufacturer)'), $manufacturers)
