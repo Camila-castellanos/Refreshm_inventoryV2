@@ -39,7 +39,7 @@ class SaleFormEdit extends FormRequest
             "amount_paid" => "required|numeric",
             "items" => "required_without:newItems|array",
             "items.*.id" => "required|exists:items,id",
-            "items.*.sold" => "required|date",
+            "items.*.sold" => "nullable|date",
             "items.*.customer" => "sometimes|nullable",
             "credit" => "nullable|numeric",
             "tax_id" => "nullable",
