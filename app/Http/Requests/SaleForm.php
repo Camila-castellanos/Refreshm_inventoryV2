@@ -38,7 +38,7 @@ class SaleForm extends FormRequest
             'amount_paid' => 'required|numeric',
             'items' => 'array|nullable',
             'items.*.id' => 'required_with:items|exists:items,id',
-            'items.*.sold' => 'required_with:items|date',
+            'items.*.sold' => 'nullable|date',
             'items.*.customer' => 'required_with:items',
             'items.*.profit' => 'required_with:items|numeric',
             'items.*.position' => 'numeric|nullable',
