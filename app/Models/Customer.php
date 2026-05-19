@@ -6,13 +6,26 @@ use App\Models\Scopes\CompanyUsersSharedScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Laravel\Sanctum\HasApiTokens;
 
-class Customer extends Model
+class Customer extends Authenticatable
 {
-    use HasFactory;
+    use HasApiTokens, HasFactory;
 
     protected $fillable = [
         'customer', 'user_id', 'company_id', 'first_name', 'last_name', 'email', 'phone', 'phone_optional', 'account_number', 'website', 'notes', 'currency', 'billing_address', 'billing_address_optional', 'billing_address_country', 'billing_address_state', 'billing_address_city', 'billing_address_postal', 'ship_name', 'shipping_address', 'shipping_address_optional', 'shipping_address_country', 'shipping_address_state', 'shipping_address_city', 'shipping_address_postal', 'shipping_phone', 'delivery_instructions', 'credit',
+        // Auth fields
+        'password',
+        'email_verified_at',
+        'remember_token',
+        'magic_link_expires_at',
+    ];
+
+    protected $hidden = [
+        'password',
+        'remember_token',
     ];
 
     protected static function booted()
@@ -31,6 +44,22 @@ class Customer extends Model
     }
 
     /**
+     * Get incoming requests for this customer.
+     */
+    public function incomingRequests(): HasMany
+    {
+        return $this->hasMany(IncomingRequest::class);
+    }
+
+    /**
+     * Get incoming request items for this customer.
+     */
+    public function incomingRequestItems(): HasMany
+    {
+        return $this->hasMany(IncomingRequestItem::class);
+    }
+
+    /**
      * Get sales related to this customer through items
      */
     public function sales()
@@ -43,6 +72,14 @@ class Customer extends Model
             'id',       // Local key on customers table
             'sale_id'   // Local key on items table
         );
+    }
+
+    /**
+     * Check if the customer has a password set.
+     */
+    public function hasPassword(): bool
+    {
+        return ! empty($this->password);
     }
 
     // For array

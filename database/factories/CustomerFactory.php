@@ -55,4 +55,19 @@ class CustomerFactory extends Factory
             'credit' => $credit,
         ]);
     }
+
+    public function withPassword(string $password = 'hashed'): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'password' => $password,
+        ]);
+    }
+
+    public function withMagicLink(string $token = 'test-token', int $expiresInMinutes = 15): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'remember_token' => $token,
+            'magic_link_expires_at' => now()->addMinutes($expiresInMinutes),
+        ]);
+    }
 }

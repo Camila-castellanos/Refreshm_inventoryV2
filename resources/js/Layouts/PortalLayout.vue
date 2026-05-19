@@ -1,19 +1,20 @@
 <template>
-  <div class="bg-gray-100 min-h-screen">
-    <header class="bg-white shadow-md">
+  <div class="min-h-screen max-w-screen">
+<header class="bg-white dark:bg-surface-800 shadow">
       <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-        <div class="flex items-center">
-          <img src="/images/swiftstock_logo.jpeg" alt="Logo" class="h-12">
+        <div class="flex items-center gap-4">
+          <img src="/images/swiftstock_logo.jpeg" class="h-10" alt="Logo" />
+          <span class="text-surface-500 text-sm">{{ title }}</span>
         </div>
         <div class="flex items-center gap-4">
           <template v-if="auth?.user">
-            <span class="text-surface-600 dark:text-surface-300 text-sm hidden sm:inline">{{ auth.user.email }}</span>
             <Button
               label="Dashboard"
               icon="pi pi-home"
               @click="dashboard"
               class="p-button-outlined p-button-sm"
             />
+            <span class="text-surface-600 dark:text-surface-300 text-sm hidden sm:inline">{{ auth.user.email }}</span>
             <Button
               label="Sign out"
               icon="pi pi-sign-out"
@@ -33,26 +34,25 @@
       </div>
     </header>
 
-    <main class="max-w-7xl mx-auto py-8 px-4">
-      <InventoryList :items="items" :shopName="shopName" :shopSlug="shopSlug" :userTabs="userTabs"></InventoryList>
+    <main class="min-h-screen">
+      <slot />
     </main>
+
+    <Toast />
+    <ConfirmDialog />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
-import { usePage } from '@inertiajs/vue3';
-import Button from 'primevue/button';
-import InventoryList from './InventoryList.vue';
+import { computed } from "vue";
+import { Link, usePage } from "@inertiajs/vue3";
+import Button from "primevue/button";
+import Toast from "primevue/toast";
+import ConfirmDialog from "primevue/confirmdialog";
 
-interface Props {
-  items?: any[];
-  shopName?: string;
-  shopSlug?: string;
-  userTabs?: { id: number; name: string; order: number }[];
-}
-
-defineProps<Props>();
+const props = defineProps<{
+  title?: string;
+}>();
 
 const page = usePage();
 const auth = computed(() => page.props.customer_auth);

@@ -37,6 +37,12 @@ class HandleInertiaRequests extends Middleware
             'user' => $request->user() ? $this->getUserAuthData($request->user()) : null,
         ];
 
+        $customerAuthData = fn () => [
+            'user' => auth('customer')->check()
+                ? $this->getUserAuthData(auth('customer')->user())
+                : null,
+        ];
+
         $flashData = function () use ($request) {
             return [
                 'success' => $request->session()->get('success'),
@@ -47,6 +53,7 @@ class HandleInertiaRequests extends Middleware
         return array_merge($parentShare, [
             'layout' => fn () => $request->is('inventory*') ? 'InventoryLayout' : null,
             'auth' => $authData,
+            'customer_auth' => $customerAuthData,
             'permissions_defaults' => function () use ($request) {
                 $user = $request->user();
                 if (! $user) {
@@ -64,11 +71,20 @@ class HandleInertiaRequests extends Middleware
     /**
      * Helper function to format user data for sharing, including a list of shops.
      *
-     * @param  \App\Models\User  $user  The authenticated user instance.
+     * @param  \App\Models\User|\App\Models\Customer  $user  The authenticated user instance.
      * @return array<string, mixed>
      */
-    protected function getUserAuthData(User $user): array
+    protected function getUserAuthData($user): array
     {
+        // If user is actually a Customer (from portal), return minimal data
+        if ($user instanceof \App\Models\Customer) {
+            return [
+                'id' => $user->id,
+                'email' => $user->email,
+                'type' => 'customer',
+            ];
+        }
+
         // Eager load company and its shops efficiently
         $user->loadMissing(['company.shops']);
 

@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Models\Scopes\CompanyUsersSharedScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class IncomingRequestItem extends Model
 {
@@ -21,6 +22,7 @@ class IncomingRequestItem extends Model
         'incoming_request_id', 'original_item_id', 'date', 'supplier', 'manufacturer',
         'storage_id', 'position', 'model', 'colour', 'battery', 'grade', 'issues', 'cost', 'imei',
         'selling_price', 'customer', 'user_id', 'vendor_id', 'shop_id', 'type', 'currency',
+        'customer_id',
     ];
 
     protected $casts = [
@@ -35,5 +37,10 @@ class IncomingRequestItem extends Model
     public function originalItem()
     {
         return $this->belongsTo(Item::class, 'original_item_id');
+    }
+
+    public function customer(): BelongsTo
+    {
+        return $this->belongsTo(Customer::class);
     }
 }

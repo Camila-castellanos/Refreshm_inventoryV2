@@ -25,6 +25,11 @@ class LogSuccessfulLogin
     {
         $user = $event->user;
 
+        // Skip logging for customer portal logins (Customer model, not User)
+        if ($user instanceof \App\Models\Customer) {
+            return;
+        }
+
         LoginActivity::create([
             'user_id' => $user->id,
             'login_at' => now(),

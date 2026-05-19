@@ -37,6 +37,13 @@ class CompanyUsersSharedScope implements Scope
     {
         if (Auth::check()) {
             $user = Auth::user();
+
+            // Portal customers are "orphaned" (no company_id) and should see
+            // their resources across all companies/shops, so we skip company filtering.
+            if ($user instanceof \App\Models\Customer) {
+                return;
+            }
+
             if ($user->company_id) {
                 $tableName = $model->getTable();
                 $module = $this->moduleMap[$tableName] ?? null;

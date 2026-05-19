@@ -27,17 +27,54 @@ use App\Http\Controllers\TaxController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UtilitiesController;
 use App\Http\Controllers\VendorController;
+use App\Http\Controllers\Auth\CustomerAuthController;
+use App\Http\Controllers\Portal\PortalController;
 use Illuminate\Foundation\Application;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
+// =====================================================
+// Customer Portal Routes (Public Store Account)
+// =====================================================
+Route::prefix('publicstore/account')->name('publicstore.account.')->group(function () {
+    Route::get('/', function () {
+        if (Auth::guard('customer')->check()) {
+            return redirect()->route('publicstore.account.dashboard');
+        }
+
+        return redirect()->route('publicstore.account.login.show');
+    })->name('home');
+
+    // Guest routes (no auth required)
+    Route::middleware('guest:customer')->group(function () {
+        Route::get('/login', [CustomerAuthController::class, 'showLogin'])->name('login.show');
+        Route::post('/login', [CustomerAuthController::class, 'login'])->name('login');
+        
+        Route::get('/register', [CustomerAuthController::class, 'showRegister'])->name('register.show');
+        Route::post('/register', [CustomerAuthController::class, 'register'])->name('register');
+        
+        Route::get('/magic-link/{token}', [CustomerAuthController::class, 'showSetPassword'])->name('magic-link.show');
+        Route::post('/set-password', [CustomerAuthController::class, 'setPassword'])->name('set-password');
+    });
+
+    // Authenticated routes (session-based auth via customer guard)
+    Route::middleware('auth:customer')->group(function () {
+        Route::get('/dashboard', [PortalController::class, 'dashboard'])->name('dashboard');
+        Route::get('/requests', [PortalController::class, 'requests'])->name('requests');
+        Route::get('/requests/{id}', [PortalController::class, 'showRequest'])->name('requests.show');
+        Route::get('/returns', [PortalController::class, 'returns'])->name('returns');
+        Route::get('/credit', [PortalController::class, 'credit'])->name('credit');
+        Route::post('/logout', [CustomerAuthController::class, 'logout'])->name('logout');
+    });
+});
+
+Route::post('/publicstore/get-unique-models', [InventoryPublicController::class, 'getUniqueModelsByManufacturer'])->name('public.items.getUniqueModelsByManufacturer');
 Route::get('/publicstore/{shopSlug}', [InventoryPublicController::class, 'index'])->name('public.inventory.shop.index');
 Route::get('/publicstore', function () {
     abort(404);
 });
-Route::post('/publicstore/get-unique-models', [InventoryPublicController::class, 'getUniqueModelsByManufacturer'])->name('public.items.getUniqueModelsByManufacturer');
 Route::get('items/tabs/{id}/items', [ItemController::class, 'getTabItems'])->name('items.tabs.items');
 Route::post('publicInventory/request', [ItemController::class, 'request'])->name('items.request');
 
