@@ -435,7 +435,7 @@ onMounted(() => {
     // Match shipping by value
     const savedShipping = customerAuth.default_shipping;
     if (savedShipping !== null && savedShipping !== undefined) {
-      const match = shippingOptions.find(opt => opt.value === savedShipping);
+      const match = shippingOptions.find(opt => opt.value === Number(savedShipping));
       if (match) {
         formData.value.shipping = match;
       }

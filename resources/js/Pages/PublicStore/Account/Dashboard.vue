@@ -1,133 +1,141 @@
 <template>
   <PortalLayout>
-    <div class="p-6">
-      <!-- Stats Grid -->
-      <div class="mt-4 -mb-2 font-bold">
-        <h2>Overview</h2>
-      </div>
-      <Divider />
-
-      <div class="grid grid-cols-2 grow md:grid-cols-3 lg:grid-cols-3 gap-4 mt-6">
-        <StatCard
-          label="Total Requests"
-          :value="total_requests"
-          icon="pi-inbox"
-          color="blue"
-        />
-        <StatCard
-          label="Pending"
-          :value="pending_requests"
-          icon="pi-clock"
-          color="yellow"
-        />
-        <StatCard
-          label="Credit Balance"
-          :value="credit_balance"
-          icon="pi-wallet"
-          color="green"
-          currency="$"
-        />
-      </div>
-
-      <!-- Navigation Cards -->
-      <div class="mt-12 -mb-2 font-bold">
-        <h2>Quick Access</h2>
-      </div>
-      <Divider />
-
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mt-6">
-        <div @click="showRequestsModal = true" class="block">
-          <div class="bg-white dark:bg-surface-800 rounded-lg shadow p-6 hover:shadow-lg transition-shadow cursor-pointer">
-            <div class="flex items-center justify-between mb-4">
-              <i class="pi pi-list text-3xl text-blue-500"></i>
-              <span class="text-surface-500 text-sm">{{ total_requests }} requests</span>
-            </div>
-            <div class="text-lg font-medium text-surface-900 dark:text-surface-0">My Requests</div>
-            <div class="text-surface-600 dark:text-surface-400 text-sm mt-1">View request status</div>
-          </div>
+    <div class="p-4 md:p-8 max-w-7xl mx-auto">
+      <!-- Top Bar: Quick Stats & Profile -->
+      <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-10">
+        <div>
+          <h1 class="text-3xl font-bold text-surface-900 dark:text-surface-0">
+            Welcome, {{ $page.props.customer_auth.user.first_name }}!
+          </h1>
+          <p class="text-surface-500 mt-1">Manage your device requests and account preferences.</p>
         </div>
-        <Link href="/publicstore/account/returns" class="block">
-          <div class="bg-white dark:bg-surface-800 rounded-lg shadow p-6 hover:shadow-lg transition-shadow cursor-pointer">
-            <div class="flex items-center justify-between mb-4">
-              <i class="pi pi-replay text-3xl text-orange-500"></i>
-              <span class="text-surface-500 text-sm">Returns</span>
-            </div>
-            <div class="text-lg font-medium text-surface-900 dark:text-surface-0">Returns / Exchanges</div>
-            <div class="text-surface-600 dark:text-surface-400 text-sm mt-1">Track returns and exchanges</div>
-          </div>
-        </Link>
-        <Link href="/publicstore/account/credit" class="block">
-          <div class="bg-white dark:bg-surface-800 rounded-lg shadow p-6 hover:shadow-lg transition-shadow cursor-pointer">
-            <div class="flex items-center justify-between mb-4">
-              <i class="pi pi-wallet text-3xl text-green-500"></i>
-              <span class="text-surface-500 text-sm">{{ formatCurrency(credit_balance) }}</span>
-            </div>
-            <div class="text-lg font-medium text-surface-900 dark:text-surface-0">My Credit</div>
-            <div class="text-surface-600 dark:text-surface-400 text-sm mt-1">Balance and transactions</div>
-          </div>
-        </Link>
-        <div @click="showProfileModal = true" class="block">
-          <div class="bg-white dark:bg-surface-800 rounded-lg shadow p-6 hover:shadow-lg transition-shadow cursor-pointer">
-            <div class="flex items-center justify-between mb-4">
-              <i class="pi pi-user text-3xl text-primary-500"></i>
-            </div>
-            <div class="text-lg font-medium text-surface-900 dark:text-surface-0">My Profile</div>
-            <div class="text-surface-600 dark:text-surface-400 text-sm mt-1">Manage your preferences</div>
-          </div>
-        </div>
-      </div>
 
-      <!-- Recent Requests -->
-      <div class="mt-12 -mb-2 font-bold">
-        <h2>Recent Requests</h2>
-      </div>
-      <Divider />
-
-      <div class="bg-white dark:bg-surface-800 rounded-lg shadow mt-6">
-        <div class="p-6">
-          <div v-if="!recent_requests || recent_requests.length === 0" class="text-center text-surface-500 py-8">
-            You have no recent requests
-          </div>
-          <div v-else class="space-y-4">
-            <div
-              v-for="request in recent_requests"
-              :key="request.id"
-              class="flex justify-between items-center p-4 bg-surface-50 dark:bg-surface-700 rounded-lg"
-            >
-              <div>
-                <div class="font-medium text-surface-900 dark:text-surface-0">#{{ request.id }} - {{ request.name || 'Unnamed' }}</div>
-                <div class="text-sm text-surface-600 dark:text-surface-400">{{ request.shop_id || 'Store' }}</div>
+        <div class="flex flex-wrap gap-4 w-full lg:w-auto">
+          <!-- Total Items Card -->
+          <div class="bg-white dark:bg-surface-800 border border-surface-100 dark:border-surface-700 rounded-2xl px-6 py-4 flex items-center gap-5 shadow-sm flex-1 lg:flex-none">
+            <i class="pi pi-box text-blue-400 text-2xl"></i>
+            <div>
+              <div class="text-[9px] uppercase text-surface-400 font-bold tracking-[0.1em] mb-0.5">Total Devices</div>
+              <div class="text-xl font-semibold text-surface-900 dark:text-surface-0 leading-tight">
+                {{ total_items_count }}
               </div>
-              <Tag
-                :value="request.processed ? 'Processed' : 'Pending'"
-                :severity="request.processed ? 'success' : 'warn'"
-                class="font-medium"
-              />
             </div>
           </div>
-          <div v-if="recent_requests && recent_requests.length > 0" class="mt-4 text-center">
-            <Link href="/publicstore/account/requests" class="text-primary-500 hover:text-primary-600">
-              View all requests →
+
+          <!-- Credit Card -->
+          <div class="bg-white dark:bg-surface-800 border border-surface-100 dark:border-surface-700 rounded-2xl px-6 py-4 flex items-center gap-5 shadow-sm flex-1 lg:flex-none">
+            <i class="pi pi-wallet text-emerald-400 text-2xl"></i>
+            <div>
+              <div class="text-[9px] uppercase text-surface-400 font-bold tracking-[0.1em] mb-0.5">Available Credit</div>
+              <div class="text-xl font-semibold text-surface-900 dark:text-surface-0 leading-tight">
+                {{ formatCurrency(credit_balance) }}
+              </div>
+            </div>
+          </div>
+
+          <!-- Profile Button -->
+          <button
+            @click="showProfileModal = true"
+            class="bg-white dark:bg-surface-800 border border-surface-100 dark:border-surface-700 rounded-2xl px-6 py-4 flex items-center gap-5 shadow-sm hover:bg-surface-50 dark:hover:bg-surface-700 transition-all text-left flex-1 lg:flex-none"
+          >
+            <i class="pi pi-user text-primary-400 text-2xl"></i>
+            <div>
+              <div class="text-[9px] uppercase text-surface-400 font-bold tracking-[0.1em] mb-0.5">Account</div>
+              <div class="text-sm font-semibold text-surface-900 dark:text-surface-0 leading-tight">Preferences</div>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      <!-- Main Two-Column Layout -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
+        <!-- LEFT COLUMN: Pending Requests -->
+        <section>
+          <div class="flex items-center justify-between mb-6">
+            <h2 class="text-xl font-bold flex items-center gap-3">
+              <i class="pi pi-clock text-yellow-500"></i>
+              Active Requests
+              <Tag :value="pendingRequests.length" severity="warn" rounded class="ml-1" />
+            </h2>
+          </div>
+
+          <div class="space-y-4">
+            <div
+              v-if="pendingRequests.length === 0"
+              class="bg-surface-50 dark:bg-surface-800/50 border-2 border-dashed border-surface-200 dark:border-surface-700 rounded-2xl p-12 text-center text-surface-500"
+            >
+              <i class="pi pi-inbox text-4xl mb-3 block opacity-20"></i>
+              No active requests at the moment.
+            </div>
+            
+            <div
+              v-for="request in pendingRequests"
+              :key="request.id"
+              @click="openRequestDetail(request)"
+              class="group relative bg-white dark:bg-surface-800 p-5 rounded-2xl border border-surface-200 dark:border-surface-700 hover:border-primary-400 dark:hover:border-primary-500 shadow-sm hover:shadow-xl transition-all cursor-pointer overflow-hidden"
+            >
+              <!-- Accent border -->
+              <div class="absolute left-0 top-0 bottom-0 w-1 bg-yellow-400"></div>
+              
+              <div class="flex justify-between items-start">
+                <div class="min-w-0">
+                  <div class="flex items-center gap-2 mb-1">
+                    <span class="font-bold text-lg text-surface-900 dark:text-surface-0">#{{ request.id }}</span>
+                    <span class="text-surface-400">·</span>
+                    <span class="text-surface-900 dark:text-surface-0 font-medium truncate">{{ request.name || 'Device Request' }}</span>
+                  </div>
+                  <div class="text-sm text-surface-500 flex items-center gap-3">
+                    <span>{{ formatDate(request.created_at) }}</span>
+                    <span class="w-1 h-1 bg-surface-300 rounded-full"></span>
+                    <span>{{ request.items?.length || 0 }} items</span>
+                  </div>
+                </div>
+                <i class="pi pi-chevron-right text-surface-300 group-hover:text-primary-500 transition-colors"></i>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- RIGHT COLUMN: Past Requests -->
+        <section>
+          <div class="flex items-center justify-between mb-6">
+            <h2 class="text-xl font-bold flex items-center gap-3">
+              <i class="pi pi-history text-blue-500"></i>
+              Past Requests
+            </h2>
+            <Link 
+              v-if="total_requests > all_requests.length"
+              href="/publicstore/account/requests" 
+              class="text-sm text-primary-500 font-bold hover:underline"
+            >
+              View Full History
             </Link>
           </div>
-        </div>
-      </div>
 
-      <!-- Credit Info -->
-      <div class="mt-12 -mb-2 font-bold">
-        <h2>Credit Summary</h2>
-      </div>
-      <Divider />
-
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-        <div class="bg-white dark:bg-surface-800 rounded-lg shadow p-6">
-          <div class="text-surface-600 dark:text-surface-400 text-sm mb-1">Credit from Returns</div>
-          <div class="text-2xl font-bold text-green-600">{{ formatCurrency(credit_from_returns || 0) }}</div>
-        </div>
-        <div class="bg-white dark:bg-surface-800 rounded-lg shadow p-6">
-          <div class="text-surface-600 dark:text-surface-400 text-sm mb-1">Current Balance</div>
-          <div class="text-2xl font-bold text-surface-900 dark:text-surface-0">{{ formatCurrency(credit_balance) }}</div>
-        </div>
+          <div class="space-y-4">
+            <div v-if="pastRequests.length === 0" class="text-surface-400 text-center py-12 italic border border-surface-100 dark:border-surface-800 rounded-2xl">
+              Your request history is empty.
+            </div>
+            
+            <div
+              v-for="request in pastRequests"
+              :key="request.id"
+              @click="openRequestDetail(request)"
+              class="flex justify-between items-center p-4 bg-surface-50 dark:bg-surface-800/40 rounded-xl border border-transparent hover:border-surface-300 dark:hover:border-surface-600 hover:bg-white dark:hover:bg-surface-800 transition-all cursor-pointer group"
+            >
+              <div class="min-w-0">
+                <div class="font-bold text-surface-900 dark:text-surface-0 flex items-center gap-2">
+                  <span class="text-surface-500">#{{ request.id }}</span>
+                  <span class="truncate text-sm">{{ request.name || 'Device Request' }}</span>
+                </div>
+                <div class="text-xs text-surface-500 mt-0.5">
+                  {{ formatDate(request.created_at) }} · {{ request.items?.length || 0 }} items
+                </div>
+              </div>
+              <Tag value="Processed" severity="success" class="text-[10px]" />
+            </div>
+          </div>
+        </section>
       </div>
     </div>
 
@@ -271,7 +279,7 @@
 <script setup lang="ts">
 import { Link } from "@inertiajs/vue3";
 import { usePage } from "@inertiajs/vue3";
-import { reactive, onMounted, ref } from "vue";
+import { reactive, onMounted, ref, computed } from "vue";
 import PortalLayout from "@/Layouts/PortalLayout.vue";
 import Divider from "primevue/divider";
 import StatCard from "@/Components/StatCard.vue";
@@ -284,14 +292,18 @@ import Tag from "primevue/tag";
 import axios from "axios";
 import { useToast } from "primevue/usetoast";
 
-defineProps<{
+const props = defineProps<{
   total_requests: number;
   pending_requests: number;
+  total_items_count: number;
   credit_balance: number;
   credit_from_returns: number;
   recent_requests: any[];
   all_requests: any[];
 }>();
+
+const pendingRequests = computed(() => props.all_requests.filter(r => !r.processed));
+const pastRequests = computed(() => props.all_requests.filter(r => r.processed));
 
 const page = usePage();
 const toast = useToast();
@@ -317,7 +329,9 @@ onMounted(() => {
   const user = page.props.customer_auth?.user;
   if (user) {
     profileForm.default_store = user.default_store || '';
-    profileForm.default_shipping = user.default_shipping ?? null;
+    profileForm.default_shipping = (user.default_shipping !== null && user.default_shipping !== undefined) 
+      ? Number(user.default_shipping) 
+      : null;
     profileForm.notes = user.notes || '';
   }
 });

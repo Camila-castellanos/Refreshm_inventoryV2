@@ -37,6 +37,11 @@ class PortalController extends Controller
             ->where('customer', $customer->email)
             ->sum('credit');
 
+        // Total items requested across all requests
+        $totalItemsCount = IncomingRequestItem::withoutGlobalScopes()
+            ->where('customer_id', $customer->id)
+            ->count();
+
         // Recent requests (for dashboard preview - limited to 5)
         $recentRequests = IncomingRequest::withoutGlobalScopes()
             ->where('customer_id', $customer->id)
@@ -56,6 +61,7 @@ class PortalController extends Controller
         return \Inertia\Inertia::render('PublicStore/Account/Dashboard', [
             'total_requests' => $totalRequests,
             'pending_requests' => $pendingRequests,
+            'total_items_count' => $totalItemsCount,
             'credit_balance' => $creditBalance,
             'credit_from_returns' => $creditFromReturns,
             'recent_requests' => $recentRequests,
