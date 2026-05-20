@@ -32,7 +32,12 @@ class PortalController extends Controller
         // Credit balance from customer model
         $creditBalance = $customer->credit ?? 0;
 
-        // Recent requests
+        // Credit from returns
+        $creditFromReturns = ReturnItems::withoutGlobalScopes()
+            ->where('customer', $customer->email)
+            ->sum('credit');
+
+        // Recent requests (for dashboard preview - limited to 5)
         $recentRequests = IncomingRequest::withoutGlobalScopes()
             ->where('customer_id', $customer->id)
             ->with('items')
@@ -40,10 +45,13 @@ class PortalController extends Controller
             ->limit(5)
             ->get();
 
-        // Credit from returns
-        $creditFromReturns = ReturnItems::withoutGlobalScopes()
-            ->where('customer', $customer->email)
-            ->sum('credit');
+        // All requests for the modal (limited to 50)
+        $allRequests = IncomingRequest::withoutGlobalScopes()
+            ->where('customer_id', $customer->id)
+            ->with('items')
+            ->orderBy('created_at', 'desc')
+            ->limit(50)
+            ->get();
 
         return \Inertia\Inertia::render('PublicStore/Account/Dashboard', [
             'total_requests' => $totalRequests,
@@ -51,6 +59,7 @@ class PortalController extends Controller
             'credit_balance' => $creditBalance,
             'credit_from_returns' => $creditFromReturns,
             'recent_requests' => $recentRequests,
+            'all_requests' => $allRequests,
         ]);
     }
 

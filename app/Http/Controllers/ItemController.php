@@ -400,6 +400,7 @@ class ItemController extends Controller
                 'notes' => $notes,
                 'user_id' => $requestUserId,
                 'shipping' => $shippingData,
+                'customer_id' => Auth::guard('customer')->id() ?? null,
             ]);
 
             // Persist each requested item as a snapshot
@@ -422,6 +423,7 @@ class ItemController extends Controller
                     'selling_price' => $it['selling_price'] ?? null,
                     'currency' => $it['currency'] ?? 'CAD',
                     'customer' => $it['customer'] ?? null,
+                'customer_id' => Auth::guard('customer')->id() ?? null,
                     'user_id' => $it['user_id'] ?? Auth::id(),
                     'vendor_id' => $it['vendor_id'] ?? null,
                     'shop_id' => $it['shop_id'] ?? null,

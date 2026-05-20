@@ -36,7 +36,7 @@
       <Divider />
 
       <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mt-6">
-        <Link href="/publicstore/account/requests" class="block">
+        <div @click="showRequestsModal = true" class="block">
           <div class="bg-white dark:bg-surface-800 rounded-lg shadow p-6 hover:shadow-lg transition-shadow cursor-pointer">
             <div class="flex items-center justify-between mb-4">
               <i class="pi pi-list text-3xl text-blue-500"></i>
@@ -45,7 +45,7 @@
             <div class="text-lg font-medium text-surface-900 dark:text-surface-0">My Requests</div>
             <div class="text-surface-600 dark:text-surface-400 text-sm mt-1">View request status</div>
           </div>
-        </Link>
+        </div>
         <Link href="/publicstore/account/returns" class="block">
           <div class="bg-white dark:bg-surface-800 rounded-lg shadow p-6 hover:shadow-lg transition-shadow cursor-pointer">
             <div class="flex items-center justify-between mb-4">
@@ -98,20 +98,11 @@
                 <div class="font-medium text-surface-900 dark:text-surface-0">#{{ request.id }} - {{ request.name || 'Unnamed' }}</div>
                 <div class="text-sm text-surface-600 dark:text-surface-400">{{ request.shop_id || 'Store' }}</div>
               </div>
-              <div>
-                <span
-                  v-if="request.processed"
-                  class="px-3 py-1 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 rounded-full text-sm"
-                >
-                  Processed
-                </span>
-                <span
-                  v-else
-                  class="px-3 py-1 bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 rounded-full text-sm"
-                >
-                  Pending
-                </span>
-              </div>
+              <Tag
+                :value="request.processed ? 'Processed' : 'Pending'"
+                :severity="request.processed ? 'success' : 'warn'"
+                class="font-medium"
+              />
             </div>
           </div>
           <div v-if="recent_requests && recent_requests.length > 0" class="mt-4 text-center">
@@ -169,6 +160,111 @@
         </div>
       </form>
     </Dialog>
+
+    <!-- My Requests Modal -->
+    <Dialog v-model:visible="showRequestsModal" header="My Requests" :modal="true" class="w-full mx-4 md:w-2/3 lg:w-1/2">
+      <div v-if="!all_requests || all_requests.length === 0" class="text-center text-surface-500 py-8">
+        You have no requests yet
+      </div>
+      <div v-else class="space-y-3 max-h-96 overflow-y-auto pr-1">
+        <div
+          v-for="request in all_requests"
+          :key="request.id"
+          @click="openRequestDetail(request)"
+          class="flex justify-between items-center p-4 bg-surface-50 hover:bg-black/[0.03] dark:bg-surface-700 dark:hover:bg-black/[0.10] rounded-lg border border-transparent hover:border-primary-300 dark:hover:border-primary-600 hover:shadow-md cursor-pointer transition-all duration-200"
+        >
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2 mb-1">
+              <span class="font-semibold text-surface-900 dark:text-surface-0">#{{ request.id }}</span>
+              <span class="text-surface-600 dark:text-surface-400">·</span>
+              <span class="text-surface-900 dark:text-surface-0 truncate">{{ request.name || 'Unnamed' }}</span>
+            </div>
+            <div class="text-sm text-surface-500">{{ formatDate(request.created_at) }} · {{ request.items?.length || 0 }} items</div>
+          </div>
+          <Tag
+            :value="request.processed ? 'Processed' : 'Pending'"
+            :severity="request.processed ? 'success' : 'warn'"
+            class="font-medium ml-3 flex-shrink-0"
+          />
+        </div>
+      </div>
+      <div v-if="total_requests > 50" class="mt-4 text-center text-surface-500 text-sm">
+        Showing 50 of {{ total_requests }} requests
+      </div>
+      <div class="flex justify-end mt-4">
+        <Button type="button" severity="secondary" @click="showRequestsModal = false">Close</Button>
+      </div>
+    </Dialog>
+
+    <!-- Request Detail Modal -->
+    <Dialog v-model:visible="showRequestDetailModal" :header="'Request #' + (selectedRequest?.id || '')" :modal="true" class="w-full mx-4 md:w-2/3 lg:w-3/4">
+      <div v-if="selectedRequest">
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
+          <div class="bg-surface-50 dark:bg-surface-700 rounded-lg p-3 border border-surface-200 dark:border-surface-600">
+            <div class="text-xs text-surface-500 mb-1">Name</div>
+            <div class="font-semibold text-surface-900 dark:text-surface-0">{{ selectedRequest.name || 'Unnamed' }}</div>
+          </div>
+          <div class="bg-surface-50 dark:bg-surface-700 rounded-lg p-3 border border-surface-200 dark:border-surface-600">
+            <div class="text-xs text-surface-500 mb-1">Email</div>
+            <div class="font-semibold text-surface-900 dark:text-surface-0 truncate">{{ selectedRequest.email || 'N/A' }}</div>
+          </div>
+          <div class="bg-surface-50 dark:bg-surface-700 rounded-lg p-3 border border-surface-200 dark:border-surface-600">
+            <div class="text-xs text-surface-500 mb-1">Store</div>
+            <div class="font-semibold text-surface-900 dark:text-surface-0">{{ selectedRequest.store || 'N/A' }}</div>
+          </div>
+          <div class="bg-surface-50 dark:bg-surface-700 rounded-lg p-3 border border-surface-200 dark:border-surface-600">
+            <div class="text-xs text-surface-500 mb-1">Status</div>
+            <div class="mt-1">
+              <Tag
+                :value="selectedRequest.processed ? 'Processed' : 'Pending'"
+                :severity="selectedRequest.processed ? 'success' : 'warn'"
+                class="font-medium"
+              />
+            </div>
+          </div>
+          <div v-if="selectedRequest.notes" class="bg-surface-50 dark:bg-surface-700 rounded-lg p-3 border border-surface-200 dark:border-surface-600 col-span-2">
+            <div class="text-xs text-surface-500 mb-1">Notes</div>
+            <div class="font-semibold text-surface-900 dark:text-surface-0">{{ selectedRequest.notes }}</div>
+          </div>
+        </div>
+
+        <div class="font-semibold text-surface-900 dark:text-surface-0 mb-3">Items ({{ selectedRequest.items?.length || 0 }})</div>
+        <div v-if="!selectedRequest.items || selectedRequest.items.length === 0" class="text-center text-surface-500 py-4">
+          No items in this request
+        </div>
+        <div v-else class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-surface-200 dark:border-surface-600">
+                <th class="text-left p-2 text-surface-500 font-medium">Model</th>
+                <th class="text-left p-2 text-surface-500 font-medium">Manufacturer</th>
+                <th class="text-left p-2 text-surface-500 font-medium">Colour</th>
+                <th class="text-left p-2 text-surface-500 font-medium">Battery</th>
+                <th class="text-left p-2 text-surface-500 font-medium">Grade</th>
+                <th class="text-left p-2 text-surface-500 font-medium">Issues</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="item in selectedRequest.items"
+                :key="item.id"
+                class="border-b border-surface-100 dark:border-surface-700 hover:bg-surface-50 dark:hover:bg-surface-700"
+              >
+                <td class="p-2 text-surface-900 dark:text-surface-0">{{ item.model || 'N/A' }}</td>
+                <td class="p-2 text-surface-600 dark:text-surface-400">{{ item.manufacturer || 'N/A' }}</td>
+                <td class="p-2 text-surface-600 dark:text-surface-400">{{ item.colour || 'N/A' }}</td>
+                <td class="p-2 text-surface-600 dark:text-surface-400">{{ item.battery ? item.battery + '%' : 'N/A' }}</td>
+                <td class="p-2 text-surface-600 dark:text-surface-400">{{ item.grade || 'N/A' }}</td>
+                <td class="p-2 text-surface-600 dark:text-surface-400 text-sm max-w-xs">{{ item.issues || 'None' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="flex justify-end mt-6">
+        <Button type="button" severity="secondary" @click="showRequestDetailModal = false">Close</Button>
+      </div>
+    </Dialog>
   </PortalLayout>
 </template>
 
@@ -184,6 +280,7 @@ import InputText from "primevue/inputtext";
 import Textarea from "primevue/textarea";
 import Dropdown from "primevue/dropdown";
 import Button from "primevue/button";
+import Tag from "primevue/tag";
 import axios from "axios";
 import { useToast } from "primevue/usetoast";
 
@@ -193,6 +290,7 @@ defineProps<{
   credit_balance: number;
   credit_from_returns: number;
   recent_requests: any[];
+  all_requests: any[];
 }>();
 
 const page = usePage();
@@ -204,6 +302,9 @@ const shippingOptions = [
 ];
 
 const showProfileModal = ref(false);
+const showRequestsModal = ref(false);
+const showRequestDetailModal = ref(false);
+const selectedRequest = ref<any>(null);
 
 const profileForm = reactive({
   default_store: '',
@@ -241,5 +342,18 @@ const formatCurrency = (value: number) => {
     style: 'currency',
     currency: 'CAD'
   }).format(value || 0);
+};
+
+const formatDate = (dateString: string) => {
+  return new Date(dateString).toLocaleDateString('en-CA', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+};
+
+const openRequestDetail = (request: any) => {
+  selectedRequest.value = request;
+  showRequestDetailModal.value = true;
 };
 </script>
