@@ -353,7 +353,8 @@
 <script setup lang="ts">
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
+import { usePage } from "@inertiajs/vue3";
 import { IconField, InputIcon, Dialog, Checkbox, RadioButton } from "primevue";
 import Dropdown from 'primevue/dropdown';
 import Card from 'primevue/card';
@@ -368,12 +369,13 @@ import { defineProps } from 'vue';
 import { router } from "@inertiajs/vue3";
 import axios from 'axios';
 import Textarea from 'primevue/textarea';
-import { onMounted } from 'vue';
 import downloadSpreadsheet from '@/Utils/downloadSpreadsheet';
 import { formatDeviceModel } from '@/Utils/FormatUtils';
 
 // Ziggy `route` helper is provided globally at runtime; declare for TS
 declare const route: any;
+
+const page = usePage();
 
 interface Props {
   items?: any[]; // Using 'any[]' for simplicity, you can be more specific
@@ -420,6 +422,25 @@ const formData = ref({
   notes: '',
   store: '',
   shipping: shippingOptions[0]
+});
+
+// Prefill form data when modal opens (if customer is logged in)
+onMounted(() => {
+  const customerAuth = page.props.customer_auth?.user;
+  if (customerAuth) {
+    formData.value.name = [customerAuth.first_name, customerAuth.last_name].filter(Boolean).join(' ') || '';
+    formData.value.email = customerAuth.email || '';
+    formData.value.store = customerAuth.default_store || '';
+    formData.value.notes = customerAuth.notes || '';
+    // Match shipping by value
+    const savedShipping = customerAuth.default_shipping;
+    if (savedShipping !== null && savedShipping !== undefined) {
+      const match = shippingOptions.find(opt => opt.value === savedShipping);
+      if (match) {
+        formData.value.shipping = match;
+      }
+    }
+  }
 });
 
 const formErrors = ref({

@@ -76,12 +76,17 @@ class HandleInertiaRequests extends Middleware
      */
     protected function getUserAuthData($user): array
     {
-        // If user is actually a Customer (from portal), return minimal data
+        // If user is actually a Customer (from portal), return minimal data plus preferences
         if ($user instanceof \App\Models\Customer) {
             return [
                 'id' => $user->id,
                 'email' => $user->email,
                 'type' => 'customer',
+                'first_name' => $user->first_name,
+                'last_name' => $user->last_name,
+                'default_store' => $user->default_store,
+                'default_shipping' => $user->default_shipping,
+                'notes' => $user->notes,
             ];
         }
 

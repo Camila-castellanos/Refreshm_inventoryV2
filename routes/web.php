@@ -67,6 +67,7 @@ Route::prefix('publicstore/account')->name('publicstore.account.')->group(functi
         Route::get('/returns', [PortalController::class, 'returns'])->name('returns');
         Route::get('/credit', [PortalController::class, 'credit'])->name('credit');
         Route::post('/logout', [CustomerAuthController::class, 'logout'])->name('logout');
+        Route::put('/profile', [PortalController::class, 'updateProfile'])->name('profile');
     });
 });
 

@@ -8,13 +8,13 @@
         </div>
         <div class="flex items-center gap-4">
           <template v-if="auth?.user">
+            <span class="text-surface-600 dark:text-surface-300 text-sm">{{ auth.user.email }}</span>
             <Button
               label="Dashboard"
               icon="pi pi-home"
               @click="dashboard"
               class="p-button-outlined p-button-sm"
             />
-            <span class="text-surface-600 dark:text-surface-300 text-sm hidden sm:inline">{{ auth.user.email }}</span>
             <Button
               label="Sign out"
               icon="pi pi-sign-out"

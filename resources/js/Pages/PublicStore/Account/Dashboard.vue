@@ -35,7 +35,7 @@
       </div>
       <Divider />
 
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mt-6">
         <Link href="/publicstore/account/requests" class="block">
           <div class="bg-white dark:bg-surface-800 rounded-lg shadow p-6 hover:shadow-lg transition-shadow cursor-pointer">
             <div class="flex items-center justify-between mb-4">
@@ -66,6 +66,15 @@
             <div class="text-surface-600 dark:text-surface-400 text-sm mt-1">Balance and transactions</div>
           </div>
         </Link>
+        <div @click="showProfileModal = true" class="block">
+          <div class="bg-white dark:bg-surface-800 rounded-lg shadow p-6 hover:shadow-lg transition-shadow cursor-pointer">
+            <div class="flex items-center justify-between mb-4">
+              <i class="pi pi-user text-3xl text-primary-500"></i>
+            </div>
+            <div class="text-lg font-medium text-surface-900 dark:text-surface-0">My Profile</div>
+            <div class="text-surface-600 dark:text-surface-400 text-sm mt-1">Manage your preferences</div>
+          </div>
+        </div>
       </div>
 
       <!-- Recent Requests -->
@@ -130,14 +139,53 @@
         </div>
       </div>
     </div>
+
+    <!-- My Profile Modal -->
+    <Dialog v-model:visible="showProfileModal" header="My Profile" :modal="true" class="w-full mx-4 md:w-1/2">
+      <form @submit.prevent="saveProfile" class="flex flex-col gap-4">
+        <div>
+          <label for="defaultStore" class="block text-surface-900 dark:text-surface-0 text-sm font-medium mb-1">Default Store</label>
+          <InputText id="defaultStore" v-model="profileForm.default_store" type="text" class="w-full" placeholder="Enter your default store" />
+        </div>
+        <div>
+          <label for="defaultShipping" class="block text-surface-900 dark:text-surface-0 text-sm font-medium mb-1">Default Shipping</label>
+          <Dropdown
+            id="defaultShipping"
+            v-model="profileForm.default_shipping"
+            :options="shippingOptions"
+            optionLabel="label"
+            optionValue="value"
+            class="w-full"
+            placeholder="Select shipping"
+          />
+        </div>
+        <div>
+          <label for="notes" class="block text-surface-900 dark:text-surface-0 text-sm font-medium mb-1">Notes</label>
+          <Textarea id="notes" v-model="profileForm.notes" rows="3" class="w-full" placeholder="Enter any notes" />
+        </div>
+        <div class="flex justify-end gap-2 mt-4">
+          <Button type="button" severity="secondary" @click="showProfileModal = false">Cancel</Button>
+          <Button type="submit">Save</Button>
+        </div>
+      </form>
+    </Dialog>
   </PortalLayout>
 </template>
 
 <script setup lang="ts">
 import { Link } from "@inertiajs/vue3";
+import { usePage } from "@inertiajs/vue3";
+import { reactive, onMounted, ref } from "vue";
 import PortalLayout from "@/Layouts/PortalLayout.vue";
 import Divider from "primevue/divider";
 import StatCard from "@/Components/StatCard.vue";
+import Dialog from "primevue/dialog";
+import InputText from "primevue/inputtext";
+import Textarea from "primevue/textarea";
+import Dropdown from "primevue/dropdown";
+import Button from "primevue/button";
+import axios from "axios";
+import { useToast } from "primevue/usetoast";
 
 defineProps<{
   total_requests: number;
@@ -146,6 +194,47 @@ defineProps<{
   credit_from_returns: number;
   recent_requests: any[];
 }>();
+
+const page = usePage();
+const toast = useToast();
+
+const shippingOptions = [
+  { label: 'Standard (Free)', value: 0 },
+  { label: 'Express (+$25)', value: 25 }
+];
+
+const showProfileModal = ref(false);
+
+const profileForm = reactive({
+  default_store: '',
+  default_shipping: null as number | null,
+  notes: '',
+});
+
+onMounted(() => {
+  // Load current values from page.props.customer_auth.user
+  const user = page.props.customer_auth?.user;
+  if (user) {
+    profileForm.default_store = user.default_store || '';
+    profileForm.default_shipping = user.default_shipping ?? null;
+    profileForm.notes = user.notes || '';
+  }
+});
+
+const saveProfile = async () => {
+  try {
+    await axios.put('/publicstore/account/profile', {
+      default_store: profileForm.default_store,
+      default_shipping: profileForm.default_shipping?.toString(),
+      notes: profileForm.notes,
+    });
+    showProfileModal.value = false;
+    toast.add({ severity: 'success', summary: 'Success', detail: 'Profile saved successfully.', life: 3000 });
+  } catch (error) {
+    console.error('Failed to save profile:', error);
+    toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to save profile.', life: 5000 });
+  }
+};
 
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('en-CA', {

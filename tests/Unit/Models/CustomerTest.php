@@ -31,4 +31,12 @@ class CustomerTest extends TestCase
 
         $this->assertFalse($customer->hasPassword());
     }
+
+    public function test_customer_fillable_includes_preferences(): void
+    {
+        $customer = new Customer();
+        $fillable = $customer->getFillable();
+        $this->assertContains('default_store', $fillable);
+        $this->assertContains('default_shipping', $fillable);
+    }
 }

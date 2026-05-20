@@ -135,4 +135,22 @@ class PortalAccessTest extends TestCase
 
         $response->assertStatus(200);
     }
+
+    public function test_customer_cannot_update_another_customer_profile(): void
+    {
+        $customer1 = Customer::factory()->create();
+        $customer2 = Customer::factory()->create();
+
+        $response = $this->actingAs($customer1, 'customer')
+            ->putJson("/publicstore/account/profile", [
+                'default_store' => 'Hacked',
+            ]);
+
+        // Customer can update their own profile, so this should pass
+        $response->assertOk();
+
+        // But customer2's data should not be affected
+        $customer2->refresh();
+        $this->assertNotEquals('Hacked', $customer2->default_store);
+    }
 }

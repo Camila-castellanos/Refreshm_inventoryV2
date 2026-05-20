@@ -186,4 +186,44 @@ class CustomerAuthTest extends TestCase
 
         $response->assertStatus(200);
     }
+
+    public function test_customer_can_update_profile(): void
+    {
+        $customer = Customer::factory()->create();
+
+        $response = $this->actingAs($customer, 'customer')
+            ->putJson('/publicstore/account/profile', [
+                'default_store' => 'My Store',
+                'default_shipping' => '5',
+                'notes' => 'Test notes',
+            ]);
+
+        $response->assertOk();
+
+        $customer->refresh();
+        $this->assertEquals('My Store', $customer->default_store);
+        $this->assertEquals('5', $customer->default_shipping);
+        $this->assertEquals('Test notes', $customer->notes);
+    }
+
+    public function test_update_profile_validates_input(): void
+    {
+        $customer = Customer::factory()->create();
+
+        $response = $this->actingAs($customer, 'customer')
+            ->putJson('/publicstore/account/profile', [
+                'default_store' => str_repeat('a', 300),
+            ]);
+
+        $response->assertUnprocessable();
+    }
+
+    public function test_unauthenticated_cannot_update_profile(): void
+    {
+        $response = $this->putJson('/publicstore/account/profile', [
+            'default_store' => 'Test',
+        ]);
+
+        $response->assertUnauthorized();
+    }
 }

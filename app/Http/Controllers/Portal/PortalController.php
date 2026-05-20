@@ -140,4 +140,22 @@ class PortalController extends Controller
             'transactions' => $transactions,
         ]);
     }
+
+    /**
+     * Update the authenticated customer's profile preferences.
+     */
+    public function updateProfile(Request $request): JsonResponse
+    {
+        $customer = $request->user();
+
+        $validated = $request->validate([
+            'default_store' => ['nullable', 'string', 'max:255'],
+            'default_shipping' => ['nullable', 'string', 'max:255'],
+            'notes' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $customer->update($validated);
+
+        return response()->json(['message' => 'Profile updated successfully']);
+    }
 }
