@@ -160,7 +160,7 @@ class IncomingRequestAppendToInvoiceTest extends TestCaseWithCompany
         $this->assertSame($sale->id, $appendableItem->sale_id);
         $this->assertSame('Invoice Customer', $appendableItem->customer);
         $this->assertTrue((bool) $request->processed);
-        $this->assertDatabaseMissing('incoming_request_items', ['id' => $requestItem->id]);
+        $this->assertSoftDeleted('incoming_request_items', ['id' => $requestItem->id]);
     }
 
     public function test_append_partial_eligible_items_keeps_request_open_with_remainder(): void

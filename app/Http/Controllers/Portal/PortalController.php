@@ -7,6 +7,7 @@ use App\Models\Customer;
 use App\Models\IncomingRequest;
 use App\Models\IncomingRequestItem;
 use App\Models\ReturnItems;
+use App\Models\Scopes\CompanyUsersSharedScope;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -20,11 +21,12 @@ class PortalController extends Controller
         /** @var Customer $customer */
         $customer = $request->user();
 
-        $totalRequests = IncomingRequest::withoutGlobalScopes()
+        $totalRequests = IncomingRequest::withoutGlobalScope(CompanyUsersSharedScope::class)
+            ->withTrashed()
             ->where('customer_id', $customer->id)
             ->count();
 
-        $pendingRequests = IncomingRequest::withoutGlobalScopes()
+        $pendingRequests = IncomingRequest::withoutGlobalScope(CompanyUsersSharedScope::class)
             ->where('customer_id', $customer->id)
             ->where('processed', false)
             ->count();
@@ -37,23 +39,35 @@ class PortalController extends Controller
             ->where('customer', $customer->email)
             ->sum('credit');
 
-        // Total items requested across all requests
-        $totalItemsCount = IncomingRequestItem::withoutGlobalScopes()
-            ->where('customer_id', $customer->id)
+        // Total devices from processed (accepted) requests only
+        $totalItemsCount = IncomingRequestItem::withoutGlobalScope(CompanyUsersSharedScope::class)
+            ->withTrashed()
+            ->whereHas('request', function ($q) use ($customer) {
+                $q->withoutGlobalScope(CompanyUsersSharedScope::class)
+                  ->withTrashed()
+                  ->where('customer_id', $customer->id)
+                  ->where('processed', true);
+            })
             ->count();
 
         // Recent requests (for dashboard preview - limited to 5)
-        $recentRequests = IncomingRequest::withoutGlobalScopes()
+        $recentRequests = IncomingRequest::withoutGlobalScope(CompanyUsersSharedScope::class)
+            ->withTrashed()
             ->where('customer_id', $customer->id)
-            ->with('items')
+            ->with(['items' => function ($query) {
+                $query->withTrashed();
+            }])
             ->orderBy('created_at', 'desc')
             ->limit(5)
             ->get();
 
         // All requests for the modal (limited to 50)
-        $allRequests = IncomingRequest::withoutGlobalScopes()
+        $allRequests = IncomingRequest::withoutGlobalScope(CompanyUsersSharedScope::class)
+            ->withTrashed()
             ->where('customer_id', $customer->id)
-            ->with('items')
+            ->with(['items' => function ($query) {
+                $query->withTrashed();
+            }])
             ->orderBy('created_at', 'desc')
             ->limit(50)
             ->get();
@@ -77,9 +91,12 @@ class PortalController extends Controller
         /** @var Customer $customer */
         $customer = $request->user();
 
-        $requests = IncomingRequest::withoutGlobalScopes()
+        $requests = IncomingRequest::withoutGlobalScope(CompanyUsersSharedScope::class)
+            ->withTrashed()
             ->where('customer_id', $customer->id)
-            ->with('items')
+            ->with(['items' => function ($query) {
+                $query->withTrashed();
+            }])
             ->orderBy('created_at', 'desc')
             ->paginate(20);
 
@@ -96,10 +113,13 @@ class PortalController extends Controller
         /** @var Customer $customer */
         $customer = $request->user();
 
-        $requestData = IncomingRequest::withoutGlobalScopes()
+        $requestData = IncomingRequest::withoutGlobalScope(CompanyUsersSharedScope::class)
+            ->withTrashed()
             ->where('id', $id)
             ->where('customer_id', $customer->id)
-            ->with('items')
+            ->with(['items' => function ($query) {
+                $query->withTrashed();
+            }])
             ->first();
 
         if (! $requestData) {

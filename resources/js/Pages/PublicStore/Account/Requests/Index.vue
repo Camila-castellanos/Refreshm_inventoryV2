@@ -26,6 +26,7 @@
             </div>
             <div class="flex flex-col items-end gap-2">
               <span v-if="request.processed" class="px-3 py-1 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 rounded-full text-sm">Processed</span>
+              <span v-else-if="request.deleted_at" class="px-3 py-1 bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 rounded-full text-sm">Cancelled</span>
               <span v-else class="px-3 py-1 bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 rounded-full text-sm">Pending</span>
               <span class="text-sm text-surface-500">{{ request.items?.length || 0 }} items</span>
             </div>

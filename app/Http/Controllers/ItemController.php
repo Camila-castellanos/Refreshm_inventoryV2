@@ -577,6 +577,12 @@ class ItemController extends Controller
     public function deleteIncomingRequest($id)
     {
         $req = IncomingRequest::findOrFail($id);
+        
+        if (request()->has('processed') || request()->query('processed') || request()->input('processed')) {
+            $req->processed = true;
+            $req->save();
+        }
+        
         $req->delete();
 
         return response()->json(['deleted' => true]);

@@ -51,10 +51,11 @@ Route::prefix('publicstore/account')->name('publicstore.account.')->group(functi
     Route::middleware('guest:customer')->group(function () {
         Route::get('/login', [CustomerAuthController::class, 'showLogin'])->name('login.show');
         Route::post('/login', [CustomerAuthController::class, 'login'])->name('login');
-        
-        Route::get('/register', [CustomerAuthController::class, 'showRegister'])->name('register.show');
+        Route::post('/login/activate', [CustomerAuthController::class, 'sendActivationLink'])->name('login.activate');
+
+        Route::get('/register', fn() => redirect('/publicstore/account/login'))->name('register.show');
         Route::post('/register', [CustomerAuthController::class, 'register'])->name('register');
-        
+
         Route::get('/magic-link/{token}', [CustomerAuthController::class, 'showSetPassword'])->name('magic-link.show');
         Route::post('/set-password', [CustomerAuthController::class, 'setPassword'])->name('set-password');
     });

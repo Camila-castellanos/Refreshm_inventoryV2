@@ -247,7 +247,7 @@ async function createInvoice(req: any) {
         if (result?.data?.sold) {
           // If the sale was successful, delete the originating incoming request first
           try {
-            await axios.delete(route('items.incomingRequests.delete', req.id));
+            await axios.delete(route('items.incomingRequests.delete', req.id), { params: { processed: true } });
             toast.add({ severity: 'success', summary: 'Request removed', detail: 'Incoming request successfully processed and deleted', life: 2500 });
           } catch (e) {
             console.error('Failed to delete incoming request after sale', e);

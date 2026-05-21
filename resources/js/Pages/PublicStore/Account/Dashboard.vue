@@ -15,7 +15,7 @@
           <div class="bg-white dark:bg-surface-800 border border-surface-100 dark:border-surface-700 rounded-2xl px-6 py-4 flex items-center gap-5 shadow-sm flex-1 lg:flex-none">
             <i class="pi pi-box text-blue-400 text-2xl"></i>
             <div>
-              <div class="text-[9px] uppercase text-surface-400 font-bold tracking-[0.1em] mb-0.5">Total Devices</div>
+              <div class="text-[9px] uppercase text-surface-400 font-bold tracking-[0.1em] mb-0.5">Devices Purchased</div>
               <div class="text-xl font-semibold text-surface-900 dark:text-surface-0 leading-tight">
                 {{ total_items_count }}
               </div>
@@ -49,12 +49,12 @@
 
       <!-- Main Two-Column Layout -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
-        <!-- LEFT COLUMN: Pending Requests -->
+        <!-- LEFT COLUMN: Current Requests -->
         <section>
           <div class="flex items-center justify-between mb-6">
             <h2 class="text-xl font-bold flex items-center gap-3">
               <i class="pi pi-clock text-yellow-500"></i>
-              Active Requests
+              Current Requests
               <Tag :value="pendingRequests.length" severity="warn" rounded class="ml-1" />
             </h2>
           </div>
@@ -65,7 +65,7 @@
               class="bg-surface-50 dark:bg-surface-800/50 border-2 border-dashed border-surface-200 dark:border-surface-700 rounded-2xl p-12 text-center text-surface-500"
             >
               <i class="pi pi-inbox text-4xl mb-3 block opacity-20"></i>
-              No active requests at the moment.
+              No current requests at the moment.
             </div>
             
             <div
@@ -96,12 +96,12 @@
           </div>
         </section>
 
-        <!-- RIGHT COLUMN: Past Requests -->
+        <!-- RIGHT COLUMN: Past Orders -->
         <section>
           <div class="flex items-center justify-between mb-6">
             <h2 class="text-xl font-bold flex items-center gap-3">
               <i class="pi pi-history text-blue-500"></i>
-              Past Requests
+              Past Orders
             </h2>
             <Link 
               v-if="total_requests > all_requests.length"
@@ -132,7 +132,11 @@
                   {{ formatDate(request.created_at) }} · {{ request.items?.length || 0 }} items
                 </div>
               </div>
-              <Tag value="Processed" severity="success" class="text-[10px]" />
+              <Tag 
+                :value="request.processed ? 'Processed' : (request.deleted_at ? 'Cancelled' : 'Pending')" 
+                :severity="request.processed ? 'success' : (request.deleted_at ? 'danger' : 'warn')" 
+                class="text-[10px]" 
+              />
             </div>
           </div>
         </section>
@@ -190,8 +194,8 @@
             <div class="text-sm text-surface-500">{{ formatDate(request.created_at) }} · {{ request.items?.length || 0 }} items</div>
           </div>
           <Tag
-            :value="request.processed ? 'Processed' : 'Pending'"
-            :severity="request.processed ? 'success' : 'warn'"
+            :value="request.processed ? 'Processed' : (request.deleted_at ? 'Cancelled' : 'Pending')"
+            :severity="request.processed ? 'success' : (request.deleted_at ? 'danger' : 'warn')"
             class="font-medium ml-3 flex-shrink-0"
           />
         </div>
@@ -224,8 +228,8 @@
             <div class="text-xs text-surface-500 mb-1">Status</div>
             <div class="mt-1">
               <Tag
-                :value="selectedRequest.processed ? 'Processed' : 'Pending'"
-                :severity="selectedRequest.processed ? 'success' : 'warn'"
+                :value="selectedRequest.processed ? 'Processed' : (selectedRequest.deleted_at ? 'Cancelled' : 'Pending')"
+                :severity="selectedRequest.processed ? 'success' : (selectedRequest.deleted_at ? 'danger' : 'warn')"
                 class="font-medium"
               />
             </div>
@@ -302,8 +306,8 @@ const props = defineProps<{
   all_requests: any[];
 }>();
 
-const pendingRequests = computed(() => props.all_requests.filter(r => !r.processed));
-const pastRequests = computed(() => props.all_requests.filter(r => r.processed));
+const pendingRequests = computed(() => props.all_requests.filter(r => !r.processed && !r.deleted_at));
+const pastRequests = computed(() => props.all_requests.filter(r => r.processed || r.deleted_at));
 
 const page = usePage();
 const toast = useToast();

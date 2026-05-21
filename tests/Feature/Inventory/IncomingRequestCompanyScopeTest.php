@@ -86,6 +86,38 @@ class IncomingRequestCompanyScopeTest extends TestCaseWithCompany
         $response->assertStatus(404);
     }
 
+    public function test_delete_incoming_request_soft_deletes_request_and_items(): void
+    {
+        $request = IncomingRequest::create([
+            'name' => 'Delete Me',
+            'email' => 'delete@example.com',
+            'store' => 'Main',
+            'user_id' => $this->owner->id,
+            'processed' => false,
+        ]);
+
+        $item = IncomingRequestItem::create([
+            'incoming_request_id' => $request->id,
+            'date' => now(),
+            'user_id' => $this->owner->id,
+            'type' => 'device',
+            'currency' => 'CAD',
+        ]);
+
+        $response = $this->actingAs($this->owner)
+            ->deleteJson("/inventory/items/incoming-requests/{$request->id}");
+
+        $response->assertOk();
+
+        $this->assertSoftDeleted('incoming_requests', [
+            'id' => $request->id,
+        ]);
+
+        $this->assertSoftDeleted('incoming_request_items', [
+            'id' => $item->id,
+        ]);
+    }
+
     private function createOtherCompanyIncomingRequest(): array
     {
         $otherCompany = Company::factory()->create();

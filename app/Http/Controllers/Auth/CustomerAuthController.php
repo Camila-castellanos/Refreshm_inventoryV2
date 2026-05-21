@@ -8,6 +8,7 @@ use App\Models\Customer;
 use App\Services\MagicLinkService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rules\Password;
@@ -21,46 +22,46 @@ class CustomerAuthController extends Controller
     ) {}
 
     /**
-     * Show register form.
+     * Show register form (now redirects to unified login page).
      */
     public function showRegister()
     {
-        return Inertia::render('PublicStore/Account/Register');
+        return redirect()->route('publicstore.account.login.show');
     }
 
     /**
-     * Register a new customer.
+     * Register a new customer with email + password.
      */
     public function register(Request $request)
     {
         $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:customers,email'],
+            'name'     => ['required', 'string', 'max:255'],
+            'email'    => ['required', 'string', 'email', 'max:255', 'unique:customers,email'],
             'password' => ['required', 'confirmed', Password::min(8)->letters()->numbers()],
         ]);
 
         $customer = Customer::withoutGlobalScopes()->create([
-            'customer' => $validated['name'],
-            'first_name' => $validated['name'],
-            'email' => $validated['email'],
-            'password' => Hash::make($validated['password']),
+            'customer'          => $validated['name'],
+            'first_name'        => $validated['name'],
+            'email'             => $validated['email'],
+            'password'          => Hash::make($validated['password']),
             'email_verified_at' => now(),
-            'user_id' => 1, // System user for portal customers
+            'user_id'           => 1,
         ]);
 
         Mail::to($customer->email)->send(new WelcomeEmail(
             $customer,
-            config('app.url').'/publicstore/account/dashboard'
+            config('app.url') . '/publicstore/account/dashboard'
         ));
 
-        \Illuminate\Support\Facades\Auth::guard('customer')->login($customer);
+        Auth::guard('customer')->login($customer);
         $request->session()->regenerate();
 
         return redirect()->route('publicstore.account.dashboard');
     }
 
     /**
-     * Show login form.
+     * Show the unified login page.
      */
     public function showLogin()
     {
@@ -68,9 +69,43 @@ class CustomerAuthController extends Controller
     }
 
     /**
-     * Handle login request - sends magic link if no password, error if has password.
+     * Authenticate with email + password.
      */
     public function login(Request $request)
+    {
+        $validated = $request->validate([
+            'email'    => ['required', 'string', 'email'],
+            'password' => ['required', 'string'],
+        ]);
+
+        $customer = Customer::withoutGlobalScopes()
+            ->where('email', $validated['email'])
+            ->first();
+
+        // Customer doesn't exist or has no password set yet (not activated)
+        if (! $customer || ! $customer->hasPassword()) {
+            throw ValidationException::withMessages([
+                'email' => ['These credentials do not match our records.'],
+            ]);
+        }
+
+        if (! Hash::check($validated['password'], $customer->password)) {
+            throw ValidationException::withMessages([
+                'password' => ['Incorrect password.'],
+            ]);
+        }
+
+        Auth::guard('customer')->login($customer, $request->boolean('remember'));
+        $request->session()->regenerate();
+
+        return redirect()->intended(route('publicstore.account.dashboard'));
+    }
+
+    /**
+     * Send a one-time activation magic link for customers already in the system
+     * but who have not yet set a password.
+     */
+    public function sendActivationLink(Request $request)
     {
         $validated = $request->validate([
             'email' => ['required', 'string', 'email'],
@@ -80,36 +115,34 @@ class CustomerAuthController extends Controller
             ->where('email', $validated['email'])
             ->first();
 
-        // Security: don't reveal if email exists
+        // Always return the same success message — don't reveal if email exists
         if (! $customer) {
-            return back()->with('success', 'If your email is registered, you will receive a link.');
+            return back()->with('activation_success', 'If your email is in our system, you will receive an activation link.');
         }
 
-        // Customer already has password - reject magic link flow
+        // Already has a password — guide them to sign in
         if ($customer->hasPassword()) {
             return back()->withErrors([
-                'email' => 'This account already has a password. Use the login form.',
+                'activation_email' => 'This account is already active. Please sign in with your password.',
             ]);
         }
 
-        // Generate and send magic link
-        $token = $this->magicLinkService->generateToken($customer);
-        $magicLinkUrl = config('app.url').'/publicstore/account/magic-link/'.$token;
+        $token         = $this->magicLinkService->generateToken($customer);
+        $magicLinkUrl  = config('app.url') . '/publicstore/account/magic-link/' . $token;
 
         $this->magicLinkService->sendMagicLink($customer, $magicLinkUrl);
 
-        return back()->with('success', 'Check your email for the link.');
+        return back()->with('activation_success', 'Activation link sent! Check your email to set your password.');
     }
 
     /**
-     * Show the set password page (for magic link verification).
+     * Show the set password page (magic link verification).
      */
     public function showSetPassword(string $token)
     {
         $customer = $this->magicLinkService->validateToken($token);
 
         if (! $customer) {
-            // Can't return JSON if it's a page load, better to return Inertia with error prop
             return Inertia::render('PublicStore/Account/SetPassword', [
                 'token' => $token,
                 'email' => null,
@@ -124,12 +157,12 @@ class CustomerAuthController extends Controller
     }
 
     /**
-     * Set password from magic link token.
+     * Set password from magic link token and log the customer in.
      */
     public function setPassword(Request $request)
     {
         $validated = $request->validate([
-            'token' => ['required', 'string'],
+            'token'    => ['required', 'string'],
             'password' => ['required', 'confirmed', Password::min(8)->letters()->numbers()],
         ]);
 
@@ -141,14 +174,13 @@ class CustomerAuthController extends Controller
             ]);
         }
 
-        $customer->password = Hash::make($validated['password']);
+        $customer->password          = Hash::make($validated['password']);
         $customer->email_verified_at = now();
         $customer->save();
 
-        // Consume the token
         $this->magicLinkService->consumeToken($customer);
 
-        \Illuminate\Support\Facades\Auth::guard('customer')->login($customer);
+        Auth::guard('customer')->login($customer);
         $request->session()->regenerate();
 
         return redirect()->route('publicstore.account.dashboard');
@@ -159,11 +191,10 @@ class CustomerAuthController extends Controller
      */
     public function logout(Request $request)
     {
-        \Illuminate\Support\Facades\Auth::guard('customer')->logout();
+        Auth::guard('customer')->logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
         return redirect()->route('publicstore.account.login.show');
     }
 }
-

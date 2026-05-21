@@ -45,7 +45,7 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
-import { Link, usePage } from "@inertiajs/vue3";
+import { Link, usePage, router } from "@inertiajs/vue3";
 import Button from "primevue/button";
 import Toast from "primevue/toast";
 import ConfirmDialog from "primevue/confirmdialog";
@@ -58,7 +58,7 @@ const page = usePage();
 const auth = computed(() => page.props.customer_auth);
 
 const logout = () => {
-  window.location.href = '/publicstore/account/logout';
+  router.post('/publicstore/account/logout');
 };
 
 const login = () => {

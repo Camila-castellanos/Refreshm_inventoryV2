@@ -6,14 +6,19 @@ use App\Models\Scopes\CompanyUsersSharedScope;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class IncomingRequest extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected static function booted()
     {
         static::addGlobalScope(new CompanyUsersSharedScope);
+
+        static::deleting(function ($request) {
+            $request->items()->delete();
+        });
     }
 
     protected $table = 'incoming_requests';

@@ -153,4 +153,41 @@ class PortalAccessTest extends TestCase
         $customer2->refresh();
         $this->assertNotEquals('Hacked', $customer2->default_store);
     }
+
+    public function test_dashboard_includes_soft_deleted_and_processed_requests_in_all_and_recent_requests(): void
+    {
+        $customer = Customer::factory()->create(['password' => 'hashed']);
+
+        // 1. Create an active request
+        $activeRequest = IncomingRequest::factory()->create([
+            'customer_id' => $customer->id,
+            'processed' => false,
+        ]);
+
+        // 2. Create a processed request
+        $processedRequest = IncomingRequest::factory()->create([
+            'customer_id' => $customer->id,
+            'processed' => true,
+        ]);
+
+        // 3. Create a soft-deleted request
+        $deletedRequest = IncomingRequest::factory()->create([
+            'customer_id' => $customer->id,
+            'processed' => false,
+        ]);
+        $deletedRequest->delete();
+
+        $response = $this->actingAsCustomer($customer)
+            ->get('/publicstore/account/dashboard');
+
+        $response->assertStatus(200);
+
+        // Assert dashboard statistics
+        $response->assertInertia(fn ($page) => $page
+            ->component('PublicStore/Account/Dashboard')
+            ->where('total_requests', 3) // Active, Processed, and Deleted request should all count towards total
+            ->where('pending_requests', 1) // Only the active request should count as pending
+            ->has('all_requests', 3) // Should contain all 3 requests
+        );
+    }
 }
