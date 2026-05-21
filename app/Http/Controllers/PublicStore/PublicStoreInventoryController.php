@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\PublicStore;
 
+use App\Http\Controllers\Controller;
 use App\Models\Company;
 use App\Models\Item;
 use App\Models\Shop;
@@ -12,7 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
-class InventoryPublicController extends Controller
+class PublicStoreInventoryController extends Controller
 {
     use HasNaturalModelSorting;
 

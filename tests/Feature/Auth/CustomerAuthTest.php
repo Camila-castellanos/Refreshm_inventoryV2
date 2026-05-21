@@ -21,7 +21,7 @@ class CustomerAuthTest extends TestCase
         // Create a system user for portal customers (since customers require user_id)
         $user = \App\Models\User::factory()->create();
 
-        $response = $this->post('/publicstore/account/register', [
+        $response = $this->post(route('public-store.portal.register'), [
             'name' => 'Juan Perez',
             'email' => 'juan@test.com',
             'password' => 'Password123',
@@ -29,7 +29,7 @@ class CustomerAuthTest extends TestCase
         ]);
 
         $response->assertStatus(302);
-        $response->assertRedirect('/publicstore/account/dashboard');
+        $response->assertRedirect(route('public-store.portal.dashboard'));
         $this->assertDatabaseHas('customers', ['email' => 'juan@test.com']);
 
         // Check customer is authenticated
@@ -43,7 +43,7 @@ class CustomerAuthTest extends TestCase
     {
         Customer::factory()->create(['email' => 'existe@test.com']);
 
-        $response = $this->post('/publicstore/account/register', [
+        $response = $this->post(route('public-store.portal.register'), [
             'name' => 'Otro Nombre',
             'email' => 'existe@test.com',
             'password' => 'Password123',
@@ -60,38 +60,38 @@ class CustomerAuthTest extends TestCase
         Mail::fake();
         $customer = Customer::factory()->create(['password' => null]);
 
-        $response = $this->post('/publicstore/account/login', [
+        $response = $this->post(route('public-store.portal.login.activate'), [
             'email' => $customer->email,
         ]);
 
         // back()->with() redirects back after POST, so we follow it
         $response->assertStatus(302);
-        $response->assertSessionHas('success', 'Revisa tu email para el enlace.');
+        $response->assertSessionHas('activation_success', 'Activation link successfully sent to your email!');
         Mail::assertSent(\App\Mail\MagicLinkEmail::class);
     }
 
     public function test_email_not_found_returns_generic_message(): void
     {
-        $response = $this->post('/publicstore/account/login', [
+        $response = $this->post(route('public-store.portal.login.forgot-password'), [
             'email' => 'noexiste@test.com',
         ]);
 
         // back()->with() redirects back after POST, so we follow it
         $response->assertStatus(302);
-        $response->assertSessionHas('success', 'Si tu email está registrado, recibirás un enlace.');
+        $response->assertSessionHas('activation_success', 'If your email is in our system, you will receive a password reset link.');
     }
 
     public function test_customer_with_password_cannot_use_magic_link(): void
     {
         $customer = Customer::factory()->create(['password' => Hash::make('Password123')]);
 
-        $response = $this->post('/publicstore/account/login', [
+        $response = $this->post(route('public-store.portal.login.activate'), [
             'email' => $customer->email,
         ]);
 
         // back()->withErrors() redirects back after validation error
         $response->assertStatus(302);
-        $response->assertSessionHasErrors(['email']);
+        $response->assertSessionHasErrors(['activation_email' => 'This account is already active. Please sign in with your password.']);
     }
 
     public function test_set_password_creates_password_and_invalidates_token(): void
@@ -102,14 +102,14 @@ class CustomerAuthTest extends TestCase
             'magic_link_expires_at' => now()->addMinutes(15),
         ]);
 
-        $response = $this->post('/publicstore/account/set-password', [
+        $response = $this->post(route('public-store.portal.set-password'), [
             'token' => 'valid-token',
             'password' => 'NewPassword123',
             'password_confirmation' => 'NewPassword123',
         ]);
 
         $response->assertStatus(302);
-        $response->assertRedirect('/publicstore/account/dashboard');
+        $response->assertRedirect(route('public-store.portal.dashboard'));
 
         // Token should be consumed and password set
         $customer->refresh();
@@ -129,7 +129,7 @@ class CustomerAuthTest extends TestCase
             'magic_link_expires_at' => now()->subMinutes(1),
         ]);
 
-        $response = $this->post('/publicstore/account/set-password', [
+        $response = $this->post(route('public-store.portal.set-password'), [
             'token' => 'expired-token',
             'password' => 'NewPassword123',
             'password_confirmation' => 'NewPassword123',
@@ -141,7 +141,7 @@ class CustomerAuthTest extends TestCase
 
     public function test_invalid_token_returns_error(): void
     {
-        $response = $this->post('/publicstore/account/set-password', [
+        $response = $this->post(route('public-store.portal.set-password'), [
             'token' => 'non-existent-token',
             'password' => 'NewPassword123',
             'password_confirmation' => 'NewPassword123',
@@ -157,7 +157,7 @@ class CustomerAuthTest extends TestCase
 
         $this->actingAs($customer, 'customer');
 
-        $response = $this->post('/publicstore/account/logout');
+        $response = $this->post(route('public-store.portal.logout'));
 
         $response->assertStatus(302);
     }
@@ -170,7 +170,7 @@ class CustomerAuthTest extends TestCase
             'magic_link_expires_at' => now()->addMinutes(15),
         ]);
 
-        $response = $this->get('/publicstore/account/magic-link/valid-token');
+        $response = $this->get(route('public-store.portal.magic-link.show', ['token' => 'valid-token']));
 
         $response->assertStatus(200);
     }
@@ -182,7 +182,7 @@ class CustomerAuthTest extends TestCase
             'magic_link_expires_at' => now()->subMinutes(1),
         ]);
 
-        $response = $this->get('/publicstore/account/magic-link/expired-token');
+        $response = $this->get(route('public-store.portal.magic-link.show', ['token' => 'expired-token']));
 
         $response->assertStatus(200);
     }
@@ -192,7 +192,7 @@ class CustomerAuthTest extends TestCase
         $customer = Customer::factory()->create();
 
         $response = $this->actingAs($customer, 'customer')
-            ->putJson('/publicstore/account/profile', [
+            ->putJson(route('public-store.portal.profile'), [
                 'default_store' => 'My Store',
                 'default_shipping' => '5',
                 'notes' => 'Test notes',
@@ -211,7 +211,7 @@ class CustomerAuthTest extends TestCase
         $customer = Customer::factory()->create();
 
         $response = $this->actingAs($customer, 'customer')
-            ->putJson('/publicstore/account/profile', [
+            ->putJson(route('public-store.portal.profile'), [
                 'default_store' => str_repeat('a', 300),
             ]);
 
@@ -220,7 +220,7 @@ class CustomerAuthTest extends TestCase
 
     public function test_unauthenticated_cannot_update_profile(): void
     {
-        $response = $this->putJson('/publicstore/account/profile', [
+        $response = $this->putJson(route('public-store.portal.profile'), [
             'default_store' => 'Test',
         ]);
 

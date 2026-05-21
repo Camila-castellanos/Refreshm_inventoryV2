@@ -58,7 +58,7 @@ const page = usePage();
 const auth = computed(() => page.props.customer_auth);
 
 const logout = () => {
-  router.post(route('publicstore.account.logout'), {}, {
+  router.post(route('public-store.portal.logout'), {}, {
     onSuccess: () => {
       // The backend handles redirection
     }
@@ -66,10 +66,10 @@ const logout = () => {
 };
 
 const login = () => {
-  window.location.href = '/publicstore/account/login';
+  router.visit(route('public-store.portal.login.show'));
 };
 
 const dashboard = () => {
-  window.location.href = '/publicstore/account/dashboard';
+  router.visit(route('public-store.portal.dashboard'));
 };
 </script>

@@ -2,7 +2,7 @@
   <PortalLayout>
     <!-- Header bar -->
     <div class="flex items-center gap-4 mb-6">
-      <Link href="/publicstore/account/dashboard" class="text-surface-600 hover:text-surface-900 dark:text-surface-300">
+      <Link :href="route('public-store.portal.dashboard')" class="text-surface-600 hover:text-surface-900 dark:text-surface-300">
         <i class="pi pi-arrow-left text-xl"></i>
       </Link>
       <h1 class="text-2xl font-semibold text-surface-900 dark:text-surface-0">My Requests</h1>
@@ -16,7 +16,7 @@
     <div v-else class="space-y-4">
       <div v-for="request in requests.data" :key="request.id"
         class="bg-white dark:bg-surface-800 rounded-lg shadow p-6 hover:shadow-lg transition-shadow">
-        <Link :href="`/publicstore/account/requests/${request.id}`" class="block">
+        <Link :href="route('public-store.portal.requests.show', { id: request.id })" class="block">
           <div class="flex justify-between items-start">
             <div>
               <div class="text-lg font-medium text-surface-900 dark:text-surface-0">#{{ request.id }}</div>
@@ -66,6 +66,6 @@ const formatDate = (dateString: string) => {
 };
 
 const loadPage = (page: number) => {
-  router.get(`/publicstore/account/requests?page=${page}`);
+  router.get(route('public-store.portal.requests', { page }));
 };
 </script>

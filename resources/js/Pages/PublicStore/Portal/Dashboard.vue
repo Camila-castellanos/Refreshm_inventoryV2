@@ -105,7 +105,7 @@
             </h2>
             <Link 
               v-if="total_requests > all_requests.length"
-              href="/publicstore/account/requests" 
+              :href="route('public-store.portal.requests')" 
               class="text-sm text-primary-500 font-bold hover:underline"
             >
               View Full History
@@ -342,7 +342,7 @@ onMounted(() => {
 
 const saveProfile = async () => {
   try {
-    await axios.put('/publicstore/account/profile', {
+    await axios.put(route('public-store.portal.profile'), {
       default_store: profileForm.default_store,
       default_shipping: profileForm.default_shipping?.toString(),
       notes: profileForm.notes,

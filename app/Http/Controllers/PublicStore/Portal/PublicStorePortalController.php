@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Portal;
+namespace App\Http\Controllers\PublicStore\Portal;
 
 use App\Http\Controllers\Controller;
 use App\Models\Customer;
@@ -11,7 +11,7 @@ use App\Models\Scopes\CompanyUsersSharedScope;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
-class PortalController extends Controller
+class PublicStorePortalController extends Controller
 {
     /**
      * Get dashboard stats for the authenticated customer.
@@ -72,7 +72,7 @@ class PortalController extends Controller
             ->limit(50)
             ->get();
 
-        return \Inertia\Inertia::render('PublicStore/Account/Dashboard', [
+        return \Inertia\Inertia::render('PublicStore/Portal/Dashboard', [
             'total_requests' => $totalRequests,
             'pending_requests' => $pendingRequests,
             'total_items_count' => $totalItemsCount,
@@ -100,7 +100,7 @@ class PortalController extends Controller
             ->orderBy('created_at', 'desc')
             ->paginate(20);
 
-        return \Inertia\Inertia::render('PublicStore/Account/Requests/Index', [
+        return \Inertia\Inertia::render('PublicStore/Portal/Requests/Index', [
             'requests' => $requests,
         ]);
     }
@@ -126,7 +126,7 @@ class PortalController extends Controller
             abort(403, "You don't have access to this request.");
         }
 
-        return \Inertia\Inertia::render('PublicStore/Account/Requests/Show', [
+        return \Inertia\Inertia::render('PublicStore/Portal/Requests/Show', [
             'requestData' => $requestData,
             'items' => $requestData->items,
         ]);
@@ -145,7 +145,7 @@ class PortalController extends Controller
             ->orderBy('created_at', 'desc')
             ->paginate(20);
 
-        return \Inertia\Inertia::render('PublicStore/Account/Returns', [
+        return \Inertia\Inertia::render('PublicStore/Portal/Returns', [
             'returnsData' => $returns,
             'credit_total' => $returns->sum('credit'),
         ]);
@@ -169,10 +169,34 @@ class PortalController extends Controller
             'current_balance' => $customer->credit ?? 0,
         ]);
 
-        return \Inertia\Inertia::render('PublicStore/Account/Credit', [
+        return \Inertia\Inertia::render('PublicStore/Portal/Credit', [
             'balance' => $customer->credit ?? 0,
             'currency' => $customer->currency ?? 'CAD',
             'transactions' => $transactions,
+        ]);
+    }
+
+    /**
+     * List all orders for the authenticated customer.
+     */
+    public function orders(Request $request)
+    {
+        /** @var Customer $customer */
+        $customer = $request->user();
+
+        $orders = \App\Models\Sale::withoutGlobalScopes()
+            ->whereHas('items', function ($q) use ($customer) {
+                $q->withoutGlobalScopes()
+                  ->where('customer', $customer->email);
+            })
+            ->with(['items' => function ($q) {
+                $q->withoutGlobalScopes();
+            }])
+            ->orderBy('created_at', 'desc')
+            ->paginate(20);
+
+        return \Inertia\Inertia::render('PublicStore/Portal/Orders', [
+            'orders' => $orders,
         ]);
     }
 

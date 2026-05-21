@@ -22,13 +22,13 @@ class PortalAccessTest extends TestCase
 
     public function test_unauthenticated_cannot_access_dashboard(): void
     {
-        $response = $this->get('/publicstore/account/dashboard');
+        $response = $this->get(route('public-store.portal.dashboard'));
 
         $response->assertStatus(302);
         // Redirects to login (exact URL may vary based on guard config)
         $this->assertTrue(
             str_ends_with($response->headers->get('Location'), '/login') ||
-            str_ends_with($response->headers->get('Location'), '/publicstore/account/login')
+            str_ends_with($response->headers->get('Location'), route('public-store.portal.login.show'))
         );
     }
 
@@ -37,7 +37,7 @@ class PortalAccessTest extends TestCase
         $customer = Customer::factory()->create(['password' => 'hashed']);
 
         $response = $this->actingAsCustomer($customer)
-            ->get('/publicstore/account/dashboard');
+            ->get(route('public-store.portal.dashboard'));
 
         $response->assertStatus(200);
     }
@@ -51,7 +51,7 @@ class PortalAccessTest extends TestCase
         ]);
 
         $response = $this->actingAsCustomer($customer)
-            ->get('/publicstore/account/requests');
+            ->get(route('public-store.portal.requests'));
 
         $response->assertStatus(200);
     }
@@ -65,7 +65,7 @@ class PortalAccessTest extends TestCase
         IncomingRequest::factory()->create(['customer_id' => $customer2->id]);
 
         $response = $this->actingAsCustomer($customer1)
-            ->get('/publicstore/account/requests');
+            ->get(route('public-store.portal.requests'));
 
         $response->assertStatus(200);
     }
@@ -78,7 +78,7 @@ class PortalAccessTest extends TestCase
         $request = IncomingRequest::factory()->create(['customer_id' => $customer2->id]);
 
         $response = $this->actingAsCustomer($customer1)
-            ->get("/publicstore/account/requests/{$request->id}");
+            ->get(route('public-store.portal.requests.show', ['id' => $request->id]));
 
         $response->assertStatus(403);
     }
@@ -91,7 +91,7 @@ class PortalAccessTest extends TestCase
         ]);
 
         $response = $this->actingAsCustomer($customer)
-            ->get('/publicstore/account/credit');
+            ->get(route('public-store.portal.credit'));
 
         $response->assertStatus(200);
     }
@@ -109,7 +109,7 @@ class PortalAccessTest extends TestCase
         ]);
 
         $response = $this->actingAsCustomer($customer)
-            ->get('/publicstore/account/orders');
+            ->get(route('public-store.portal.orders'));
 
         $response->assertStatus(200);
     }
@@ -131,7 +131,7 @@ class PortalAccessTest extends TestCase
         ]);
 
         $response = $this->actingAsCustomer($customer)
-            ->get('/publicstore/account/returns');
+            ->get(route('public-store.portal.returns'));
 
         $response->assertStatus(200);
     }
@@ -142,7 +142,7 @@ class PortalAccessTest extends TestCase
         $customer2 = Customer::factory()->create();
 
         $response = $this->actingAs($customer1, 'customer')
-            ->putJson("/publicstore/account/profile", [
+            ->putJson(route('public-store.portal.profile'), [
                 'default_store' => 'Hacked',
             ]);
 
@@ -178,13 +178,13 @@ class PortalAccessTest extends TestCase
         $deletedRequest->delete();
 
         $response = $this->actingAsCustomer($customer)
-            ->get('/publicstore/account/dashboard');
+            ->get(route('public-store.portal.dashboard'));
 
         $response->assertStatus(200);
 
         // Assert dashboard statistics
         $response->assertInertia(fn ($page) => $page
-            ->component('PublicStore/Account/Dashboard')
+            ->component('PublicStore/Portal/Dashboard')
             ->where('total_requests', 3) // Active, Processed, and Deleted request should all count towards total
             ->where('pending_requests', 1) // Only the active request should count as pending
             ->has('all_requests', 3) // Should contain all 3 requests

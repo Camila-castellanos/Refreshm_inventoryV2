@@ -4,7 +4,7 @@
     <div class="bg-white dark:bg-surface-800 shadow">
       <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
         <div class="flex items-center gap-4">
-          <Link href="/publicstore/account/dashboard" class="text-surface-600 hover:text-surface-900 dark:text-surface-300">
+          <Link :href="route('public-store.portal.dashboard')" class="text-surface-600 hover:text-surface-900 dark:text-surface-300">
             <i class="pi pi-arrow-left text-xl"></i>
           </Link>
           <h1 class="text-2xl font-semibold text-surface-900 dark:text-surface-0">My Orders</h1>
@@ -81,10 +81,10 @@ const formatCurrency = (value: number) => {
 };
 
 const loadPage = (page: number) => {
-  router.get(`/publicstore/account/orders?page=${page}`);
+  router.get(route('public-store.portal.orders', { page }));
 };
 
 const logout = () => {
-  window.location.href = '/publicstore/account/logout';
+  router.post(route('public-store.portal.logout'));
 };
 </script>

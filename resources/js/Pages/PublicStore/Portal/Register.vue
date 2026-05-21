@@ -72,7 +72,7 @@
 
           <div class="mt-6 text-center">
             <span class="text-surface-600 dark:text-surface-400">Already have an account?</span>
-            <Link href="/publicstore/account/login" class="text-primary-500 hover:text-primary-600 ml-1">Sign in</Link>
+            <Link :href="route('public-store.portal.login.show')" class="text-primary-500 hover:text-primary-600 ml-1">Sign in</Link>
           </div>
         </div>
       </div>
@@ -103,7 +103,7 @@ const submitRegister = () => {
   isLoading.value = true;
   errors.value = {};
 
-  form.post('/publicstore/account/register', {
+  form.post(route('public-store.portal.register'), {
     onSuccess: () => {
       isLoading.value = false;
     },

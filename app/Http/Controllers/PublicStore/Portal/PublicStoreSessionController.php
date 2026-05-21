@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Auth;
+namespace App\Http\Controllers\PublicStore\Portal;
 
 use App\Http\Controllers\Controller;
 use App\Mail\WelcomeEmail;
@@ -15,7 +15,7 @@ use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
-class CustomerAuthController extends Controller
+class PublicStoreSessionController extends Controller
 {
     public function __construct(
         private MagicLinkService $magicLinkService
@@ -26,7 +26,7 @@ class CustomerAuthController extends Controller
      */
     public function showRegister()
     {
-        return redirect()->route('publicstore.account.login.show');
+        return redirect()->route('public-store.portal.login.show');
     }
 
     /**
@@ -51,13 +51,13 @@ class CustomerAuthController extends Controller
 
         Mail::to($customer->email)->send(new WelcomeEmail(
             $customer,
-            config('app.url') . '/publicstore/account/dashboard'
+            route('public-store.portal.dashboard')
         ));
 
         Auth::guard('customer')->login($customer);
         $request->session()->regenerate();
 
-        return redirect()->route('publicstore.account.dashboard');
+        return redirect()->route('public-store.portal.dashboard');
     }
 
     /**
@@ -65,7 +65,7 @@ class CustomerAuthController extends Controller
      */
     public function showLogin()
     {
-        return Inertia::render('PublicStore/Account/Login');
+        return Inertia::render('PublicStore/Portal/Login');
     }
 
     /**
@@ -103,7 +103,7 @@ class CustomerAuthController extends Controller
             return redirect()->route('public.inventory.shop.index', ['shopSlug' => $lastShop]);
         }
 
-        return redirect()->intended(route('publicstore.account.dashboard'));
+        return redirect()->intended(route('public-store.portal.dashboard'));
     }
 
     /**
@@ -135,7 +135,7 @@ class CustomerAuthController extends Controller
         }
 
         $token         = $this->magicLinkService->generateToken($customer);
-        $magicLinkUrl  = route('publicstore.account.magic-link.show', ['token' => $token, 'type' => 'activation']);
+        $magicLinkUrl  = route('public-store.portal.magic-link.show', ['token' => $token, 'type' => 'activation']);
 
         $this->magicLinkService->sendMagicLink($customer, $magicLinkUrl, 'activation');
 
@@ -161,7 +161,7 @@ class CustomerAuthController extends Controller
         }
 
         $token         = $this->magicLinkService->generateToken($customer);
-        $magicLinkUrl  = route('publicstore.account.magic-link.show', ['token' => $token, 'type' => 'reset']);
+        $magicLinkUrl  = route('public-store.portal.magic-link.show', ['token' => $token, 'type' => 'reset']);
 
         $this->magicLinkService->sendMagicLink($customer, $magicLinkUrl, 'reset');
 
@@ -176,7 +176,7 @@ class CustomerAuthController extends Controller
         $customer = $this->magicLinkService->validateToken($token);
 
         if (! $customer) {
-            return Inertia::render('PublicStore/Account/SetPassword', [
+            return Inertia::render('PublicStore/Portal/SetPassword', [
                 'token' => $token,
                 'email' => null,
                 'error' => 'The link has expired or is invalid. Request a new one.',
@@ -184,7 +184,7 @@ class CustomerAuthController extends Controller
             ]);
         }
 
-        return Inertia::render('PublicStore/Account/SetPassword', [
+        return Inertia::render('PublicStore/Portal/SetPassword', [
             'token' => $token,
             'email' => $customer->email,
             'type'  => $request->query('type', 'access'),
@@ -223,7 +223,7 @@ class CustomerAuthController extends Controller
             return redirect()->route('public.inventory.shop.index', ['shopSlug' => $lastShop]);
         }
 
-        return redirect()->route('publicstore.account.dashboard');
+        return redirect()->route('public-store.portal.dashboard');
     }
 
     /**
@@ -243,6 +243,6 @@ class CustomerAuthController extends Controller
             return redirect()->route('public.inventory.shop.index', ['shopSlug' => $lastShop]);
         }
 
-        return redirect()->route('publicstore.account.login.show');
+        return redirect()->route('public-store.portal.login.show');
     }
 }

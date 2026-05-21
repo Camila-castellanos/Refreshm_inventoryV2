@@ -99,7 +99,7 @@ const form = useForm({
 });
 
 const submitPassword = () => {
-  form.post(route('publicstore.account.set-password'), {
+  form.post(route('public-store.portal.set-password'), {
     onFinish: () => form.reset('password', 'password_confirmation'),
   });
 };

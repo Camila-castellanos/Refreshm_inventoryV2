@@ -255,7 +255,7 @@ const loginErrors  = computed(() => (page.props.errors as any) || {});
 
 const submitLogin = () => {
   loginLoading.value = true;
-  loginForm.post('/publicstore/account/login', {
+  loginForm.post(route('public-store.portal.login'), {
     onSuccess: () => { loginLoading.value = false; },
     onError:   () => { loginLoading.value = false; },
   });
@@ -265,7 +265,7 @@ const submitLogin = () => {
 const forgotForm = useForm({ email: '' });
 
 const submitForgot = () => {
-  forgotForm.post(route('publicstore.account.login.forgot-password'), {
+  forgotForm.post(route('public-store.portal.login.forgot-password'), {
     onSuccess: () => {
       showForgotModal.value = false;
       forgotForm.reset();
@@ -281,7 +281,7 @@ const registerForm    = useForm({ name: '', email: '', password: '', password_co
 const submitRegister = () => {
   registerLoading.value = true;
   registerErrors.value  = {};
-  registerForm.post('/publicstore/account/register', {
+  registerForm.post(route('public-store.portal.register'), {
     onSuccess: () => { registerLoading.value = false; },
     onError: (err) => {
       registerErrors.value  = err;
@@ -298,7 +298,7 @@ const activationForm    = useForm({ email: '' });
 const submitActivation = () => {
   activationLoading.value = true;
   // Clear previous flash messages if possible by manual reset or just let Inertia handle it
-  activationForm.post(route('publicstore.account.login.activate'), {
+  activationForm.post(route('public-store.portal.login.activate'), {
     onSuccess: () => {
       activationForm.reset();
       activationLoading.value = false;

@@ -11,24 +11,11 @@ use App\Http\Controllers\EmailsController;
 use App\Http\Controllers\ExpensesController;
 use App\Http\Controllers\Inventory\IncomingRequestAppendController;
 use App\Http\Controllers\Inventory\IncomingRequestInvoicePreviewController;
-use App\Http\Controllers\InventoryPublicController;
-use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\ItemController;
-use App\Http\Controllers\LocationController;
-use App\Http\Controllers\MailListController;
-use App\Http\Controllers\PaymentController;
-use App\Http\Controllers\ProductModelController;
-use App\Http\Controllers\ProspectController;
-use App\Http\Controllers\SaleController;
-use App\Http\Controllers\ShopController;
-use App\Http\Controllers\StorageController;
-use App\Http\Controllers\StoreController;
-use App\Http\Controllers\TaxController;
-use App\Http\Controllers\UserController;
-use App\Http\Controllers\UtilitiesController;
-use App\Http\Controllers\VendorController;
-use App\Http\Controllers\Auth\CustomerAuthController;
-use App\Http\Controllers\Portal\PortalController;
+use App\Http\Controllers\PublicStore\PublicStoreInventoryController;
+use App\Http\Controllers\PublicStore\Portal\PublicStoreSessionController;
+use App\Http\Controllers\PublicStore\Portal\PublicStorePortalController;
+
 use Illuminate\Foundation\Application;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -36,46 +23,47 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
 // =====================================================
-// Customer Portal Routes (Public Store Account)
+// Customer Portal Routes (Public Store Portal)
 // =====================================================
-Route::prefix('publicstore/account')->name('publicstore.account.')->group(function () {
+Route::prefix('public-store/portal')->name('public-store.portal.')->group(function () {
     Route::get('/', function () {
         if (Auth::guard('customer')->check()) {
-            return redirect()->route('publicstore.account.dashboard');
+            return redirect()->route('public-store.portal.dashboard');
         }
 
-        return redirect()->route('publicstore.account.login.show');
+        return redirect()->route('public-store.portal.login.show');
     })->name('home');
 
     // Guest routes (no auth required)
     Route::middleware('guest:customer')->group(function () {
-        Route::get('/login', [CustomerAuthController::class, 'showLogin'])->name('login.show');
-        Route::post('/login', [CustomerAuthController::class, 'login'])->name('login');
-        Route::post('/login/activate', [CustomerAuthController::class, 'sendActivationLink'])->name('login.activate');
-        Route::post('/login/forgot-password', [CustomerAuthController::class, 'sendResetLink'])->name('login.forgot-password');
+        Route::get('/login', [PublicStoreSessionController::class, 'showLogin'])->name('login.show');
+        Route::post('/login', [PublicStoreSessionController::class, 'login'])->name('login');
+        Route::post('/login/activate', [PublicStoreSessionController::class, 'sendActivationLink'])->name('login.activate');
+        Route::post('/login/forgot-password', [PublicStoreSessionController::class, 'sendResetLink'])->name('login.forgot-password');
 
-        Route::get('/register', fn() => redirect('/publicstore/account/login'))->name('register.show');
-        Route::post('/register', [CustomerAuthController::class, 'register'])->name('register');
+        Route::get('/register', fn() => redirect()->route('public-store.portal.login.show'))->name('register.show');
+        Route::post('/register', [PublicStoreSessionController::class, 'register'])->name('register');
 
-        Route::get('/magic-link/{token}', [CustomerAuthController::class, 'showSetPassword'])->name('magic-link.show');
-        Route::post('/set-password', [CustomerAuthController::class, 'setPassword'])->name('set-password');
+        Route::get('/magic-link/{token}', [PublicStoreSessionController::class, 'showSetPassword'])->name('magic-link.show');
+        Route::post('/set-password', [PublicStoreSessionController::class, 'setPassword'])->name('set-password');
     });
 
     // Authenticated routes (session-based auth via customer guard)
     Route::middleware('auth:customer')->group(function () {
-        Route::get('/dashboard', [PortalController::class, 'dashboard'])->name('dashboard');
-        Route::get('/requests', [PortalController::class, 'requests'])->name('requests');
-        Route::get('/requests/{id}', [PortalController::class, 'showRequest'])->name('requests.show');
-        Route::get('/returns', [PortalController::class, 'returns'])->name('returns');
-        Route::get('/credit', [PortalController::class, 'credit'])->name('credit');
-        Route::post('/logout', [CustomerAuthController::class, 'logout'])->name('logout');
-        Route::put('/profile', [PortalController::class, 'updateProfile'])->name('profile');
+        Route::get('/dashboard', [PublicStorePortalController::class, 'dashboard'])->name('dashboard');
+        Route::get('/requests', [PublicStorePortalController::class, 'requests'])->name('requests');
+        Route::get('/requests/{id}', [PublicStorePortalController::class, 'showRequest'])->name('requests.show');
+        Route::get('/returns', [PublicStorePortalController::class, 'returns'])->name('returns');
+        Route::get('/credit', [PublicStorePortalController::class, 'credit'])->name('credit');
+        Route::get('/orders', [PublicStorePortalController::class, 'orders'])->name('orders');
+        Route::post('/logout', [PublicStoreSessionController::class, 'logout'])->name('logout');
+        Route::put('/profile', [PublicStorePortalController::class, 'updateProfile'])->name('profile');
     });
 });
 
-Route::post('/publicstore/get-unique-models', [InventoryPublicController::class, 'getUniqueModelsByManufacturer'])->name('public.items.getUniqueModelsByManufacturer');
-Route::get('/publicstore/{shopSlug}', [InventoryPublicController::class, 'index'])->name('public.inventory.shop.index');
-Route::get('/publicstore', function () {
+Route::post('/public-store/get-unique-models', [PublicStoreInventoryController::class, 'getUniqueModelsByManufacturer'])->name('public.items.getUniqueModelsByManufacturer');
+Route::get('/public-store/{shopSlug}', [PublicStoreInventoryController::class, 'index'])->name('public.inventory.shop.index');
+Route::get('/public-store', function () {
     abort(404);
 });
 Route::get('items/tabs/{id}/items', [ItemController::class, 'getTabItems'])->name('items.tabs.items');

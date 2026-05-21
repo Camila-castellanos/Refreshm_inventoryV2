@@ -2,7 +2,7 @@
   <PortalLayout>
     <!-- Header bar -->
     <div class="flex items-center gap-4 mb-6">
-      <Link href="/publicstore/account/requests" class="text-surface-600 hover:text-surface-900 dark:text-surface-300">
+      <Link :href="route('public-store.portal.requests')" class="text-surface-600 hover:text-surface-900 dark:text-surface-300">
         <i class="pi pi-arrow-left text-xl"></i>
       </Link>
       <h1 class="text-2xl font-semibold text-surface-900 dark:text-surface-0">Request #{{ requestId }}</h1>
@@ -11,7 +11,7 @@
     <!-- Content -->
     <div v-if="error" class="text-center py-8">
       <div class="text-red-500">{{ error }}</div>
-      <Link href="/publicstore/account/requests" class="text-primary-500 hover:text-primary-600 mt-4 inline-block">Back to requests</Link>
+      <Link :href="route('public-store.portal.requests')" class="text-primary-500 hover:text-primary-600 mt-4 inline-block">Back to requests</Link>
     </div>
 
     <div v-else class="space-y-6">
@@ -66,7 +66,7 @@
         </div>
       </div>
 
-      <Link href="/publicstore/account/requests" class="inline-block">
+      <Link :href="route('public-store.portal.requests')" class="inline-block">
         <Button label="Back to requests" icon="pi pi-arrow-left" class="p-button-outlined" />
       </Link>
     </div>

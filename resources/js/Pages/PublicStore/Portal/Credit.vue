@@ -2,7 +2,7 @@
   <PortalLayout>
     <!-- Header bar -->
     <div class="flex items-center gap-4 mb-6">
-      <Link href="/publicstore/account/dashboard" class="text-surface-600 hover:text-surface-900 dark:text-surface-300">
+      <Link :href="route('public-store.portal.dashboard')" class="text-surface-600 hover:text-surface-900 dark:text-surface-300">
         <i class="pi pi-arrow-left text-xl"></i>
       </Link>
       <h1 class="text-2xl font-semibold text-surface-900 dark:text-surface-0">My Credit</h1>
@@ -57,7 +57,7 @@
       </div>
     </div>
 
-    <Link href="/publicstore/account/dashboard" class="inline-block mt-6">
+    <Link :href="route('public-store.portal.dashboard')" class="inline-block mt-6">
       <Button label="Back to dashboard" icon="pi pi-home" class="p-button-outlined" />
     </Link>
   </PortalLayout>

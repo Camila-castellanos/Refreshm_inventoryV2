@@ -8,7 +8,7 @@ class InventoryPublicTest extends TestCaseWithCompany
 {
     public function test_index_returns_404_for_invalid_shop(): void
     {
-        $response = $this->get('/publicstore/invalid-shop-12345');
+        $response = $this->get('/public-store/invalid-shop-12345');
 
         $response->assertStatus(404);
     }
@@ -26,7 +26,7 @@ class InventoryPublicTest extends TestCaseWithCompany
             'manufacturer' => 'Apple',
         ]);
 
-        $response = $this->get('/publicstore/'.$shop->slug);
+        $response = $this->get('/public-store/'.$shop->slug);
 
         $response->assertStatus(200);
         $response->assertInertia(fn ($page) => $page
@@ -48,7 +48,7 @@ class InventoryPublicTest extends TestCaseWithCompany
             'manufacturer' => 'Samsung',
         ]);
 
-        $response = $this->get('/publicstore/'.$shop->id);
+        $response = $this->get('/public-store/'.$shop->id);
 
         $response->assertStatus(200);
     }
@@ -73,7 +73,7 @@ class InventoryPublicTest extends TestCaseWithCompany
             'model' => 'Available iPhone',
         ]);
 
-        $response = $this->get('/publicstore/'.$shop->slug);
+        $response = $this->get('/public-store/'.$shop->slug);
 
         $response->assertStatus(200);
 
@@ -103,7 +103,7 @@ class InventoryPublicTest extends TestCaseWithCompany
             'model' => 'Available iPhone',
         ]);
 
-        $response = $this->get('/publicstore/'.$shop->slug);
+        $response = $this->get('/public-store/'.$shop->slug);
 
         $response->assertStatus(200);
 
@@ -137,7 +137,7 @@ class InventoryPublicTest extends TestCaseWithCompany
             'type' => 'device',
         ]);
 
-        $response = $this->post('/publicstore/get-unique-models', [
+        $response = $this->post('/public-store/get-unique-models', [
             'manufacturers' => ['Apple'],
         ]);
 
@@ -150,7 +150,7 @@ class InventoryPublicTest extends TestCaseWithCompany
 
     public function test_get_unique_models_requires_manufacturers(): void
     {
-        $response = $this->post('/publicstore/get-unique-models', []);
+        $response = $this->post('/public-store/get-unique-models', []);
 
         $response->assertStatus(302);
     }
@@ -179,7 +179,7 @@ class InventoryPublicTest extends TestCaseWithCompany
             'type' => 'device',
         ]);
 
-        $response = $this->post('/publicstore/get-unique-models', [
+        $response = $this->post('/public-store/get-unique-models', [
             'manufacturers' => ['Apple'],
         ]);
 
