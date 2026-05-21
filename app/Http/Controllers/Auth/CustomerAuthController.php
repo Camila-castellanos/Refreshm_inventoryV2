@@ -117,7 +117,9 @@ class CustomerAuthController extends Controller
 
         // Always return the same success message — don't reveal if email exists
         if (! $customer) {
-            return back()->with('activation_success', 'If your email is in our system, you will receive an activation link.');
+            return back()->withErrors([
+                'activation_email' => 'This email is not registered in our systems. Please contact support.',
+            ]);
         }
 
         // Already has a password — guide them to sign in
@@ -132,7 +134,7 @@ class CustomerAuthController extends Controller
 
         $this->magicLinkService->sendMagicLink($customer, $magicLinkUrl);
 
-        return back()->with('activation_success', 'Activation link sent! Check your email to set your password.');
+        return back()->with('activation_success', 'Activation link successfully sent to your email!');
     }
 
     /**

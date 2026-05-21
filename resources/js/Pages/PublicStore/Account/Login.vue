@@ -128,17 +128,28 @@
 
                 <!-- Activation link form -->
                 <div v-else key="activate-form">
-                  <div class="flex items-start gap-4 bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-700 p-4 rounded-xl mb-6 shadow-sm">
-                    <i class="pi pi-info-circle text-blue-500 text-xl mt-0.5"></i>
-                    <div class="text-surface-700 dark:text-surface-300 leading-relaxed text-sm">
-                      <span class="font-bold text-surface-900 dark:text-surface-0 block mb-1">Account Activation</span>
-                      If your email was already added to our system, we'll send you a link to set your password and activate your account.
+                  <!-- Info box: Clean & Minimalist -->
+                  <div class="flex items-start gap-4 bg-white dark:bg-surface-800 border border-surface-200 dark:border-surface-700 p-4 rounded-xl mb-6 shadow-sm">
+                    <div class="flex-shrink-0 w-10 h-10 rounded-lg bg-surface-50 dark:bg-surface-700 flex items-center justify-center">
+                      <i class="pi pi-envelope text-blue-500 text-lg"></i>
+                    </div>
+                    <div class="text-surface-600 dark:text-surface-400 leading-relaxed text-sm">
+                      <span class="font-bold text-surface-900 dark:text-surface-0 block mb-0.5">Activation Method</span>
+                      Enter your email to receive a secure link to set your password and access your account.
                     </div>
                   </div>
 
-                  <div v-if="activationSuccess" class="flex items-start gap-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 text-green-700 dark:text-green-400 px-4 py-3 rounded-xl mb-5 text-sm">
-                    <i class="pi pi-check-circle mt-0.5 flex-shrink-0"></i>
-                    <span>{{ activationSuccess }}</span>
+                  <!-- Dynamic Status Message: White background, gray text -->
+                  <div v-if="activationSuccess || activationErrors.activation_email" 
+                       class="flex items-center gap-3 bg-white dark:bg-surface-800 border border-surface-200 dark:border-surface-700 p-4 rounded-xl mb-6 text-sm shadow-sm animate-fade-in"
+                       :class="{ 'border-l-4 border-l-green-500': activationSuccess, 'border-l-4 border-l-red-500': activationErrors.activation_email }">
+                    <i :class="[
+                        'pi text-lg',
+                        activationSuccess ? 'pi-check-circle text-green-500' : 'pi-exclamation-circle text-red-500'
+                    ]"></i>
+                    <span class="text-surface-700 dark:text-surface-200 font-medium">
+                        {{ activationSuccess || activationErrors.activation_email }}
+                    </span>
                   </div>
 
                   <form @submit.prevent="submitActivation" class="space-y-4">
@@ -212,12 +223,18 @@ const activationForm    = useForm({ email: '' });
 
 const submitActivation = () => {
   activationLoading.value = true;
-  activationForm.post('/publicstore/account/login/activate', {
+  // Clear previous flash messages if possible by manual reset or just let Inertia handle it
+  activationForm.post(route('publicstore.account.login.activate'), {
     onSuccess: () => {
       activationForm.reset();
       activationLoading.value = false;
     },
-    onError: () => { activationLoading.value = false; },
+    onError: () => { 
+      activationLoading.value = false; 
+    },
+    onFinish: () => {
+      activationLoading.value = false;
+    }
   });
 };
 </script>
