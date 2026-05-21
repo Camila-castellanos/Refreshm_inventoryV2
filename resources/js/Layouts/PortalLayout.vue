@@ -58,7 +58,11 @@ const page = usePage();
 const auth = computed(() => page.props.customer_auth);
 
 const logout = () => {
-  router.post('/publicstore/account/logout');
+  router.post(route('publicstore.account.logout'), {}, {
+    onSuccess: () => {
+      // The backend handles redirection
+    }
+  });
 };
 
 const login = () => {

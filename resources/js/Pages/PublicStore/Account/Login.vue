@@ -47,9 +47,16 @@
                 <p class="text-surface-500 dark:text-surface-400 text-sm mt-1">Sign in with your email and password</p>
               </div>
 
-              <div v-if="flashSuccess" class="flex items-start gap-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 text-green-700 dark:text-green-400 px-4 py-3 rounded-xl mb-5 text-sm">
-                <i class="pi pi-check-circle mt-0.5 flex-shrink-0"></i>
-                <span>{{ flashSuccess }}</span>
+              <div v-if="flashSuccess || activationSuccess || flashError" 
+                   class="flex items-center gap-3 bg-white dark:bg-surface-800 border border-surface-200 dark:border-surface-700 p-4 rounded-xl mb-6 text-sm shadow-sm animate-fade-in"
+                   :class="{ 'border-l-4 border-l-green-500': flashSuccess || activationSuccess, 'border-l-4 border-l-red-500': flashError }">
+                <i :class="[
+                    'pi text-lg flex-shrink-0',
+                    (flashSuccess || activationSuccess) ? 'pi-check-circle text-green-500' : 'pi-exclamation-circle text-red-500'
+                ]"></i>
+                <span class="text-surface-700 dark:text-surface-200 font-medium">
+                  {{ flashSuccess || activationSuccess || flashError }}
+                </span>
               </div>
 
               <form @submit.prevent="submitLogin" class="space-y-4">
@@ -61,6 +68,9 @@
                 <div>
                   <label for="login-password" class="block text-surface-700 dark:text-surface-200 text-sm font-medium mb-1.5">Password</label>
                   <InputText id="login-password" type="password" v-model="loginForm.password" placeholder="Your password" class="w-full" :class="{ 'p-invalid': loginErrors.password }" />
+                  <div class="flex justify-end mt-1">
+                    <button type="button" @click="showForgotModal = true" class="text-xs text-primary-500 hover:text-primary-600 font-medium">Forgot password?</button>
+                  </div>
                   <small v-if="loginErrors.password" class="text-red-500 mt-1 block">{{ loginErrors.password }}</small>
                 </div>
                 <Button label="Sign in" type="submit" icon="pi pi-sign-in" class="w-full" :loading="loginLoading" />
@@ -168,23 +178,75 @@
         </div>
       </div>
     </div>
+
+    <!-- Forgot Password Modal -->
+    <Dialog v-model:visible="showForgotModal" header="Recover Password" modal class="w-full max-w-sm mx-4">
+      <div class="mb-6">
+        <p class="text-surface-600 dark:text-surface-400 text-sm leading-relaxed">
+          Enter your email and we'll send you a secure link to reset your password.
+        </p>
+      </div>
+
+      <form @submit.prevent="submitForgot" class="space-y-4">
+        <div v-if="forgotForm.errors.email" 
+             class="flex items-center gap-3 bg-white dark:bg-surface-800 border border-surface-200 dark:border-surface-700 p-3 rounded-xl mb-4 text-xs shadow-sm border-l-4 border-l-red-500 animate-fade-in">
+          <i class="pi pi-exclamation-circle text-red-500"></i>
+          <span class="text-surface-700 dark:text-surface-200 font-medium">{{ forgotForm.errors.email }}</span>
+        </div>
+
+        <div>
+          <label for="forgot-email" class="block text-surface-700 dark:text-surface-200 text-sm font-medium mb-1.5">Email address</label>
+          <InputText id="forgot-email" type="email" v-model="forgotForm.email" placeholder="your@email.com" class="w-full" :class="{ 'p-invalid': forgotForm.errors.email }" autofocus />
+        </div>
+        
+        <div class="flex justify-end gap-2 pt-2">
+          <Button type="button" label="Cancel" severity="secondary" text @click="showForgotModal = false" />
+          <Button type="submit" label="Send link" icon="pi pi-paper-plane" :loading="forgotForm.processing" />
+        </div>
+      </form>
+    </Dialog>
   </PortalLayout>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 import { useForm, usePage } from "@inertiajs/vue3";
 import Button from "primevue/button";
 import InputText from "primevue/inputtext";
+import Dialog from "primevue/dialog";
 import PortalLayout from "@/Layouts/PortalLayout.vue";
+import { useToast } from "primevue/usetoast";
 
 const page = usePage();
+const toast = useToast();
 
 const flashSuccess      = computed(() => (page.props.flash as any)?.success);
 const activationSuccess = computed(() => (page.props.flash as any)?.activation_success);
+const flashError        = computed(() => (page.props.flash as any)?.error);
+
+// Watch for activation success to show a toast
+watch(activationSuccess, (newVal) => {
+  if (newVal) {
+    toast.add({
+      severity: 'success',
+      summary: 'Information',
+      detail: newVal,
+      life: 5000
+    });
+  }
+}, { immediate: true });
 
 const activeTab    = ref<'signin' | 'register'>('signin');
 const registerMode = ref<'new' | 'activate'>('new');
+const showForgotModal = ref(false);
+
+// Watch for modal visibility to clear form
+watch(showForgotModal, (newVal) => {
+  if (newVal) {
+    forgotForm.clearErrors();
+    forgotForm.reset();
+  }
+});
 
 // ── Sign In ──────────────────────────────────────────
 const loginLoading = ref(false);
@@ -196,6 +258,18 @@ const submitLogin = () => {
   loginForm.post('/publicstore/account/login', {
     onSuccess: () => { loginLoading.value = false; },
     onError:   () => { loginLoading.value = false; },
+  });
+};
+
+// ── Forgot Password ──────────────────────────────────
+const forgotForm = useForm({ email: '' });
+
+const submitForgot = () => {
+  forgotForm.post(route('publicstore.account.login.forgot-password'), {
+    onSuccess: () => {
+      showForgotModal.value = false;
+      forgotForm.reset();
+    },
   });
 };
 

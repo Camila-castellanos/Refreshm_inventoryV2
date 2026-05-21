@@ -52,6 +52,7 @@ Route::prefix('publicstore/account')->name('publicstore.account.')->group(functi
         Route::get('/login', [CustomerAuthController::class, 'showLogin'])->name('login.show');
         Route::post('/login', [CustomerAuthController::class, 'login'])->name('login');
         Route::post('/login/activate', [CustomerAuthController::class, 'sendActivationLink'])->name('login.activate');
+        Route::post('/login/forgot-password', [CustomerAuthController::class, 'sendResetLink'])->name('login.forgot-password');
 
         Route::get('/register', fn() => redirect('/publicstore/account/login'))->name('register.show');
         Route::post('/register', [CustomerAuthController::class, 'register'])->name('register');

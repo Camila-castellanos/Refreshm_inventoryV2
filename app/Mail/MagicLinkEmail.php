@@ -15,14 +15,17 @@ class MagicLinkEmail extends Mailable
 
     public Customer $customer;
     public string $magicLinkUrl;
+    public string $type;
 
     /**
      * Create a new message instance.
+     * @param string $type 'activation' | 'reset' | 'access'
      */
-    public function __construct(Customer $customer, string $magicLinkUrl)
+    public function __construct(Customer $customer, string $magicLinkUrl, string $type = 'access')
     {
         $this->customer = $customer;
         $this->magicLinkUrl = $magicLinkUrl;
+        $this->type = $type;
     }
 
     /**
@@ -30,8 +33,14 @@ class MagicLinkEmail extends Mailable
      */
     public function envelope(): Envelope
     {
+        $subjects = [
+            'activation' => 'Activate your Customer Account',
+            'reset'      => 'Reset your password',
+            'access'     => 'Access your account',
+        ];
+
         return new Envelope(
-            subject: 'Accede a tu cuenta',
+            subject: $subjects[$this->type] ?? $subjects['access'],
         );
     }
 
@@ -42,6 +51,9 @@ class MagicLinkEmail extends Mailable
     {
         return new Content(
             view: 'emails.portal.magic-link',
+            with: [
+                'type' => $this->type,
+            ],
         );
     }
 

@@ -83,6 +83,9 @@ class InventoryPublicController extends Controller
         // Apply hierarchical sorting (Apple -> Samsung -> Google -> Others, Newest models first)
         $items = $this->applyHierarchicalModelSorting($items)->values();
 
+        // Save the last shop slug in session to redirect back after logout
+        session(['last_public_shop' => $shop->slug]);
+
         return Inertia::render('PublicInventory/Index', [
             'items' => $items,
             'shopName' => $shop->name,

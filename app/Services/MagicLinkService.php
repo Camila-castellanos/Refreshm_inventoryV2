@@ -71,8 +71,8 @@ class MagicLinkService
     /**
      * Send a magic link email to the customer.
      */
-    public function sendMagicLink(Customer $customer, string $magicLinkUrl): void
+    public function sendMagicLink(Customer $customer, string $magicLinkUrl, string $type = 'access'): void
     {
-        Mail::to($customer->email)->send(new MagicLinkEmail($customer, $magicLinkUrl));
+        Mail::to($customer->email)->send(new MagicLinkEmail($customer, $magicLinkUrl, $type));
     }
 }

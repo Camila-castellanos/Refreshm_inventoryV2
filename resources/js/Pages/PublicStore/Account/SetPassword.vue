@@ -6,10 +6,17 @@
         <!-- Header -->
         <div class="text-center mb-8">
           <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white dark:bg-surface-800 mb-4 shadow-lg border border-surface-100 dark:border-surface-700">
-            <i class="pi pi-lock text-surface-900 dark:text-surface-0 !text-3xl"></i>
+            <i :class="[
+              'pi !text-3xl',
+              type === 'reset' ? 'pi-key text-orange-500' : 'pi-lock text-surface-900 dark:text-surface-0'
+            ]"></i>
           </div>
-          <h1 class="text-3xl font-bold text-surface-900 dark:text-surface-0 mb-1">Secure Activation</h1>
-          <p class="text-surface-500 dark:text-surface-400 text-sm">Create a password to activate your account</p>
+          <h1 class="text-3xl font-bold text-surface-900 dark:text-surface-0 mb-1">
+            {{ type === 'reset' ? 'Reset Password' : 'Secure Activation' }}
+          </h1>
+          <p class="text-surface-500 dark:text-surface-400 text-sm">
+            {{ type === 'reset' ? 'Choose a new secure password for your account' : 'Create a password to activate your account' }}
+          </p>
         </div>
 
         <div class="bg-white dark:bg-surface-800 rounded-2xl shadow-lg p-8 border border-surface-100 dark:border-surface-700">
@@ -59,9 +66,9 @@
             </div>
 
             <Button
-              label="Activate account"
+              :label="type === 'reset' ? 'Update password' : 'Activate account'"
               type="submit"
-              icon="pi pi-shield"
+              :icon="type === 'reset' ? 'pi pi-check' : 'pi pi-shield'"
               class="w-full mt-2"
               :loading="form.processing"
             />
@@ -82,6 +89,7 @@ const props = defineProps<{
   email?: string | null;
   token: string;
   error?: string | null;
+  type: 'activation' | 'reset' | 'access';
 }>();
 
 const form = useForm({

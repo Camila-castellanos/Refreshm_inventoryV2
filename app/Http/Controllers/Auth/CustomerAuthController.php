@@ -98,6 +98,11 @@ class CustomerAuthController extends Controller
         Auth::guard('customer')->login($customer, $request->boolean('remember'));
         $request->session()->regenerate();
 
+        $lastShop = session('last_public_shop');
+        if ($lastShop) {
+            return redirect()->route('public.inventory.shop.index', ['shopSlug' => $lastShop]);
+        }
+
         return redirect()->intended(route('publicstore.account.dashboard'));
     }
 
@@ -130,17 +135,43 @@ class CustomerAuthController extends Controller
         }
 
         $token         = $this->magicLinkService->generateToken($customer);
-        $magicLinkUrl  = config('app.url') . '/publicstore/account/magic-link/' . $token;
+        $magicLinkUrl  = route('publicstore.account.magic-link.show', ['token' => $token, 'type' => 'activation']);
 
-        $this->magicLinkService->sendMagicLink($customer, $magicLinkUrl);
+        $this->magicLinkService->sendMagicLink($customer, $magicLinkUrl, 'activation');
 
         return back()->with('activation_success', 'Activation link successfully sent to your email!');
     }
 
     /**
+     * Send a magic link for password recovery (forgot password).
+     */
+    public function sendResetLink(Request $request)
+    {
+        $validated = $request->validate([
+            'email' => ['required', 'string', 'email'],
+        ]);
+
+        $customer = Customer::withoutGlobalScopes()
+            ->where('email', $validated['email'])
+            ->first();
+
+        // Security: Same generic success if not found to avoid enumeration
+        if (! $customer || ! $customer->hasPassword()) {
+            return back()->with('activation_success', 'If your email is in our system, you will receive a password reset link.');
+        }
+
+        $token         = $this->magicLinkService->generateToken($customer);
+        $magicLinkUrl  = route('publicstore.account.magic-link.show', ['token' => $token, 'type' => 'reset']);
+
+        $this->magicLinkService->sendMagicLink($customer, $magicLinkUrl, 'reset');
+
+        return back()->with('activation_success', 'Reset link sent! Check your email to update your password.');
+    }
+
+    /**
      * Show the set password page (magic link verification).
      */
-    public function showSetPassword(string $token)
+    public function showSetPassword(Request $request, string $token)
     {
         $customer = $this->magicLinkService->validateToken($token);
 
@@ -149,12 +180,14 @@ class CustomerAuthController extends Controller
                 'token' => $token,
                 'email' => null,
                 'error' => 'The link has expired or is invalid. Request a new one.',
+                'type'  => $request->query('type', 'access'),
             ]);
         }
 
         return Inertia::render('PublicStore/Account/SetPassword', [
             'token' => $token,
             'email' => $customer->email,
+            'type'  => $request->query('type', 'access'),
         ]);
     }
 
@@ -185,17 +218,30 @@ class CustomerAuthController extends Controller
         Auth::guard('customer')->login($customer);
         $request->session()->regenerate();
 
+        $lastShop = session('last_public_shop');
+        if ($lastShop) {
+            return redirect()->route('public.inventory.shop.index', ['shopSlug' => $lastShop]);
+        }
+
         return redirect()->route('publicstore.account.dashboard');
     }
 
     /**
-     * Logout the customer.
+     * Logout the customer without affecting other guards (like admin/web).
      */
     public function logout(Request $request)
     {
+        $lastShop = session('last_public_shop');
+        
         Auth::guard('customer')->logout();
-        $request->session()->invalidate();
+
+        // No invalidamos toda la sesión para no desconectar al admin
+        // Pero regeneramos el token para seguridad básica
         $request->session()->regenerateToken();
+
+        if ($lastShop) {
+            return redirect()->route('public.inventory.shop.index', ['shopSlug' => $lastShop]);
+        }
 
         return redirect()->route('publicstore.account.login.show');
     }

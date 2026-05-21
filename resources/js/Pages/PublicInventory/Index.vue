@@ -41,7 +41,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import { usePage } from '@inertiajs/vue3';
+import { usePage, router } from '@inertiajs/vue3';
 import Button from 'primevue/button';
 import InventoryList from './InventoryList.vue';
 
@@ -58,7 +58,7 @@ const page = usePage();
 const auth = computed(() => page.props.customer_auth);
 
 const logout = () => {
-  window.location.href = '/publicstore/account/logout';
+  router.post(route('publicstore.account.logout'));
 };
 
 const login = () => {

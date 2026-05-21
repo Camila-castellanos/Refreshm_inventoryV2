@@ -16,13 +16,37 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>Access your account</h1>
+            <h1>
+                @if($type === 'activation')
+                    Activate your account
+                @elseif($type === 'reset')
+                    Reset your password
+                @else
+                    Access your account
+                @endif
+            </h1>
         </div>
         <div class="content">
             <p>Hello <strong>{{ $customer->first_name ?: $customer->email }}</strong>,</p>
-            <p>You received this link to access your Customer Portal account. This is a single-use link that expires in <strong>15 minutes</strong>.</p>
+            
+            @if($type === 'activation')
+                <p>You have been registered in our Customer Portal. Click the button below to set your password and activate your account.</p>
+            @elseif($type === 'reset')
+                <p>We received a request to reset your password. Click the button below to choose a new one.</p>
+            @else
+                <p>You received this link to access your Customer Portal account. This is a single-use link that expires in <strong>15 minutes</strong>.</p>
+            @endif
+
             <p style="text-align: center;">
-                <a href="{{ $magicLinkUrl }}" class="button">Access my account</a>
+                <a href="{{ $magicLinkUrl }}" class="button">
+                    @if($type === 'activation')
+                        Activate Account
+                    @elseif($type === 'reset')
+                        Reset Password
+                    @else
+                        Access my account
+                    @endif
+                </a>
             </p>
             <p>If you didn't request this link, you can safely ignore this email.</p>
             <div class="warning">
