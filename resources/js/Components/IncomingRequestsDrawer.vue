@@ -325,15 +325,20 @@ function exportRequestToCSV(req: any) {
   }
 
   const config: CSVConfig<any> = {
-    headers: ['ID', 'Model', 'Manufacturer', 'IMEI', 'Issues', 'Price', 'Currency'],
+    headers: ['Date', 'Vendor', 'Manufacturer', 'Model', 'Colour', 'Battery', 'Grade', 'Issues', 'IMEI/Serial', 'Cost', 'Selling Price', 'Location'],
     rowMapper: (it: any) => [
-      it.id,
-      it.model || it.type || 'Item',
+      it.date || '',
+      it.supplier || it.vendor?.vendor || req.name || '',
       it.manufacturer || '',
-      it.imei || '',
+      it.model || it.type || 'Item',
+      it.colour || '',
+      it.battery || '',
+      it.grade || '',
       it.issues || '',
-      it.selling_price ?? it.cost ?? '',
-      it.currency || 'CAD'
+      it.imei || '',
+      it.cost || '',
+      it.selling_price || '',
+      it.location || ''
     ],
     filenamePrefix: `request_${req.id}`
   };
@@ -361,17 +366,22 @@ function exportAllToCSV() {
   }
 
   const config: CSVConfig<any> = {
-    headers: ['Request Name', 'Store', 'Item ID', 'Model', 'Manufacturer', 'IMEI', 'Issues', 'Price', 'Currency'],
+    headers: ['Request Name', 'Store', 'Date', 'Vendor', 'Manufacturer', 'Model', 'Colour', 'Battery', 'Grade', 'Issues', 'IMEI/Serial', 'Cost', 'Selling Price', 'Location'],
     rowMapper: (it: any) => [
       it.request_name,
       it.request_store,
-      it.id,
-      it.model || it.type || 'Item',
+      it.date || '',
+      it.supplier || it.vendor?.vendor || it.request_name || '',
       it.manufacturer || '',
-      it.imei || '',
+      it.model || it.type || 'Item',
+      it.colour || '',
+      it.battery || '',
+      it.grade || '',
       it.issues || '',
-      it.selling_price ?? it.cost ?? '',
-      it.currency || 'CAD'
+      it.imei || '',
+      it.cost || '',
+      it.selling_price || '',
+      it.location || ''
     ],
     filenamePrefix: 'all_pending_requests'
   };

@@ -40,6 +40,11 @@ class IncomingRequestItem extends Model
         return $this->belongsTo(Item::class, 'original_item_id');
     }
 
+    public function storage()
+    {
+        return $this->belongsTo(Storage::class);
+    }
+
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);

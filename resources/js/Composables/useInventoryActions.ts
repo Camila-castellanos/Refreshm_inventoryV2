@@ -116,16 +116,20 @@ export function useInventoryActions(
     
     try {
       const config: CSVConfig<Item> = {
-        headers: ['ID', 'Model', 'Manufacturer', 'Color', 'Grade', 'Battery', 'Issues', 'Price'],
+        headers: ['Date', 'Vendor', 'Manufacturer', 'Model', 'Colour', 'Battery', 'Grade', 'Issues', 'IMEI/Serial', 'Cost', 'Selling Price', 'Location'],
         rowMapper: (item) => [
-          item.id,
-          item.model,
-          item.manufacturer,
-          item.colour,
-          item.grade,
-          item.battery,
-          item.issues,
-          item.selling_price
+          item.date || '',
+          item.vendor?.vendor || item.vendor || item.supplier || '',
+          item.manufacturer || '',
+          item.model || '',
+          item.colour || '',
+          item.battery || '',
+          item.grade || '',
+          item.issues || '',
+          item.imei || '',
+          item.cost || '',
+          item.selling_price || '',
+          item.location || ''
         ],
         filenamePrefix: 'items'
       };

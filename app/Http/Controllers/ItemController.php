@@ -504,7 +504,7 @@ class ItemController extends Controller
     {
         $processedParam = $request->query('processed', false);
 
-        $requests = IncomingRequest::with(['items.originalItem'])
+        $requests = IncomingRequest::with(['items.originalItem.storage', 'items.storage'])
             ->where('processed', $processedParam)
             ->orderBy('created_at', 'desc')
             ->get();
@@ -514,6 +514,7 @@ class ItemController extends Controller
         $requests->each(function ($req) {
             $req->items->each(function ($item) {
                 if ($item->originalItem) {
+                    $item->date = $item->date ?? $item->originalItem->date;
                     $item->supplier = $item->supplier ?? $item->originalItem->supplier;
                     $item->manufacturer = $item->manufacturer ?? $item->originalItem->manufacturer;
                     $item->storage_id = $item->storage_id ?? $item->originalItem->storage_id;
@@ -526,6 +527,14 @@ class ItemController extends Controller
                     $item->cost = $item->cost ?? $item->originalItem->cost;
                     $item->imei = $item->imei ?? $item->originalItem->imei;
                     $item->type = $item->type ?? $item->originalItem->type;
+                }
+
+                // Build location string if storage info is available
+                $storage = $item->storage ?? ($item->originalItem ? $item->originalItem->storage : null);
+                if ($storage && $item->position) {
+                    $item->location = "{$storage->name} - {$item->position} / {$storage->limit}";
+                } else {
+                    $item->location = "";
                 }
             });
         });
