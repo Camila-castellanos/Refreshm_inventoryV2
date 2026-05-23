@@ -5,6 +5,7 @@ import { useToast } from 'primevue/usetoast';
 import { useDialog } from 'primevue/usedialog';
 import axios from 'axios';
 import { Item, Tab as ITab } from '@/Lib/types';
+import { exportToCSV as triggerCSVExport, CSVConfig } from '@/Utils/csvExport';
 import ItemsSell from '@/Pages/Inventory/Modals/ItemsSell.vue';
 import MoveItem from '@/Pages/Inventory/Modals/MoveItem.vue';
 
@@ -114,30 +115,22 @@ export function useInventoryActions(
     }
     
     try {
-      const headers = ['ID', 'Model', 'Manufacturer', 'Color', 'Grade', 'Battery', 'Issues', 'Price'];
-      const rows = selectedItems.value.map(item => [
-        item.id,
-        item.model,
-        item.manufacturer,
-        item.colour,
-        item.grade,
-        item.battery,
-        item.issues,
-        item.selling_price
-      ]);
-      
-      const csv = [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement('a');
-      const url = URL.createObjectURL(blob);
-      
-      link.setAttribute('href', url);
-      link.setAttribute('download', `items_${new Date().toISOString().split('T')[0]}.csv`);
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
+      const config: CSVConfig<Item> = {
+        headers: ['ID', 'Model', 'Manufacturer', 'Color', 'Grade', 'Battery', 'Issues', 'Price'],
+        rowMapper: (item) => [
+          item.id,
+          item.model,
+          item.manufacturer,
+          item.colour,
+          item.grade,
+          item.battery,
+          item.issues,
+          item.selling_price
+        ],
+        filenamePrefix: 'items'
+      };
+
+      triggerCSVExport(selectedItems.value, config);
       toast.add({ severity: 'success', summary: 'Success', detail: 'Items exported to CSV', life: 3000 });
     } catch (error) {
       toast.add({ severity: 'error', summary: 'Error', detail: 'Could not export items', life: 3000 });

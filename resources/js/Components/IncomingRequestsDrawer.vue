@@ -8,7 +8,10 @@
 
     <Sidebar v-model:visible="visible" position="right" :baseZIndex="10000" dismissable :style="{ width: '380px' }">
       <div class="p-4">
-        <h3 class="text-lg font-bold">Incoming Requests</h3>
+        <div class="flex justify-between items-center">
+          <h3 class="text-lg font-bold">Incoming Requests</h3>
+          <Button v-if="requests.length > 0" label="Export All" icon="pi pi-download" class="p-button-sm p-button-text" @click="exportAllToCSV" />
+        </div>
         <p class="mt-2 text-sm text-gray-600">Here you can manage incoming requests.</p>
 
         <div class="mt-4">
@@ -55,6 +58,7 @@
             @click="showAppendModal = true"
           />
           <Button label="Create invoice" icon="pi pi-receipt" class="p-button-sm p-button-outlined create-invoice" @click="createInvoice(activeRequest)" />
+          <Button label="Export to CSV" icon="pi pi-download" class="p-button-sm p-button-outlined" @click="exportRequestToCSV(activeRequest)" />
           <Button label="Delete request" icon="pi pi-trash" class="p-button-sm p-button-danger p-button-outlined" @click="deleteRequest(activeRequest)" />
         </div>
 
@@ -120,6 +124,7 @@ import { useDialog } from 'primevue/usedialog';
 import { usePage } from '@inertiajs/vue3';
 import ItemsSell from '../Pages/Inventory/Modals/ItemsSell.vue';
 import AppendIncomingRequestToSale from '@/Pages/Inventory/Modals/AppendIncomingRequestToSale.vue';
+import { exportToCSV as triggerCSVExport, type CSVConfig } from '@/Utils/csvExport';
 import {
   buildAppendErrorToast,
   buildAppendOutcomeToast,
@@ -311,6 +316,67 @@ async function refreshRequestDataAfterAppend() {
   }
 
   activeRequest.value = refreshed;
+}
+
+function exportRequestToCSV(req: any) {
+  if (!req || !req.items || req.items.length === 0) {
+    toast.add({ severity: 'warn', summary: 'Warning', detail: 'No items to export', life: 3000 });
+    return;
+  }
+
+  const config: CSVConfig<any> = {
+    headers: ['ID', 'Model', 'Manufacturer', 'IMEI', 'Issues', 'Price', 'Currency'],
+    rowMapper: (it: any) => [
+      it.id,
+      it.model || it.type || 'Item',
+      it.manufacturer || '',
+      it.imei || '',
+      it.issues || '',
+      it.selling_price ?? it.cost ?? '',
+      it.currency || 'CAD'
+    ],
+    filenamePrefix: `request_${req.id}`
+  };
+
+  triggerCSVExport(req.items, config);
+}
+
+function exportAllToCSV() {
+  if (requests.value.length === 0) {
+    toast.add({ severity: 'warn', summary: 'Warning', detail: 'No requests to export', life: 3000 });
+    return;
+  }
+
+  const allItems = requests.value.flatMap((req: any) => 
+    (req.items || []).map((it: any) => ({
+      ...it,
+      request_name: req.name || 'Anon',
+      request_store: req.store || ''
+    }))
+  );
+
+  if (allItems.length === 0) {
+    toast.add({ severity: 'warn', summary: 'Warning', detail: 'No items to export', life: 3000 });
+    return;
+  }
+
+  const config: CSVConfig<any> = {
+    headers: ['Request Name', 'Store', 'Item ID', 'Model', 'Manufacturer', 'IMEI', 'Issues', 'Price', 'Currency'],
+    rowMapper: (it: any) => [
+      it.request_name,
+      it.request_store,
+      it.id,
+      it.model || it.type || 'Item',
+      it.manufacturer || '',
+      it.imei || '',
+      it.issues || '',
+      it.selling_price ?? it.cost ?? '',
+      it.currency || 'CAD'
+    ],
+    filenamePrefix: 'all_pending_requests'
+  };
+
+  triggerCSVExport(allItems, config);
 }
 
 async function deleteItem(it: any) {
