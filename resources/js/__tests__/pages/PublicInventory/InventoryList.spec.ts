@@ -25,6 +25,25 @@ vi.mock('@/Components/ExchangeRateToggle.vue', () => ({
   }
 }));
 
+vi.mock('@inertiajs/vue3', () => ({
+  usePage: () => ({
+    props: {
+      customer_auth: {
+        user: null
+      },
+      auth: {
+        user: null
+      }
+    }
+  }),
+  router: {
+    reload: vi.fn(),
+    visit: vi.fn(),
+    get: vi.fn(),
+    post: vi.fn(),
+  }
+}));
+
 vi.mock('primevue/usetoast', () => ({
   useToast: () => ({
     add: vi.fn()
