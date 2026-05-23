@@ -371,3 +371,44 @@ export interface Market {
   google_tag_id: string | null;
   faq: any;
 }
+
+export interface IncomingRequest {
+  id: number;
+  name: string;
+  email: string;
+  store: string;
+  notes: string | null;
+  processed: boolean;
+  shipping: any;
+  customer_id: number | null;
+  items?: IncomingRequestItem[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface IncomingRequestItem {
+  id: number;
+  incoming_request_id: number;
+  original_item_id: number | null;
+  date: string;
+  supplier: string | null;
+  manufacturer: string;
+  model: string;
+  colour: string;
+  battery: string;
+  grade: string;
+  issues: string | null;
+  cost: number;
+  imei: string | null;
+  selling_price: number;
+  customer: string | null;
+  user_id: number;
+  vendor_id: number;
+  shop_id: number | null;
+  type: string | null;
+  currency: string | null;
+  customer_id: number | null;
+  created_at: string;
+  updated_at: string;
+  request?: IncomingRequest;
+}
