@@ -300,6 +300,7 @@ class DashboardController extends Controller
         // Agregaciones simples para items en inventario
         $inventoryData = Item::where('status', '!=', Item::STATUS_SOLD)
             ->whereIn('type', ['device', 'accessory'])
+            ->whereNull('sale_id')
             ->selectRaw('
             COALESCE(SUM(cost), 0) as inventory_value,
             COALESCE(SUM(selling_price), 0) as sale_value
