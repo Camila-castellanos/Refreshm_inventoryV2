@@ -87,6 +87,7 @@ import Popover from 'primevue/popover';
 import { useDialog } from "primevue/usedialog";
 import ExportCSV from "@/Pages/Inventory/Modals/ExportCSV.vue";
 import Tag from 'primevue/tag';
+import { formatDate } from "@/Utils/date";
 import { onMounted, onBeforeUnmount, nextTick } from "vue";
 //Popover actions logic
 const op = ref();
@@ -280,17 +281,6 @@ function formatInt(value: number | string | undefined): string {
   const num = Number(value)
   if (isNaN(num)) return '0'
   return new Intl.NumberFormat('en-US').format(num)
-}
-
-// Función auxiliar para formatear fechas y eliminar hora
-function formatDate(value: string | null | undefined): string {
-  if (!value) return '';
-  // Si el valor es tipo ISO, separa por 'T' y toma la primera parte
-  if (value.includes('T')) {
-    return value.split('T')[0];
-  }
-  // Si el valor tiene espacio, separa por espacio y toma la primera parte
-  return value.split(' ')[0];
 }
 
 function checkOverflow() {
