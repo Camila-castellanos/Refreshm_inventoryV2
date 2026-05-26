@@ -28,13 +28,14 @@ class Item extends Model implements HasMedia
         'customer', 'sold', 'hold', 'discount', 'tax',
         'subtotal', 'profit', 'user_id', 'vendor_id', 'custom_values',
         'sold_storage_id', 'sold_position', 'sold_storage_name', 'shop_id',
-        'type', 'product_model_id', 'status',
+        'type', 'product_model_id', 'status', 'partially_sold_at',
     ];
 
     // Cast date and sold attributes as full datetime
     protected $casts = [
         'date' => 'datetime',
         'sold' => 'datetime',
+        'partially_sold_at' => 'datetime',
     ];
 
     // Append custom attributes to JSON
@@ -300,6 +301,13 @@ class Item extends Model implements HasMedia
                 $item->status = self::STATUS_RESERVED;
             } else {
                 $item->status = self::STATUS_AVAILABLE;
+            }
+
+            // Set partially_sold_at when transitioning to STATUS_RESERVED (if not already set)
+            if ($item->status === self::STATUS_RESERVED
+                && ! is_null($item->sale_id)
+                && is_null($item->partially_sold_at)) {
+                $item->partially_sold_at = now();
             }
 
             // 2. If item is not sold, ensure sold date is cleared

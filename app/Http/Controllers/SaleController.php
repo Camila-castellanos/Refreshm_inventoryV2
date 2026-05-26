@@ -499,7 +499,7 @@ class SaleController extends Controller
                     'items' => function ($query) {
                         $query->select([
                             'id', 'sale_id', 'customer', 'battery', 'cost',
-                            'selling_price', 'sold', 'vendor_id', 'model',
+                            'selling_price', 'sold', 'partially_sold_at', 'vendor_id', 'model',
                             'manufacturer', 'colour', 'grade', 'issues', 'imei',
                             'date', 'type', 'sold_position', 'sold_storage_name',
                             'sold_storage_id', 'custom_values',
@@ -558,7 +558,9 @@ class SaleController extends Controller
                         'issues' => $item->issues,
                         'imei' => $item->imei,
                         'battery' => $battery,
-                        'sold' => Carbon::parse($item->sold)->format('Y-m-d'),
+                        'sold' => $item->sold
+                            ? Carbon::parse($item->sold)->format('Y-m-d')
+                            : ($item->partially_sold_at ? Carbon::parse($item->partially_sold_at)->format('Y-m-d') : null),
                         'date' => Carbon::parse($item->date)->format('Y-m-d'),
                         'type' => $item->type,
                         'cost' => '$ '.number_format($cost, 2),

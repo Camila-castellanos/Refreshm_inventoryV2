@@ -242,7 +242,7 @@ class DashboardController extends Controller
                   ->orWhere(function ($q2) use ($startOfMonth, $endOfMonth) {
                       $q2->whereNull('items.sold')
                          ->where('items.status', Item::STATUS_RESERVED)
-                         ->whereBetween('sales.created_at', [$startOfMonth, $endOfMonth]);
+                         ->whereBetween('items.partially_sold_at', [$startOfMonth, $endOfMonth]);
                   });
             })
             ->selectRaw('
@@ -323,7 +323,7 @@ class DashboardController extends Controller
             COUNT(CASE WHEN date >= ? AND date <= ? THEN 1 END) as trades_this_month,
             COUNT(CASE
                 WHEN (sold >= ? AND sold <= ?)
-                     OR (status = ? AND sale_id IS NOT NULL AND updated_at >= ? AND updated_at <= ?)
+                     OR (status = ? AND sale_id IS NOT NULL AND partially_sold_at >= ? AND partially_sold_at <= ?)
                 THEN 1
             END) as sold_this_month
         ', [
