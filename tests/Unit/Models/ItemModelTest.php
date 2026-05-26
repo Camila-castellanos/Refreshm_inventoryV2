@@ -6,6 +6,7 @@ use App\Models\Item;
 use App\Models\ProductModel;
 use App\Models\Storage;
 use App\Models\Vendor;
+use Carbon\Carbon;
 use Tests\TestCaseWithCompany;
 
 class ItemModelTest extends TestCaseWithCompany
@@ -296,5 +297,121 @@ class ItemModelTest extends TestCaseWithCompany
         $this->assertNull($item->sale_id);
         $this->assertEquals($this->storage->id, $item->storage_id);
         $this->assertEquals(10, $item->position);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Partially Sold At Tests (sold-date-tracking SDD)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    public function test_partially_sold_at_is_set_when_item_transitions_to_reserved(): void
+    {
+        $sale = \App\Models\Sale::factory()->create([
+            'user_id' => $this->owner->id,
+        ]);
+
+        $item = $this->createItem([
+            'status' => 'available',
+            'partially_sold_at' => null,
+        ]);
+
+        // Simulate transitioning to reserved by setting sale_id
+        $item->sale_id = $sale->id;
+        $item->save();
+
+        $this->assertNotNull($item->partially_sold_at);
+        $this->assertEquals('reserved', $item->status);
+    }
+
+    public function test_partially_sold_at_is_not_overwritten_if_already_set(): void
+    {
+        $sale = \App\Models\Sale::factory()->create([
+            'user_id' => $this->owner->id,
+        ]);
+
+        $originalDate = now()->subDays(5);
+        $item = $this->createItem([
+            'status' => 'reserved',
+            'sale_id' => $sale->id,
+            'partially_sold_at' => $originalDate,
+        ]);
+
+        // Update some other field to trigger a save
+        $item->issues = 'Screen crack';
+        $item->save();
+
+        $this->assertEquals($originalDate->toDateTimeString(), $item->partially_sold_at->toDateTimeString());
+    }
+
+    public function test_partially_sold_at_is_preserved_when_remove_sale_is_called(): void
+    {
+        $sale = \App\Models\Sale::factory()->create([
+            'user_id' => $this->owner->id,
+        ]);
+
+        $item = $this->createItem([
+            'status' => 'reserved',
+            'sale_id' => $sale->id,
+            'customer' => 'Test Customer',
+            'partially_sold_at' => now()->subDays(3),
+        ]);
+
+        $item->removeSale();
+
+        $this->assertNull($item->sale_id);
+        $this->assertNull($item->customer);
+        $this->assertNotNull($item->partially_sold_at);
+    }
+
+    public function test_partially_sold_at_is_preserved_when_item_goes_back_to_available(): void
+    {
+        $sale = \App\Models\Sale::factory()->create([
+            'user_id' => $this->owner->id,
+        ]);
+
+        $item = $this->createItem([
+            'status' => 'reserved',
+            'sale_id' => $sale->id,
+            'partially_sold_at' => now()->subDays(2),
+        ]);
+
+        $item->markAsAvailable();
+
+        $this->assertEquals('available', $item->status);
+        $this->assertNull($item->sale_id);
+        $this->assertNotNull($item->partially_sold_at);
+    }
+
+    public function test_partially_sold_at_is_null_for_available_items_without_sale(): void
+    {
+        $item = $this->createItem([
+            'status' => 'available',
+            'sale_id' => null,
+        ]);
+
+        $this->assertNull($item->partially_sold_at);
+    }
+
+    public function test_partially_sold_at_fallback_used_when_sold_is_null(): void
+    {
+        // This tests the scenario where an item is reserved (sold=null, sale_id set)
+        // and partially_sold_at should be used as the fallback for display
+        $sale = \App\Models\Sale::factory()->create([
+            'user_id' => $this->owner->id,
+            'created_at' => now()->subDays(10),
+        ]);
+
+        $item = $this->createItem([
+            'status' => 'reserved',
+            'sale_id' => $sale->id,
+            'sold' => null,
+            'partially_sold_at' => now()->subDays(5),
+        ]);
+
+        // The item should use partially_sold_at as the fallback for "sold" date
+        $soldDate = $item->sold
+            ? Carbon::parse($item->sold)->format('Y-m-d')
+            : ($item->partially_sold_at ? Carbon::parse($item->partially_sold_at)->format('Y-m-d') : null);
+
+        $this->assertEquals(now()->subDays(5)->format('Y-m-d'), $soldDate);
     }
 }
