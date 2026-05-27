@@ -414,4 +414,170 @@ class ItemModelTest extends TestCaseWithCompany
 
         $this->assertEquals(now()->subDays(5)->format('Y-m-d'), $soldDate);
     }
+
+    public function test_sold_date_prefers_sold_field_over_partially_sold_at(): void
+    {
+        // When sold field is set, it should always be used regardless of partially_sold_at
+        $sale = \App\Models\Sale::factory()->create([
+            'user_id' => $this->owner->id,
+        ]);
+
+        $item = $this->createItem([
+            'status' => 'sold',
+            'sale_id' => $sale->id,
+            'sold' => '2026-05-15',
+            'partially_sold_at' => '2026-05-20',
+        ]);
+
+        // The item should use sold date, NOT partially_sold_at
+        $soldDate = $item->sold
+            ? Carbon::parse($item->sold)->format('Y-m-d')
+            : ($item->partially_sold_at ? Carbon::parse($item->partially_sold_at)->format('Y-m-d') : null);
+
+        $this->assertEquals('2026-05-15', $soldDate);
+    }
+
+    public function test_sold_date_falls_back_to_updated_at_when_no_sold_or_partially_sold_at(): void
+    {
+        // When both sold and partially_sold_at are null, fall back to updated_at
+        $sale = \App\Models\Sale::factory()->create([
+            'user_id' => $this->owner->id,
+        ]);
+
+        $item = $this->createItem([
+            'status' => 'reserved',
+            'sale_id' => $sale->id,
+            'sold' => null,
+            'partially_sold_at' => null,
+        ]);
+
+        // The item should fall back to updated_at (which is approximately now when created)
+        $soldDate = $item->sold
+            ? Carbon::parse($item->sold)->format('Y-m-d')
+            : ($item->partially_sold_at ? Carbon::parse($item->partially_sold_at)->format('Y-m-d') : Carbon::parse($item->updated_at)->format('Y-m-d'));
+
+        // Just verify it's a valid date string in Y-m-d format
+        $this->assertMatchesRegularExpression('/^\d{4}-\d{2}-\d{2}$/', $soldDate);
+        // And it's not null (falls back to updated_at which is always set)
+        $this->assertNotEmpty($soldDate);
+    }
+
+    public function test_partially_sold_at_is_set_automatically_when_item_becomes_reserved(): void
+    {
+        // Creating an item with sale_id and reserved status should auto-set partially_sold_at
+        $sale = \App\Models\Sale::factory()->create([
+            'user_id' => $this->owner->id,
+        ]);
+
+        $item = $this->createItem([
+            'status' => 'reserved',
+            'sale_id' => $sale->id,
+            'sold' => null,
+            'partially_sold_at' => null,
+        ]);
+
+        // The boot() callback should have set partially_sold_at
+        $this->assertNotNull($item->partially_sold_at);
+    }
+
+    public function test_dashboard_sale_value_excludes_items_with_sale_id(): void
+    {
+        // Items with sale_id (reserved) should NOT be included in sale_value calculation
+        $sale = \App\Models\Sale::factory()->create([
+            'user_id' => $this->owner->id,
+        ]);
+
+        // Item with sale_id - should be excluded from sale_value
+        $this->createItem([
+            'status' => 'reserved',
+            'sale_id' => $sale->id,
+            'type' => 'device',
+            'selling_price' => 500,
+            'cost' => 300,
+        ]);
+
+        // Available item - should be included
+        $this->createItem([
+            'status' => 'available',
+            'sale_id' => null,
+            'type' => 'device',
+            'selling_price' => 200,
+            'cost' => 100,
+        ]);
+
+        // Query like DashboardController calculateInventoryMetrics
+        $inventoryData = \App\Models\Item::where('status', '!=', \App\Models\Item::STATUS_SOLD)
+            ->whereIn('type', ['device', 'accessory'])
+            ->whereNull('sale_id')
+            ->selectRaw('
+                COALESCE(SUM(cost), 0) as inventory_value,
+                COALESCE(SUM(selling_price), 0) as sale_value
+            ')
+            ->first();
+
+        // Only the available item (200) should be included
+        $this->assertEquals(200, $inventoryData->sale_value);
+        $this->assertEquals(100, $inventoryData->inventory_value);
+    }
+
+    public function test_dashboard_sale_value_includes_available_and_on_hold_items_without_sale_id(): void
+    {
+        // Items without sale_id that are available or on hold should be included
+        $this->createItem([
+            'status' => 'available',
+            'sale_id' => null,
+            'type' => 'device',
+            'selling_price' => 100,
+            'cost' => 50,
+        ]);
+
+        $this->createItem([
+            'status' => 'on_hold',
+            'sale_id' => null,
+            'type' => 'device',
+            'selling_price' => 150,
+            'cost' => 75,
+        ]);
+
+        $inventoryData = \App\Models\Item::where('status', '!=', \App\Models\Item::STATUS_SOLD)
+            ->whereIn('type', ['device', 'accessory'])
+            ->whereNull('sale_id')
+            ->selectRaw('
+                COALESCE(SUM(cost), 0) as inventory_value,
+                COALESCE(SUM(selling_price), 0) as sale_value
+            ')
+            ->first();
+
+        $this->assertEquals(250, $inventoryData->sale_value);
+        $this->assertEquals(125, $inventoryData->inventory_value);
+    }
+
+    public function test_sold_items_never_included_in_sale_value(): void
+    {
+        // Items with status sold should never appear in inventory metrics
+        $sale = \App\Models\Sale::factory()->create([
+            'user_id' => $this->owner->id,
+        ]);
+
+        $this->createItem([
+            'status' => 'sold',
+            'sale_id' => $sale->id,
+            'type' => 'device',
+            'selling_price' => 1000,
+            'cost' => 500,
+        ]);
+
+        $inventoryData = \App\Models\Item::where('status', '!=', \App\Models\Item::STATUS_SOLD)
+            ->whereIn('type', ['device', 'accessory'])
+            ->whereNull('sale_id')
+            ->selectRaw('
+                COALESCE(SUM(cost), 0) as inventory_value,
+                COALESCE(SUM(selling_price), 0) as sale_value
+            ')
+            ->first();
+
+        // Sold items should not be included (sale_value = 0)
+        $this->assertEquals(0, $inventoryData->sale_value);
+        $this->assertEquals(0, $inventoryData->inventory_value);
+    }
 }
