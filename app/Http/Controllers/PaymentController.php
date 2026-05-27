@@ -650,7 +650,7 @@ class PaymentController extends Controller
         $firstItemsQuery = Item::whereIn('sale_id', $validSales->pluck('id')->toArray())
             ->whereIn('status', [Item::STATUS_SOLD, Item::STATUS_RESERVED])
             ->orderBy('sold', 'desc')
-            ->select('id', 'sale_id', 'sold', 'customer', 'status');
+            ->select('id', 'sale_id', 'sold', 'partially_sold_at', 'customer', 'status');
         if ($hasOrgAccounting) {
             $firstItemsQuery->withoutGlobalScope(CompanyItemScope::class);
         }
@@ -744,8 +744,8 @@ class PaymentController extends Controller
             }
 
             // Formatear la respuesta (como en original)
-            // Si el item está reserved (sin sold date), usar la fecha de creación de la venta
-            $sold = Carbon::parse($firstItem->sold ?? $sale->created_at);
+            // Si el item está reserved (sin sold date), usar partially_sold_at, luego la fecha de creación de la venta
+            $sold = Carbon::parse($firstItem->sold ?? $firstItem->partially_sold_at ?? $sale->created_at);
 
             // Calculate the correct balance_remaining considering credit and verify data integrity
             $sale_credit = (float) ($sale->credit ?? 0);
