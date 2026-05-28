@@ -76,13 +76,20 @@
                   <div class="bg-blue-100 text-blue-800 text-xs font-semibold px-3 py-1 rounded-full">
                     Result #{{ index + 1 }}
                   </div>
-                  <span class="text-xs font-semibold px-3 py-1 rounded-full"
-                    :class="resultItem.type === 'draft' 
-                      ? 'bg-blue-200 text-blue-800' 
-                      : 'bg-green-200 text-green-800'"
-                  >
-                    {{ resultItem.type === 'draft' ? 'DRAFT' : 'INVENTORY' }}
-                  </span>
+                  <div class="flex gap-2">
+                    <span class="text-xs font-semibold px-3 py-1 rounded-full"
+                      :class="resultItem.type === 'draft' 
+                        ? 'bg-blue-200 text-blue-800' 
+                        : 'bg-green-200 text-green-800'"
+                    >
+                      {{ resultItem.type === 'draft' ? 'DRAFT' : 'INVENTORY' }}
+                    </span>
+                    <span v-if="resultItem.item?.status === 'reserved'" 
+                      class="text-xs font-semibold px-3 py-1 rounded-full bg-amber-200 text-amber-800"
+                    >
+                      ⚠ RESERVED (unpaid sale)
+                    </span>
+                  </div>
                 </div>
 
                 <!-- Item Details Grid -->

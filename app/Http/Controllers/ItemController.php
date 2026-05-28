@@ -1162,7 +1162,7 @@ class ItemController extends Controller
 
         // Con el nuevo scope global, ya no necesitamos filtrar por user_id
         $context = [
-            'items' => Item::with(['storage:id,name,limit', 'vendor:id,vendor'])->whereNull('sold')->whereNotNull('hold')->get(),
+            'items' => Item::with(['storage:id,name,limit', 'vendor:id,vendor'])->where('status', '!=', Item::STATUS_SOLD)->whereNotNull('hold')->get(),
             'tabs' => $tabs,
             'fields' => $customFields,
         ];
@@ -1738,7 +1738,7 @@ class ItemController extends Controller
             $items = Item::select('items.*')
                 ->join('tab_items', 'items.id', '=', 'tab_items.item_id')
                 ->where('tab_items.tab_id', $id)
-                ->whereNull('items.sold')
+                ->where('items.status', Item::STATUS_AVAILABLE)
                 ->whereNull('items.hold')
                 ->with(['storage:id,name,limit', 'vendor:id,vendor'])
                 ->get();

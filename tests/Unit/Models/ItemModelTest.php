@@ -201,8 +201,9 @@ class ItemModelTest extends TestCaseWithCompany
 
         $item->removeSale();
 
-        $this->assertNull($item->storage_id);
-        $this->assertNull($item->position);
+        // Original position (5) is occupied → falls back to next available (1)
+        $this->assertEquals($this->storage->id, $item->storage_id);
+        $this->assertEquals(1, $item->position);
     }
 
     public function test_item_belongs_to_storage_relationship(): void
