@@ -46,7 +46,7 @@ class CheckoutController extends Controller
         // Real-time Stock Validation
         $itemIds = collect($request->items)->pluck('id');
         $unavailableItems = Item::whereIn('id', $itemIds)
-            ->whereNotNull('sold')
+            ->where('status', '!=', Item::STATUS_AVAILABLE)
             ->get();
 
         if ($unavailableItems->count() > 0) {
@@ -184,11 +184,15 @@ class CheckoutController extends Controller
                 'channel' => 'ecommerce', // Channel for ecommerce sales
             ]);
 
-            Item::whereIn('id', $itemIds)->update([
-                'sale_id' => $sale->id,
-                'sold' => now(),
-                'customer' => $customerInfo['firstName'].' '.$customerInfo['lastName'],
-            ]);
+            // Use model saves so the boot hook handles status='sold',
+            // clears storage_id/position, and records sold_storage_id/sold_position
+            $items = Item::whereIn('id', $itemIds)->get();
+            foreach ($items as $item) {
+                $item->sale_id = $sale->id;
+                $item->sold = now();
+                $item->customer = $customerInfo['firstName'].' '.$customerInfo['lastName'];
+                $item->save();
+            }
 
             // Send Confirmation Email
             try {

@@ -279,6 +279,19 @@ class PaymentController extends Controller
                 'updated_at' => now(),
             ]);
 
+            // Transition items: sold if fully paid, reserved if partial
+            $saleItems = Item::where('sale_id', $item->sale_id)->get();
+            foreach ($saleItems as $saleItem) {
+                if ($paid == 1) {
+                    // Fully paid → boot hook sets status='sold', clears position
+                    $saleItem->sold = $request->paidDate ?? now();
+                } else {
+                    // Partial payment → keep reserved, ensure sold is cleared
+                    $saleItem->sold = null;
+                }
+                $saleItem->save();
+            }
+
             if ($request->paidPaymentAccount == 'Cash on Hand') {
                 $old_cash = CashOnHand::where('user_id', $user->id)->value('balance');
                 CashOnHand::where('user_id', $user->id)->update([
@@ -321,6 +334,12 @@ class PaymentController extends Controller
                 'paid' => 0,
                 'updated_at' => now(),
             ]);
+
+            // Revert items to reserved (sale no longer fully paid, restore position)
+            $saleItems = Item::where('sale_id', $request->sale_id)->get();
+            foreach ($saleItems as $saleItem) {
+                $saleItem->revertToReserved();
+            }
         }
 
         Payment::where('id', $request->id)->delete();
@@ -341,12 +360,16 @@ class PaymentController extends Controller
         $item = Item::where('sale_id', $sale['id'])->first();
         $user = Auth::user();
 
+        $paid = 0; // default
+
         if ($oldAmount >= $newAmount) {
+            // Decreasing payment: sale becomes unpaid (or less paid)
             $totalAmount = $oldAmount - $newAmount;
-            $amountToSubtract = min($totalAmount, $sale['amount_paid']); // Calculate the amount to subtract from the sale
+            $amountToSubtract = min($totalAmount, $sale['amount_paid']);
             $amount = ($sale['amount_paid'] - $amountToSubtract < 0 ? 0 : $sale['amount_paid'] - $amountToSubtract);
-            $balance = ($sale['balance_remaining'] + $amountToSubtract < 0 ? 0 : $sale['balance_remaining'] + $amountToSubtract); // Subtract the amount from the sale
-            $totalAmount -= $amountToSubtract; // Subtract the amount from the payment
+            $balance = ($sale['balance_remaining'] + $amountToSubtract < 0 ? 0 : $sale['balance_remaining'] + $amountToSubtract);
+            $totalAmount -= $amountToSubtract;
+            $paid = 0;
 
             Sale::where('id', $request->sale_id)->update([
                 'balance_remaining' => ($balance < 0) ? 0 : $balance,
@@ -354,7 +377,14 @@ class PaymentController extends Controller
                 'paid' => 0,
                 'updated_at' => now(),
             ]);
+
+            // Revert items to reserved (sale no longer fully paid)
+            $saleItems = Item::where('sale_id', $request->sale_id)->get();
+            foreach ($saleItems as $saleItem) {
+                $saleItem->revertToReserved();
+            }
         } else {
+            // Increasing payment: sale might become fully paid
             $totalAmount = $newAmount - $oldAmount;
             $item = Item::where('sale_id', $sale['id'])->first();
             $amt = $totalAmount + $sale['amount_paid'];
@@ -372,6 +402,19 @@ class PaymentController extends Controller
                 'notes' => $request->paidNotes,
                 'updated_at' => now(),
             ]);
+
+            // Transition items based on new paid status
+            $saleItems = Item::where('sale_id', $request->sale_id)->get();
+            foreach ($saleItems as $saleItem) {
+                if ($paid == 1) {
+                    // Fully paid → boot hook sets status='sold', clears position
+                    $saleItem->sold = $request->paymentDate ?? now();
+                } else {
+                    // Still unpaid → keep reserved
+                    $saleItem->sold = null;
+                }
+                $saleItem->save();
+            }
 
             if ($request->paymentAccount == 'Cash on Hand') {
                 $old_cash = CashOnHand::where('user_id', $user->id)->value('balance');
@@ -421,14 +464,14 @@ class PaymentController extends Controller
                 'saleId' => $id,
                 'saleDate' => Item::where('sale_id', $id)->pluck('sold')->first(),
                 'customer' => Item::where('sale_id', $id)->pluck('customer')->first(),
-                'items' => Item::where('user_id', $user->id)->with(['storage:id,name,limit', 'vendor:id,vendor'])->whereNull('sold')->whereNull('hold')->get(),
+                'items' => Item::where('user_id', $user->id)->with(['storage:id,name,limit', 'vendor:id,vendor'])->where('status', Item::STATUS_AVAILABLE)->whereNull('hold')->get(),
             ];
         } else {
             $context = [
                 'saleId' => $id,
                 'saleDate' => Item::where('sale_id', $id)->pluck('sold')->first(),
                 'customer' => Item::where('sale_id', $id)->pluck('customer')->first(),
-                'items' => Item::where('user_id', $user->id)->with(['storage:id,name,limit', 'vendor:id,vendor'])->whereNull('sold')->whereNull('hold')->get(),
+                'items' => Item::where('user_id', $user->id)->with(['storage:id,name,limit', 'vendor:id,vendor'])->where('status', Item::STATUS_AVAILABLE)->whereNull('hold')->get(),
             ];
         }
 
@@ -447,13 +490,27 @@ class PaymentController extends Controller
             $item['amount_paid'] = $item['amount_paid'] > $item['total'] ? $item['total'] : $item['amount_paid'];
             $item['balance_remaining'] = $item['amount_paid'] >= $item['total'] ? 0 : $item['total'] - $item['amount_paid'];
             $total = str_replace(',', '', $item['total']);
-            $update_item = Item::where('sale_id', $item['id'])->update(
-                [
-                    'sold' => $item['date'],
-                    'customer' => $item['customer'],
-                ]
-            );
-            $paid = $item['amount_paid'] < 1 ? 0 : 1;
+
+            // Determine if the sale is fully paid
+            $isFullyPaid = (float) $item['balance_remaining'] <= 0;
+
+            // Update each item via model save so the boot hook handles status, position, and storage_id
+            $saleItems = Item::where('sale_id', $item['id'])->get();
+            foreach ($saleItems as $saleItem) {
+                $saleItem->customer = $item['customer'];
+
+                if ($isFullyPaid) {
+                    // Fully paid → boot hook sets status='sold', clears storage_id and position
+                    $saleItem->sold = $item['date'];
+                } else {
+                    // Not fully paid → boot hook sets status='reserved', keeps position
+                    $saleItem->sold = null;
+                }
+
+                $saleItem->save();
+            }
+
+            $paid = $isFullyPaid ? 1 : 0;
             $object = Sale::where('id', $item['id'])->update(['amount_paid' => $item['amount_paid'], 'balance_remaining' => $item['balance_remaining'], 'paid' => $paid, 'total' => $total]);
             $updated[] = $object;
         }
