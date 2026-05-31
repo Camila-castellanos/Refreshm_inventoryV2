@@ -88,6 +88,7 @@ class HandleInertiaRequests extends Middleware
                 'default_store' => $user->default_store,
                 'default_shipping' => $user->default_shipping,
                 'notes' => $user->notes,
+                'currency' => $user->currency,
             ];
         }
 

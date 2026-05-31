@@ -77,6 +77,9 @@
 import { Link } from "@inertiajs/vue3";
 import Button from "primevue/button";
 import PortalLayout from "@/Layouts/PortalLayout.vue";
+import { useCurrency } from "@/Composables/useCurrency";
+
+const { formatCurrency } = useCurrency();
 
 const props = defineProps<{
   requestData: any;
@@ -92,10 +95,6 @@ const formatDate = (dateString: string) => {
     month: 'long',
     day: 'numeric',
   });
-};
-
-const formatCurrency = (value: number) => {
-  return new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD' }).format(value || 0);
 };
 
 const getGradeClass = (grade: string) => {

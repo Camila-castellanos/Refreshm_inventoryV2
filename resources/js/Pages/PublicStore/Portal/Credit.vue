@@ -12,7 +12,7 @@
     <div class="bg-gradient-to-r from-primary-500 to-primary-600 rounded-lg shadow p-8 text-white mb-6">
       <div class="text-surface-200 text-sm mb-1">Current Balance</div>
       <div class="text-4xl font-bold mb-2">{{ formatCurrency(balance) }}</div>
-      <div class="text-surface-200 text-sm">{{ currency || 'CAD' }}</div>
+      <div class="text-surface-200 text-sm">{{ currentCurrency }}</div>
     </div>
 
     <!-- Transactions -->
@@ -67,6 +67,9 @@
 import { Link } from "@inertiajs/vue3";
 import Button from "primevue/button";
 import PortalLayout from "@/Layouts/PortalLayout.vue";
+import { useCurrency } from "@/Composables/useCurrency";
+
+const { formatCurrency, currentCurrency } = useCurrency();
 
 defineProps<{
   balance: number;
@@ -77,7 +80,4 @@ defineProps<{
   };
 }>();
 
-const formatCurrency = (value: number) => {
-  return new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD' }).format(value || 0);
-};
 </script>

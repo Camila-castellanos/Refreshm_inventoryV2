@@ -166,6 +166,18 @@
           <label for="notes" class="block text-surface-900 dark:text-surface-0 text-sm font-medium mb-1">Notes</label>
           <Textarea id="notes" v-model="profileForm.notes" rows="3" class="w-full" placeholder="Enter any notes" />
         </div>
+        <div>
+          <label for="currency" class="block text-surface-900 dark:text-surface-0 text-sm font-medium mb-1">Preferred Currency</label>
+          <Dropdown
+            id="currency"
+            v-model="profileForm.currency"
+            :options="[{label: 'CAD - Canadian Dollar', value: 'CAD'}, {label: 'USD - US Dollar', value: 'USD'}]"
+            optionLabel="label"
+            optionValue="value"
+            class="w-full"
+            placeholder="Select currency"
+          />
+        </div>
         <div class="flex justify-end gap-2 mt-4">
           <Button type="button" severity="secondary" @click="showProfileModal = false">Cancel</Button>
           <Button type="submit">Save</Button>
@@ -292,6 +304,7 @@
 import { Link } from "@inertiajs/vue3";
 import { usePage } from "@inertiajs/vue3";
 import { reactive, onMounted, ref, computed } from "vue";
+import { useCurrency } from "@/Composables/useCurrency";
 import PortalLayout from "@/Layouts/PortalLayout.vue";
 import Divider from "primevue/divider";
 import StatCard from "@/Components/StatCard.vue";
@@ -323,6 +336,7 @@ const requestTotal = computed(() => {
 
 const page = usePage();
 const toast = useToast();
+const { formatCurrency } = useCurrency();
 
 const shippingOptions = [
   { label: 'Standard (Free)', value: 0 },
@@ -338,6 +352,7 @@ const profileForm = reactive({
   default_store: '',
   default_shipping: null as number | null,
   notes: '',
+  currency: 'CAD',
 });
 
 onMounted(() => {
@@ -349,6 +364,7 @@ onMounted(() => {
       ? Number(user.default_shipping) 
       : null;
     profileForm.notes = user.notes || '';
+    profileForm.currency = user.currency || 'CAD';
   }
 });
 
@@ -358,20 +374,18 @@ const saveProfile = async () => {
       default_store: profileForm.default_store,
       default_shipping: profileForm.default_shipping?.toString(),
       notes: profileForm.notes,
+      currency: profileForm.currency,
     });
+    // Update local Inertia state
+    if (page.props.customer_auth?.user) {
+      page.props.customer_auth.user.currency = profileForm.currency;
+    }
     showProfileModal.value = false;
     toast.add({ severity: 'success', summary: 'Success', detail: 'Profile saved successfully.', life: 3000 });
   } catch (error) {
     console.error('Failed to save profile:', error);
     toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to save profile.', life: 5000 });
   }
-};
-
-const formatCurrency = (value: number) => {
-  return new Intl.NumberFormat('en-CA', {
-    style: 'currency',
-    currency: 'CAD'
-  }).format(value || 0);
 };
 
 const formatDate = (dateString: string) => {

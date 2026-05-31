@@ -211,6 +211,7 @@ class PublicStorePortalController extends Controller
             'default_store' => ['nullable', 'string', 'max:255'],
             'default_shipping' => ['nullable', 'string', 'max:255'],
             'notes' => ['nullable', 'string', 'max:1000'],
+            'currency' => ['nullable', 'string', 'in:CAD,USD'],
         ]);
 
         $customer->update($validated);

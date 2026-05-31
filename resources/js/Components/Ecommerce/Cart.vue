@@ -53,7 +53,7 @@
                             <!-- Price and Quantity -->
                             <div class="flex items-center justify-between mt-2">
                                 <div class="text-lg font-bold text-gray-800">
-                                    {{ getCurrencySymbol(market.currency) }} {{ formatPrice(item.selling_price) }}
+                                    {{ formatCurrency(item.selling_price, market.currency) }}
                                 </div>
                                 
                                 <!-- Quantity Controls - Commented out for refurbished individual items -->
@@ -91,7 +91,7 @@
                             <!-- Subtotal and Remove -->
                             <div class="flex items-center justify-between mt-3">
                                 <div class="text-sm text-gray-600">
-                                    Price: {{ getCurrencySymbol(market.currency) }} {{ formatPrice(item.selling_price) }}
+                                    Price: {{ formatCurrency(item.selling_price, market.currency) }}
                                 </div>
                                 
                                 <button 
@@ -131,7 +131,7 @@
                 <div class="space-y-2">
                     <div class="flex justify-between text-sm text-gray-600">
                         <span>Subtotal ({{ itemCount }} {{ itemCount === 1 ? 'item' : 'items' }})</span>
-                        <span>{{ getCurrencySymbol(market.currency) }} {{ formatPrice(subtotal) }}</span>
+                        <span>{{ formatCurrency(subtotal, market.currency) }}</span>
                     </div>
                     <div class="flex justify-between text-sm text-gray-600">
                         <span>Shipping</span>
@@ -140,7 +140,7 @@
                     <div class="border-t border-gray-200 pt-2">
                         <div class="flex justify-between text-lg font-semibold text-gray-900">
                             <span>Total</span>
-                            <span>{{ getCurrencySymbol(market.currency) }} {{ formatPrice(total) }}</span>
+                            <span>{{ formatCurrency(total, market.currency) }}</span>
                         </div>
                     </div>
                 </div>
@@ -236,7 +236,7 @@ import { ref, computed, watch, defineExpose, onMounted } from 'vue'
 import Drawer from 'primevue/drawer'
 import Dialog from 'primevue/dialog'
 import { useCartStore } from '@/stores/cartStore'
-import { getCurrencySymbol } from '@/utils/currency'
+import { useCurrency } from '@/Composables/useCurrency'
 
 // Props
 const props = defineProps({
@@ -255,6 +255,7 @@ const emit = defineEmits(['close', 'checkout', 'item-updated', 'item-removed'])
 
 // Initialize cart store
 const cartStore = useCartStore()
+const { formatCurrency } = useCurrency()
 
 // Local state
 const isVisible = ref(props.visible)
@@ -292,10 +293,6 @@ watch(isVisible, (newValue) => {
 })
 
 // Methods
-const formatPrice = (price) => {
-    return new Intl.NumberFormat().format(price)
-}
-
 const closeCart = () => {
     isVisible.value = false
 }

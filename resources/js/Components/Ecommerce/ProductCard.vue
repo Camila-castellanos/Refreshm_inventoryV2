@@ -53,7 +53,7 @@
                              class="font-bold text-gray-900 leading-none"
                              :class="compact ? 'text-base' : 'text-xl'"
                         >
-                            <span class="text-xs text-gray-500 font-normal mr-1">from</span>{{ getCurrencySymbol(market.currency) }}{{ formatPrice(item.min_price) }}
+                            <span class="text-xs text-gray-500 font-normal mr-1">from</span>{{ formatCurrency(item.min_price, market.currency) }}
                         </div>
                         
                         <!-- Show single price for individual items -->
@@ -61,7 +61,7 @@
                              class="font-bold text-gray-900 leading-none"
                              :class="compact ? 'text-base' : 'text-xl'"
                         >
-                            {{ getCurrencySymbol(market.currency) }}{{ formatPrice(item.selling_price) }}
+                            {{ formatCurrency(item.selling_price, market.currency) }}
                         </div>
 
                     </div>
@@ -87,7 +87,9 @@
 
 <script setup>
 import { computed, ref } from 'vue'
-import { getCurrencySymbol } from '@/utils/currency'
+import { useCurrency } from '@/Composables/useCurrency'
+
+const { formatCurrency } = useCurrency()
 
 // Props
 const props = defineProps({
@@ -130,10 +132,6 @@ const productImage = computed(() => {
 })
 
 // Methods
-const formatPrice = (price) => {
-    return new Intl.NumberFormat().format(price)
-}
-
 const formatCategoryName = (category) => {
     return category.charAt(0).toUpperCase() + category.slice(1)
 }

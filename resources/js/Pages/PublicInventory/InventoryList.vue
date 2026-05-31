@@ -71,7 +71,7 @@
               <Column field="model" header="Model" class="sm:hidden font-semibold" />
               <Column field="selling_price" header="Price">
                 <template #body="{ data }" class="text-right">
-                  <div class="text-xl font-bold text-black">${{ data.selling_price?.toFixed(2) }}</div>
+                  <div class="text-xl font-bold text-black">{{ formatCurrency(data.selling_price) }}</div>
                 </template>
               </Column>
 
@@ -88,10 +88,10 @@
 
         <h2 class="text-2xl justify-self-end font-black p-4 text-black">
           Total:
-          ${{ (
+          {{ formatCurrency(
             selectedItems.reduce((accumulator, currentItem) => accumulator + (Number(currentItem.selling_price) || 0), 0)
             + (formData.shipping?.value ?? 0)
-          ).toFixed(2) }}
+          ) }}
         </h2>
         <div class="flex w-full justify-around ">
           <Button severity="secondary" type="button" @click="showSelectedItems = false">CANCEL</Button>
@@ -324,8 +324,8 @@
                             Issues: {{ item.issues }}
                           </div>
                         </div>
-                        <div class="text-xl md:text-2xl font-bold text-black w-24">${{
-                          item.selling_price?.toFixed(2) }}
+                        <div class="text-xl md:text-2xl font-bold text-black w-24">
+                          {{ formatCurrency(item.selling_price) }}
                         </div>
                         <Button v-if="!isItemSelected(item)" icon="pi pi-plus"
                           class="p-button-rounded p-button-outlined  p-button-secondary md:self-center self-end cursor"
@@ -365,6 +365,7 @@ import Message from 'primevue/message';
 import GenericTabs from '@/Components/GenericTabs.vue';
 import ExchangeRateToggle from '@/Components/ExchangeRateToggle.vue';
 import { useToast } from 'primevue/usetoast';
+import { useCurrency } from '@/Composables/useCurrency';
 import { defineProps } from 'vue';
 import { router } from "@inertiajs/vue3";
 import axios from 'axios';
@@ -376,21 +377,9 @@ import { formatDeviceModel } from '@/Utils/FormatUtils';
 declare const route: any;
 
 const page = usePage();
-
-interface Props {
-  items?: any[]; // Using 'any[]' for simplicity, you can be more specific
-  shopName?: string;
-  shopSlug?: string;
-  userTabs?: Array<{
-    id: number;
-    name: string;
-    order: number;
-  }>;
-}
-
-const props = defineProps<Props>();
-
 const toast = useToast();
+const { formatCurrency } = useCurrency();
+
 
 // Make shopName reactive so it can be updated
 const currentShopName = ref(props.shopName || '');

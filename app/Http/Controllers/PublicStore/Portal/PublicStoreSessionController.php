@@ -5,6 +5,7 @@ namespace App\Http\Controllers\PublicStore\Portal;
 use App\Http\Controllers\Controller;
 use App\Mail\WelcomeEmail;
 use App\Models\Customer;
+use App\Services\GeoIPService;
 use App\Services\MagicLinkService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -18,7 +19,8 @@ use Inertia\Inertia;
 class PublicStoreSessionController extends Controller
 {
     public function __construct(
-        private MagicLinkService $magicLinkService
+        private MagicLinkService $magicLinkService,
+        private GeoIPService $geoIPService
     ) {}
 
     /**
@@ -55,9 +57,16 @@ class PublicStoreSessionController extends Controller
         ));
 
         Auth::guard('customer')->login($customer);
+        $this->detectAndSaveCurrency($customer, $request->ip());
         $request->session()->regenerate();
 
-        return redirect()->route('public-store.portal.dashboard');
+
+        $lastShop = session('last_public_shop');
+        if ($lastShop) {
+            return redirect()->route('public.inventory.shop.index', ['shopSlug' => $lastShop]);
+        }
+
+                return redirect()->intended(route('public-store.portal.dashboard'));
     }
 
     /**
@@ -96,6 +105,7 @@ class PublicStoreSessionController extends Controller
         }
 
         Auth::guard('customer')->login($customer, $request->boolean('remember'));
+        $this->detectAndSaveCurrency($customer, $request->ip());
         $request->session()->regenerate();
 
         $lastShop = session('last_public_shop');
@@ -107,7 +117,8 @@ class PublicStoreSessionController extends Controller
     }
 
     /**
-     * Send a one-time activation magic link for customers already in the system
+     * Send a one-time activation magic link
+ for customers already in the system
      * but who have not yet set a password.
      */
     public function sendActivationLink(Request $request)
@@ -216,6 +227,7 @@ class PublicStoreSessionController extends Controller
         $this->magicLinkService->consumeToken($customer);
 
         Auth::guard('customer')->login($customer);
+        $this->detectAndSaveCurrency($customer, $request->ip());
         $request->session()->regenerate();
 
         $lastShop = session('last_public_shop');
@@ -244,5 +256,18 @@ class PublicStoreSessionController extends Controller
         }
 
         return redirect()->route('public-store.portal.login.show');
+    }
+
+    /**
+     * Detect and save customer currency preference if not already set.
+     */
+    private function detectAndSaveCurrency(Customer $customer, ?string $ip): void
+    {
+        if ($customer->currency !== null) {
+            return;
+        }
+
+        $currency = $this->geoIPService->getCurrencyByIP($ip ?? '');
+        $customer->update(['currency' => $currency]);
     }
 }

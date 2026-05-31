@@ -47,12 +47,15 @@
 
 <script setup lang="ts">
 import { ref, watch, onMounted } from 'vue';
+import { usePage, router } from '@inertiajs/vue3';
+import axios from 'axios';
 
 interface Props {
   // Items no longer needed here
 }
 
 const props = defineProps<Props>();
+const page = usePage();
 
 const emit = defineEmits<{
   exchangeToggled: [value: boolean, exchangeRate: number | null, currency: string];
@@ -64,17 +67,39 @@ const exchangeActive = ref(false);
 const isLoadingExchangeRate = ref(false);
 const isCached = ref(false);
 
-const toggleExchange = () => {
+const toggleExchange = async () => {
   exchangeActive.value = !exchangeActive.value;
   country.value = country.value === "USA" ? "CA" : "USA";
   
   const currency = exchangeActive.value ? 'USD' : 'CAD';
   const rate = exchangeActive.value ? exchangeRate.value : null;
+  
+  // Persist preference
+  if (page.props.customer_auth?.user) {
+    try {
+      await axios.put(route('public-store.portal.profile'), {
+        currency: currency
+      });
+      // Update local Inertia state
+      page.props.customer_auth.user.currency = currency;
+    } catch (error) {
+      console.error('Failed to persist currency preference:', error);
+    }
+  } else {
+    localStorage.setItem('selected_currency', currency);
+  }
+
   emit('exchangeToggled', exchangeActive.value, rate, currency);
 };
 
 // Detect user's country using GeoIP
 const detectUserCountry = async (): Promise<string> => {
+  // Check if we already have a preference
+  const savedCurrency = page.props.customer_auth?.user?.currency || localStorage.getItem('selected_currency');
+  if (savedCurrency) {
+    return savedCurrency === 'USD' ? 'USA' : 'CA';
+  }
+
   try {
     const response = await fetch('https://ipapi.co/json/');
     const data = await response.json();
