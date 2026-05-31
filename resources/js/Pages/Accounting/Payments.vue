@@ -35,7 +35,7 @@ import DataTable from "@/Components/DataTable.vue";
 import AppLayout from "@/Layouts/AppLayout.vue";
 import { EmailTemplate, PaymentResponse as IPaymentResponse } from "@/Lib/types";
 import { Tab, TabList, Tabs, useDialog } from "primevue";
-import { onMounted, ref, computed } from "vue";
+import { onMounted, ref, computed, nextTick } from "vue";
 import axios from "axios";
 import { headers } from "./data";
 import ShowPayments from "./Modals/ShowPayments.vue";
@@ -73,7 +73,26 @@ onMounted(() => {
     ];
   }
   currentTab.value = `/payments${props.data_status !== "all" ? `?status=${props.data_status}` : ""}`;
-  console.log("invoices props:", props);
+
+  // Auto-open SaleEdit modal if sale_to_edit param is present
+  const urlParams = new URLSearchParams(window.location.search);
+  const saleToEdit = urlParams.get('sale_to_edit');
+  if (saleToEdit) {
+    const saleId = Number(saleToEdit);
+    const payment = (props.items ?? []).find((item) => Number(item.sale_id) === saleId);
+    if (!payment || Number.isNaN(saleId)) {
+      toast.add({ severity: "warn", summary: "Invoice not found", detail: "No payment data found for that sale.", life: 3000 });
+      return;
+    }
+    nextTick(() => {
+      dialog.open(SaleEdit, {
+        data: { saleId, payment },
+        props: { modal: true, header: "Edit sale" },
+        onClose: () => { router.reload() }
+      });
+      window.history.replaceState({}, '', window.location.pathname);
+    });
+  }
 
 });
 

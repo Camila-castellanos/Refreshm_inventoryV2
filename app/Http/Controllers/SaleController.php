@@ -308,22 +308,33 @@ class SaleController extends Controller
             // 3. Actualizar ítems existentes
             foreach ($request->items as $item) {
                 $sale_item = Item::find($item['id']);
-                $updateData = [
-                    'selling_price' => $item['selling_price'],
-                    'profit' => $item['selling_price'] - $item['cost'],
-                    'customer' => $request->customer,
-                    'status' => $itemStatus,
-                ];
 
                 if ($paid == 1) {
-                    $updateData['sold'] = $request->date;
-                    $updateData['position'] = null;
-                    $updateData['storage_id'] = null;
+                    $sale_item->update([
+                        'selling_price' => $item['selling_price'],
+                        'profit' => $item['selling_price'] - $item['cost'],
+                        'customer' => $request->customer,
+                        'status' => $itemStatus,
+                        'sold' => $request->date,
+                        'position' => null,
+                        'storage_id' => null,
+                    ]);
                 } else {
-                    $updateData['sold'] = null;
-                }
+                    // Reverting to unpaid — update fields, then handle position
+                    $sale_item->selling_price = $item['selling_price'];
+                    $sale_item->profit = $item['selling_price'] - $item['cost'];
+                    $sale_item->customer = $request->customer;
 
-                $sale_item->update($updateData);
+                    if ($sale_item->getOriginal('status') === Item::STATUS_SOLD) {
+                        // Was sold → now reverting: restore position if possible
+                        $sale_item->revertToReserved();
+                    } else {
+                        // Was already reserved/available → keep position
+                        $sale_item->sold = null;
+                        $sale_item->status = $itemStatus;
+                        $sale_item->save();
+                    }
+                }
             }
 
             // 4. Procesar nuevos ítems
@@ -499,7 +510,7 @@ class SaleController extends Controller
                     'items' => function ($query) {
                         $query->select([
                             'id', 'sale_id', 'customer', 'battery', 'cost',
-                            'selling_price', 'sold', 'vendor_id', 'model',
+                            'selling_price', 'sold', 'partially_sold_at', 'vendor_id', 'model',
                             'manufacturer', 'colour', 'grade', 'issues', 'imei',
                             'date', 'type', 'sold_position', 'sold_storage_name',
                             'sold_storage_id', 'custom_values',
@@ -558,7 +569,9 @@ class SaleController extends Controller
                         'issues' => $item->issues,
                         'imei' => $item->imei,
                         'battery' => $battery,
-                        'sold' => Carbon::parse($item->sold)->format('Y-m-d'),
+                        'sold' => $item->sold
+                            ? Carbon::parse($item->sold)->format('Y-m-d')
+                            : ($item->partially_sold_at ? Carbon::parse($item->partially_sold_at)->format('Y-m-d') : null),
                         'date' => Carbon::parse($item->date)->format('Y-m-d'),
                         'type' => $item->type,
                         'cost' => '$ '.number_format($cost, 2),

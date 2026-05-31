@@ -28,13 +28,14 @@ class Item extends Model implements HasMedia
         'customer', 'sold', 'hold', 'discount', 'tax',
         'subtotal', 'profit', 'user_id', 'vendor_id', 'custom_values',
         'sold_storage_id', 'sold_position', 'sold_storage_name', 'shop_id',
-        'type', 'product_model_id', 'status',
+        'type', 'product_model_id', 'status', 'partially_sold_at',
     ];
 
     // Cast date and sold attributes as full datetime
     protected $casts = [
         'date' => 'datetime',
         'sold' => 'datetime',
+        'partially_sold_at' => 'datetime',
     ];
 
     // Append custom attributes to JSON
@@ -237,36 +238,7 @@ class Item extends Model implements HasMedia
         }
 
         // Attempt to restore original location if available
-        if ($this->sold_storage_id && $this->sold_position) {
-            // Check if that position is currently free (check both items and drafts)
-            $isOccupiedByItem = self::where('storage_id', $this->sold_storage_id)
-                ->where('position', $this->sold_position)
-                ->where('id', '!=', $this->id) // Exclude self just in case
-                ->exists();
-
-            $isOccupiedByDraft = DraftItem::where('storage_id', $this->sold_storage_id)
-                ->where('storage_position', $this->sold_position)
-                ->exists();
-
-            if (! $isOccupiedByItem && ! $isOccupiedByDraft) {
-                // If free, restore location
-                $this->storage_id = $this->sold_storage_id;
-                $this->position = $this->sold_position;
-
-                // Clear sold history as it is successfully restored
-                $this->sold_storage_id = null;
-                $this->sold_position = null;
-                $this->sold_storage_name = null;
-            } else {
-                // If occupied, ensure active location is null
-                $this->storage_id = null;
-                $this->position = null;
-                // We KEEP sold_storage_id/sold_position for history reference/display
-            }
-        } else {
-            $this->storage_id = null;
-            $this->position = null;
-        }
+        $this->restorePositionIfPossible();
 
         $this->sale_id = null;
         $this->customer = null;
@@ -279,6 +251,63 @@ class Item extends Model implements HasMedia
         $this->status = self::STATUS_AVAILABLE;
 
         return $this->saveOrFail();
+    }
+
+    /**
+     * Revert a sold item back to reserved (e.g. payment reversed or removed).
+     * Attempts to restore the original position if still free; otherwise
+     * finds the next available slot in the same storage.
+     */
+    public function revertToReserved(): bool
+    {
+        $this->restorePositionIfPossible();
+
+        $this->sold = null;
+        $this->status = self::STATUS_RESERVED;
+
+        return $this->saveOrFail();
+    }
+
+    /**
+     * Try to restore the item to its original storage position.
+     * If original is free → restore it. If occupied → next available in same storage.
+     * If storage full → leave position null. Clears sold_* history on successful restore.
+     */
+    private function restorePositionIfPossible(): void
+    {
+        if ($this->sold_storage_id && $this->sold_position) {
+            $isOccupiedByItem = self::where('storage_id', $this->sold_storage_id)
+                ->where('position', $this->sold_position)
+                ->where('id', '!=', $this->id)
+                ->exists();
+
+            $isOccupiedByDraft = DraftItem::where('storage_id', $this->sold_storage_id)
+                ->where('storage_position', $this->sold_position)
+                ->exists();
+
+            if (! $isOccupiedByItem && ! $isOccupiedByDraft) {
+                // Original position is free — restore it
+                $this->storage_id = $this->sold_storage_id;
+                $this->position = $this->sold_position;
+                $this->sold_storage_id = null;
+                $this->sold_position = null;
+                $this->sold_storage_name = null;
+            } else {
+                // Original occupied — try next available in same storage
+                $nextPos = self::getNextAvailablePosition($this->sold_storage_id);
+                if ($nextPos) {
+                    $this->storage_id = $this->sold_storage_id;
+                    $this->position = $nextPos;
+                } else {
+                    $this->storage_id = null;
+                    $this->position = null;
+                }
+                // Keep sold_storage_id/position for history reference
+            }
+        } else {
+            $this->storage_id = null;
+            $this->position = null;
+        }
     }
 
     public function tabItems()
@@ -300,6 +329,13 @@ class Item extends Model implements HasMedia
                 $item->status = self::STATUS_RESERVED;
             } else {
                 $item->status = self::STATUS_AVAILABLE;
+            }
+
+            // Set partially_sold_at when transitioning to STATUS_RESERVED (if not already set)
+            if ($item->status === self::STATUS_RESERVED
+                && ! is_null($item->sale_id)
+                && is_null($item->partially_sold_at)) {
+                $item->partially_sold_at = now();
             }
 
             // 2. If item is not sold, ensure sold date is cleared

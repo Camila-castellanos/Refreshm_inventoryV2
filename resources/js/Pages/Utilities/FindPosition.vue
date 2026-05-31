@@ -73,16 +73,40 @@
               >
                 <!-- Result Number Badge -->
                 <div class="flex items-start justify-between mb-4">
-                  <div class="bg-blue-100 text-blue-800 text-xs font-semibold px-3 py-1 rounded-full">
+                  <div class="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide px-3 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+                    <span class="inline-block h-1.5 w-1.5 rounded-full bg-slate-500"></span>
                     Result #{{ index + 1 }}
                   </div>
-                  <span class="text-xs font-semibold px-3 py-1 rounded-full"
-                    :class="resultItem.type === 'draft' 
-                      ? 'bg-blue-200 text-blue-800' 
-                      : 'bg-green-200 text-green-800'"
-                  >
-                    {{ resultItem.type === 'draft' ? 'DRAFT' : 'INVENTORY' }}
-                  </span>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span
+                      class="inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide px-3 py-1 rounded-full border"
+                      :class="resultItem.type === 'draft'
+                        ? 'bg-blue-50 text-blue-700 border-blue-200'
+                        : 'bg-emerald-50 text-emerald-700 border-emerald-200'"
+                    >
+                      <span
+                        class="inline-block h-1.5 w-1.5 rounded-full"
+                        :class="resultItem.type === 'draft'
+                          ? 'bg-blue-500'
+                          : 'bg-emerald-500'"
+                      ></span>
+                      {{ resultItem.type === 'draft' ? 'Draft' : 'Inventory' }}
+                    </span>
+                    <span
+                      v-if="resultItem.item?.status === 'reserved'"
+                      class="inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide px-3 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200"
+                    >
+                      <span class="inline-block h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+                      Reserved · unpaid sale
+                    </span>
+                    <Button
+                      v-if="resultItem.item?.status === 'reserved' && resultItem.item?.sale_id"
+                      label="Go to invoice"
+                      icon="pi pi-external-link"
+                      class="p-button-sm p-button-outlined"
+                      @click="goToInvoice(resultItem.item.sale_id)"
+                    />
+                  </div>
                 </div>
 
                 <!-- Item Details Grid -->
@@ -250,5 +274,9 @@ const formatDraftLabel = (draft) => {
   if (!draft) return 'Unknown Draft'
   const date = new Date(draft.created_at).toISOString().split('T')[0]
   return `${draft.title} (${date})`
+}
+
+const goToInvoice = (saleId) => {
+  window.open(`/accounting/payments?sale_to_edit=${saleId}`, '_blank')
 }
 </script>

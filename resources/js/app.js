@@ -111,23 +111,7 @@ createInertiaApp({
       render: () =>  h(App, props),
     });
 
-    // Registrar el mixin para manejar layouts dinámicos
-    app.mixin({
-      methods: {
-        getLayout(component) {
-          if (component.layout) {
-            return require(`../Layouts/${component.layout}`).default;
-          }
-          return require("../Layouts/AppLayout").default; // Default layout
-        },
-      },
-    });
-
-    app.config.globalProperties.$axios = axios;
-
-    app.directive("tooltip", Tooltip);
-
-    // Registrar plugins y montar la aplicación
+// Registrar plugins y montar la aplicación
     app
       .use(plugin)
       .use(pinia)
