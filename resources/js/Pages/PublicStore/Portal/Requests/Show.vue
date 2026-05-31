@@ -58,7 +58,7 @@
                   <td class="py-3 px-4">
                     <span :class="getGradeClass(item.grade)" class="px-2 py-1 rounded text-sm">{{ item.grade || 'N/A' }}</span>
                   </td>
-                  <td class="py-3 px-4 text-right text-surface-900 dark:text-surface-0">{{ formatCurrency(item.cost) }}</td>
+                  <td class="py-3 px-4 text-right text-surface-900 dark:text-surface-0">{{ formatCurrency(item.selling_price || item.cost, item.currency, true) }}</td>
                 </tr>
               </tbody>
             </table>
@@ -79,14 +79,13 @@ import Button from "primevue/button";
 import PortalLayout from "@/Layouts/PortalLayout.vue";
 import { useCurrency } from "@/Composables/useCurrency";
 
-const { formatCurrency } = useCurrency();
-
 const props = defineProps<{
   requestData: any;
   items: any[];
   error?: string;
 }>();
 
+const { formatCurrency } = useCurrency();
 const requestId = props.requestData?.id || 0;
 
 const formatDate = (dateString: string) => {

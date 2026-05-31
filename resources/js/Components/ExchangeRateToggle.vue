@@ -65,56 +65,39 @@ const country = ref("CA");
 const exchangeRate = ref(1);
 const exchangeActive = ref(false);
 const isLoadingExchangeRate = ref(false);
-const isCached = ref(false);
+
+const updateStateFromCurrency = (currency: string) => {
+  if (currency === 'USD') {
+    country.value = 'USA';
+    exchangeActive.value = true;
+  } else {
+    country.value = 'CA';
+    exchangeActive.value = false;
+  }
+};
 
 const toggleExchange = async () => {
-  exchangeActive.value = !exchangeActive.value;
-  country.value = country.value === "USA" ? "CA" : "USA";
+  const newCurrency = exchangeActive.value ? 'CAD' : 'USD';
+  updateStateFromCurrency(newCurrency);
   
-  const currency = exchangeActive.value ? 'USD' : 'CAD';
   const rate = exchangeActive.value ? exchangeRate.value : null;
   
   // Persist preference
   if (page.props.customer_auth?.user) {
     try {
       await axios.put(route('public-store.portal.profile'), {
-        currency: currency
+        currency: newCurrency
       });
       // Update local Inertia state
-      page.props.customer_auth.user.currency = currency;
+      page.props.customer_auth.user.currency = newCurrency;
     } catch (error) {
       console.error('Failed to persist currency preference:', error);
     }
   } else {
-    localStorage.setItem('selected_currency', currency);
+    localStorage.setItem('selected_currency', newCurrency);
   }
 
-  emit('exchangeToggled', exchangeActive.value, rate, currency);
-};
-
-// Detect user's country using GeoIP
-const detectUserCountry = async (): Promise<string> => {
-  // Check if we already have a preference
-  const savedCurrency = page.props.customer_auth?.user?.currency || localStorage.getItem('selected_currency');
-  if (savedCurrency) {
-    return savedCurrency === 'USD' ? 'USA' : 'CA';
-  }
-
-  try {
-    const response = await fetch('https://ipapi.co/json/');
-    const data = await response.json();
-    const countryCode = data.country_code;
-    
-    console.log(`User country detected: ${countryCode}`);
-    
-    if (countryCode === 'US') {
-      return 'USA';
-    }
-    return 'CA';
-  } catch (error) {
-    console.error('Error detecting country:', error);
-    return 'CA'; // Default to CA
-  }
+  emit('exchangeToggled', exchangeActive.value, rate, newCurrency);
 };
 
 // Fetch exchange rate from server API
@@ -131,10 +114,7 @@ const fetchExchangeRate = async (): Promise<boolean> => {
 
     if (data.success && data.rate) {
       exchangeRate.value = data.rate;
-      isCached.value = data.cached || false;
-      
-      const source = isCached.value ? 'cache' : 'API';
-      console.log(`Exchange rate loaded from ${source}:`, exchangeRate.value);
+      console.log(`Exchange rate loaded:`, exchangeRate.value);
       return true;
     } else {
       throw new Error(data.message || 'Failed to fetch exchange rate');
@@ -147,57 +127,26 @@ const fetchExchangeRate = async (): Promise<boolean> => {
   }
 };
 
-// Refresh exchange rate (bypass cache)
-const refreshExchangeRate = async (): Promise<boolean> => {
-  try {
-    isLoadingExchangeRate.value = true;
-    const response = await fetch('/api/exchange-rate/refresh', {
-      method: 'POST'
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Server error: ${response.status}`);
-    }
-
-    const data = await response.json();
-
-    if (data.success && data.rate) {
-      exchangeRate.value = data.rate;
-      isCached.value = false;
-      console.log('Exchange rate refreshed:', exchangeRate.value);
-      return true;
-    } else {
-      throw new Error(data.message || 'Failed to refresh exchange rate');
-    }
-  } catch (error) {
-    console.error('Error refreshing exchange rates:', error);
-    return false;
-  } finally {
-    isLoadingExchangeRate.value = false;
-  }
-};
-
-// Fetch exchange rate on mount
+// Initialize on mount
 onMounted(async () => {
-  // Detect user country first
-  const userCountry = await detectUserCountry();
+  const currentCurrency = page.props.customer_auth?.user?.currency || 
+                          localStorage.getItem('selected_currency') || 
+                          page.props.customer_auth?.guest_currency ||
+                          'CAD';
+  updateStateFromCurrency(currentCurrency);
   
-  // Fetch exchange rate first
+  // Fetch exchange rate
   await fetchExchangeRate();
   
-  // Set initial country based on detection
-  if (userCountry === 'USA') {
-    country.value = 'USA';
-    exchangeActive.value = true;
-    
-    // Notify parent about initial US state
+  // Notify parent if USD is active
+  if (exchangeActive.value) {
     emit('exchangeToggled', true, exchangeRate.value, 'USD');
   }
 });
 
-// Expose refresh method if needed
+// Expose methods if needed
 defineExpose({
-  refreshExchangeRate
+  fetchExchangeRate
 });
 </script>
 

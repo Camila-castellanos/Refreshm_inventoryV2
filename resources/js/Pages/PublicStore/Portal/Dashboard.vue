@@ -281,13 +281,13 @@
                 <td class="p-2 text-surface-600 dark:text-surface-400">{{ item.battery ? item.battery + '%' : 'N/A' }}</td>
                 <td class="p-2 text-surface-600 dark:text-surface-400">{{ item.grade || 'N/A' }}</td>
                 <td class="p-2 text-surface-600 dark:text-surface-400 text-sm max-w-xs">{{ item.issues || 'None' }}</td>
-                <td class="p-2 text-surface-900 dark:text-surface-0 text-right font-medium">{{ formatCurrency(item.selling_price) }}</td>
+                <td class="p-2 text-surface-900 dark:text-surface-0 text-right font-medium">{{ formatCurrency(item.selling_price, item.currency, true) }}</td>
               </tr>
             </tbody>
             <tfoot>
               <tr class="bg-surface-50 dark:bg-surface-700">
                 <td colspan="6" class="p-3 text-right font-semibold text-surface-900 dark:text-surface-0">Total:</td>
-                <td class="p-3 text-right font-bold text-lg text-surface-900 dark:text-surface-0">{{ formatCurrency(requestTotal) }}</td>
+                <td class="p-3 text-right font-bold text-lg text-surface-900 dark:text-surface-0">{{ formatCurrency(requestTotal, selectedRequest.items?.[0]?.currency, true) }}</td>
               </tr>
             </tfoot>
           </table>
@@ -352,7 +352,7 @@ const profileForm = reactive({
   default_store: '',
   default_shipping: null as number | null,
   notes: '',
-  currency: 'CAD',
+  currency: '',
 });
 
 onMounted(() => {

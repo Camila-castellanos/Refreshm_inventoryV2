@@ -37,11 +37,32 @@ class HandleInertiaRequests extends Middleware
             'user' => $request->user() ? $this->getUserAuthData($request->user()) : null,
         ];
 
-        $customerAuthData = fn () => [
-            'user' => auth('customer')->check()
-                ? $this->getUserAuthData(auth('customer')->user())
-                : null,
-        ];
+        $customerAuthData = function () use ($request) {
+            $user = auth('customer')->user();
+            
+            if ($user) {
+                return [
+                    'user' => $this->getUserAuthData($user),
+                ];
+            }
+
+            // Guest logic: Detect currency via GeoIP if not in session
+            $guestCurrency = $request->session()->get('guest_currency');
+            if (!$guestCurrency) {
+                try {
+                    $geoIPService = app(\App\Services\GeoIPService::class);
+                    $guestCurrency = $geoIPService->getCurrencyByIP($request->ip() ?? '');
+                    $request->session()->put('guest_currency', $guestCurrency);
+                } catch (\Exception $e) {
+                    $guestCurrency = 'CAD';
+                }
+            }
+
+            return [
+                'user' => null,
+                'guest_currency' => $guestCurrency,
+            ];
+        };
 
         $flashData = function () use ($request) {
             return [

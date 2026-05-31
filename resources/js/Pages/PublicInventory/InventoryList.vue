@@ -378,8 +378,14 @@ declare const route: any;
 
 const page = usePage();
 const toast = useToast();
-const { formatCurrency } = useCurrency();
+const { formatCurrency, currentCurrency } = useCurrency();
 
+const props = defineProps<{
+  items: any[];
+  shopName?: string;
+  shopSlug?: string;
+  userTabs?: any[];
+}>();
 
 // Make shopName reactive so it can be updated
 const currentShopName = ref(props.shopName || '');
@@ -387,22 +393,20 @@ const currentShopSlug = ref(props.shopSlug || '');
 
 // State to track current exchange rate and currency
 const currentExchangeRate = ref<number | null>(null);
-const currentCurrency = ref<string>('CAD');
 const isExchangeActive = ref(false);
 
 const handleExchangeToggled = (isActive: boolean, exchangeRate: number | null = null, currency: string = 'CAD') => {
   // Update exchange rate and currency when toggle changes
   currentExchangeRate.value = exchangeRate;
-  currentCurrency.value = currency;
   isExchangeActive.value = isActive;
   console.log('Exchange rate toggled:', isActive, 'Rate:', exchangeRate, 'Currency:', currency);
 };
 
 
-const shippingOptions = [
-  { label: 'Standard (Free)', value: 0 },
-  { label: 'Express (+$25)', value: 25 }
-];
+const shippingOptions = computed(() => [
+  { label: `Standard (Free)`, value: 0 },
+  { label: `Express (+${formatCurrency(25)})`, value: 25 }
+]);
 
 // Form data and errors
 const formData = ref({
@@ -410,11 +414,12 @@ const formData = ref({
   email: '',
   notes: '',
   store: '',
-  shipping: shippingOptions[0]
+  shipping: null as any
 });
 
 // Prefill form data when modal opens (if customer is logged in)
 onMounted(() => {
+  formData.value.shipping = shippingOptions.value[0];
   const customerAuth = page.props.customer_auth?.user;
   if (customerAuth) {
     formData.value.name = [customerAuth.first_name, customerAuth.last_name].filter(Boolean).join(' ') || '';
