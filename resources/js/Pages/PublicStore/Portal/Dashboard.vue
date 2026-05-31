@@ -254,6 +254,7 @@
                 <th class="text-left p-2 text-surface-500 font-medium">Battery</th>
                 <th class="text-left p-2 text-surface-500 font-medium">Grade</th>
                 <th class="text-left p-2 text-surface-500 font-medium">Issues</th>
+                <th class="text-right p-2 text-surface-500 font-medium">Price</th>
               </tr>
             </thead>
             <tbody>
@@ -268,8 +269,15 @@
                 <td class="p-2 text-surface-600 dark:text-surface-400">{{ item.battery ? item.battery + '%' : 'N/A' }}</td>
                 <td class="p-2 text-surface-600 dark:text-surface-400">{{ item.grade || 'N/A' }}</td>
                 <td class="p-2 text-surface-600 dark:text-surface-400 text-sm max-w-xs">{{ item.issues || 'None' }}</td>
+                <td class="p-2 text-surface-900 dark:text-surface-0 text-right font-medium">{{ formatCurrency(item.selling_price) }}</td>
               </tr>
             </tbody>
+            <tfoot>
+              <tr class="bg-surface-50 dark:bg-surface-700">
+                <td colspan="6" class="p-3 text-right font-semibold text-surface-900 dark:text-surface-0">Total:</td>
+                <td class="p-3 text-right font-bold text-lg text-surface-900 dark:text-surface-0">{{ formatCurrency(requestTotal) }}</td>
+              </tr>
+            </tfoot>
           </table>
         </div>
       </div>
@@ -308,6 +316,10 @@ const props = defineProps<{
 
 const pendingRequests = computed(() => props.all_requests.filter(r => !r.processed && !r.deleted_at));
 const pastRequests = computed(() => props.all_requests.filter(r => r.processed || r.deleted_at));
+const requestTotal = computed(() => {
+  if (!selectedRequest.value?.items) return 0;
+  return selectedRequest.value.items.reduce((sum, item) => sum + (Number(item.selling_price) || 0), 0);
+});
 
 const page = usePage();
 const toast = useToast();
