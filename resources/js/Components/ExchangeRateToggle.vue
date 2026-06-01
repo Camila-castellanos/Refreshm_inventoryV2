@@ -50,12 +50,15 @@ import { ref, watch, onMounted } from 'vue';
 import { usePage, router } from '@inertiajs/vue3';
 import axios from 'axios';
 
+import { useCurrency } from '@/Composables/useCurrency';
+
 interface Props {
   // Items no longer needed here
 }
 
 const props = defineProps<Props>();
 const page = usePage();
+const { setGlobalCurrency, currentCurrency } = useCurrency();
 
 const emit = defineEmits<{
   exchangeToggled: [value: boolean, exchangeRate: number | null, currency: string];
@@ -88,13 +91,13 @@ const toggleExchange = async () => {
       await axios.put(route('public-store.portal.profile'), {
         currency: newCurrency
       });
-      // Update local Inertia state
-      page.props.customer_auth.user.currency = newCurrency;
+      // Update local Inertia state and global currency ref
+      setGlobalCurrency(newCurrency);
     } catch (error) {
       console.error('Failed to persist currency preference:', error);
     }
   } else {
-    localStorage.setItem('selected_currency', newCurrency);
+    setGlobalCurrency(newCurrency);
   }
 
   emit('exchangeToggled', exchangeActive.value, rate, newCurrency);
@@ -129,18 +132,20 @@ const fetchExchangeRate = async (): Promise<boolean> => {
 
 // Initialize on mount
 onMounted(async () => {
-  const currentCurrency = page.props.customer_auth?.user?.currency || 
-                          localStorage.getItem('selected_currency') || 
-                          page.props.customer_auth?.guest_currency ||
-                          'CAD';
-  updateStateFromCurrency(currentCurrency);
+  updateStateFromCurrency(currentCurrency.value);
   
   // Fetch exchange rate
   await fetchExchangeRate();
   
-  // Notify parent if USD is active
-  if (exchangeActive.value) {
-    emit('exchangeToggled', true, exchangeRate.value, 'USD');
+  // Notify parent of initial state
+  emit('exchangeToggled', exchangeActive.value, exchangeActive.value ? exchangeRate.value : null, currentCurrency.value);
+});
+
+// React to global currency changes (like when using back button after changing in dashboard)
+watch(currentCurrency, (newVal, oldVal) => {
+  if (newVal !== oldVal) {
+    updateStateFromCurrency(newVal);
+    emit('exchangeToggled', exchangeActive.value, exchangeActive.value ? exchangeRate.value : null, newVal);
   }
 });
 

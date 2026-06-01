@@ -358,7 +358,7 @@ const requestTotal = computed(() => {
 
 const page = usePage();
 const toast = useToast();
-const { formatCurrency } = useCurrency();
+const { formatCurrency, setGlobalCurrency } = useCurrency();
 
 const shippingOptions = [
   { label: 'Standard (Free)', value: 0 },
@@ -398,10 +398,8 @@ const saveProfile = async () => {
       notes: profileForm.notes,
       currency: profileForm.currency,
     });
-    // Update local Inertia state
-    if (page.props.customer_auth?.user) {
-      page.props.customer_auth.user.currency = profileForm.currency;
-    }
+    // Update local Inertia state and global currency ref
+    setGlobalCurrency(profileForm.currency);
     showProfileModal.value = false;
     toast.add({ severity: 'success', summary: 'Success', detail: 'Profile saved successfully.', life: 3000 });
   } catch (error) {

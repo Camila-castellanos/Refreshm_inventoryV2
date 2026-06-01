@@ -1,10 +1,18 @@
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { usePage } from '@inertiajs/vue3';
+
+// Global state outside the composable to persist across Inertia history navigations
+const globalCurrency = ref<string | null>(null);
 
 export function useCurrency() {
     const page = usePage();
 
     const currentCurrency = computed(() => {
+        // Global override for current session (survives history navigation)
+        if (globalCurrency.value) {
+            return globalCurrency.value;
+        }
+
         // 1. Source of truth: Authenticated customer preference
         const userCurrency = page.props.customer_auth?.user?.currency;
         if (userCurrency) {
@@ -26,6 +34,14 @@ export function useCurrency() {
         // 4. Ultimate fallback
         return 'CAD';
     });
+
+    const setGlobalCurrency = (newCurrency: string) => {
+        globalCurrency.value = newCurrency;
+        localStorage.setItem('selected_currency', newCurrency);
+        if (page.props.customer_auth?.user) {
+            page.props.customer_auth.user.currency = newCurrency;
+        }
+    };
 
     /**
      * Formats a numeric value as currency based on the current user preference.
@@ -55,5 +71,6 @@ export function useCurrency() {
     return {
         currentCurrency,
         formatCurrency,
+        setGlobalCurrency,
     };
 }
