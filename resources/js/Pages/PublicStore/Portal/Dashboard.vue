@@ -47,6 +47,27 @@
         </div>
       </div>
 
+      <!-- Recently Visited Section -->
+      <section v-if="visited_shops && visited_shops.length > 0" class="mb-10">
+        <h2 class="text-xl font-bold flex items-center gap-3 mb-6">
+          <i class="pi pi-map-marker text-primary-500"></i>
+          Recently Visited
+        </h2>
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          <Link
+            v-for="shop in visited_shops"
+            :key="shop.id"
+            :href="route('public.inventory.shop.index', { shopSlug: shop.slug })"
+            class="visited-shop-card bg-white dark:bg-surface-800 p-3 rounded-[2rem] border border-surface-100 dark:border-surface-700 hover:border-primary-400 dark:hover:border-primary-500 shadow-sm hover:shadow-xl transition-all duration-300 group flex flex-col items-center text-center overflow-hidden h-40 justify-center"
+          >
+            <i class="pi pi-shop transition-all duration-500 mb-1"></i>
+            <div class="font-black text-surface-900 dark:text-surface-0 truncate w-full px-4 text-base">
+              {{ shop.name }}
+            </div>
+          </Link>
+        </div>
+      </section>
+
       <!-- Main Two-Column Layout -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
         <!-- LEFT COLUMN: Current Requests -->
@@ -325,6 +346,7 @@ const props = defineProps<{
   credit_from_returns: number;
   recent_requests: any[];
   all_requests: any[];
+  visited_shops: any[];
 }>();
 
 const pendingRequests = computed(() => props.all_requests.filter(r => !r.processed && !r.deleted_at));
@@ -401,3 +423,23 @@ const openRequestDetail = (request: any) => {
   showRequestDetailModal.value = true;
 };
 </script>
+
+<style scoped>
+.visited-shop-card i {
+  font-size: 75px;
+  line-height: 1;
+  opacity: 0.15;
+  color: #9ca3af; /* fallback color */
+}
+
+.visited-shop-card:hover i {
+  opacity: 1;
+  transform: scale(1.05);
+  color: var(--primary-500, #3b82f6); /* Use primary color if available */
+}
+
+/* Dark mode adjustments */
+:deep(.dark) .visited-shop-card i {
+  color: #4b5563;
+}
+</style>

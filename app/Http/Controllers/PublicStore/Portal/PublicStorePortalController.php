@@ -72,6 +72,12 @@ class PublicStorePortalController extends Controller
             ->limit(50)
             ->get();
 
+        // Recently visited shops (limited to 5)
+        $visitedShops = $customer->visitedShops()
+            ->orderByPivot('last_visited_at', 'desc')
+            ->limit(5)
+            ->get();
+
         return \Inertia\Inertia::render('PublicStore/Portal/Dashboard', [
             'total_requests' => $totalRequests,
             'pending_requests' => $pendingRequests,
@@ -80,6 +86,7 @@ class PublicStorePortalController extends Controller
             'credit_from_returns' => $creditFromReturns,
             'recent_requests' => $recentRequests,
             'all_requests' => $allRequests,
+            'visited_shops' => $visitedShops,
         ]);
     }
 

@@ -61,6 +61,15 @@ class Customer extends Authenticatable
     }
 
     /**
+     * Get shops recently visited by this customer.
+     */
+    public function visitedShops()
+    {
+        return $this->belongsToMany(Shop::class, 'customer_visited_shops')
+            ->withPivot('last_visited_at');
+    }
+
+    /**
      * Get sales related to this customer through items
      */
     public function sales()

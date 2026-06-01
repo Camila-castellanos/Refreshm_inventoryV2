@@ -87,6 +87,19 @@ class PublicStoreInventoryController extends Controller
         // Save the last shop slug in session to redirect back after logout
         session(['last_public_shop' => $shop->slug]);
 
+        // Track the visit if customer is logged in
+        if (auth('customer')->check()) {
+            DB::table('customer_visited_shops')->updateOrInsert(
+                [
+                    'customer_id' => auth('customer')->id(),
+                    'shop_id' => $shop->id,
+                ],
+                [
+                    'last_visited_at' => now(),
+                ]
+            );
+        }
+
         return Inertia::render('PublicInventory/Index', [
             'items' => $items,
             'shopName' => $shop->name,

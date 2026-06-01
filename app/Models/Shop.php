@@ -112,6 +112,15 @@ class Shop extends Model
     }
 
     /**
+     * Get customers who have visited this shop.
+     */
+    public function visitors()
+    {
+        return $this->belongsToMany(Customer::class, 'customer_visited_shops')
+            ->withPivot('last_visited_at');
+    }
+
+    /**
      * Retrieve the model for a bound value.
      * This provides fallback: first try slug, then try id
      */
