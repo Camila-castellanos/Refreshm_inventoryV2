@@ -283,8 +283,12 @@ class PaymentController extends Controller
             $saleItems = Item::where('sale_id', $item->sale_id)->get();
             foreach ($saleItems as $saleItem) {
                 if ($paid == 1) {
-                    // Fully paid → boot hook sets status='sold', clears position
-                    $saleItem->sold = $request->paidDate ?? now();
+                    // Fully paid → preserve original sale date (do not overwrite with payment date)
+                    $saleItem->sold = $saleItem->sold
+                        ?? $saleItem->partially_sold_at
+                        ?? $sale->date
+                        ?? $sale->created_at
+                        ?? now();
                 } else {
                     // Partial payment → keep reserved, ensure sold is cleared
                     $saleItem->sold = null;
@@ -407,8 +411,12 @@ class PaymentController extends Controller
             $saleItems = Item::where('sale_id', $request->sale_id)->get();
             foreach ($saleItems as $saleItem) {
                 if ($paid == 1) {
-                    // Fully paid → boot hook sets status='sold', clears position
-                    $saleItem->sold = $request->paymentDate ?? now();
+                    // Fully paid → preserve original sale date (do not overwrite with payment date)
+                    $saleItem->sold = $saleItem->sold
+                        ?? $saleItem->partially_sold_at
+                        ?? $sale->date
+                        ?? $sale->created_at
+                        ?? now();
                 } else {
                     // Still unpaid → keep reserved
                     $saleItem->sold = null;
