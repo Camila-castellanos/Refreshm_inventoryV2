@@ -253,6 +253,14 @@ import { ITEM_TYPE_OPTIONS, ItemType, getItemTypeLabel } from '@/Enums/ItemType'
 import Dropdown from 'primevue/dropdown';
 
 const toast = useToast();
+// Matches SaleController::store / SaleController::update per-item warning shape
+// (see openspec/changes/fix-payments-list-and-storage-flow-hardening/specs/sales/spec.md).
+type StorageWarning = {
+  item_id: number | null;
+  model: string | null;
+  type: string | null;
+  reason: "no_storage_available" | string;
+};
 const dialog = useDialog();
 const confirm = useConfirm();
 const dialogRef = inject("dialogRef") as Ref<DynamicDialogInstance>;
@@ -329,7 +337,24 @@ onMounted(async () => {
     console.log(balance_remaining.value, form.value.customer_credit)
     console.log("add credit bollean:", Number(balance_remaining) > 0 && form.customer_credit > 0)
     if (itemsResponse.data.length > 0) {
-      form.value.date = new Date(itemsResponse.data[0].sold || new Date());
+      // Use `payment.value.date` (the user-picked sale.date from the Payments
+      // page response, see PaymentController::getPaymentsData which uses
+      // $sale->date as the primary source) instead of `items[0].sold`. For an
+      // unpaid (RESERVED) sale, items[0].sold is null and the previous code
+      // fell back to `new Date()` (today), which is wrong: the Edit Sale
+      // modal must show the sale's actual date, not today.
+      //
+      // Parse the date-only string in local time to avoid UTC shift:
+      // new Date('2026-06-02') is UTC midnight, which displays as
+      // 2026-06-01 in UTC-3. Splitting and constructing with year/month/day
+      // keeps it in the user's local timezone.
+      const dateStr = payment.value.date;
+      if (dateStr && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+        const [y, m, d] = dateStr.split('-').map(Number);
+        form.value.date = new Date(y, m - 1, d);
+      } else {
+        form.value.date = new Date();
+      }
       form.value.sale_credit = itemsResponse.data[0].credit || 0;
     }
   } catch (error) {
@@ -460,6 +485,19 @@ const onEdit = async () => {
    try {
      const response = await axios.post(route("sales.update"), sale);
      if (response.status >= 200 && response.status < 400) {
+       // Surface per-item storage fallback warnings as non-blocking toasts.
+       // The backend returns the existing body shape with an added `warnings` key
+       // (see SaleController::update). Forward-compatible: response.status is the
+       // only check SaleEdit ever relied on.
+       const warnings = (response.data?.warnings ?? []) as StorageWarning[];
+       for (const w of warnings) {
+         toast.add({
+           severity: "warn",
+           summary: "Storage warning",
+           detail: `${w.model ?? "Item"} (${w.type ?? "?"}) could not be assigned to a storage. Contact admin.`,
+           life: 5000,
+         });
+       }
        toast.add({
          severity: "success",
          summary: "Sale Updated",

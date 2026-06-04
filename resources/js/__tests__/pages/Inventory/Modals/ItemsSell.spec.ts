@@ -115,8 +115,10 @@ describe('Inventory/Modals/ItemsSell.vue', () => {
       return Promise.resolve({ data: [] });
     });
 
-    vi.mocked(axios.post).mockResolvedValue({ 
-      data: 'http://example.com/sale/123/invoice.pdf' // Mock PDF URL response matching split logic
+    vi.mocked(axios.post).mockResolvedValue({
+      // SaleController::store response shape: {url, warnings[]}
+      // (see openspec/changes/fix-payments-list-and-storage-flow-hardening)
+      data: { url: 'http://example.com/sale/123/invoice.pdf', warnings: [] }
     });
   });
 

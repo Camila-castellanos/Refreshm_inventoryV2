@@ -56,6 +56,58 @@ class PaymentCrudTest extends TestCaseWithCompany
         $response->assertStatus(200);
     }
 
+    /**
+     * The Payments page must use `sales.date` (the user-picked payment date in
+     * the form) as the primary date source. The item's `partially_sold_at` (set
+     * when the item becomes RESERVED) and `created_at` are fallbacks. This
+     * aligns the Payments page with the simpleList endpoint, which already
+     * uses `sales.date`.
+     *
+     * Regression scenario: a sale created today (created_at = today) with a
+     * backdated `payment_date` (sales.date = 2 days ago) and a still-RESERVED
+     * item. Pre-fix, the Payments page showed today (partially_sold_at) while
+     * the simpleList showed 2 days ago (sales.date). Post-fix, both show
+     * `sales.date`.
+     *
+     * @test
+     */
+    public function test_payments_page_uses_sale_date_not_partially_sold_at(): void
+    {
+        $today = now();
+        $twoDaysAgo = $today->copy()->subDays(2);
+
+        $sale = Sale::factory()->create([
+            'user_id' => $this->owner->id,
+            'total' => 100.00,
+            'paid' => 0, // unpaid → items stay RESERVED
+            'date' => $twoDaysAgo, // user backdated the payment date
+            'created_at' => $today,
+            'updated_at' => $today,
+        ]);
+
+        // Item is RESERVED (sold = null), with partially_sold_at = today (set
+        // by the Item saving boot hook when transitioning to RESERVED).
+        Item::factory()->create([
+            'sale_id' => $sale->id,
+            'user_id' => $this->owner->id,
+            'shop_id' => $this->shop->id,
+            'storage_id' => $this->storage->id,
+            'sold' => null,
+            'partially_sold_at' => $today,
+            'status' => Item::STATUS_RESERVED,
+            'selling_price' => 100,
+        ]);
+
+        $response = $this->actingAs($this->owner)
+            ->get('/accounting/payments?status=all');
+
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->has('items', 1)
+            ->where('items.0.date', $twoDaysAgo->format('Y-m-d'))
+        );
+    }
+
     public function test_can_record_payment(): void
     {
         $sale = Sale::factory()->create([

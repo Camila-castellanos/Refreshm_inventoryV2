@@ -20,6 +20,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use DateTime;
 use Exception;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -167,6 +168,7 @@ class SaleController extends Controller
         }
 
         // Process new items (items created during the sale)
+        $warnings = [];
         if ($request->newItems) {
             foreach ($request->newItems as $new_item) {
                 $total = $new_item['selling_price'] + (($form['tax'] / 100) * $new_item['selling_price']);
@@ -205,13 +207,55 @@ class SaleController extends Controller
                     $itemData['storage_id'] = $storageSlot['storage_id'];
                     $itemData['position'] = $storageSlot['position'];
                 } else {
+                    $warnings[] = [
+                        'item_id' => null, // new item has no id yet
+                        'model' => $new_item['model'] ?? null,
+                        'type' => $new_item['type'] ?? null,
+                        'reason' => 'no_storage_available',
+                    ];
                     Log::warning('No storage available for new sale item', [
                         'user_id' => Auth::id(),
                         'sale_id' => $sale->id,
                     ]);
                 }
 
-                $item = Item::create($itemData);
+                // Pragmatic race protection: Storage::findFirstAvailablePosition() is
+                // a read-then-write. Two concurrent stores can pick the same position
+                // and trip items_storage_position_unique (SQLSTATE 23000). The unique
+                // index is the durable defense; the catch-and-retry just hides the
+                // common case. The DB::transaction + lockForUpdate follow-up is
+                // tracked in fix-payments-list-and-storage-flow-hardening/design.md.
+                $attempt = 0;
+                while (true) {
+                    $attempt++;
+                    try {
+                        $item = Item::create($itemData);
+                        break;
+                    } catch (QueryException $e) {
+                        if ($e->getCode() !== '23000') {
+                            throw $e; // not a unique violation — let it surface
+                        }
+                        if ($attempt >= 2) {
+                            return response()->json(
+                                ['error' => 'Storage is being modified concurrently, please retry.'],
+                                422
+                            );
+                        }
+                        // Retry once with a fresh position
+                        $storageSlot = Storage::findFirstAvailablePosition();
+                        if ($storageSlot === null) {
+                            $warnings[] = [
+                                'item_id' => null,
+                                'model' => $new_item['model'] ?? null,
+                                'type' => $new_item['type'] ?? null,
+                                'reason' => 'no_storage_available',
+                            ];
+                            break;
+                        }
+                        $itemData['storage_id'] = $storageSlot['storage_id'];
+                        $itemData['position'] = $storageSlot['position'];
+                    }
+                }
 
                 if ($request->paid) {
                     Payment::insert([
@@ -239,7 +283,11 @@ class SaleController extends Controller
         // Invalidate dashboard cache for the authenticated user
         $this->cacheService->invalidateForUser(Auth::id());
 
-        return response()->json($receiptUrl, 201);
+        // BREAKING CHANGE: response body was a raw receipt URL string. Now an object
+        // {url, warnings[]} so the frontend can surface no-storage fallbacks. The
+        // apply phase audit (T14 of the change) confirmed ItemsSell.vue is the only
+        // consumer. See openspec/changes/fix-payments-list-and-storage-flow-hardening.
+        return response()->json(['url' => $receiptUrl, 'warnings' => $warnings ?? []], 201);
     }
 
     /**
@@ -365,6 +413,17 @@ class SaleController extends Controller
             }
 
             // 4. Procesar nuevos ítems
+            //
+            // LOAD-BEARING ORDER: the existing-items loop above MUST run before this
+            // new-items loop. Storage::findFirstAvailablePosition() reads the items
+            // table for occupancy; if existing items persist AFTER new items, the
+            // new-items loop picks colliding positions and trips
+            // items_storage_position_unique. Safe today only because neither loop is
+            // wrapped in a transaction. A future refactor that wraps both loops in a
+            // single transaction OR reorders them MUST re-call
+            // findFirstAvailablePosition after each existing item persists, OR call
+            // it inline per-iteration. See R7.S1 for the regression-lock-in test.
+            $warnings = [];
             if (! empty($request->newItems)) {
                 foreach ($request->newItems as $item) {
                     $newItemData = [
@@ -401,13 +460,51 @@ class SaleController extends Controller
                         $newItemData['storage_id'] = $storageSlot['storage_id'];
                         $newItemData['position'] = $storageSlot['position'];
                     } else {
+                        $warnings[] = [
+                            'item_id' => $item['id'] ?? null,
+                            'model' => $item['model'] ?? null,
+                            'type' => $item['type'] ?? null,
+                            'reason' => 'no_storage_available',
+                        ];
                         Log::warning('No storage available for new sale item', [
                             'user_id' => $user->id,
                             'sale_id' => $request->id,
                         ]);
                     }
 
-                    Item::create($newItemData);
+                    // Pragmatic race protection: see Change 2 (store method) for the
+                    // full rationale. The unique index items_storage_position_unique
+                    // is the durable defense; the catch-and-retry hides the common case.
+                    $attempt = 0;
+                    while (true) {
+                        $attempt++;
+                        try {
+                            Item::create($newItemData);
+                            break;
+                        } catch (QueryException $e) {
+                            if ($e->getCode() !== '23000') {
+                                throw $e;
+                            }
+                            if ($attempt >= 2) {
+                                return response()->json(
+                                    ['error' => 'Storage is being modified concurrently, please retry.'],
+                                    422
+                                );
+                            }
+                            $storageSlot = Storage::findFirstAvailablePosition();
+                            if ($storageSlot === null) {
+                                $warnings[] = [
+                                    'item_id' => $item['id'] ?? null,
+                                    'model' => $item['model'] ?? null,
+                                    'type' => $item['type'] ?? null,
+                                    'reason' => 'no_storage_available',
+                                ];
+                                break;
+                            }
+                            $newItemData['storage_id'] = $storageSlot['storage_id'];
+                            $newItemData['position'] = $storageSlot['position'];
+                        }
+                    }
                 }
             }
 
@@ -432,7 +529,11 @@ class SaleController extends Controller
             // Invalidate dashboard cache for the authenticated user
             $this->cacheService->invalidateForUser(Auth::id());
 
-            return response()->json($request, 201);
+            // Response shape: preserve the existing body (long-standing leak of the
+            // form-request) and add a `warnings` key. The frontend only checks
+            // response.status (SaleEdit.vue:461), so adding a key is non-breaking.
+            // See openspec/changes/fix-payments-list-and-storage-flow-hardening.
+            return response()->json(array_merge($request->all(), ['warnings' => $warnings ?? []]), 201);
         } catch (Exception $e) {
             Log::error('Error updating sale: '.$e->getMessage());
 

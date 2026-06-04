@@ -609,9 +609,11 @@ class PaymentController extends Controller
         $search = $request->query('q', '');
         $limit = (int) $request->query('limit', 25);
 
-        // Base query: solo ventas que tienen al menos un ítem vendido
+        // Base query: solo ventas con al menos un ítem (cualquier status: SOLD o RESERVED).
+        // El filtro `whereNotNull('sold')` se eliminó porque ocultaba ventas con items
+        // únicamente RESERVED (p. ej. AddItemsToSale y AppendIncomingRequestToSale).
         $query = Sale::with('items')
-            ->whereHas('items', fn ($q) => $q->whereNotNull('sold'));
+            ->has('items');
 
         // Si viene término de búsqueda, aplicamos filtro en date o en customer del primer ítem
         if ($search !== '') {
@@ -808,9 +810,13 @@ class PaymentController extends Controller
                 $credited_items[] = $creditedItem;
             }
 
-            // Formatear la respuesta (como en original)
-            // Si el item está reserved (sin sold date), usar partially_sold_at, luego la fecha de creación de la venta
-            $sold = Carbon::parse($firstItem->sold ?? $firstItem->partially_sold_at ?? $sale->created_at);
+            // Formatear la respuesta.
+            // The primary date source is `sales.date` (the user-picked payment date
+            // in the form). This aligns the Payments page with the simpleList
+            // endpoint (which already uses `sales.date`). Fallback chain for
+            // edge cases: items.sold (when the item is SOLD), partially_sold_at
+            // (when the item is RESERVED), then sales.created_at.
+            $sold = Carbon::parse($sale->date ?? $firstItem->sold ?? $firstItem->partially_sold_at ?? $sale->created_at);
 
             // Calculate the correct balance_remaining considering credit and verify data integrity
             $sale_credit = (float) ($sale->credit ?? 0);

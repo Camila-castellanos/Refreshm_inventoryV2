@@ -182,6 +182,14 @@ import { ITEM_TYPE_OPTIONS, ItemType, getItemTypeLabel } from '@/Enums/itemType'
 import { useCredit } from '@/Composables/useCredit';
 import CreditDialog from '@/Components/CreditDialog.vue';
 const dialog = useDialog();
+// Matches SaleController::store / SaleController::update per-item warning shape
+// (see openspec/changes/fix-payments-list-and-storage-flow-hardening/specs/sales/spec.md).
+type StorageWarning = {
+  item_id: number | null;
+  model: string | null;
+  type: string | null;
+  reason: "no_storage_available" | string;
+};
 const toast = useToast();
 // Ziggy runtime helper (global). Declared here to avoid TS errors in this file.
 declare const route: any;
@@ -412,15 +420,29 @@ async function submitForm(e: Event, isConfirmed: boolean) {
 
   try {
     console.log("Sale Payload:", salePayload);
-    const { data } = await axios.post<string>(route("sales.store"), salePayload);
+    const { data } = await axios.post<{ url: string; warnings: StorageWarning[] }>(route("sales.store"), salePayload);
+
+    // Surface per-item storage fallback warnings as non-blocking toasts.
+    // The backend returns {url, warnings[]} (see SaleController::store).
+    if (data.warnings?.length) {
+      for (const w of data.warnings) {
+        toast.add({
+          severity: "warn",
+          summary: "Storage warning",
+          detail: `${w.model ?? "Item"} (${w.type ?? "?"}) could not be assigned to a storage. Contact admin.`,
+          life: 5000,
+        });
+      }
+    }
+
     const link = document.createElement("a");
-    link.href = data;
+    link.href = data.url;
     link.target = "_blank";
     link.rel = "noopener noreferrer";
 
     document.body.appendChild(link);
 
-  const invoiceNumber = data.split("sale/")[1].split("/")[0];
+  const invoiceNumber = data.url.split("sale/")[1].split("/")[0];
   const customerLabel = (form.customer as any)?.customer || (form.customer as any)?.name || 'customer';
   link.download = `${customerLabel} invoice #${invoiceNumber}.pdf`;
     link.click();
