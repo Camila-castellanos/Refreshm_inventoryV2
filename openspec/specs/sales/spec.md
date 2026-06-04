@@ -242,17 +242,23 @@ The frontend modals (`ItemsSell.vue`, `SaleEdit.vue`) MUST read
   `sales.store`.
 
 ### Requirement: Payments Page Date Source
+ 
+ The `date` field returned in the Payments page response (via
+ `PaymentController::getPaymentsData`) MUST be sourced from
+ `sales.date` (the user-picked payment date in the form) as the PRIMARY
+ value. The fallback chain when `sales.date` is null is: `items.sold`
+ (when the item is SOLD), then `items.partially_sold_at` (when the item
+ is RESERVED), then `sales.created_at`. This aligns the Payments page
+ with the `simpleList` endpoint (which already uses `sales.date`) so
+ the same sale shows the same date in both views.
+ 
+ BOTH endpoints MUST return the date as a plain `Y-m-d` string formatted
+ to the user's timezone on the backend. Returning raw date objects or
+ ISO strings with timezone suffixes (like `Z`) is FORBIDDEN as it causes
+ inconsistent shifts in the frontend based on the browser's local time.
+ 
+ #### Scenario: Unpaid sale with backdated payment_date shows that backdated date (not partially_sold_at)
 
-The `date` field returned in the Payments page response (via
-`PaymentController::getPaymentsData`) MUST be sourced from
-`sales.date` (the user-picked payment date in the form) as the PRIMARY
-value. The fallback chain when `sales.date` is null is: `items.sold`
-(when the item is SOLD), then `items.partially_sold_at` (when the item
-is RESERVED), then `sales.created_at`. This aligns the Payments page
-with the `simpleList` endpoint (which already uses `sales.date`) so
-the same sale shows the same date in both views.
-
-#### Scenario: Unpaid sale with backdated payment_date shows that backdated date (not partially_sold_at)
 
 - GIVEN a sale created today with `date = 2 days ago` (user backdated
   the payment date in the form) and an item with
