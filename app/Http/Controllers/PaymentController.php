@@ -816,7 +816,16 @@ class PaymentController extends Controller
             // endpoint (which already uses `sales.date`). Fallback chain for
             // edge cases: items.sold (when the item is SOLD), partially_sold_at
             // (when the item is RESERVED), then sales.created_at.
-            $sold = Carbon::parse($sale->date ?? $firstItem->sold ?? $firstItem->partially_sold_at ?? $sale->created_at);
+            //
+            // Convert to the user's timezone before formatting. Without this,
+            // `format('Y-m-d')` runs in app TZ (UTC by default) and shows the
+            // wrong calendar day for users in negative-UTC timezones when the
+            // stored datetime crosses midnight in UTC. The simpleList endpoint
+            // avoids this via the Sale model's `serializeDate` method (which
+            // converts to user TZ); the Payments page must do the same here.
+            $userTz = config('app.user_timezone', config('app.timezone'));
+            $sold = Carbon::parse($sale->date ?? $firstItem->sold ?? $firstItem->partially_sold_at ?? $sale->created_at)
+                ->setTimezone($userTz);
 
             // Calculate the correct balance_remaining considering credit and verify data integrity
             $sale_credit = (float) ($sale->credit ?? 0);

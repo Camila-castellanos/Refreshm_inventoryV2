@@ -108,6 +108,54 @@ class PaymentCrudTest extends TestCaseWithCompany
         );
     }
 
+    /**
+     * The Payments page must format `sales.date` in the user's timezone, not
+     * in the app's default timezone (UTC). The simpleList endpoint already does
+     * this via the Sale model's `serializeDate` method; the Payments page
+     * previously formatted via Carbon::format('Y-m-d') which runs in app TZ.
+     * For a user in UTC-3, a sale with `sales.date = 2026-06-02 02:30:00 UTC`
+     * (= 2026-06-01 23:30 user time) would show as 2026-06-02 in the Payments
+     * page but 2026-06-01 in the simpleList — a 1-day mismatch.
+     *
+     * @test
+     */
+    public function test_payments_page_formats_sale_date_in_user_timezone(): void
+    {
+        // Set the user's timezone to UTC-3 (Argentina). The SetUserTimezone
+        // middleware reads this from the user record and sets app.user_timezone.
+        $this->owner->update(['timezone' => 'America/Argentina/Buenos_Aires']);
+
+        // Create a sale with date stored as 2026-06-02 02:30:00 UTC. In user
+        // TZ (UTC-3) this is 2026-06-01 23:30:00. The Payments page must
+        // display 2026-06-01 (the user-local calendar day), not 2026-06-02.
+        $sale = Sale::factory()->create([
+            'user_id' => $this->owner->id,
+            'total' => 100.00,
+            'paid' => 0,
+            'date' => '2026-06-02 02:30:00', // stored as this UTC datetime
+        ]);
+
+        Item::factory()->create([
+            'sale_id' => $sale->id,
+            'user_id' => $this->owner->id,
+            'shop_id' => $this->shop->id,
+            'storage_id' => $this->storage->id,
+            'sold' => null,
+            'partially_sold_at' => now(),
+            'status' => Item::STATUS_RESERVED,
+            'selling_price' => 100,
+        ]);
+
+        $response = $this->actingAs($this->owner)
+            ->get('/accounting/payments?status=all');
+
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->has('items', 1)
+            ->where('items.0.date', '2026-06-01') // user-local date (UTC-3 of 2026-06-02 02:30 UTC)
+        );
+    }
+
     public function test_can_record_payment(): void
     {
         $sale = Sale::factory()->create([
