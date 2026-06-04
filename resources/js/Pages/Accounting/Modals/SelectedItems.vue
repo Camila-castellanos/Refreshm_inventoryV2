@@ -23,7 +23,7 @@
 import { Item } from "@/Lib/types";
 import axios from "axios";
 import { Button, Column, ConfirmDialog, DataTable, InputNumber, useConfirm, useToast } from "primevue";
-import { DynamicDialogInstance } from "primevue/dynamicdialogoptions";
+import type { DynamicDialogInstance } from "primevue/dynamicdialogoptions";
 import { inject, onMounted, ref, Ref } from "vue";
 
 const confirm = useConfirm();

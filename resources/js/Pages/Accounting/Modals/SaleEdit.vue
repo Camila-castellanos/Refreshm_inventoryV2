@@ -245,7 +245,7 @@ import axios from "axios";
 import { useToast } from "primevue/usetoast";
 import { Button, Column, ConfirmDialog, DataTable, DatePicker, InputNumber, Select, Textarea, useConfirm, useDialog, InputText, Dialog } from "primevue";
 import { Customer, Item, PaymentResponse, Tax } from "@/Lib/types";
-import { DynamicDialogCloseOptions, DynamicDialogInstance } from "primevue/dynamicdialogoptions";
+import type { DynamicDialogCloseOptions, DynamicDialogInstance } from "primevue/dynamicdialogoptions";
 import AddTaxes from "./AddTaxes.vue";
 import CreateEdit from "@/Pages/Customers/CreateEdit.vue";
 import { format } from "date-fns";

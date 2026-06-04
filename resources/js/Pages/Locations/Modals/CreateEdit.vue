@@ -13,7 +13,7 @@
 <script setup lang="ts">
 import axios from "axios";
 import Button from "primevue/button";
-import { DynamicDialogInstance } from "primevue/dynamicdialogoptions";
+import type { DynamicDialogInstance } from "primevue/dynamicdialogoptions";
 import InputText from "primevue/inputtext";
 import { inject, reactive, Ref, ref, watchEffect } from "vue";
 import { router } from "@inertiajs/vue3";

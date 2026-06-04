@@ -26,9 +26,12 @@ export default defineConfig(({ mode }) => {
         // Vite dev server settings. If VITE_ALLOWED_ORIGINS is present in .env,
         // restrict CORS to that list; otherwise enable permissive CORS for dev.
         server: {
-            host: false,
+            host: true,
             port: 5173,
-            cors: { origin: allowed },
+            cors: true,
+            hmr: {
+                host: 'localhost',
+            },
         },
     };
 });

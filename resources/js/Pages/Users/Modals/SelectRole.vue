@@ -3,7 +3,7 @@ import { User } from "@/Lib/types";
 import { usePage } from "@inertiajs/vue3";
 import axios from "axios";
 import { Button, FloatLabel, Select, useToast } from "primevue";
-import { DynamicDialogInstance } from "primevue/dynamicdialogoptions";
+import type { DynamicDialogInstance } from "primevue/dynamicdialogoptions";
 import { inject, onMounted, Ref, ref } from "vue";
 
 const roles = ref([

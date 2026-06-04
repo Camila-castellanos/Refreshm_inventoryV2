@@ -73,7 +73,7 @@ import { Button, Dialog, InputText, Message, Tab, TabList, TabPanel, TabPanels, 
 import { inject, onMounted, reactive, ref, Ref, watch } from "vue";
 import { createMailListHeaders } from "../IndexData";
 import axios from "axios";
-import { DynamicDialogInstance } from "primevue/dynamicdialogoptions";
+import type { DynamicDialogInstance } from "primevue/dynamicdialogoptions";
 
 const toast = useToast();
 

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import axios from "axios";
 import { Button, FloatLabel, MultiSelect, useToast } from "primevue";
-import { DynamicDialogInstance } from "primevue/dynamicdialogoptions";
+import type { DynamicDialogInstance } from "primevue/dynamicdialogoptions";
 import { inject, onMounted, Ref, ref } from "vue";
 
 const selectedUsers: Ref<any[]> = ref([]);

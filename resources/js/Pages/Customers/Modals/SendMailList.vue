@@ -20,7 +20,7 @@
 
 <script setup lang="ts">
 import { Button, Dropdown, ConfirmDialog, useConfirm } from "primevue";
-import { DynamicDialogInstance } from "primevue/dynamicdialogoptions";
+import type { DynamicDialogInstance } from "primevue/dynamicdialogoptions";
 import Editor from "primevue/editor";
 import { useToast } from "primevue/usetoast";
 import axios from "axios";

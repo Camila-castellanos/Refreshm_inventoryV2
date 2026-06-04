@@ -41,7 +41,7 @@ import Password from "primevue/password";
 import Button from "primevue/button";
 import Message from "primevue/message";
 import { User } from "@/Lib/types";
-import { DynamicDialogInstance } from "primevue/dynamicdialogoptions";
+import type { DynamicDialogInstance } from "primevue/dynamicdialogoptions";
 
 const dialogRef = inject('dialogRef') as Ref<DynamicDialogInstance>;
 const toast = useToast();

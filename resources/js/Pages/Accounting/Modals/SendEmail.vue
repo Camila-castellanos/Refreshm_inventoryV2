@@ -32,7 +32,7 @@ import Editor from "primevue/editor";
 import { useToast } from "primevue/usetoast";
 import axios from "axios";
 import { inject, Ref, ref, watch, watchEffect } from "vue";
-import { DynamicDialogInstance } from "primevue/dynamicdialogoptions";
+import type { DynamicDialogInstance } from "primevue/dynamicdialogoptions";
 
 const templates = ref<EmailTemplate[]>([]);
 const selectedTemplate = ref<EmailTemplate | null>(null);
