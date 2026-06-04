@@ -1,0 +1,10 @@
+artifact_store: openspec
+project: refreshm_inventoryv2
+preflight:
+  pace: interactive
+  prs: ask-always
+  review_budget_lines: 400
+testing:
+  php: vendor/bin/phpunit
+  js: npm run test:run
+  strict_tdd: false
