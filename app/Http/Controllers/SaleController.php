@@ -191,11 +191,24 @@ class SaleController extends Controller
                 if ($request->paid) {
                     $itemData['status'] = Item::STATUS_SOLD;
                     $itemData['sold'] = Carbon::now();
-                    $itemData['position'] = null;
-                    $itemData['storage_id'] = null;
                 } else {
                     $itemData['status'] = Item::STATUS_RESERVED;
                     $itemData['sold'] = null;
+                }
+
+                // Auto-assign storage so the Item saving hook (Item.php:347-356)
+                // can snapshot a real sold_storage_* triplet when the item is SOLD.
+                // For unpaid items, the creating hook (Item.php:370-377) uses the
+                // storage_id to assign a position.
+                $storageSlot = Storage::findFirstAvailablePosition();
+                if ($storageSlot !== null) {
+                    $itemData['storage_id'] = $storageSlot['storage_id'];
+                    $itemData['position'] = $storageSlot['position'];
+                } else {
+                    Log::warning('No storage available for new sale item', [
+                        'user_id' => Auth::id(),
+                        'sale_id' => $sale->id,
+                    ]);
                 }
 
                 $item = Item::create($itemData);
@@ -310,7 +323,21 @@ class SaleController extends Controller
                 $sale_item = Item::find($item['id']);
 
                 if ($paid == 1) {
-                    $sale_item->update([
+                    // Mirror SaleController.php:126-128: capture the snapshot from
+                    // the in-memory model BEFORE the update nulls the active fields.
+                    // The boot hook's is_null($item->sold_storage_id) guard
+                    // (Item.php:349) makes the explicit copy + hook coexist safely.
+                    // Idempotency: do not overwrite an existing snapshot if the item
+                    // was already sold once and is being re-edited.
+                    $snapshot = [];
+                    if (is_null($sale_item->sold_storage_id) && ! is_null($sale_item->storage_id)) {
+                        $snapshot = [
+                            'sold_storage_id' => $sale_item->storage_id,
+                            'sold_position' => $sale_item->position,
+                            'sold_storage_name' => $sale_item->storage?->name,
+                        ];
+                    }
+                    $sale_item->update(array_merge([
                         'selling_price' => $item['selling_price'],
                         'profit' => $item['selling_price'] - $item['cost'],
                         'customer' => $request->customer,
@@ -318,7 +345,7 @@ class SaleController extends Controller
                         'sold' => $request->date,
                         'position' => null,
                         'storage_id' => null,
-                    ]);
+                    ], $snapshot));
                 } else {
                     // Reverting to unpaid — update fields, then handle position
                     $sale_item->selling_price = $item['selling_price'];
@@ -355,10 +382,29 @@ class SaleController extends Controller
 
                     if ($paid == 1) {
                         $newItemData['sold'] = $request->date;
-                        $newItemData['position'] = null;
-                        $newItemData['storage_id'] = null;
                     } else {
                         $newItemData['sold'] = null;
+                    }
+
+                    // Auto-assign storage so the Item saving hook (Item.php:347-356)
+                    // can snapshot a real sold_storage_* triplet when the item is SOLD.
+                    // For unpaid items, the creating hook (Item.php:370-377) uses the
+                    // storage_id to assign a position.
+                    // NOTE: We set position explicitly here because the Item::saving hook
+                    // (Item.php:322) fires BEFORE the Item::creating hook (Item.php:370) due
+                    // to Eloquent's registration-order event semantics. The saving hook
+                    // nulls storage_id before creating can use it to assign position. This
+                    // workaround is duplicated from the store method (Change 1). A proper
+                    // fix would reorder the hook registration; tracked as a follow-up.
+                    $storageSlot = Storage::findFirstAvailablePosition();
+                    if ($storageSlot !== null) {
+                        $newItemData['storage_id'] = $storageSlot['storage_id'];
+                        $newItemData['position'] = $storageSlot['position'];
+                    } else {
+                        Log::warning('No storage available for new sale item', [
+                            'user_id' => $user->id,
+                            'sale_id' => $request->id,
+                        ]);
                     }
 
                     Item::create($newItemData);
@@ -514,9 +560,11 @@ class SaleController extends Controller
                             'manufacturer', 'colour', 'grade', 'issues', 'imei',
                             'date', 'type', 'sold_position', 'sold_storage_name',
                             'sold_storage_id', 'custom_values',
+                            'storage_id', 'position',
                         ]);
                     },
                     'items.vendor:id,vendor',
+                    'items.storage:id,name,limit',
                 ])
                 ->get();
 
@@ -582,6 +630,13 @@ class SaleController extends Controller
                         'sold_position' => $item->sold_position,
                         'sold_storage_name' => $item->sold_storage_name,
                         'sold_storage_id' => $item->sold_storage_id,
+                        'storage_id' => $item->storage_id,
+                        'position' => $item->position,
+                        'storage' => $item->storage ? [
+                            'id' => $item->storage->id,
+                            'name' => $item->storage->name,
+                            'limit' => $item->storage->limit,
+                        ] : null,
                         'supplier' => $item->vendor?->vendor ?? null,
                     ], $customFields);
                 }

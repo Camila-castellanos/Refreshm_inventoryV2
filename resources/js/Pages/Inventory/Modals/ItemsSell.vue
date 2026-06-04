@@ -294,7 +294,7 @@ const newRowTemplate = {
   issues: "",
   imei: "",
   selling_price: 0,
-  position: "",
+  position: null,
   storage_id: null,
   cost: 0,
   profit: 0,

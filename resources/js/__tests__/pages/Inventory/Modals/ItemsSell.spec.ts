@@ -238,13 +238,33 @@ describe('Inventory/Modals/ItemsSell.vue', () => {
 
       // Empty items
       vm.params.items = [];
-      
+
       const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
-      
+
       await vm.submitForm(new Event('submit'), true);
 
       expect(alertSpy).toHaveBeenCalledWith(expect.stringContaining('No items'));
       expect(axios.post).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('New row template (Bug D)', () => {
+    it('new row position field is null, not an empty string', async () => {
+      wrapper = createWrapper();
+      const vm = wrapper.vm as any;
+      await nextTick();
+
+      // Call the same addNewRow the UI uses; the template is spread in.
+      vm.addNewRow();
+      await nextTick();
+
+      const newRow = vm.params.items[vm.params.items.length - 1];
+      expect(newRow.isNew).toBe(true);
+      // Contract: payload position must be null so backend `numeric|nullable`
+      // validation (SaleForm.php:44) accepts it. Empty string fails the rule.
+      expect(newRow.position).toBeNull();
+      expect(newRow.position).not.toBe('');
+      expect(newRow.storage_id).toBeNull();
     });
   });
 });

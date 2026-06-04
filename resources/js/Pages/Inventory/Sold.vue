@@ -114,7 +114,7 @@ function updateTableData(data: any[]) {
       selling_price: `${item.selling_price}`,
       subtotal: `${item.subtotal ?? 'unknown'}`,
       total: `${item.total ?? 'unknown'}`,
-      location: `${item.sold_storage_name ?? 'N/A'} - (${item.sold_position ?? 'N/A'})`,
+      location: `${item.sold_storage_name ?? item.storage?.name ?? 'N/A'} - (${item.sold_position ?? item.position ?? 'N/A'})`,
       vendor: item.vendor?.vendor,
       battery: computed(() => {
         if (item.battery && !String(item.battery).endsWith("%")) {
