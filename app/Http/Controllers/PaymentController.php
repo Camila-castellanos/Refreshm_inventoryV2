@@ -631,16 +631,20 @@ class PaymentController extends Controller
             ->get();
 
         // Mapeamos al formato simple
-        $list = $sales->map(function (Sale $sale) {
+        $userTz = config('app.user_timezone', config('app.timezone'));
+        $list = $sales->map(function (Sale $sale) use ($userTz) {
             $firstItem = $sale->items->first();
             $raw = $firstItem->customer;
             $customer = is_numeric($raw) && ($cust = Customer::find($raw))
                          ? $cust->customer
                          : (string) $raw;
 
+            // Align date formatting with getPaymentsData to avoid timezone shifts in frontend
+            $date = Carbon::parse($sale->date)->setTimezone($userTz)->format('Y-m-d');
+
             return [
                 'sale_id' => $sale->id,
-                'date' => $sale->date,
+                'date' => $date,
                 'customer' => $customer,
                 'total' => $sale->total,
             ];
