@@ -23,11 +23,12 @@ folded in as R9 and R10. Shipped as a single conventional commit
 - This archive: `openspec/changes/fix-payments-list-and-storage-flow-hardening/archive.md`
 
 ## Commit
+ 
+ - SHA: `58256fc`
+ - Subject: `docs(spec): clarify consistent backend date formatting requirement`
+ - Previous SHA: `85ed240` (fix), `9beb250` (original)
+ - Files: 10 (+929/-27)
 
-- SHA: `9beb250`
-- Subject: `fix(sales): surface reserved-only sales in payments list and harden auto-assign`
-- Files: 8 (2 backend controllers, 2 Vue modals, 1 new test file, 2 extended test files, 1 extended JS spec)
-- Lines: +907/-15
 
 ## Canonical spec
 
@@ -46,6 +47,7 @@ folded in as R9 and R10. Shipped as a single conventional commit
 5. R8: Sale responses surface storage assignment warnings
 6. R9 (user-verified during T15): Payments Page Date Source — `sales.date` as primary
 7. R10 (user-verified during T15 second pass): Edit Sale Modal Initial Date
+8. R11 (user-verified during investigation): Consistent Backend Date Representation — fixed `simpleList` discrepancy.
 
 ## Discovered during apply (follow-ups, not in scope)
 
